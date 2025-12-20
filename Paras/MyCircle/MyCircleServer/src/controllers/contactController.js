@@ -1,0 +1,129 @@
+const ContactRequest = require('../models/ContactRequest');
+const Post = require('../models/Post');
+
+// @desc    Create a contact request
+// @route   POST /api/contact/:postId
+// @access  Private
+exports.createRequest = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.postId);
+
+        if (!post) {
+            return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        // Check if user is the owner
+        if (post.user.toString() === req.user.id) {
+            return res.status(400).json({ msg: 'Cannot request contact for your own post' });
+        }
+
+        // Check for existing request
+        const existingRequest = await ContactRequest.findOne({
+            post: req.params.postId,
+            requester: req.user.id,
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ msg: 'Request already sent' });
+        }
+
+        const newRequest = new ContactRequest({
+            post: req.params.postId,
+            requester: req.user.id,
+            recipient: post.user,
+            message: req.body.message,
+        });
+
+        const request = await newRequest.save();
+        res.json(request);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get received requests (for my posts)
+// @route   GET /api/contact/received
+// @access  Private
+exports.getReceivedRequests = async (req, res) => {
+    try {
+        const requests = await ContactRequest.find({ recipient: req.user.id })
+            .populate('post', ['title', 'type'])
+            .populate('requester', ['displayName', 'avatar'])
+            .sort({ createdAt: -1 });
+
+        res.json(requests);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get sent requests (my applications)
+// @route   GET /api/contact/sent
+// @access  Private
+exports.getSentRequests = async (req, res) => {
+    try {
+        const requests = await ContactRequest.find({ requester: req.user.id })
+            .populate('post', ['title', 'type', 'contactPhone', 'contactWhatsapp'])
+            .populate('recipient', ['displayName', 'avatar'])
+            .sort({ createdAt: -1 });
+
+        // Filter out contact info if not approved! 
+        // Although the population above gets it from Post, we should maybe be careful?
+        // Actually, logic: If status is approved, frontend gets 'post' details which might have contact.
+        // But let's be explicit: The *Post* model has fields contactPhone/Whatsapp.
+        // We should primarily rely on the logic that if approved, allow access.
+
+        // For MVP: We return the request. If approved, the frontend can call GetPost again to see contact 
+        // OR we include it here only if approved.
+
+        // Let's refine the response:
+        const enrichedRequests = requests.map(reqObj => {
+            const reqJson = reqObj.toObject();
+            if (reqJson.status !== 'approved') {
+                if (reqJson.post) {
+                    delete reqJson.post.contactPhone;
+                    delete reqJson.post.contactWhatsapp;
+                }
+            }
+            return reqJson;
+        });
+
+        res.json(enrichedRequests);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Update request status (Approve/Reject)
+// @route   PUT /api/contact/:id/status
+// @access  Private
+exports.updateRequestStatus = async (req, res) => {
+    try {
+        const { status } = req.body; // 'approved' or 'rejected'
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ msg: 'Invalid status' });
+        }
+
+        let request = await ContactRequest.findById(req.params.id);
+
+        if (!request) {
+            return res.status(404).json({ msg: 'Request not found' });
+        }
+
+        // Verify recipient is the logged in user
+        if (request.recipient.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'Not authorized' });
+        }
+
+        request.status = status;
+        await request.save();
+
+        res.json(request);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};

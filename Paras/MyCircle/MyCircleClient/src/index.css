@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-background text-foreground font-sans antialiased overflow-x-hidden;
+
+        /* Custom Scrollbar */
+        &::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+            @apply bg-muted;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            @apply bg-secondary rounded-full;
+        }
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        @apply font-display tracking-tight;
+    }
+}
+
+@layer utilities {
+    .glass {
+        @apply bg-card backdrop-blur-md border border-card-border shadow-lg;
+    }
+
+    .glass-hover {
+        @apply hover:bg-white/5 transition-colors duration-300;
+    }
+
+    .text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    }
+}

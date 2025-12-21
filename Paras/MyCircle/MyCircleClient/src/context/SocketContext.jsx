@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
-import { useToast } from '../components/ui/Toast';
 
 const SocketContext = createContext();
 
@@ -13,7 +12,6 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }) => {
     const { user } = useAuth();
-    const { success, info, warning } = useToast();
     const [socket, setSocket] = useState(null);
     const [connected, setConnected] = useState(false);
 
@@ -46,42 +44,6 @@ export const SocketProvider = ({ children }) => {
             setConnected(false);
         });
 
-        // Listen for notifications
-        newSocket.on('new_notification', (data) => {
-            console.log('Notification received:', data);
-
-            switch (data.type) {
-                case 'comment':
-                case 'reply':
-                    info(data.message);
-                    try {
-                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // Simple notification sound
-                        audio.play().catch(e => console.log('Audio play failed', e));
-                    } catch (e) {
-                        console.log('Audio error', e);
-                    }
-                    break;
-                case 'request_received':
-                    info(`New contact request from ${data.requesterName}`);
-                    try {
-                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                        audio.play().catch(e => console.log('Audio play failed', e));
-                    } catch (e) { }
-                    break;
-                case 'request_approved':
-                    success(`${data.recipientName} approved your contact request!`);
-                    break;
-                case 'request_rejected':
-                    warning(`${data.recipientName} declined your contact request`);
-                    break;
-                default:
-                    info(data.message || 'New notification');
-                    try {
-                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                        audio.play().catch(e => console.log('Audio play failed', e));
-                    } catch (e) { }
-            }
-        });
 
         setSocket(newSocket);
 

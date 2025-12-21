@@ -16,9 +16,12 @@ app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Initialize Socket.io
+const isProduction = process.env.NODE_ENV === 'production';
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        origin: isProduction
+            ? process.env.CLIENT_URL
+            : (process.env.CLIENT_URL || 'http://localhost:5173'),
         methods: ['GET', 'POST'],
         credentials: true
     }

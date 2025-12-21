@@ -18,9 +18,14 @@ const Navbar = () => {
     const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
     const location = useLocation();
 
+    const isProduction = import.meta.env.PROD;
+    const apiURL = isProduction
+        ? (import.meta.env.VITE_API_URL || '')
+        : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
+
     // Google OAuth Login Handler
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:5000/auth/google';
+        window.location.href = `${apiURL}/auth/google`;
     };
 
     useEffect(() => {

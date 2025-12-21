@@ -2,6 +2,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api';
 import axios from 'axios';
 
+const isProduction = import.meta.env.PROD;
+const apiURL = isProduction
+    ? (import.meta.env.VITE_API_URL || '')
+    : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -60,7 +65,7 @@ export const AuthProvider = ({ children }) => {
         if (isEmail) {
             // Dev Login via Backend
             try {
-                const res = await axios.post('http://localhost:5000/auth/dev-login', { email: tokenOrEmail });
+                const res = await axios.post(`${apiURL}/auth/dev-login`, { email: tokenOrEmail });
                 localStorage.setItem('token', res.data.token);
                 await fetchUserProfile();
             } catch (err) {
@@ -73,7 +78,7 @@ export const AuthProvider = ({ children }) => {
             await fetchUserProfile();
         } else {
             // Redirect to backend auth (Google)
-            window.location.href = 'http://localhost:5000/auth/google';
+            window.location.href = `${apiURL}/auth/google`;
         }
     };
 

@@ -5,6 +5,7 @@ import { Menu, X, Rocket, PlusCircle } from 'lucide-react';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
+import { getAvatarUrl } from '../../utils/avatar';
 
 const Navbar = () => {
 
@@ -82,8 +83,8 @@ const Navbar = () => {
                             <Link to="/profile">
                                 <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden border border-white/10 hover:border-primary transition-colors cursor-pointer">
                                     <img
-                                        src={user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"}
-                                        alt="User"
+                                        src={getAvatarUrl(user)}
+                                        alt={user.displayName}
                                         className="w-full h-full object-cover"
                                     />
                                 </div>

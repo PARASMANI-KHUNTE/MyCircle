@@ -31,7 +31,7 @@ const AnimatedSphere = () => {
 const HeroScene = () => {
     return (
         <div className="absolute top-0 right-0 w-[50%] h-[600px] z-[-1] pointer-events-none opacity-50 md:opacity-100">
-            <Canvas>
+            <Canvas dpr={[1, 1.5]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[10, 10, 5]} intensity={1} />
                 <AnimatedSphere />

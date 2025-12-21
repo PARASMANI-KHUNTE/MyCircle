@@ -1,21 +1,54 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import Loading from '../components/ui/Loading';
 import { ArrowLeft, Save } from 'lucide-react';
 import api from '../utils/api';
 
 const EditProfile = () => {
     const { user, refreshUser } = useAuth();
+    const { success, error } = useToast();
     const navigate = useNavigate();
-    const [avatarFile, setAvatarFile] = useState(null);
-    const [avatarPreview, setAvatarPreview] = useState(user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix");
     const [loading, setLoading] = useState(false);
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(user?.avatar || "");
+    const [formData, setFormData] = useState({
+        displayName: '',
+        bio: '',
+        location: '',
+        skills: '',
+        contactPhone: '',
+        contactWhatsapp: ''
+    });
 
-    // ... (rest of state)
+    React.useEffect(() => {
+        if (user) {
+            setFormData({
+                displayName: user.displayName || '',
+                bio: user.bio || '',
+                location: user.location || '',
+                skills: Array.isArray(user.skills) ? user.skills.join(', ') : (user.skills || ''),
+                contactPhone: user.contactPhone || '',
+                contactWhatsapp: user.contactWhatsapp || ''
+            });
+            setAvatarPreview(user.avatar || "");
+        }
+    }, [user]);
 
-    // ... (rest of handlers)
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleAvatarChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setAvatarFile(file);
+            setAvatarPreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -43,11 +76,11 @@ const EditProfile = () => {
             // Refresh user data in context to update UI immediately
             await refreshUser();
 
-            alert("Profile Updated Successfully!");
+            success("Profile Updated Successfully!");
             navigate('/profile');
         } catch (err) {
             console.error(err);
-            alert("Update failed");
+            error("Failed to update profile. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -66,9 +99,13 @@ const EditProfile = () => {
                     <div className="flex items-center gap-6 mb-4">
                         <div className="w-20 h-20 rounded-full bg-secondary overflow-hidden border border-white/10">
                             <img
-                                src={avatarPreview}
+                                src={avatarPreview || '/default-avatar.svg'}
                                 alt="User"
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = '/default-avatar.svg';
+                                }}
                             />
                         </div>
                         <label className="cursor-pointer">
@@ -126,11 +163,13 @@ const EditProfile = () => {
                         />
                     </div>
 
-                    <Button variant="primary" type="submit" className="mt-4">
-                        <Save className="w-4 h-4 mr-2" /> Save Changes
+                    <Button variant="primary" type="submit" className="mt-4" disabled={loading}>
+                        <Save className="w-4 h-4 mr-2" /> {loading ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </form>
             </div>
+
+            {loading && <Loading fullscreen text="Updating profile..." />}
         </div>
     );
 };

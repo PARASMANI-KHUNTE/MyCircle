@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Tag, MessageCircle, Clock, Heart, Share2, Repeat } from 'lucide-react';
+import { MapPin, Tag, MessageCircle, Clock, Heart, Share2, Repeat, BarChart2 } from 'lucide-react';
 import Button from './Button';
 import api from '../../utils/api';
+import { useToast } from './Toast';
 
-const PostCard = ({ post, onRequestContact, currentUserId }) => {
-    const { title, description, type, location, price, user, createdAt, images, acceptsBarter, likes: initialLikes, shares: initialShares } = post;
+const typeColors = {
+    job: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    service: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    sell: 'bg-green-500/10 text-green-400 border-green-500/20',
+    rent: 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+};
+
+const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnPost, onStatusChange, onDelete }) => {
+    const { title, description, type, location, price, user, createdAt, images, acceptsBarter, likes: initialLikes, shares: initialShares, isActive, status } = post;
     const [likes, setLikes] = useState(initialLikes || []);
     const [shares, setShares] = useState(initialShares || 0);
 
     // Check if this is the current user's post
-    const isOwnPost = currentUserId && user?._id === currentUserId;
+    const isOwnPost = propIsOwnPost || (currentUserId && user?._id === currentUserId);
     const isLiked = currentUserId && likes.includes(currentUserId);
 
     const handleLike = async (e) => {
@@ -33,25 +41,62 @@ const PostCard = ({ post, onRequestContact, currentUserId }) => {
             await api.post(`/posts/${post._id}/share`);
             setShares(shares + 1);
             navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`);
-            alert('Link copied to clipboard!');
+            success('Link copied to clipboard!');
         } catch (err) {
             console.error(err);
         }
     };
 
-    const typeColors = {
-        job: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-        service: 'bg-green-500/10 text-green-400 border-green-500/20',
-        sell: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-        rent: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    const [showAnalytics, setShowAnalytics] = useState(false);
+    const [analyticsData, setAnalyticsData] = useState(null);
+
+    const handleShowAnalytics = async () => {
+        if (!showAnalytics && !analyticsData) {
+            try {
+                const res = await api.get(`/posts/${post._id}/analytics`);
+                setAnalyticsData(res.data);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        setShowAnalytics(!showAnalytics);
     };
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-2xl p-6 hover:border-white/20 transition-all duration-300 flex flex-col h-full"
+            className={`glass rounded-2xl p-6 hover:border-white/20 transition-all duration-300 flex flex-col h-full relative ${!isActive ? 'opacity-75 grayscale' : ''}`}
         >
+            {/* Analytics Overlay */}
+            {showAnalytics && analyticsData && (
+                <div className="absolute inset-0 bg-dark/95 backdrop-blur-xl z-20 rounded-2xl p-6 flex flex-col justify-center items-center text-center animate-in fade-in duration-200">
+                    <h3 className="text-xl font-bold text-white mb-6">Post Analytics</h3>
+                    <div className="grid grid-cols-2 gap-4 w-full mb-6">
+                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                            <div className="text-2xl font-bold text-primary">{analyticsData.views}</div>
+                            <div className="text-xs text-gray-400">Total Views</div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                            <div className="text-2xl font-bold text-pink-500">{analyticsData.likes}</div>
+                            <div className="text-xs text-gray-400">Likes</div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                            <div className="text-2xl font-bold text-blue-500">{analyticsData.shares}</div>
+                            <div className="text-xs text-gray-400">Shares</div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                            <div className="text-2xl font-bold text-yellow-500">{analyticsData.daysActive}</div>
+                            <div className="text-xs text-gray-400">Days Active</div>
+                        </div>
+                    </div>
+                    <Button variant="outline" onClick={() => setShowAnalytics(false)} className="w-full justify-center">
+                        Close Analytics
+                    </Button>
+                </div>
+            )}
+
+            {/* ... header ... */}
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                     <img
@@ -82,6 +127,13 @@ const PostCard = ({ post, onRequestContact, currentUserId }) => {
                     )}
                 </div>
             </div>
+
+            {/* Status Badge */}
+            {status && status !== 'active' && (
+                <div className="absolute top-4 right-4 bg-gray-800 text-white text-xs px-2 py-1 rounded">
+                    {status.toUpperCase()}
+                </div>
+            )}
 
             <p className="text-gray-300 text-sm mb-4 line-clamp-2 flex-grow">
                 {description}
@@ -121,8 +173,7 @@ const PostCard = ({ post, onRequestContact, currentUserId }) => {
                 </div>
             </div>
 
-            <div className="pt-4 border-t border-white/5 flex justify-end">
-                {/* Only show contact button if NOT own post */}
+            <div className="pt-4 border-t border-white/5 flex justify-end gap-2">
                 {!isOwnPost && onRequestContact && (
                     <Button
                         variant="primary"
@@ -133,10 +184,60 @@ const PostCard = ({ post, onRequestContact, currentUserId }) => {
                     </Button>
                 )}
 
-                {/* Show "Your Post" badge if it's own post */}
                 {isOwnPost && (
-                    <div className="w-full text-center py-2 text-xs text-primary bg-primary/10 rounded-xl border border-primary/20">
-                        Your Post
+                    <div className="flex w-full gap-2">
+                        <Button
+                            variant="outline"
+                            className="bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20"
+                            onClick={handleShowAnalytics}
+                        >
+                            <BarChart2 className="w-4 h-4" />
+                        </Button>
+
+                        {onStatusChange && (
+                            <>
+                                {status === 'active' ? (
+                                    <>
+                                        <Button
+                                            variant="outline"
+                                            className="text-sm text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/10"
+                                            onClick={() => onStatusChange('inactive')}
+                                        >
+                                            Disable
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="text-sm text-blue-400 border-blue-400/20 hover:bg-blue-400/10"
+                                            onClick={() => onStatusChange('sold')}
+                                        >
+                                            Sold
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 text-sm text-green-400 border-green-400/20 hover:bg-green-400/10"
+                                        onClick={() => onStatusChange('active')}
+                                    >
+                                        {status === 'sold' ? 'Relist' : 'Enable'}
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                        {onDelete && (
+                            <Button
+                                variant="outline"
+                                className="text-sm text-red-400 border-red-400/20 hover:bg-red-500/10"
+                                onClick={onDelete}
+                            >
+                                Delete
+                            </Button>
+                        )}
+                        {!onStatusChange && !onDelete && (
+                            <div className="w-full text-center py-2 text-xs text-primary bg-primary/10 rounded-xl border border-primary/20">
+                                Your Post
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -145,3 +246,4 @@ const PostCard = ({ post, onRequestContact, currentUserId }) => {
 };
 
 export default PostCard;
+

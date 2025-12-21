@@ -42,6 +42,10 @@ const UserSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    preferences: {
+        emailNotifications: { type: Boolean, default: true },
+        profileVisibility: { type: String, enum: ['public', 'private'], default: 'public' }
+    },
     stats: {
         totalPosts: { type: Number, default: 0 },
         activePosts: { type: Number, default: 0 },

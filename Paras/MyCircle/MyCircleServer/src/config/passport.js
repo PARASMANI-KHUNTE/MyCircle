@@ -24,9 +24,31 @@ module.exports = function (passport) {
                     try {
                         let user = await User.findOne({ googleId: profile.id });
 
+                        const avatar = (profile.photos && profile.photos.length > 0)
+                            ? profile.photos[0].value
+                            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profile.displayName)}`;
+
                         if (user) {
+                            // Update existing user with latest Google info
+                            user.displayName = profile.displayName;
+                            user.firstName = profile.name.givenName;
+                            user.lastName = profile.name.familyName;
+                            // Only update avatar if Google provides one, or if current is missing
+                            // Use the calculated robust avatar
+                            if (!user.avatar || (profile.photos && profile.photos.length > 0)) {
+                                user.avatar = avatar;
+                            }
+                            await user.save();
                             done(null, user);
                         } else {
+                            const newUser = {
+                                googleId: profile.id,
+                                displayName: profile.displayName,
+                                firstName: profile.name.givenName,
+                                lastName: profile.name.familyName,
+                                email: profile.emails[0].value,
+                                avatar: avatar,
+                            };
                             user = await User.create(newUser);
                             done(null, user);
                         }

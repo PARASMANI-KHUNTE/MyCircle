@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import api from '../utils/api'; // Use API
+import { useToast } from '../components/ui/Toast';
 import PostCard from '../components/ui/PostCard';
-import { Search } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Feed = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { success, error: showError } = useToast();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
@@ -36,13 +38,12 @@ const Feed = () => {
         return matchesFilter && matchesSearch;
     });
 
-    const handleRequestContact = async (postId) => {
+    const handleContactRequest = async (postId) => {
         try {
-            await api.post(`/contact/${postId}`);
-            alert("Contact Request Sent Successfully!");
+            await api.post(`/contacts/${postId}`);
+            success('Contact Request Sent Successfully!');
         } catch (err) {
-            console.error(err);
-            alert(err.response?.data?.msg || "Failed to send request");
+            showError(err.response?.data?.msg || 'Failed to send request');
         }
     };
 

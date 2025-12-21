@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Alert } from 'react-native';
 import api from '../../src/services/api';
-import { MapPin } from 'lucide-react-native';
-
-// Mock data if API fails locally
-const MOCK_POSTS = [
-    { _id: '1', title: 'Welcome to MyCircle', description: 'This is a demo post since API might be unreachable.', type: 'job', user: { displayName: 'Admin' }, location: 'Local', price: 0 }
-];
+import PostCard from '../../src/components/ui/PostCard';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 const Feed = () => {
+    const router = useRouter(); // Add router
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -18,65 +16,60 @@ const Feed = () => {
 
     const fetchPosts = async () => {
         try {
-            // Real API Call
             const res = await api.get('/posts');
             setPosts(res.data);
         } catch (err) {
             console.log('API Error:', err);
-            // Fallback only if error is "Network Error" (meaning IP might be wrong), otherwise show empty or error
-            if (err.message === 'Network Error') {
-                alert("Check API_URL in src/services/api.ts");
-            }
+            Alert.alert("Connection Error", "Could not connect to server. Check API URL.");
         } finally {
             setLoading(false);
         }
     };
 
-    const renderItem = ({ item }) => (
-        <View className="bg-card mb-4 p-4 rounded-2xl border border-white/10">
-            <View className="flex-row justify-between mb-2">
-                <View className="flex-row items-center gap-2">
-                    <View className="w-8 h-8 rounded-full bg-secondary" />
-                    <View>
-                        <Text className="text-white font-bold">{item.title}</Text>
-                        <Text className="text-xs text-gray-400">{item.user?.displayName}</Text>
-                    </View>
-                </View>
-                <View className="px-2 py-1 bg-white/10 rounded-lg">
-                    <Text className="text-xs text-primary font-bold uppercase">{item.type}</Text>
-                </View>
-            </View>
+    const handleRequestContact = async (postId) => {
+        try {
+            await api.post(`/contacts/${postId}`);
+            Alert.alert("Success", "Contact Request Sent!");
+        } catch (err) {
+            Alert.alert("Error", err.response?.data?.msg || "Failed to send request");
+        }
+    }
 
-            <Text className="text-gray-300 mb-3" numberOfLines={3}>{item.description}</Text>
-
-            <View className="flex-row justify-between items-center border-t border-white/5 pt-3">
-                <View className="flex-row items-center gap-1">
-                    <MapPin size={12} color="#a1a1aa" />
-                    <Text className="text-xs text-gray-400">{item.location}</Text>
-                </View>
-                <Text className="text-white font-bold">₹{item.price || 0}</Text>
-            </View>
-
-            <TouchableOpacity className="mt-3 bg-primary py-2 rounded-xl items-center">
-                <Text className="text-white font-bold text-xs">Request Contact</Text>
-            </TouchableOpacity>
-        </View>
-    );
+    const handlePostPress = (postId) => {
+        router.push(`/post/${postId}`);
+    }
 
     return (
-        <View className="flex-1 bg-background pt-10 px-4">
-            <Text className="text-2xl font-bold text-white mb-4">Explore</Text>
+        <SafeAreaView className="flex-1 bg-black" edges={['top']}>
+            <View className="px-4 py-4 border-b border-white/10">
+                <Text className="text-3xl font-bold text-white">Explore</Text>
+                <Text className="text-zinc-400">Discover local opportunities</Text>
+            </View>
+
             {loading ? (
-                <ActivityIndicator color="#8b5cf6" />
+                <View className="flex-1 justify-center items-center">
+                    <ActivityIndicator size="large" color="#8b5cf6" />
+                </View>
             ) : (
                 <FlatList
                     data={posts}
                     keyExtractor={item => item._id}
-                    renderItem={renderItem}
+                    renderItem={({ item }) => (
+                        <PostCard
+                            post={item}
+                            isOwnPost={false}
+                            onPress={() => handlePostPress(item._id)}
+                            onRequestContact={() => handleRequestContact(item._id)}
+                        />
+                    )}
+                    contentContainerStyle={{ padding: 16 }}
                     showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={
+                        <Text className="text-white text-center mt-20">No posts found</Text>
+                    }
                 />
             )}
-        </View>
+        </SafeAreaView>
     );
 };
 

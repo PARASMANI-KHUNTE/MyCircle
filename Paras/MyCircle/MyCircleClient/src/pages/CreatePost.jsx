@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { AlertCircle, CheckCircle, Upload, X } from 'lucide-react';
 
 const CreatePost = () => {
     const navigate = useNavigate();
+    const { error: showError } = useToast();
     const [formData, setFormData] = useState({
         type: 'job',
         title: '',
@@ -29,7 +31,7 @@ const CreatePost = () => {
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);
         if (files.length + images.length > 5) {
-            alert('Maximum 5 images allowed');
+            showError('Maximum 5 images allowed');
             return;
         }
 

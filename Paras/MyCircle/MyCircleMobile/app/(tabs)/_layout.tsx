@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, PlusSquare, Inbox } from 'lucide-react-native';
+import { Home, PlusSquare, Inbox, Grid, User } from 'lucide-react-native';
 
 export default function TabLayout() {
     return (
@@ -36,6 +36,20 @@ export default function TabLayout() {
                 options={{
                     title: 'Requests',
                     tabBarIcon: ({ color }) => <Inbox size={24} color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="myposts"
+                options={{
+                    title: 'My Posts',
+                    tabBarIcon: ({ color }) => <Grid size={24} color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: 'Profile',
+                    tabBarIcon: ({ color }) => <User size={24} color={color} />,
                 }}
             />
         </Tabs>

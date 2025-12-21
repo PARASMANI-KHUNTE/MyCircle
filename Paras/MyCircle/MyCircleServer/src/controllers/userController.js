@@ -22,6 +22,7 @@ exports.getUserProfile = async (req, res) => {
 // @access  Private
 exports.updateUserProfile = async (req, res) => {
     try {
+        console.log('Update Profile Req Body:', req.body); // DEBUG LOG
         const { bio, contactPhone, contactWhatsapp, location, skills } = req.body;
 
         const user = await User.findById(req.user.id);
@@ -36,6 +37,7 @@ exports.updateUserProfile = async (req, res) => {
         if (contactWhatsapp) user.contactWhatsapp = contactWhatsapp;
         if (location) user.location = location;
         if (skills) user.skills = skills; // Expecting array of strings
+        if (req.file) user.avatar = req.file.path;
 
         await user.save();
         res.json(user);
@@ -71,6 +73,35 @@ exports.getUserStats = async (req, res) => {
             reviews: user.reviews,
             joined: user.createdAt
         });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+// @desc    Update user settings
+// @route   PUT /api/user/settings
+// @access  Private
+exports.updateUserSettings = async (req, res) => {
+    try {
+        const { emailNotifications, profileVisibility } = req.body;
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        if (user.preferences) {
+            if (emailNotifications !== undefined) user.preferences.emailNotifications = emailNotifications;
+            if (profileVisibility !== undefined) user.preferences.profileVisibility = profileVisibility;
+        } else {
+            user.preferences = {
+                emailNotifications: emailNotifications !== undefined ? emailNotifications : true,
+                profileVisibility: profileVisibility !== undefined ? profileVisibility : 'public'
+            };
+        }
+
+        await user.save();
+        res.json(user.preferences);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

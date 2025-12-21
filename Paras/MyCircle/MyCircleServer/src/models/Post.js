@@ -32,8 +32,8 @@ const PostSchema = new mongoose.Schema({
     }],
     status: {
         type: String,
-        enum: ['open', 'closed'],
-        default: 'open',
+        enum: ['active', 'inactive', 'sold', 'completed', 'archived'],
+        default: 'active',
     },
     contactPhone: {
         type: String,

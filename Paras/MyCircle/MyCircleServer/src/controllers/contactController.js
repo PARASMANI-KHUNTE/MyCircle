@@ -2,43 +2,69 @@ const ContactRequest = require('../models/ContactRequest');
 const Post = require('../models/Post');
 
 // @desc    Create a contact request
-// @route   POST /api/contact/:postId
+// @route   POST /api/contacts/request or POST /api/contacts/:postId
 // @access  Private
 exports.createRequest = async (req, res) => {
     try {
-        const post = await Post.findById(req.params.postId);
+        const requesterId = req.user.id;
+        const { postId: bodyPostId, recipientId } = req.body;
+        const postId = bodyPostId || req.params.postId;
 
-        if (!post) {
-            return res.status(404).json({ msg: 'Post not found' });
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
         }
 
+        // Fetch the post to get recipient
+        const post = await Post.findById(postId);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        const finalRecipientId = recipientId || post.user;
+
         // Check if user is the owner
-        if (post.user.toString() === req.user.id) {
+        if (post.user.toString() === requesterId) {
             return res.status(400).json({ msg: 'Cannot request contact for your own post' });
         }
 
         // Check for existing request
         const existingRequest = await ContactRequest.findOne({
-            post: req.params.postId,
-            requester: req.user.id,
+            requester: requesterId,
+            recipient: finalRecipientId,
+            post: postId
         });
 
         if (existingRequest) {
-            return res.status(400).json({ msg: 'Request already sent' });
+            return res.status(400).json({ message: 'Contact request already sent for this post' });
         }
 
-        const newRequest = new ContactRequest({
-            post: req.params.postId,
-            requester: req.user.id,
-            recipient: post.user,
+        // Create new request
+        const contactRequest = await ContactRequest.create({
+            requester: requesterId,
+            recipient: finalRecipientId,
+            post: postId,
             message: req.body.message,
+            status: 'pending'
         });
 
-        const request = await newRequest.save();
-        res.json(request);
+        // Populate requester details for notification
+        await contactRequest.populate('requester', 'displayName avatar');
+
+        // Send real-time notification to recipient
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user:${finalRecipientId}`).emit('notification', {
+                type: 'request_received',
+                requesterName: contactRequest.requester.displayName,
+                postId: postId,
+                requestId: contactRequest._id
+            });
+        }
+
+        res.json(contactRequest);
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error');
+        res.status(500).json({ message: 'Server Error' });
     }
 };
 
@@ -120,6 +146,20 @@ exports.updateRequestStatus = async (req, res) => {
 
         request.status = status;
         await request.save();
+
+        // Populate recipient details for notification
+        await request.populate('recipient', 'displayName');
+
+        // Send real-time notification to requester
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user:${request.requester}`).emit('notification', {
+                type: status === 'approved' ? 'request_approved' : 'request_rejected',
+                recipientName: request.recipient.displayName,
+                postId: request.post,
+                requestId: request._id
+            });
+        }
 
         res.json(request);
     } catch (err) {

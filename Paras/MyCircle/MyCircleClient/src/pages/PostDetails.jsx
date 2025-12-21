@@ -3,17 +3,23 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { motion } from 'framer-motion';
 import Button from '../components/ui/Button';
+import PostCard from '../components/ui/PostCard';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/ui/Toast';
+import { getAvatarUrl } from '../utils/avatar';
 import { ArrowLeft, MapPin, DollarSign, Clock, MessageCircle, Share2, Heart, Repeat } from 'lucide-react';
 
 const PostDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { success, error: showError } = useToast();
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [requestLoading, setRequestLoading] = useState(false);
     const [likes, setLikes] = useState([]);
     const [shares, setShares] = useState(0);
+    const [relatedPosts, setRelatedPosts] = useState([]);
 
     const currentUserId = user?.id;
     const isLiked = currentUserId && likes.includes(currentUserId);
@@ -25,6 +31,16 @@ const PostDetails = () => {
                 setPost(res.data);
                 setLikes(res.data.likes || []);
                 setShares(res.data.shares || 0);
+                setShares(res.data.shares || 0);
+
+                // Fetch Related Posts
+                try {
+                    const relatedRes = await api.get(`/posts/related/${id}`);
+                    setRelatedPosts(relatedRes.data);
+                } catch (error) {
+                    console.error("Failed to fetch related posts", error);
+                }
+
                 setLoading(false);
             } catch (err) {
                 console.error(err);
@@ -52,9 +68,34 @@ const PostDetails = () => {
             await api.post(`/posts/${id}/share`);
             setShares(shares + 1);
             navigator.clipboard.writeText(window.location.href);
-            alert('Link copied to clipboard!');
+            success('Link copied to clipboard!');
         } catch (err) {
             console.error(err);
+            showError('Failed to share post');
+        }
+    };
+
+    const handleContactRequest = async () => {
+        if (!user) {
+            showError('Please sign in to send contact requests');
+            navigate('/');
+            return;
+        }
+
+        setRequestLoading(true);
+        try {
+            await api.post('/contacts/request', {
+                postId: id,
+                recipientId: post.user._id
+            });
+            success('Contact request sent successfully!');
+        } catch (err) {
+            console.error('Contact request error:', err);
+            // Show the specific error message from the server
+            const errorMessage = err.response?.data?.message || err.response?.data?.msg || 'Failed to send contact request. Please try again.';
+            showError(errorMessage);
+        } finally {
+            setRequestLoading(false);
         }
     };
 
@@ -149,6 +190,19 @@ const PostDetails = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Related Posts */}
+                    {relatedPosts.length > 0 && (
+                        <div>
+                            <div className="h-px bg-white/10 mb-8" />
+                            <h2 className="text-xl font-bold text-white mb-4">Related Posts</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {relatedPosts.map(post => (
+                                    <PostCard key={post._id} post={post} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar */}
@@ -172,8 +226,14 @@ const PostDetails = () => {
 
                         {!isOwnPost && (
                             <div className="space-y-3">
-                                <Button variant="primary" className="w-full h-12 text-lg">
-                                    <MessageCircle className="w-5 h-5 mr-2" /> Contact {post.user?.displayName}
+                                <Button
+                                    variant="primary"
+                                    className="w-full h-12 text-lg"
+                                    onClick={handleContactRequest}
+                                    disabled={requestLoading}
+                                >
+                                    <MessageCircle className="w-5 h-5 mr-2" />
+                                    {requestLoading ? 'Sending Request...' : 'Request Contact'}
                                 </Button>
                                 <Button variant="outline" className="w-full h-12">
                                     Save for Later

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
+import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { Check, X, Clock, Phone, MessageCircle } from 'lucide-react';
 
 const Requests = () => {
+    const { error: showError } = useToast();
     const [activeTab, setActiveTab] = useState('received'); // 'received' or 'sent'
     const [receivedRequests, setReceivedRequests] = useState([]);
     const [sentRequests, setSentRequests] = useState([]);
@@ -17,7 +19,7 @@ const Requests = () => {
     const fetchRequests = async () => {
         setLoading(true);
         try {
-            const endpoint = activeTab === 'received' ? '/contact/received' : '/contact/sent';
+            const endpoint = activeTab === 'received' ? '/contacts/received' : '/contacts/sent';
             const res = await api.get(endpoint);
             if (activeTab === 'received') setReceivedRequests(res.data);
             else setSentRequests(res.data);
@@ -30,14 +32,14 @@ const Requests = () => {
 
     const handleAction = async (requestId, status) => {
         try {
-            await api.put(`/contact/${requestId}/status`, { status });
+            await api.put(`/contacts/${requestId}/status`, { status });
             // Optimistic update
             setReceivedRequests(prev => prev.map(req =>
                 req._id === requestId ? { ...req, status } : req
             ));
         } catch (err) {
             console.error(err);
-            alert("Action failed");
+            showError("Action failed. Please try again.");
         }
     };
 

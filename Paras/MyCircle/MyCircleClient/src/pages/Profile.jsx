@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { MapPin, Mail, Phone, Calendar, Edit2, Star, Shield, LayoutGrid } from 'lucide-react';
 import Button from '../components/ui/Button';
+import StatsCard from '../components/ui/StatsCard';
+import { getAvatarUrl } from '../utils/avatar';
 
 const Profile = () => {
     const { user } = useAuth();
@@ -18,8 +20,8 @@ const Profile = () => {
                     ...user, // Basic info from auth context
                     ...res.data, // Dynamic stats from API
                     location: user.location || 'Location not set',
-                    joined: user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Dec 2023',
-                    bio: user.bio || 'No bio provided.',
+                    joined: user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '',
+                    bio: user.bio || '',
                     skills: user.skills || [],
                 });
             } catch (err) {
@@ -56,7 +58,7 @@ const Profile = () => {
                     <div className="relative flex flex-col md:flex-row items-end gap-6 pt-12">
                         <div className="w-32 h-32 rounded-full border-4 border-dark bg-dark overflow-hidden shadow-xl">
                             <img
-                                src={profile.avatar}
+                                src={getAvatarUrl(profile)}
                                 alt={profile.displayName}
                                 className="w-full h-full object-cover"
                             />
@@ -74,10 +76,21 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        <Button variant="outline" className="mb-2" onClick={() => window.location.href = '/edit-profile'}>
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Edit Profile
-                        </Button>
+                        <div className="flex gap-3 mb-2">
+                            <Button variant="outline" onClick={() => window.location.href = '/edit-profile'}>
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Edit Profile
+                            </Button>
+                            <Button variant="outline" onClick={() => window.location.href = '/settings'}>
+                                Settings
+                            </Button>
+                            <Button variant="danger" onClick={() => {
+                                localStorage.removeItem('token');
+                                window.location.href = '/';
+                            }}>
+                                Logout
+                            </Button>
+                        </div>
                     </div>
 
                     <p className="mt-8 text-gray-300 leading-relaxed max-w-2xl">
@@ -94,34 +107,31 @@ const Profile = () => {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="glass p-6 rounded-xl flex items-center gap-4">
-                        <div className="p-3 rounded-lg bg-yellow-500/10 text-yellow-500">
-                            <Star className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold">{profile.rating || 0}</div>
-                            <div className="text-sm text-gray-400">Average Rating</div>
-                        </div>
-                    </div>
-                    <div className="glass p-6 rounded-xl flex items-center gap-4">
-                        <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                            <LayoutGrid className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold">{stats.totalPosts}</div>
-                            <div className="text-sm text-gray-400">Total Posts</div>
-                        </div>
-                    </div>
-                    <div className="glass p-6 rounded-xl flex items-center gap-4">
-                        <div className="p-3 rounded-lg bg-green-500/10 text-green-500">
-                            <Shield className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold">{stats.activePosts}</div>
-                            <div className="text-sm text-gray-400">Active Posts</div>
-                        </div>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <StatsCard
+                        icon={Star}
+                        label="Average Rating"
+                        value={profile.rating || 0}
+                        color="border-yellow-500/50"
+                    />
+                    <StatsCard
+                        icon={LayoutGrid}
+                        label="Total Posts"
+                        value={stats.totalPosts}
+                        color="border-primary/50"
+                    />
+                    <StatsCard
+                        icon={Shield}
+                        label="Active Posts"
+                        value={stats.activePosts}
+                        color="border-green-500/50"
+                    />
+                    <StatsCard
+                        icon={Mail}
+                        label="Contacts Recv"
+                        value={stats.contactsReceived || 0}
+                        color="border-pink-500/50"
+                    />
                 </div>
 
                 {/* Contact Info (Private) */}
@@ -139,7 +149,7 @@ const Profile = () => {
                             <Phone className="w-5 h-5 text-gray-400" />
                             <div>
                                 <div className="text-xs text-gray-500 uppercase tracking-wider">Phone Number</div>
-                                <div>+1 (555) 123-4567</div>
+                                <div>{profile.contactPhone || 'Not Added'}</div>
                             </div>
                         </div>
                     </div>

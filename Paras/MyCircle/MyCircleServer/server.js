@@ -12,6 +12,7 @@ const connectDB = require('./src/config/db');
 require('./src/config/passport')(passport);
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Initialize Socket.io

@@ -1,12 +1,6 @@
 const path = require('path');
 const dotenvPath = path.resolve(__dirname, '.env');
-const result = require('dotenv').config({ path: dotenvPath, debug: true });
-console.log("Dotenv loading from:", dotenvPath);
-if (result.error) {
-    console.error("Dotenv Error:", result.error);
-} else {
-    console.log("Dotenv Parsed:", result.parsed);
-}
+const result = require('dotenv').config({ path: dotenvPath });
 const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
@@ -39,11 +33,35 @@ io.on('connection', (socket) => {
     // Join user's personal room
     socket.on('join', (userId) => {
         socket.join(`user:${userId}`);
-        console.log(`User ${userId} joined their room`);
+        socket.userId = userId; // Store userId on socket
+        console.log(`User ${userId} joined their room: user:${userId}`);
+
+        // Broadcast online status
+        socket.broadcast.emit('user_online', userId);
+    });
+
+    // Typing indicators
+    socket.on('typing_start', (data) => {
+        // data: { conversationId, userId }
+        socket.to(data.conversationId).emit('user_typing', {
+            userId: data.userId,
+            conversationId: data.conversationId
+        });
+    });
+
+    socket.on('typing_stop', (data) => {
+        socket.to(data.conversationId).emit('user_stop_typing', {
+            userId: data.userId,
+            conversationId: data.conversationId
+        });
     });
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
+        if (socket.userId) {
+            // Broadcast offline status
+            socket.broadcast.emit('user_offline', socket.userId);
+        }
     });
 });
 
@@ -68,6 +86,8 @@ app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api/posts', require('./src/routes/postRoutes'));
 app.use('/api/contacts', require('./src/routes/contactRoutes'));
 app.use('/api/user', require('./src/routes/userRoutes'));
+app.use('/api/chat', require('./src/routes/chatRoutes'));
+app.use('/api/notifications', require('./src/routes/notificationRoutes'));
 
 app.get('/', (req, res) => {
     res.send('MyCircle API is running...');

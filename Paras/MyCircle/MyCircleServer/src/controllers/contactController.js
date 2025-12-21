@@ -24,7 +24,7 @@ exports.createRequest = async (req, res) => {
 
         // Check if user is the owner
         if (post.user.toString() === requesterId) {
-            return res.status(400).json({ msg: 'Cannot request contact for your own post' });
+            return res.status(400).json({ message: 'Cannot request contact for your own post' });
         }
 
         // Check for existing request
@@ -53,7 +53,7 @@ exports.createRequest = async (req, res) => {
         // Send real-time notification to recipient
         const io = req.app.get('io');
         if (io) {
-            io.to(`user:${finalRecipientId}`).emit('notification', {
+            io.to(`user:${finalRecipientId}`).emit('new_notification', {
                 type: 'request_received',
                 requesterName: contactRequest.requester.displayName,
                 postId: postId,
@@ -130,18 +130,18 @@ exports.updateRequestStatus = async (req, res) => {
     try {
         const { status } = req.body; // 'approved' or 'rejected'
         if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({ msg: 'Invalid status' });
+            return res.status(400).json({ message: 'Invalid status' });
         }
 
         let request = await ContactRequest.findById(req.params.id);
 
         if (!request) {
-            return res.status(404).json({ msg: 'Request not found' });
+            return res.status(404).json({ message: 'Request not found' });
         }
 
         // Verify recipient is the logged in user
         if (request.recipient.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'Not authorized' });
+            return res.status(401).json({ message: 'Not authorized' });
         }
 
         request.status = status;
@@ -153,7 +153,7 @@ exports.updateRequestStatus = async (req, res) => {
         // Send real-time notification to requester
         const io = req.app.get('io');
         if (io) {
-            io.to(`user:${request.requester}`).emit('notification', {
+            io.to(`user:${request.requester}`).emit('new_notification', {
                 type: status === 'approved' ? 'request_approved' : 'request_rejected',
                 recipientName: request.recipient.displayName,
                 postId: request.post,

@@ -38,7 +38,7 @@ export const SocketProvider = ({ children }) => {
             console.log('Socket connected:', newSocket.id);
             setConnected(true);
             // Join user's personal room
-            newSocket.emit('join', user.id);
+            newSocket.emit('join', user._id || user.id);
         });
 
         newSocket.on('disconnect', () => {
@@ -47,12 +47,26 @@ export const SocketProvider = ({ children }) => {
         });
 
         // Listen for notifications
-        newSocket.on('notification', (data) => {
+        newSocket.on('new_notification', (data) => {
             console.log('Notification received:', data);
 
             switch (data.type) {
+                case 'comment':
+                case 'reply':
+                    info(data.message);
+                    try {
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // Simple notification sound
+                        audio.play().catch(e => console.log('Audio play failed', e));
+                    } catch (e) {
+                        console.log('Audio error', e);
+                    }
+                    break;
                 case 'request_received':
                     info(`New contact request from ${data.requesterName}`);
+                    try {
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                        audio.play().catch(e => console.log('Audio play failed', e));
+                    } catch (e) { }
                     break;
                 case 'request_approved':
                     success(`${data.recipientName} approved your contact request!`);
@@ -62,6 +76,10 @@ export const SocketProvider = ({ children }) => {
                     break;
                 default:
                     info(data.message || 'New notification');
+                    try {
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                        audio.play().catch(e => console.log('Audio play failed', e));
+                    } catch (e) { }
             }
         });
 

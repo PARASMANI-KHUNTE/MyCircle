@@ -6,6 +6,7 @@ import PostCard from '../components/ui/PostCard';
 import { Filter, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 
 const Feed = () => {
     const navigate = useNavigate();
@@ -15,6 +16,18 @@ const Feed = () => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+
+    const { socket } = useSocket(); // Get socket from context
+
+    useEffect(() => {
+        if (socket) {
+            socket.on('new_post', (newPost) => {
+                setPosts(prev => [newPost, ...prev]);
+                success('New post added!');
+            });
+            return () => socket.off('new_post');
+        }
+    }, [socket]);
 
     useEffect(() => {
         fetchPosts();
@@ -37,15 +50,6 @@ const Feed = () => {
             post.description.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesFilter && matchesSearch;
     });
-
-    const handleContactRequest = async (postId) => {
-        try {
-            await api.post(`/contacts/${postId}`);
-            success('Contact Request Sent Successfully!');
-        } catch (err) {
-            showError(err.response?.data?.msg || 'Failed to send request');
-        }
-    };
 
     const handlePostClick = (postId) => {
         navigate(`/post/${postId}`);
@@ -100,12 +104,7 @@ const Feed = () => {
                             <PostCard
                                 post={post}
                                 currentUserId={user?._id}
-                                onRequestContact={(id) => {
-                                    // Prevent navigation when clicking contact button
-                                    const event = window.event || {};
-                                    if (event.stopPropagation) event.stopPropagation();
-                                    handleRequestContact(id);
-                                }}
+                            // onRequestContact removed to force navigation
                             />
                         </div>
                     ))}

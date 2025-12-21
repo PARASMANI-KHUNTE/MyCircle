@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 const { checkContentSafety } = require('../config/gemini');
+const { createNotification } = require('./notificationController');
 
 // @desc    Create a post
 // @route   POST /api/posts
@@ -35,6 +36,14 @@ exports.createPost = async (req, res) => {
         });
 
         const post = await newPost.save();
+        const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
+
+        // Emit real-time event
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new_post', populatedPost);
+        }
+
         res.json(post);
     } catch (err) {
         console.error(err.message);
@@ -51,7 +60,18 @@ exports.getPosts = async (req, res) => {
         const posts = await Post.find({ isActive: true })
             .sort({ createdAt: -1 })
             .populate('user', ['displayName', 'avatar']);
-        res.json(posts);
+
+        // Add application count for each post
+        const ContactRequest = require('../models/ContactRequest');
+        const postsWithCount = await Promise.all(posts.map(async (post) => {
+            const applicationCount = await ContactRequest.countDocuments({ post: post._id });
+            return {
+                ...post.toObject(),
+                applicationCount
+            };
+        }));
+
+        res.json(postsWithCount);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -63,13 +83,28 @@ exports.getPosts = async (req, res) => {
 // @access  Public
 exports.getPostById = async (req, res) => {
     try {
-        const post = await Post.findById(req.params.id).populate('user', ['displayName', 'avatar']);
+        const post = await Post.findById(req.params.id)
+            .populate('user', ['displayName', 'avatar'])
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user', select: 'displayName avatar' },
+                    { path: 'replies.user', select: 'displayName avatar' }
+                ]
+            });
 
         if (!post) {
             return res.status(404).json({ msg: 'Post not found' });
         }
 
-        res.json(post);
+        // Add application count
+        const ContactRequest = require('../models/ContactRequest');
+        const applicationCount = await ContactRequest.countDocuments({ post: post._id });
+
+        res.json({
+            ...post.toObject(),
+            applicationCount
+        });
     } catch (err) {
         console.error(err.message);
         if (err.kind === 'ObjectId') {
@@ -95,7 +130,7 @@ exports.deletePost = async (req, res) => {
             return res.status(401).json({ msg: 'User not authorized' });
         }
 
-        await post.remove();
+        await Post.findByIdAndDelete(req.params.id);
 
         res.json({ msg: 'Post removed' });
     } catch (err) {
@@ -220,6 +255,21 @@ exports.likePost = async (req, res) => {
         }
 
         await post.save();
+
+        // Notify if liked and not self
+        if (likeIndex === -1 && post.user.toString() !== req.user.id) {
+            const io = req.app.get('io');
+            await createNotification(io, {
+                recipient: post.user,
+                sender: req.user.id,
+                type: 'like',
+                title: 'New Like',
+                message: 'Someone liked your post.',
+                link: `/post/${post._id}`,
+                relatedId: post._id
+            });
+        }
+
         res.json({ likes: post.likes.length, isLiked: likeIndex === -1 });
     } catch (err) {
         console.error(err.message);
@@ -244,7 +294,7 @@ exports.sharePost = async (req, res) => {
         post.shares += 1;
         await post.save();
 
-        res.json({ shares: post.shares });
+        res.json({ shares: post.shares, link: `${process.env.CLIENT_URL || 'http://localhost:5173'}/post/${post._id}` });
     } catch (err) {
         console.error(err.message);
         if (err.kind === 'ObjectId') {
@@ -355,6 +405,185 @@ exports.getPostAnalytics = async (req, res) => {
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
+        res.status(500).send('Server Error');
+    }
+};
+// @desc    Create a comment
+// @route   POST /api/posts/:id/comment
+// @access  Private
+exports.commentOnPost = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+
+        if (!post) {
+            return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        const newComment = {
+            user: req.user.id,
+            text: req.body.text,
+            createdAt: new Date()
+        };
+
+        post.comments.unshift(newComment);
+        await post.save();
+
+        // Populate the user of the new comment to return it immediately
+        const populatedPost = await Post.findById(req.params.id).populate('comments.user', ['displayName', 'avatar']);
+        const addedComment = populatedPost.comments[0];
+
+        // Emit notification to post owner (if not self)
+        if (post.user.toString() !== req.user.id) {
+            const io = req.app.get('io');
+            await createNotification(io, {
+                recipient: post.user,
+                sender: req.user.id,
+                type: 'request', // Map 'comment' to available enum type or expand enum. Using 'request' (message circle) for now or 'info'
+                title: 'New Comment',
+                message: `New comment on your post: ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''}`,
+                link: `/post/${post._id}`,
+                relatedId: post._id
+            });
+        }
+
+        res.json(addedComment);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Delete comment
+// @route   DELETE /api/posts/:id/comment/:commentId
+// @access  Private
+exports.deleteComment = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+
+        if (!post) {
+            return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        // Pull out comment
+        const comment = post.comments.find(comment => comment.id === req.params.commentId);
+
+        if (!comment) {
+            return res.status(404).json({ msg: 'Comment not found' });
+        }
+
+        // Check user
+        if (comment.user.toString() !== req.user.id && post.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'User not authorized' });
+        }
+
+        // Get remove index
+        const removeIndex = post.comments.map(comment => comment.id.toString()).indexOf(req.params.commentId);
+
+        post.comments.splice(removeIndex, 1);
+
+        await post.save();
+        res.json(post.comments);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Edit comment
+// @route   PUT /api/posts/:id/comment/:commentId
+// @access  Private
+exports.editComment = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+
+        if (!post) {
+            return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        // Find comment
+        const comment = post.comments.find(comment => comment.id === req.params.commentId);
+
+        if (!comment) {
+            return res.status(404).json({ msg: 'Comment not found' });
+        }
+
+        // Check user authorization
+        if (comment.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'User not authorized' });
+        }
+
+        // Update comment text
+        comment.text = req.body.text;
+        await post.save();
+
+        // Return updated comment with populated user
+        const populatedPost = await Post.findById(req.params.id).populate('comments.user', ['displayName', 'avatar']);
+        const updatedComment = populatedPost.comments.find(c => c.id === req.params.commentId);
+
+        res.json(updatedComment);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Reply to a comment
+// @route   POST /api/posts/:id/comment/:commentId/reply
+// @access  Private
+exports.replyToComment = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+
+        if (!post) {
+            return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        const comment = post.comments.find(comment => comment.id === req.params.commentId);
+
+        if (!comment) {
+            return res.status(404).json({ msg: 'Comment not found' });
+        }
+
+        const newReply = {
+            user: req.user.id,
+            text: req.body.text,
+            createdAt: new Date()
+        };
+
+        if (!comment.replies) {
+            comment.replies = [];
+        }
+
+        comment.replies.push(newReply);
+        await post.save();
+
+        // Populate to return full data
+        const populatedPost = await Post.findById(req.params.id)
+            .populate('comments.replies.user', ['displayName', 'avatar']);
+
+        const updatedComment = populatedPost.comments.find(c => c.id === req.params.commentId);
+        const addedReply = updatedComment.replies[updatedComment.replies.length - 1];
+
+
+        // Emit notification to comment owner (if not self)
+        if (comment.user.toString() !== req.user.id) {
+            const io = req.app.get('io');
+            if (io) {
+                await createNotification(io, {
+                    recipient: comment.user,
+                    sender: req.user.id,
+                    type: 'request', // Using 'request' as generic 'reply' or add 'reply' to enum
+                    title: 'New Reply',
+                    message: `Reply to your comment: ${req.body.text.substring(0, 30)}...`,
+                    link: `/post/${post._id}`,
+                    relatedId: post._id
+                });
+            }
+        }
+
+        res.json(addedReply);
+    } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 };

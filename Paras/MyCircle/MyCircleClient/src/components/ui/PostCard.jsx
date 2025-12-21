@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Tag, MessageCircle, Clock, Heart, Share2, Repeat, BarChart2 } from 'lucide-react';
+import { MapPin, Tag, MessageCircle, Clock, Heart, Share2, Repeat, BarChart2, Users } from 'lucide-react';
 import Button from './Button';
 import api from '../../utils/api';
 import { useToast } from './Toast';
@@ -100,9 +100,13 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                     <img
-                        src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.displayName}`}
+                        src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.displayName || 'User'}&background=random`}
                         alt={user?.displayName}
                         className="w-10 h-10 rounded-full bg-secondary object-cover border border-white/10"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || 'User'}&background=random`;
+                        }}
                     />
                     <div>
                         <h3 className="font-semibold text-white leading-tight line-clamp-1">{title}</h3>
@@ -170,6 +174,13 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                         <Share2 className="w-4 h-4" />
                         {shares}
                     </button>
+                    {/* Application Count for job/service posts */}
+                    {(type === 'job' || type === 'service') && post.applicationCount !== undefined && (
+                        <div className="flex items-center gap-1 text-xs text-blue-400" title="Applications">
+                            <Users className="w-4 h-4" />
+                            {post.applicationCount}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -178,7 +189,10 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                     <Button
                         variant="primary"
                         className="text-sm px-4 py-2 w-full justify-center"
-                        onClick={() => onRequestContact(post._id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onRequestContact(post._id, e);
+                        }}
                     >
                         <MessageCircle className="w-4 h-4" /> Contact
                     </Button>

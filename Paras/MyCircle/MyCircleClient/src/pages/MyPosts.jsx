@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import api from '../utils/api';
+import { useToast } from '../components/ui/Toast';
+import { useDialog } from '../hooks/useDialog';
 import PostCard from '../components/ui/PostCard';
 import Button from '../components/ui/Button';
 import { Plus, Filter, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const MyPosts = () => {
+    const { success, error: showError } = useToast();
+    const dialog = useDialog();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, active, inactive, sold
@@ -37,12 +41,16 @@ const MyPosts = () => {
     };
 
     const handleDelete = async (postId) => {
-        if (!window.confirm('Are you sure you want to delete this post?')) return;
+        const confirmed = await dialog.confirm('Are you sure you want to delete this post?', 'Delete Post');
+        if (!confirmed) return;
+
         try {
             await api.delete(`/posts/${postId}`);
             setPosts(posts.filter(p => p._id !== postId));
+            success('Post deleted successfully!');
         } catch (err) {
             console.error(err);
+            showError('Failed to delete post.');
         }
     };
 
@@ -63,11 +71,6 @@ const MyPosts = () => {
                     <h1 className="text-3xl font-bold text-white mb-2">My Posts</h1>
                     <p className="text-gray-400">Manage your listings and services</p>
                 </div>
-                <Link to="/create-post">
-                    <Button variant="primary">
-                        <Plus className="w-5 h-5 mr-2" /> Create New Post
-                    </Button>
-                </Link>
             </div>
 
             {/* Filters & Controls */}
@@ -107,9 +110,6 @@ const MyPosts = () => {
                     <Filter className="w-12 h-12 text-gray-500 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-white mb-2">No posts found</h3>
                     <p className="text-gray-400 mb-6">You haven't created any posts with this status yet.</p>
-                    <Link to="/create-post">
-                        <Button variant="outline">Create Post</Button>
-                    </Link>
                 </div>
             ) : (
                 <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>

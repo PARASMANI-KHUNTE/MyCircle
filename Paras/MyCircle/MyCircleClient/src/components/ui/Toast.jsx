@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Info, X, MessageCircle, Heart, UserPlus } from 'lucide-react';
 
 const ToastContext = createContext();
 
@@ -55,14 +55,20 @@ const Toast = ({ message, type, onClose }) => {
         success: <CheckCircle className="w-5 h-5" />,
         error: <XCircle className="w-5 h-5" />,
         warning: <AlertCircle className="w-5 h-5" />,
-        info: <Info className="w-5 h-5" />
+        info: <Info className="w-5 h-5" />,
+        message: <MessageCircle className="w-5 h-5" />,
+        like: <Heart className="w-5 h-5" />,
+        request: <UserPlus className="w-5 h-5" />
     };
 
     const colors = {
         success: 'bg-green-500/10 border-green-500/50 text-green-400',
         error: 'bg-red-500/10 border-red-500/50 text-red-400',
         warning: 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400',
-        info: 'bg-blue-500/10 border-blue-500/50 text-blue-400'
+        info: 'bg-blue-500/10 border-blue-500/50 text-blue-400',
+        message: 'bg-purple-500/10 border-purple-500/50 text-purple-400',
+        like: 'bg-pink-500/10 border-pink-500/50 text-pink-400',
+        request: 'bg-orange-500/10 border-orange-500/50 text-orange-400'
     };
 
     return (

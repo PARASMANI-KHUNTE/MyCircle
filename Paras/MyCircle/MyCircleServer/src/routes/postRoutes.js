@@ -21,6 +21,10 @@ router.post('/:id/like', auth, postController.likePost);
 router.post('/:id/share', postController.sharePost);
 router.get('/related/:id', postController.getRelatedPosts);
 router.patch('/:id/status', auth, postController.updatePostStatus);
+router.post('/:id/comment', auth, postController.commentOnPost);
+router.put('/:id/comment/:commentId', auth, postController.editComment);
+router.delete('/:id/comment/:commentId', auth, postController.deleteComment);
+router.post('/:id/comment/:commentId/reply', auth, postController.replyToComment);
 router.get('/:id/analytics', auth, postController.getPostAnalytics);
 
 module.exports = router;

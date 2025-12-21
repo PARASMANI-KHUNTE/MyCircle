@@ -20,7 +20,9 @@ const Landing = () => {
     const webId = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
     const [request, response, promptAsync] = Google.useAuthRequest({
-        expoClientId: webId, // EXACT property name from your checklist
+        expoClientId: webId,
+        iosClientId: webId, // Force Web ID to avoid mismatch
+        androidClientId: webId, // Force Web ID to avoid mismatch while satisfying "must be defined"
         redirectUri,
         scopes: ['profile', 'email'],
     } as any);

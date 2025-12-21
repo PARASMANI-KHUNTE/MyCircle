@@ -1,10 +1,9 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
-// NOTE: Uses localhost for Android Emulator (10.0.2.2) or local IP for physical device
-// NOTE: Uses localhost for Android Emulator (10.0.2.2) or local IP for physical device
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.10:5000/api';
-const AUTH_URL = `${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.10:5000'}/auth`;
+// Get API URL from environment variables
+const API_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 'http://192.168.1.4:5000/api';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -21,20 +20,9 @@ api.interceptors.request.use(
         }
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        return Promise.reject(error);
+    }
 );
 
-export const saveToken = async (token: string) => {
-    await SecureStore.setItemAsync('token', token);
-};
-
-export const getToken = async () => {
-    return await SecureStore.getItemAsync('token');
-};
-
-export const removeToken = async () => {
-    await SecureStore.deleteItemAsync('token');
-};
-
-export { API_URL, AUTH_URL };
 export default api;

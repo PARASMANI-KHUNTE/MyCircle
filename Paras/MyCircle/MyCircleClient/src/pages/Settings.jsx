@@ -1,91 +1,132 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bell, Shield, Trash2, ArrowLeft, Moon, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import api from '../utils/api';
 import Button from '../components/ui/Button';
+import { Bell, Lock, Trash2, Save } from 'lucide-react';
 
 const Settings = () => {
-    const navigate = useNavigate();
-    const [notifications, setNotifications] = useState(true);
-    const [publicProfile, setPublicProfile] = useState(true);
+    const [preferences, setPreferences] = useState({
+        emailNotifications: true,
+        profileVisibility: 'public'
+    });
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState('');
 
-    const handleDeleteAccount = () => {
-        if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-            // Call API to delete account
-            alert("Account deletion is not yet implemented.");
+    useEffect(() => {
+        // Fetch current user settings
+        const fetchSettings = async () => {
+            try {
+                const res = await api.get('/user/profile');
+                if (res.data.preferences) {
+                    setPreferences(res.data.preferences);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setPreferences(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage('');
+        try {
+            await api.put('/user/settings', preferences);
+            setMessage('Settings updated successfully!');
+        } catch (err) {
+            console.error(err);
+            setMessage('Failed to update settings.');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div className="container mx-auto px-6 py-24 text-white max-w-2xl">
-            <Button variant="ghost" className="mb-6 pl-0 text-gray-400 hover:text-white" onClick={() => navigate('/profile')}>
-                <ArrowLeft className="w-5 h-5 mr-2" /> Back to Profile
-            </Button>
+        <div className="container mx-auto px-6 py-24 min-h-screen">
+            <h1 className="text-3xl font-bold text-white mb-8">Account Settings</h1>
 
-            <h1 className="text-3xl font-bold mb-8">Settings</h1>
-
-            <div className="space-y-6">
+            <div className="max-w-2xl mx-auto space-y-8">
                 {/* Notifications */}
-                <div className="glass p-6 rounded-2xl">
-                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Bell className="w-5 h-5 text-primary" /> Notifications
-                    </h2>
-                    <div className="flex items-center justify-between py-2">
+                <div className="glass rounded-2xl p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                            <Bell className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-xl font-bold text-white">Notifications</h2>
+                    </div>
+
+                    <div className="flex items-center justify-between">
                         <div>
-                            <div className="font-medium">Email Notifications</div>
-                            <div className="text-sm text-gray-400">Receive emails about new messages and updates</div>
+                            <p className="text-white font-medium">Email Notifications</p>
+                            <p className="text-sm text-gray-400">Receive emails about new messages and updates</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={notifications} onChange={() => setNotifications(!notifications)} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            <input
+                                type="checkbox"
+                                name="emailNotifications"
+                                checked={preferences.emailNotifications}
+                                onChange={handleChange}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                         </label>
                     </div>
                 </div>
 
                 {/* Privacy */}
-                <div className="glass p-6 rounded-2xl">
-                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-green-500" /> Privacy
-                    </h2>
-                    <div className="flex items-center justify-between py-2">
-                        <div>
-                            <div className="font-medium">Public Profile</div>
-                            <div className="text-sm text-gray-400">Allow others to see your profile details</div>
+                <div className="glass rounded-2xl p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                            <Lock className="w-6 h-6" />
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={publicProfile} onChange={() => setPublicProfile(!publicProfile)} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
+                        <h2 className="text-xl font-bold text-white">Privacy</h2>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Profile Visibility</label>
+                            <select
+                                name="profileVisibility"
+                                value={preferences.profileVisibility}
+                                onChange={handleChange}
+                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
+                            >
+                                <option value="public">Public (Everyone can see your profile)</option>
+                                <option value="private">Private (Only you can see your details)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                {/* Appearance (Mock) */}
-                <div className="glass p-6 rounded-2xl">
-                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Globe className="w-5 h-5 text-blue-500" /> Preferences
-                    </h2>
-                    <div className="flex items-center justify-between py-2 opacity-50 cursor-not-allowed">
-                        <div>
-                            <div className="font-medium">Dark Mode</div>
-                            <div className="text-sm text-gray-400">Toggle application theme</div>
-                        </div>
-                        <div className="text-xs text-gray-500 font-mono border border-gray-600 px-2 py-1 rounded">ALWAYS ON</div>
-                    </div>
+                {/* Save Button */}
+                <div className="flex justify-end">
+                    <Button variant="primary" onClick={handleSubmit} disabled={loading}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {loading ? 'Saving...' : 'Save Changes'}
+                    </Button>
                 </div>
+                {message && <p className={`text-center ${message.includes('success') ? 'text-green-400' : 'text-red-400'}`}>{message}</p>}
 
                 {/* Danger Zone */}
-                <div className="glass p-6 rounded-2xl border border-red-500/20">
-                    <h2 className="text-xl font-bold mb-4 text-red-500 flex items-center gap-2">
-                        <Trash2 className="w-5 h-5" /> Danger Zone
-                    </h2>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="font-medium text-white">Delete Account</div>
-                            <div className="text-sm text-gray-400">Permanently delete your account and all data</div>
+                <div className="border border-red-500/20 rounded-2xl p-8 mt-12 bg-red-500/5">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-red-500/10 text-red-500">
+                            <Trash2 className="w-6 h-6" />
                         </div>
-                        <Button variant="outline" className="border-red-500/50 text-red-500 hover:bg-red-500/10 hover:text-red-400" onClick={handleDeleteAccount}>
-                            Delete Account
-                        </Button>
+                        <h2 className="text-xl font-bold text-white">Danger Zone</h2>
                     </div>
+                    <p className="text-gray-400 mb-6">Permanently delete your account and all of your content.</p>
+                    <Button variant="outline" className="text-red-500 border-red-500/20 hover:bg-red-500/10 w-full justify-center">
+                        Delete Account
+                    </Button>
                 </div>
             </div>
         </div>

@@ -32,8 +32,8 @@ const PostSchema = new mongoose.Schema({
     }],
     status: {
         type: String,
-        enum: ['open', 'closed'],
-        default: 'open',
+        enum: ['active', 'inactive', 'sold', 'completed', 'archived'],
+        default: 'active',
     },
     contactPhone: {
         type: String,
@@ -68,6 +68,36 @@ const PostSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    comments: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        text: {
+            type: String,
+            required: true
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        },
+        replies: [{
+            user: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            text: {
+                type: String,
+                required: true
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
+            }
+        }]
+    }],
 });
 
 module.exports = mongoose.model('Post', PostSchema);

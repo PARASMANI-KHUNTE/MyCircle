@@ -42,6 +42,21 @@ const UserSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    preferences: {
+        emailNotifications: { type: Boolean, default: true },
+        profileVisibility: { type: String, enum: ['public', 'private'], default: 'public' }
+    },
+    blockedUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    reports: [{
+        reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        reason: String,
+        contentType: { type: String, enum: ['post', 'comment', 'chat', 'user'] },
+        contentId: mongoose.Schema.Types.ObjectId,
+        createdAt: { type: Date, default: Date.now }
+    }],
     stats: {
         totalPosts: { type: Number, default: 0 },
         activePosts: { type: Number, default: 0 },

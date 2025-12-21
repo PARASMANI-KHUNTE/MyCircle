@@ -1,9 +1,19 @@
 import axios from 'axios';
 
 const isProduction = import.meta.env.PROD;
-const apiURL = isProduction
+let rawApiURL = isProduction
     ? (import.meta.env.VITE_API_URL || '')
     : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
+
+// Robust URL check: Ensure it has http/https. 
+// If it starts with ':', assume it's a port and prepend localhost.
+if (rawApiURL.startsWith(':')) {
+    rawApiURL = `http://localhost${rawApiURL}`;
+} else if (rawApiURL && !rawApiURL.startsWith('http')) {
+    rawApiURL = `http://${rawApiURL}`;
+}
+
+const apiURL = rawApiURL;
 
 const api = axios.create({
     baseURL: `${apiURL}/api`,

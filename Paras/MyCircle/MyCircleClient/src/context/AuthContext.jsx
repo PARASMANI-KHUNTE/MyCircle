@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import axios from 'axios';
 
@@ -13,10 +14,13 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const navigate = useNavigate();
+
     const fetchUserProfile = async () => {
         try {
             const res = await api.get('/user/profile');
             setUser(res.data);
+            return res.data; // Return user data for conditional redirects
         } catch (err) {
             console.error("Error fetching profile:", err.message);
             // If fetching profile fails, token might be invalid
@@ -37,7 +41,10 @@ export const AuthProvider = ({ children }) => {
                 localStorage.setItem('token', tokenFromUrl);
                 // Remove token from URL for clean state
                 window.history.replaceState({}, document.title, window.location.pathname);
-                await fetchUserProfile();
+                const userData = await fetchUserProfile();
+                if (userData) {
+                    navigate('/feed');
+                }
             } else {
                 const storedToken = localStorage.getItem('token');
                 if (storedToken) {

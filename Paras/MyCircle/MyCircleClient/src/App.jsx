@@ -22,8 +22,8 @@ import DialogProvider from './components/ui/DialogProvider';
 function App() {
   return (
     <ToastProvider>
-      <AuthProvider>
-        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
           <SocketProvider>
             <NotificationProvider>
               <DialogProvider>
@@ -40,15 +40,15 @@ function App() {
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/chat" element={<Chat />} />
                     <Route path="/settings" element={<Settings />} />
-                    <Route path="/login/success" element={<Home />} /> {/* Temporary redirect handler */}
+                    <Route path="/login/success" element={<Home />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Layout>
               </DialogProvider>
             </NotificationProvider>
           </SocketProvider>
-        </Router>
-      </AuthProvider>
+        </AuthProvider>
+      </Router>
     </ToastProvider>
   );
 }

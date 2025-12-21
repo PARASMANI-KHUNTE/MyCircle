@@ -37,7 +37,8 @@ router.get(
             (err, token) => {
                 if (err) throw err;
                 // Redirect to frontend with token
-                res.redirect(`http://localhost:5173/login/success?token=${token}`);
+                const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+                res.redirect(`${clientUrl}/login/success?token=${token}`);
             }
         );
     }

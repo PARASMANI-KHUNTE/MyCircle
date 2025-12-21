@@ -38,6 +38,7 @@ services:
   - type: web
     name: mycircle-client
     runtime: static
+    plan: free
     root: Paras/MyCircle/MyCircleClient
     buildCommand: npm install && npm run build
     staticPublishPath: dist

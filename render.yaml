@@ -35,7 +35,7 @@ services:
           property: url
 
   # Frontend Service
-  - type: static
+  - type: web
     name: mycircle-client
     env: static
     root: Paras/MyCircle/MyCircleClient

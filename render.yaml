@@ -3,7 +3,7 @@ services:
   - type: web
     name: mycircle-server
     runtime: node
-    root: Paras/MyCircle/MyCircleServer
+    rootDir: Paras/MyCircle/MyCircleServer
     buildCommand: npm install
     startCommand: node server.js
     plan: free # Optional: defaults to starter/free depending on account
@@ -39,7 +39,7 @@ services:
     name: mycircle-client
     runtime: static
     plan: free
-    root: Paras/MyCircle/MyCircleClient
+    rootDir: Paras/MyCircle/MyCircleClient
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     routes:

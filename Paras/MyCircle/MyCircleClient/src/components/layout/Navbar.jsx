@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Rocket, PlusCircle, MessageCircle } from 'lucide-react';
+import { Menu, X, PlusCircle, MessageCircle } from 'lucide-react';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -51,9 +51,7 @@ const Navbar = () => {
             <div className="container mx-auto px-6 flex items-center justify-between">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 group">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                        <Rocket className="text-white w-5 h-5 group-hover:animate-pulse" />
-                    </div>
+                    <img src="/logo.png" alt="MyCircle" className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" />
                     <span className="text-xl font-bold font-display tracking-tight text-white group-hover:text-primary transition-colors">
                         MyCircle
                     </span>

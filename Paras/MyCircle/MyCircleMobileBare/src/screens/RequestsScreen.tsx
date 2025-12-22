@@ -6,7 +6,7 @@ import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
-const RequestsScreen = () => {
+const RequestsScreen = ({ navigation }: any) => {
     const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
     const [sentRequests, setSentRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -37,7 +37,7 @@ const RequestsScreen = () => {
 
     const handleAction = async (id: string, status: string) => {
         try {
-            await api.post(`/contacts/${id}/status`, { status });
+            await api.put(`/contacts/${id}/status`, { status });
             Alert.alert('Success', `Request ${status}`);
             fetchRequests();
         } catch (error) {
@@ -63,7 +63,9 @@ const RequestsScreen = () => {
                 <View style={styles.headerText}>
                     <Text style={styles.userName}>{item.requester?.displayName}</Text>
                     <Text style={styles.requestContext}>wants to contact regarding your post:</Text>
-                    <Text style={styles.postTitle}>{item.post?.title}</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('PostDetails', { id: item.post._id })}>
+                        <Text style={[styles.postTitle, { textDecorationLine: 'underline' }]}>{item.post?.title}</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 

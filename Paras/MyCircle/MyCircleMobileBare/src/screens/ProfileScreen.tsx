@@ -1,25 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, Alert, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { Settings, LogOut, MapPin, MessageCircle } from 'lucide-react-native';
+import { Settings, LogOut, MapPin, MessageCircle, Shield, ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAvatarUrl } from '../utils/avatar';
 import api from '../services/api';
 
-const ProfileScreen = ({ navigation }: any) => {
-    const { logout } = useAuth();
+const ProfileScreen = ({ navigation, route }: any) => {
+    const { logout, user: currentUser } = useAuth();
     const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    // Check if we are viewing another user's profile
+    const userId = route?.params?.userId;
+    const isOwnProfile = !userId || (currentUser && userId === currentUser._id) || (currentUser && userId === currentUser.id);
 
     useEffect(() => {
         fetchProfile();
-    }, []);
+    }, [userId]);
 
     const fetchProfile = async () => {
         try {
-            const res = await api.get('/user/profile');
+            setLoading(true);
+            const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
+            const res = await api.get(endpoint);
             setUser(res.data);
         } catch (error) {
             console.error(error);
+            Alert.alert("Error", "Could not fetch profile");
+            if (!isOwnProfile) navigation.goBack();
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -30,7 +41,55 @@ const ProfileScreen = ({ navigation }: any) => {
         ]);
     };
 
-    if (!user) {
+    const handleReport = () => {
+        Alert.alert(
+            "Report User",
+            "Why are you reporting this user?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Spam", onPress: () => submitReport("spam") },
+                { text: "Harassment", onPress: () => submitReport("harassment") },
+                { text: "Inappropriate Content", onPress: () => submitReport("inappropriate") }
+            ]
+        );
+    };
+
+    const submitReport = async (reason: string) => {
+        try {
+            await api.post('/user/report', {
+                reportedUserId: userId,
+                reason,
+                contentType: 'profile',
+                contentId: userId
+            });
+            Alert.alert("Reported", "Thank you for your report. We will investigate.");
+        } catch (error) {
+            Alert.alert("Error", "Failed to submit report");
+        }
+    };
+
+    const handleBlock = () => {
+        Alert.alert(
+            "Block User",
+            "Are you sure? You won't see their posts or messages.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Block", style: "destructive", onPress: async () => {
+                        try {
+                            await api.post(`/user/block/${userId}`);
+                            Alert.alert("Blocked", "User has been blocked");
+                            navigation.goBack();
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to block user");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    if (loading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#8b5cf6" />
@@ -38,21 +97,38 @@ const ProfileScreen = ({ navigation }: any) => {
         );
     }
 
+    if (!user) return null;
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.headerRow}>
-                    <Text style={styles.headerTitle}>Profile</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {!isOwnProfile && (
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16, padding: 4 }}>
+                                <ArrowLeft size={24} color="#ffffff" />
+                            </TouchableOpacity>
+                        )}
+                        <Text style={styles.headerTitle}>{isOwnProfile ? 'Profile' : 'User Profile'}</Text>
+                    </View>
                     <View style={styles.actionRow}>
-                        <TouchableOpacity onPress={() => navigation.navigate('ChatList')} style={styles.actionButton}>
-                            <MessageCircle size={20} color="#8b5cf6" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.actionButton}>
-                            <Settings size={20} color="#a1a1aa" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleLogout} style={styles.actionButton}>
-                            <LogOut size={20} color="#ef4444" />
-                        </TouchableOpacity>
+                        {isOwnProfile ? (
+                            <>
+                                <TouchableOpacity onPress={() => navigation.navigate('ChatList')} style={styles.actionButton}>
+                                    <MessageCircle size={20} color="#8b5cf6" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.actionButton}>
+                                    <Settings size={20} color="#a1a1aa" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleLogout} style={styles.actionButton}>
+                                    <LogOut size={20} color="#ef4444" />
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <TouchableOpacity onPress={handleReport} style={styles.actionButton}>
+                                <Shield size={20} color="#ef4444" />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -78,12 +154,19 @@ const ProfileScreen = ({ navigation }: any) => {
                 {/* Statistics */}
                 <View style={styles.statsGrid}>
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('MyPosts')}
-                        style={styles.statBox}
-                        activeOpacity={0.7}
+                        onPress={() => isOwnProfile && navigation.navigate('MyPosts')}
+                        style={[styles.statBox, isOwnProfile && styles.activeStatBox]}
+                        activeOpacity={isOwnProfile ? 0.7 : 1}
+                        disabled={!isOwnProfile}
                     >
-                        <Text style={styles.statValue}>{user.stats?.totalPosts || 0}</Text>
-                        <Text style={styles.statLabel}>Posts</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={styles.statValue}>{user.stats?.totalPosts || 0}</Text>
+                            {isOwnProfile && <Settings size={12} color="transparent" />}
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                            <Text style={[styles.statLabel, isOwnProfile && { color: '#8b5cf6' }]}>Posts</Text>
+                            {isOwnProfile && <MessageCircle size={10} color="#8b5cf6" style={{ marginLeft: 4, transform: [{ rotate: '-45deg' }] }} />}
+                        </View>
                     </TouchableOpacity>
                     <View style={styles.statBox}>
                         <Text style={[styles.statValue, { color: '#a855f7' }]}>{user.stats?.requestsReceived || 0}</Text>
@@ -119,12 +202,40 @@ const ProfileScreen = ({ navigation }: any) => {
                     </View>
                 </View>
 
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('EditProfile')}
-                    style={styles.editButton}
-                >
-                    <Text style={styles.editButtonText}>Edit Profile</Text>
-                </TouchableOpacity>
+                {isOwnProfile ? (
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('EditProfile')}
+                            style={[styles.actionButtonMain, styles.editButton]}
+                        >
+                            <Text style={styles.editButtonText}>Edit Profile</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('MyPosts')}
+                            style={[styles.actionButtonMain, styles.postsButton]}
+                        >
+                            <Text style={[styles.editButtonText, { color: '#ffffff' }]}>My Posts</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('ChatWindow', { recipient: user })}
+                            style={[styles.actionButtonMain, styles.messageButton]}
+                        >
+                            <MessageCircle size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={[styles.editButtonText, { color: '#ffffff' }]}>Message</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={handleBlock}
+                            style={[styles.actionButtonMain, styles.blockButton]}
+                        >
+                            <Text style={[styles.editButtonText, { color: '#ef4444' }]}>Block</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
             </ScrollView>
         </SafeAreaView>
@@ -273,17 +384,43 @@ const styles = StyleSheet.create({
         color: '#71717a',
         fontStyle: 'italic',
     },
-    editButton: {
-        backgroundColor: '#ffffff',
+    activeStatBox: {
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 16,
+    },
+    actionButtonMain: {
+        flex: 1,
         paddingVertical: 14,
         borderRadius: 16,
         alignItems: 'center',
-        marginTop: 16,
+    },
+    editButton: {
+        backgroundColor: '#ffffff',
+    },
+    postsButton: {
+        backgroundColor: '#27272a',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     editButtonText: {
         fontSize: 16,
         fontWeight: 'bold',
         color: '#000000',
+    },
+    messageButton: {
+        backgroundColor: '#8b5cf6',
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    blockButton: {
+        backgroundColor: '#27272a',
+        borderWidth: 1,
+        borderColor: '#ef4444',
     },
 });
 

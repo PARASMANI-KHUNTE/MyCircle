@@ -28,7 +28,7 @@ interface PostCardProps {
     onRequestContact?: () => void;
 }
 
-const PostCard = ({ post, isOwnPost, onPress, onRequestContact }: PostCardProps) => {
+const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: PostCardProps & { navigation?: any }) => {
     const { user: currentUser } = useAuth();
     const { success, error } = useToast();
     const [likes, setLikes] = useState(post.likes || []);
@@ -92,15 +92,23 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact }: PostCardProps)
                     source={{ uri: getAvatarUrl(post.user as any) }}
                     style={styles.avatar}
                 />
-                <View style={styles.userInfo}>
-                    <Text style={styles.displayName}>{post.user.displayName}</Text>
-                    <Text style={[styles.type, { color: getTypeColor(post.type) }]}>
-                        {post.type}
-                    </Text>
-                </View>
+                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })}>
+                    <View style={styles.userInfo}>
+                        <Text style={styles.displayName}>{post.user.displayName}</Text>
+                        <Text style={[styles.type, { color: getTypeColor(post.type) }]}>
+                            {post.type}
+                        </Text>
+                    </View>
+                </TouchableOpacity>
                 {post.price && (
                     <View style={styles.priceTag}>
                         <Text style={styles.priceText}>₹{post.price}</Text>
+                    </View>
+                )}
+                {isOwnPost && (post as any).applicationCount > 0 && (
+                    <View style={styles.requestBadge}>
+                        <MessageCircle size={12} color="#ffffff" fill="#ffffff" />
+                        <Text style={styles.requestBadgeText}>{(post as any).applicationCount}</Text>
                     </View>
                 )}
             </View>
@@ -295,6 +303,21 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
         marginLeft: 8,
+    },
+    requestBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginLeft: 8,
+        gap: 4,
+    },
+    requestBadgeText: {
+        color: '#ffffff',
+        fontSize: 12,
+        fontWeight: 'bold',
     },
 });
 

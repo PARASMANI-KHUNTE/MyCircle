@@ -90,7 +90,7 @@ const MyPostsScreen = ({ navigation }: any) => {
 
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.postCardWrapper}>
-            <PostCard post={item} isOwnPost={true} />
+            <PostCard post={item} isOwnPost={true} navigation={navigation} />
 
             <View style={styles.actionsToolbar}>
                 <View style={styles.actionGroup}>

@@ -14,5 +14,6 @@ router.post('/unblock/:userId', auth, userController.unblockUser);
 router.get('/blocked', auth, userController.getBlockedUsers);
 router.post('/report', auth, userController.reportUser);
 router.get('/connections', auth, userController.getConnections);
+router.get('/:userId', auth, userController.getUserById);
 
 module.exports = router;

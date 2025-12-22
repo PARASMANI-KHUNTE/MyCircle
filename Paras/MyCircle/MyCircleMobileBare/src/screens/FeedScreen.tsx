@@ -141,10 +141,10 @@ const FeedScreen = ({ navigation }: any) => {
                     keyExtractor={item => (item as any)._id}
                     renderItem={({ item }) => (
                         <PostCard
-                            post={item as any}
-                            isOwnPost={false}
-                            onPress={() => handlePostPress((item as any)._id)}
-                            onRequestContact={() => handleRequestContact((item as any)._id)}
+                            post={item}
+                            onPress={() => navigation.navigate('PostDetails', { id: item._id })}
+                            onRequestContact={() => handleRequestContact(item._id)}
+                            navigation={navigation}
                         />
                     )}
                     contentContainerStyle={styles.listContent}

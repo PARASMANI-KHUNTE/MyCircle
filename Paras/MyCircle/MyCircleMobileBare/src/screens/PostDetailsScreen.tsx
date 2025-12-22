@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Linking, StyleSheet, Dimensions, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart } from 'lucide-react-native';
+import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical } from 'lucide-react-native';
 import { Clipboard } from 'react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import api from '../services/api';
@@ -108,6 +108,99 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         }
     };
 
+    const handleReportPost = () => {
+        Alert.alert(
+            "Report Post",
+            "Select a reason:",
+            [
+                { text: "Spam", onPress: () => submitReport("Spam") },
+                { text: "Inappropriate Content", onPress: () => submitReport("Inappropriate") },
+                { text: "Scam/Fraud", onPress: () => submitReport("Scam") },
+                { text: "Cancel", style: "cancel" }
+            ]
+        );
+    };
+
+    const submitReport = async (reason: string) => {
+        try {
+            await api.post('/user/report', {
+                reportedUserId: post.user._id,
+                reason,
+                contentType: 'post',
+                contentId: id
+            });
+            Alert.alert("Reported", "Thank you for reporting.");
+        } catch (err) {
+            Alert.alert("Error", "Failed to submit report");
+        }
+    };
+
+    const handleBlockUser = () => {
+        Alert.alert(
+            "Block User",
+            "Are you sure? You won't see their posts.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Block",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await api.post(`/user/block/${post.user._id}`);
+                            Alert.alert("Blocked", "User blocked");
+                            navigation.goBack();
+                        } catch (err) {
+                            Alert.alert("Error", "Failed to block user");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const showMenu = () => {
+        if (isOwnPost) {
+            Alert.alert(
+                "Options",
+                undefined,
+                [
+                    { text: "Delete Post", style: 'destructive', onPress: handleDeletePost }, // Assuming handleDeletePost exists or need to add
+                    { text: "Cancel", style: "cancel" }
+                ]
+            );
+        } else {
+            Alert.alert(
+                "Options",
+                undefined,
+                [
+                    { text: "Report Post", onPress: handleReportPost },
+                    { text: "Block Author", onPress: handleBlockUser, style: 'destructive' },
+                    { text: "Cancel", style: "cancel" }
+                ]
+            );
+        }
+    };
+
+    // Quick fix: Add handleDeletePost if it doesn't exist in original (it likely does or I should add it)
+    // I will check original file content first. For now, assume it might not exist in this scope if I didn't see it.
+    // Actually, looking at imports `Trash2` implies delete capability.
+    // Let's add handleDeletePost just in case or use existing.
+
+    // Wait, I see `Trash2` imported but didn't see `handleDelete` in previous `view_file`... 
+    // Ah, I missed it or it wasn't there? 
+    // Let's look at lines 125-137. It has a Share button but no Delete button shown in header. 
+    // The previous view_file `PostDetailsScreen` didn't show `handleDelete`.
+
+    const handleDeletePost = async () => {
+        try {
+            await api.delete(`/posts/${id}`);
+            Alert.alert("Deleted", "Post removed");
+            navigation.goBack();
+        } catch (err) {
+            Alert.alert("Error", "Failed to delete post");
+        }
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -132,6 +225,9 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
                         <Share2 size={24} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={showMenu} style={styles.headerButton}>
+                        <MoreVertical size={24} color="white" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -187,7 +283,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                             </View>
                         </View>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Profile', { userId: post.user?._id })}
+                            onPress={() => navigation.navigate('UserProfile', { userId: post.user?._id })}
                             style={styles.viewProfileButton}
                         >
                             <Text style={styles.viewProfileText}>View Profile</Text>

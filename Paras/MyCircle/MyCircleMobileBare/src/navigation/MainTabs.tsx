@@ -140,6 +140,13 @@ const MainTabs = () => {
                 }}
             />
             <Tab.Screen
+                name="Requests"
+                component={RequestsScreen}
+                options={{
+                    tabBarIcon: ({ color }) => <TabBarIcon icon={Inbox} color={color} />,
+                }}
+            />
+            <Tab.Screen
                 name="Profile"
                 component={ProfileScreen}
                 options={{

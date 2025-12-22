@@ -223,3 +223,21 @@ exports.getConnections = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+// @desc    Get user by ID (Public Profile)
+// @route   GET /api/user/:userId
+// @access  Private
+exports.getUserById = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId).select('-password -preferences -blockedUsers');
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json(user);
+    } catch (err) {
+        console.error(err.message);
+        if (err.kind === 'ObjectId') {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.status(500).send('Server Error');
+    }
+};

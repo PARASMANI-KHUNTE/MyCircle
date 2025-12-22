@@ -151,7 +151,18 @@ exports.getMyPosts = async (req, res) => {
         const posts = await Post.find({ user: req.user.id })
             .sort({ createdAt: -1 })
             .populate('user', ['displayName', 'avatar']);
-        res.json(posts);
+
+        // Add application count for each post
+        const ContactRequest = require('../models/ContactRequest');
+        const postsWithCount = await Promise.all(posts.map(async (post) => {
+            const applicationCount = await ContactRequest.countDocuments({ post: post._id });
+            return {
+                ...post.toObject(),
+                applicationCount
+            };
+        }));
+
+        res.json(postsWithCount);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -246,6 +257,21 @@ exports.likePost = async (req, res) => {
 
         // Check if already liked
         const likeIndex = post.likes.indexOf(req.user.id);
+
+        // Check block status (only if liking, unliking is always allowed)
+        if (likeIndex === -1 && post.user.toString() !== req.user.id) {
+            const User = require('../models/User');
+            // Check if post owner blocked current user
+            const postOwner = await User.findById(post.user);
+            if (postOwner.blockedUsers.includes(req.user.id)) {
+                return res.status(403).json({ msg: 'You cannot interact with this post' });
+            }
+            // Check if current user blocked post owner (optional, but good for consistency)
+            const currentUser = await User.findById(req.user.id);
+            if (currentUser.blockedUsers.includes(post.user)) {
+                return res.status(403).json({ msg: 'You have blocked this user' });
+            }
+        }
 
         if (likeIndex > -1) {
             // Unlike
@@ -425,6 +451,19 @@ exports.commentOnPost = async (req, res) => {
             return res.status(400).json({ msg: 'Comment contains inappropriate language. Please be respectful.' });
         }
 
+        // Check block status
+        if (post.user.toString() !== req.user.id) {
+            const User = require('../models/User');
+            const postOwner = await User.findById(post.user);
+            if (postOwner.blockedUsers.includes(req.user.id)) {
+                return res.status(403).json({ msg: 'You cannot comment on this post' });
+            }
+            const currentUser = await User.findById(req.user.id);
+            if (currentUser.blockedUsers.includes(post.user)) {
+                return res.status(403).json({ msg: 'You have blocked this user' });
+            }
+        }
+
         const newComment = {
             user: req.user.id,
             text: req.body.text,
@@ -548,6 +587,19 @@ exports.replyToComment = async (req, res) => {
 
         if (!comment) {
             return res.status(404).json({ msg: 'Comment not found' });
+        }
+
+        // Check block status (with comment owner)
+        if (comment.user.toString() !== req.user.id) {
+            const User = require('../models/User');
+            const commentOwner = await User.findById(comment.user);
+            if (commentOwner.blockedUsers.includes(req.user.id)) {
+                return res.status(403).json({ msg: 'You cannot reply to this user' });
+            }
+            const currentUser = await User.findById(req.user.id);
+            if (currentUser.blockedUsers.includes(comment.user)) {
+                return res.status(403).json({ msg: 'You have blocked this user' });
+            }
         }
 
         const newReply = {

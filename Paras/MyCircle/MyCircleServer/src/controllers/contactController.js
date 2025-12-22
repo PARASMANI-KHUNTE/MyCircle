@@ -38,6 +38,19 @@ exports.createRequest = async (req, res) => {
             return res.status(400).json({ message: 'Contact request already sent for this post' });
         }
 
+        // Check if users have blocked each other
+        const User = require('../models/User');
+        const currentUser = await User.findById(requesterId);
+        const recipientUser = await User.findById(finalRecipientId);
+
+        if (currentUser.blockedUsers.includes(finalRecipientId)) {
+            return res.status(403).json({ message: 'You have blocked this user' });
+        }
+
+        if (recipientUser.blockedUsers.includes(requesterId)) {
+            return res.status(403).json({ message: 'You cannot make a request to this user' });
+        }
+
         // Create new request
         const contactRequest = await ContactRequest.create({
             requester: requesterId,

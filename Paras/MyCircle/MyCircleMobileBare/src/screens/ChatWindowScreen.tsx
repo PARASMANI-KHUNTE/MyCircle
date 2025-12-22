@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image, StyleSheet, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
-import { ArrowLeft, Send } from 'lucide-react-native';
+import { ArrowLeft, Send, MoreVertical } from 'lucide-react-native';
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
     const { id, recipient } = route.params;
@@ -19,7 +19,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const flatListRef = useRef<FlatList>(null);
 
     const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
-    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (id) {
@@ -174,24 +174,94 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         </View>
     );
 
+    const handleBlockUser = async () => {
+        Alert.alert(
+            "Block User",
+            "Are you sure you want to block this user? You won't be able to message each other.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Block",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const userIdToBlock = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
+                            await api.post(`/user/block/${userIdToBlock}`);
+                            Alert.alert("Blocked", "User has been blocked.");
+                            navigation.goBack();
+                        } catch (err) {
+                            Alert.alert("Error", "Failed to block user");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleReportUser = () => {
+        const userIdToReport = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
+
+        Alert.alert(
+            "Report User",
+            "Select a reason for reporting this user:",
+            [
+                { text: "Spam", onPress: () => submitReport(userIdToReport, "Spam") },
+                { text: "Harassment", onPress: () => submitReport(userIdToReport, "Harassment") },
+                { text: "Inappropriate Content", onPress: () => submitReport(userIdToReport, "Inappropriate Content") },
+                { text: "Cancel", style: "cancel" }
+            ]
+        );
+    };
+
+    const submitReport = async (userId: string, reason: string) => {
+        try {
+            await api.post('/user/report', {
+                reportedUserId: userId,
+                reason,
+                contentType: 'chat',
+                contentId: id // conversation ID
+            });
+            Alert.alert("Reported", "Thank you for reporting. We will check it.");
+        } catch (err) {
+            Alert.alert("Error", "Failed to submit report");
+        }
+    };
+
+    const showMenu = () => {
+        Alert.alert(
+            "Options",
+            undefined,
+            [
+                { text: "Report User", onPress: handleReportUser },
+                { text: "Block User", onPress: handleBlockUser, style: 'destructive' },
+                { text: "Cancel", style: "cancel" }
+            ]
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft color="white" size={24} />
-                </TouchableOpacity>
-                <Image
-                    source={{ uri: displayUser?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${displayUser?.displayName}` }}
-                    style={styles.headerAvatar}
-                />
-                <View style={styles.headerInfo}>
-                    <Text style={styles.headerName}>{displayUser?.displayName}</Text>
-                    {isOtherUserTyping ? (
-                        <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>Typing...</Text>
-                    ) : (
-                        <Text style={styles.onlineStatus}>Online</Text>
-                    )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ArrowLeft color="white" size={24} />
+                    </TouchableOpacity>
+                    <Image
+                        source={{ uri: displayUser?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${displayUser?.displayName}` }}
+                        style={styles.headerAvatar}
+                    />
+                    <View style={styles.headerInfo}>
+                        <Text style={styles.headerName}>{displayUser?.displayName}</Text>
+                        {isOtherUserTyping ? (
+                            <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>Typing...</Text>
+                        ) : (
+                            <Text style={styles.onlineStatus}>Online</Text>
+                        )}
+                    </View>
                 </View>
+                <TouchableOpacity onPress={showMenu} style={{ padding: 8 }}>
+                    <MoreVertical color="white" size={24} />
+                </TouchableOpacity>
             </View >
 
             <KeyboardAvoidingView

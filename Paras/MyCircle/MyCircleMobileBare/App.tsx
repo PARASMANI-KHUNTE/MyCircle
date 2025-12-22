@@ -22,6 +22,7 @@ import EditProfileScreen from './src/screens/EditProfileScreen';
 import MyPostsScreen from './src/screens/MyPostsScreen';
 import RequestsScreen from './src/screens/RequestsScreen';
 import BlockedUsersScreen from './src/screens/BlockedUsersScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 const Stack = createStackNavigator();
 
@@ -55,6 +56,7 @@ const RootNavigator = () => {
           <Stack.Screen name="MyPosts" component={MyPostsScreen} />
           <Stack.Screen name="Requests" component={RequestsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="UserProfile" component={ProfileScreen} />
         </>
       )}
     </Stack.Navigator>

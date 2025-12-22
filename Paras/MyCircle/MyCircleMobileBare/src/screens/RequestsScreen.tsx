@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, Alert, ActivityIndicator, Linking, StyleSheet } from 'react-native';
 import api from '../services/api';
 import { X, Check, Phone, MessageCircle, ArrowLeft } from 'lucide-react-native';
@@ -7,10 +8,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
 const RequestsScreen = ({ navigation }: any) => {
+    const { colors } = useTheme();
     const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
     const [sentRequests, setSentRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
+
+    const themeStyles = {
+        container: { backgroundColor: colors.background },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        card: { backgroundColor: colors.card, borderColor: colors.border },
+        border: { borderColor: colors.border },
+        highlight: { backgroundColor: colors.primary + '10' },
+        activeTab: { backgroundColor: colors.input },
+        inactiveTab: { backgroundColor: colors.card },
+        avatarBg: { backgroundColor: colors.input },
+        divider: { backgroundColor: colors.border }
+    };
 
     const fetchRequests = async () => {
         try {
@@ -46,23 +61,38 @@ const RequestsScreen = ({ navigation }: any) => {
     };
 
     const handleWhatsApp = (number: string) => {
-        Linking.openURL(`whatsapp://send?phone=${number}`);
+        // Remove non-numeric characters for WhatsApp link (except + if needed, usually WhatsApp prefers just digits with country code)
+        // If number doesn't have country code (assuming India +91 default if missing for now, or handle broadly)
+        let formattedCheck = number.replace(/[^\d+]/g, '');
+
+        // Remove leading 0 if present
+        if (formattedCheck.startsWith('0')) formattedCheck = formattedCheck.substring(1);
+
+        // If no country code (length 10 for India), add 91
+        if (formattedCheck.length === 10) {
+            formattedCheck = '91' + formattedCheck;
+        } else if (formattedCheck.startsWith('+')) {
+            formattedCheck = formattedCheck.substring(1); // WhatsApp API usually takes '9198...' not '+91...'
+        }
+
+        Linking.openURL(`whatsapp://send?phone=${formattedCheck}`);
     };
 
     const handleCall = (number: string) => {
+        // Ensure the number is treated as a phone URI
         Linking.openURL(`tel:${number}`);
     };
 
     const renderReceivedItem = ({ item }: any) => (
-        <View style={styles.requestCard}>
+        <View style={[styles.requestCard, themeStyles.card]}>
             <View style={styles.cardHeader}>
                 <Image
                     source={{ uri: getAvatarUrl(item.requester) }}
-                    style={styles.avatar}
+                    style={[styles.avatar, themeStyles.avatarBg]}
                 />
                 <View style={styles.headerText}>
-                    <Text style={styles.userName}>{item.requester?.displayName}</Text>
-                    <Text style={styles.requestContext}>wants to contact regarding your post:</Text>
+                    <Text style={[styles.userName, themeStyles.text]}>{item.requester?.displayName}</Text>
+                    <Text style={[styles.requestContext, themeStyles.textSecondary]}>wants to contact regarding your post:</Text>
                     <TouchableOpacity onPress={() => navigation.navigate('PostDetails', { id: item.post._id })}>
                         <Text style={[styles.postTitle, { textDecorationLine: 'underline' }]}>{item.post?.title}</Text>
                     </TouchableOpacity>
@@ -101,20 +131,20 @@ const RequestsScreen = ({ navigation }: any) => {
     );
 
     const renderSentItem = ({ item }: any) => (
-        <View style={styles.requestCard}>
+        <View style={[styles.requestCard, themeStyles.card]}>
             <View style={styles.cardHeader}>
                 <View style={styles.headerText}>
-                    <Text style={styles.sentToText}>Request sent to <Text style={styles.boldWhite}>{item.recipient?.displayName}</Text></Text>
-                    <Text style={styles.postTitleLarge}>{item.post?.title}</Text>
-                    <Text style={styles.postType}>{item.post?.type}</Text>
+                    <Text style={[styles.sentToText, themeStyles.textSecondary]}>Request sent to <Text style={{ fontWeight: 'bold', color: colors.text }}>{item.recipient?.displayName}</Text></Text>
+                    <Text style={[styles.postTitleLarge, themeStyles.text]}>{item.post?.title}</Text>
+                    <Text style={[styles.postType, themeStyles.textSecondary]}>{item.post?.type}</Text>
                 </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, themeStyles.divider]} />
 
             <View style={styles.footerRow}>
                 <View>
-                    <Text style={styles.statusLabel}>Status</Text>
+                    <Text style={[styles.statusLabel, themeStyles.textSecondary]}>Status</Text>
                     <Text style={[
                         styles.statusTextLarge,
                         item.status === 'approved' ? styles.approvedText :
@@ -125,13 +155,21 @@ const RequestsScreen = ({ navigation }: any) => {
                 {item.status === 'approved' && (
                     <View style={styles.contactActions}>
                         {item.post?.contactWhatsapp && (
-                            <TouchableOpacity onPress={() => handleWhatsApp(item.post.contactWhatsapp)} style={styles.whatsappButton}>
+                            <TouchableOpacity
+                                onPress={() => handleWhatsApp(item.post.contactWhatsapp)}
+                                style={styles.whatsappButton}
+                            >
                                 <MessageCircle size={20} color="white" />
+                                <Text style={styles.actionButtonLabel}>WhatsApp</Text>
                             </TouchableOpacity>
                         )}
                         {item.post?.contactPhone && (
-                            <TouchableOpacity onPress={() => handleCall(item.post.contactPhone)} style={styles.callButton}>
+                            <TouchableOpacity
+                                onPress={() => handleCall(item.post.contactPhone)}
+                                style={styles.callButton}
+                            >
                                 <Phone size={20} color="white" />
+                                <Text style={styles.actionButtonLabel}>Call</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -141,28 +179,28 @@ const RequestsScreen = ({ navigation }: any) => {
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
             <View style={styles.innerContainer}>
-                <Text style={styles.headerTitle}>Requests</Text>
+                <Text style={[styles.headerTitle, themeStyles.text]}>Requests</Text>
 
-                <View style={styles.tabsContainer}>
+                <View style={[styles.tabsContainer, themeStyles.inactiveTab, themeStyles.border]}>
                     <TouchableOpacity
                         onPress={() => setActiveTab('received')}
-                        style={[styles.tab, activeTab === 'received' ? styles.activeTab : null]}
+                        style={[styles.tab, activeTab === 'received' ? themeStyles.activeTab : null]}
                     >
-                        <Text style={[styles.tabText, activeTab === 'received' ? styles.activeTabText : null]}>Received</Text>
+                        <Text style={[styles.tabText, activeTab === 'received' ? { color: colors.text } : themeStyles.textSecondary]}>Received</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setActiveTab('sent')}
-                        style={[styles.tab, activeTab === 'sent' ? styles.activeTab : null]}
+                        style={[styles.tab, activeTab === 'sent' ? themeStyles.activeTab : null]}
                     >
-                        <Text style={[styles.tabText, activeTab === 'sent' ? styles.activeTabText : null]}>Sent</Text>
+                        <Text style={[styles.tabText, activeTab === 'sent' ? { color: colors.text } : themeStyles.textSecondary]}>Sent</Text>
                     </TouchableOpacity>
                 </View>
 
                 {loading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator color="#8b5cf6" size="large" />
+                        <ActivityIndicator color={colors.primary} size="large" />
                     </View>
                 ) : (
                     <FlatList
@@ -172,7 +210,7 @@ const RequestsScreen = ({ navigation }: any) => {
                         contentContainerStyle={styles.listContent}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>No requests found</Text>
+                                <Text style={[styles.emptyText, themeStyles.textSecondary]}>No requests found</Text>
                             </View>
                         }
                     />
@@ -200,12 +238,10 @@ const styles = StyleSheet.create({
     },
     tabsContainer: {
         flexDirection: 'row',
-        backgroundColor: '#18181b', // zinc-900
         padding: 4,
         borderRadius: 12,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     tab: {
         flex: 1,
@@ -227,12 +263,10 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     requestCard: {
-        backgroundColor: '#18181b', // zinc-900
         marginBottom: 12,
         padding: 16,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     cardHeader: {
         flexDirection: 'row',
@@ -368,14 +402,30 @@ const styles = StyleSheet.create({
     },
     whatsappButton: {
         backgroundColor: '#16a34a', // green-600
-        padding: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
         borderRadius: 20,
         marginRight: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     callButton: {
         backgroundColor: '#2563eb', // blue-600
-        padding: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
         borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    actionButtonLabel: {
+        color: '#ffffff',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    callButtonText: { // Keeping for fallback if logic changes
+        color: 'white',
     },
     loadingContainer: {
         marginTop: 40,

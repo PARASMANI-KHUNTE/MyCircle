@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { ArrowLeft, Camera, User, MapPin, Briefcase } from 'lucide-react-native';
+import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone } from 'lucide-react-native';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const EditProfileScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
+    const { colors } = useTheme();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [avatar, setAvatar] = useState<any>(null);
@@ -15,7 +17,9 @@ const EditProfileScreen = ({ navigation }: any) => {
         displayName: '',
         bio: '',
         location: '',
-        skills: ''
+        skills: '',
+        phone: '',
+        countryCode: '+91'
     });
 
     useEffect(() => {
@@ -30,7 +34,9 @@ const EditProfileScreen = ({ navigation }: any) => {
                 displayName: displayName || '',
                 bio: bio || '',
                 location: location || '',
-                skills: skills ? skills.join(', ') : ''
+                skills: skills ? skills.join(', ') : '',
+                phone: res.data.phone || '',
+                countryCode: res.data.countryCode || '+91'
             });
             setLoading(false);
         } catch (err) {
@@ -69,6 +75,27 @@ const EditProfileScreen = ({ navigation }: any) => {
             formDataToSend.append('displayName', formData.displayName);
             formDataToSend.append('bio', formData.bio);
             formDataToSend.append('location', formData.location);
+            // Combine code and phone for storage or save separately
+            if (formData.phone) {
+                // Ensure no duplicates of country code if user typed it
+                formDataToSend.append('phone', formData.countryCode + formData.phone);
+                formDataToSend.append('countryCode', formData.countryCode);
+                // Also append as contactPhone as that is used by Post model often
+                formDataToSend.append('contactPhone', formData.countryCode + formData.phone);
+            }
+            // Combine code and phone for storage or save separately?
+            // User schema usually has just 'phone'. Let's save both or combined.
+            // Requirement: "add mobile please add select country to add phone number .accordingly "
+            // Storing combined is better for uniqueness.
+            // But if we want to edit it later, we need to split it.
+            // Let's assume we save 'phone' as full number and 'countryCode' as separate field if possible, or just phone.
+            // Since backend schema isn't fully visible, I will append 'contactPhone' if that's the field name. 
+            // In postController it used 'contactPhone'. In User model??
+            // I should check User model. Assuming 'phone' or 'contactPhone'.
+            // Let's use 'contactPhone' for consistency with Post, or 'phone' if generic.
+            // EditProfile usually updates User.
+            formDataToSend.append('phone', formData.countryCode + formData.phone);
+            formDataToSend.append('countryCode', formData.countryCode);
 
             const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
             skillsArray.forEach(skill => {
@@ -92,65 +119,95 @@ const EditProfileScreen = ({ navigation }: any) => {
     };
 
     if (loading) return (
-        <View style={[styles.container, styles.centerContent]}>
-            <ActivityIndicator color="#8b5cf6" size="large" />
+        <View style={[styles.container, styles.centerContent, { backgroundColor: colors.background }]}>
+            <ActivityIndicator color={colors.primary} size="large" />
         </View>
     );
 
+    const themeStyles = {
+        container: { backgroundColor: colors.background },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        headerTitle: { color: colors.text },
+        input: { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
+        border: { borderColor: colors.border },
+        icon: colors.textSecondary
+    };
+
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+            <View style={[styles.header, themeStyles.border]}>
                 <View style={styles.headerLeft}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft color="white" size={24} />
+                        <ArrowLeft color={colors.text} size={24} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Edit Profile</Text>
+                    <Text style={[styles.headerTitle, themeStyles.headerTitle]}>Edit Profile</Text>
                 </View>
                 <TouchableOpacity onPress={handleSave} disabled={saving}>
-                    {saving ? <ActivityIndicator size="small" color="#8b5cf6" /> : <Text style={styles.saveText}>Save</Text>}
+                    {saving ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>}
                 </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.scrollView}>
                 <View style={styles.avatarSection}>
                     <View style={styles.avatarWrapper}>
-                        <View style={styles.avatarContainer}>
+                        <View style={[styles.avatarContainer, { backgroundColor: colors.input, borderColor: colors.card }]}>
                             <Image
                                 source={{ uri: avatar?.uri || auth?.user?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${auth?.user?.displayName}` }}
                                 style={styles.avatarImage}
                             />
                         </View>
-                        <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+                        <TouchableOpacity style={[styles.cameraButton, { backgroundColor: colors.primary, borderColor: colors.background }]} onPress={pickImage}>
                             <Camera size={20} color="white" />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.changePictureText}>Change Profile Picture</Text>
+                    <Text style={[styles.changePictureText, themeStyles.textSecondary]}>Change Profile Picture</Text>
                 </View>
 
                 <View style={styles.formContainer}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Display Name</Text>
-                        <View style={styles.inputWrapper}>
-                            <User size={20} color="#71717a" />
+                        <Text style={[styles.label, themeStyles.textSecondary]}>Display Name</Text>
+                        <View style={[styles.inputWrapper, themeStyles.input]}>
+                            <User size={20} color={colors.textSecondary} />
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { color: colors.text }]}
                                 value={formData.displayName}
                                 onChangeText={(text) => setFormData(prev => ({ ...prev, displayName: text }))}
                                 placeholder="Enter display name"
-                                placeholderTextColor="#3f3f46"
+                                placeholderTextColor={colors.textSecondary}
                             />
                         </View>
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Bio</Text>
-                        <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                        <Text style={[styles.label, themeStyles.textSecondary]}>Phone Number</Text>
+                        <View style={styles.phoneContainer}>
+                            <View style={[styles.countryCodeContainer, themeStyles.input]}>
+                                <Text style={[styles.countryCodeText, themeStyles.text]}>{formData.countryCode}</Text>
+                            </View>
+                            <View style={[styles.inputWrapper, { flex: 1 }, themeStyles.input]}>
+                                <Phone size={20} color={colors.textSecondary} />
+                                <TextInput
+                                    style={[styles.input, { color: colors.text }]}
+                                    value={formData.phone}
+                                    onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text.replace(/[^0-9]/g, '') }))}
+                                    placeholder="Phone Number"
+                                    placeholderTextColor={colors.textSecondary}
+                                    keyboardType="phone-pad"
+                                />
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, themeStyles.textSecondary]}>Bio</Text>
+                        <View style={[styles.inputWrapper, styles.textAreaWrapper, themeStyles.input]}>
                             <TextInput
-                                style={[styles.input, styles.textArea]}
+                                style={[styles.input, styles.textArea, { color: colors.text }]}
                                 value={formData.bio}
                                 onChangeText={(text) => setFormData(prev => ({ ...prev, bio: text }))}
                                 placeholder="Tell us about yourself..."
-                                placeholderTextColor="#3f3f46"
+                                placeholderTextColor={colors.textSecondary}
                                 multiline
                                 numberOfLines={4}
                                 textAlignVertical="top"
@@ -159,29 +216,29 @@ const EditProfileScreen = ({ navigation }: any) => {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Location</Text>
-                        <View style={styles.inputWrapper}>
-                            <MapPin size={20} color="#71717a" />
+                        <Text style={[styles.label, themeStyles.textSecondary]}>Location</Text>
+                        <View style={[styles.inputWrapper, themeStyles.input]}>
+                            <MapPin size={20} color={colors.textSecondary} />
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { color: colors.text }]}
                                 value={formData.location}
                                 onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
                                 placeholder="City, Country"
-                                placeholderTextColor="#3f3f46"
+                                placeholderTextColor={colors.textSecondary}
                             />
                         </View>
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Skills (comma separated)</Text>
-                        <View style={styles.inputWrapper}>
-                            <Briefcase size={20} color="#71717a" />
+                        <Text style={[styles.label, themeStyles.textSecondary]}>Skills (comma separated)</Text>
+                        <View style={[styles.inputWrapper, themeStyles.input]}>
+                            <Briefcase size={20} color={colors.textSecondary} />
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { color: colors.text }]}
                                 value={formData.skills}
                                 onChangeText={(text) => setFormData(prev => ({ ...prev, skills: text }))}
                                 placeholder="e.g. Design, React, Painting"
-                                placeholderTextColor="#3f3f46"
+                                placeholderTextColor={colors.textSecondary}
                             />
                         </View>
                     </View>
@@ -194,7 +251,6 @@ const EditProfileScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
     },
     centerContent: {
         justifyContent: 'center',
@@ -204,7 +260,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -219,10 +274,8 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#ffffff',
     },
     saveText: {
-        color: '#8b5cf6', // violet-500
         fontWeight: 'bold',
         fontSize: 18,
     },
@@ -241,9 +294,7 @@ const styles = StyleSheet.create({
         width: 128,
         height: 128,
         borderRadius: 64,
-        backgroundColor: '#27272a', // zinc-800
         borderWidth: 4,
-        borderColor: '#18181b', // zinc-900
         overflow: 'hidden',
     },
     avatarImage: {
@@ -254,14 +305,11 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#7c3aed', // violet-600
         padding: 8,
         borderRadius: 20,
         borderWidth: 2,
-        borderColor: '#000000',
     },
     changePictureText: {
-        color: '#71717a', // zinc-500
         marginTop: 8,
         fontSize: 12,
     },
@@ -273,7 +321,6 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     label: {
-        color: '#a1a1aa', // zinc-400
         marginBottom: 8,
         marginLeft: 4,
         fontWeight: '500',
@@ -281,10 +328,8 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#18181b', // zinc-900
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
@@ -294,13 +339,27 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        color: '#ffffff',
         marginLeft: 8,
         fontSize: 16,
     },
     textArea: {
         marginLeft: 0,
         height: '100%',
+    },
+    phoneContainer: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    countryCodeContainer: {
+        borderRadius: 16,
+        borderWidth: 1,
+        paddingHorizontal: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    countryCodeText: {
+        fontWeight: 'bold',
+        fontSize: 16,
     },
 });
 

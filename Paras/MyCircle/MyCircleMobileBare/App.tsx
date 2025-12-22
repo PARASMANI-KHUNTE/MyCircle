@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { ToastProvider } from './src/components/ui/Toast';
+import { ThemeProvider } from './src/context/ThemeContext'; // Import ThemeProvider
 // CSS import moved to index.js
 
 // Screen Placeholders (We will port these next)
@@ -66,17 +67,19 @@ const RootNavigator = () => {
 const App = () => {
   return (
     <SafeAreaProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <SocketProvider>
-            <NotificationProvider>
-              <NavigationContainer>
-                <RootNavigator />
-              </NavigationContainer>
-            </NotificationProvider>
-          </SocketProvider>
-        </AuthProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <SocketProvider>
+              <NotificationProvider>
+                <NavigationContainer>
+                  <RootNavigator />
+                </NavigationContainer>
+              </NotificationProvider>
+            </SocketProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 };

@@ -5,6 +5,7 @@ import { Home, Bell, Inbox, User, PlusSquare, MessageCircle } from 'lucide-react
 import { useNotifications } from '../context/NotificationContext';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 
 import FeedScreen from '../screens/FeedScreen';
@@ -39,6 +40,7 @@ const MainTabs = () => {
     const { unreadCount } = useNotifications();
     const { socket } = useSocket() as any;
     const { user } = useAuth();
+    const { colors } = useTheme();
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
     const fetchUnreadMsgCount = async () => {
@@ -94,14 +96,14 @@ const MainTabs = () => {
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: '#18181b', // Zinc 900
-                    borderTopColor: 'rgba(255,255,255,0.1)',
+                    backgroundColor: colors.card,
+                    borderTopColor: colors.border,
                     height: 60,
                     paddingBottom: 10,
                     paddingTop: 8,
                 },
-                tabBarActiveTintColor: '#8b5cf6', // Violet 500
-                tabBarInactiveTintColor: '#a1a1aa', // Zinc 400
+                tabBarActiveTintColor: colors.primary,
+                tabBarInactiveTintColor: colors.textSecondary,
                 tabBarLabelStyle: {
                     fontSize: 12,
                     fontWeight: '500',

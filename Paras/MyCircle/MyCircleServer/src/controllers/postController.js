@@ -66,6 +66,8 @@ exports.getPosts = async (req, res) => {
         const ContactRequest = require('../models/ContactRequest');
         const postsWithCount = await Promise.all(posts.map(async (post) => {
             const applicationCount = await ContactRequest.countDocuments({ post: post._id });
+            // Debug log to verify counts
+            // console.log(`Post ${post.title}: ${applicationCount} requests`);
             return {
                 ...post.toObject(),
                 applicationCount

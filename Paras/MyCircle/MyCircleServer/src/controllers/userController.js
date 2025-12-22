@@ -1,4 +1,4 @@
-const User = require('../models/User');
+﻿const User = require('../models/User');
 const Post = require('../models/Post');
 const ContactRequest = require('../models/ContactRequest');
 
@@ -238,6 +238,118 @@ exports.getUserById = async (req, res) => {
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'User not found' });
         }
+        res.status(500).send('Server Error');
+    }
+};
+// @desc    Follow a user
+// @route   POST /api/user/follow/:userId
+// @access  Private
+exports.followUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+
+        if (userId === currentUserId) {
+            return res.status(400).json({ msg: 'You cannot follow yourself' });
+        }
+
+        const userToFollow = await User.findById(userId);
+        const currentUser = await User.findById(currentUserId);
+
+        if (!userToFollow) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        // Check if already following
+        if (currentUser.following.includes(userId)) {
+            return res.status(400).json({ msg: 'Already following this user' });
+        }
+
+        // Add to following/followers arrays
+        currentUser.following.push(userId);
+        userToFollow.followers.push(currentUserId);
+
+        // Update stats
+        currentUser.stats.followingCount = currentUser.following.length;
+        userToFollow.stats.followersCount = userToFollow.followers.length;
+
+        await currentUser.save();
+        await userToFollow.save();
+
+        res.json({ msg: 'User followed successfully', followingCount: currentUser.stats.followingCount });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Unfollow a user
+// @route   DELETE /api/user/unfollow/:userId
+// @access  Private
+exports.unfollowUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+
+        const userToUnfollow = await User.findById(userId);
+        const currentUser = await User.findById(currentUserId);
+
+        if (!userToUnfollow) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        // Remove from following/followers arrays
+        currentUser.following = currentUser.following.filter(id => id.toString() !== userId);
+        userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== currentUserId);
+
+        // Update stats
+        currentUser.stats.followingCount = currentUser.following.length;
+        userToUnfollow.stats.followersCount = userToUnfollow.followers.length;
+
+        await currentUser.save();
+        await userToUnfollow.save();
+
+        res.json({ msg: 'User unfollowed successfully', followingCount: currentUser.stats.followingCount });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get followers list
+// @route   GET /api/user/:userId/followers
+// @access  Private
+exports.getFollowers = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await User.findById(userId).populate('followers', 'displayName avatar bio location');
+
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        res.json(user.followers);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get following list
+// @route   GET /api/user/:userId/following
+// @access  Private
+exports.getFollowing = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await User.findById(userId).populate('following', 'displayName avatar bio location');
+
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        res.json(user.following);
+    } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 };

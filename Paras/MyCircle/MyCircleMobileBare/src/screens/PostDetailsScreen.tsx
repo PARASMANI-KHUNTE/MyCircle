@@ -6,12 +6,14 @@ import { Clipboard } from 'react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const PostDetailsScreen = ({ route, navigation }: any) => {
     const { id } = route.params;
     const auth = useAuth() as any;
+    const { colors } = useTheme(); // Import Theme
     const [post, setPost] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [likes, setLikes] = useState<string[]>([]);
@@ -158,6 +160,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         );
     };
 
+    // Dynamic Menu Colors (using hardcoded for alerts usually, but can't customize native alert colors easily)
     const showMenu = () => {
         if (isOwnPost) {
             Alert.alert(
@@ -213,21 +216,32 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
     const isOwnPost = auth?.user?._id === post.user?._id;
 
+    const themeStyles = {
+        container: { backgroundColor: colors.background },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        card: { backgroundColor: colors.card, borderColor: colors.border },
+        border: { borderColor: colors.border },
+        icon: colors.text,
+        input: { backgroundColor: colors.input, color: colors.text, borderColor: colors.border },
+        dimBackground: { backgroundColor: colors.card },
+    };
+
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+            <View style={[styles.header, themeStyles.border]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-                    <ArrowLeft size={24} color="white" />
+                    <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <View style={styles.headerRight}>
                     <TouchableOpacity onPress={handleLike} style={styles.headerButton}>
-                        <Heart size={24} color={isLiked ? "#ef4444" : "white"} fill={isLiked ? "#ef4444" : "transparent"} />
+                        <Heart size={24} color={isLiked ? "#ef4444" : colors.text} fill={isLiked ? "#ef4444" : "transparent"} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-                        <Share2 size={24} color="white" />
+                        <Share2 size={24} color={colors.text} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={showMenu} style={styles.headerButton}>
-                        <MoreVertical size={24} color="white" />
+                        <MoreVertical size={24} color={colors.text} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -240,10 +254,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         ))}
                     </ScrollView>
                 ) : (
-                    <View style={styles.placeholderContainer}>
+                    <View style={[styles.placeholderContainer, themeStyles.dimBackground]}>
                         {/* Note: require('../assets/logo.png') might fail if logo doesn't exist, using fallback */}
-                        <View style={styles.placeholderLogo} />
-                        <Text style={styles.placeholderText}>No images provided</Text>
+                        <View style={[styles.placeholderLogo, { backgroundColor: colors.border }]} />
+                        <Text style={[styles.placeholderText, themeStyles.textSecondary]}>No images provided</Text>
                     </View>
                 )}
 
@@ -257,12 +271,12 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         )}
                     </View>
 
-                    <Text style={styles.postTitle}>{post.title}</Text>
+                    <Text style={[styles.postTitle, themeStyles.text]}>{post.title}</Text>
 
                     <View style={styles.metaRow}>
                         <View style={styles.metaItem}>
-                            <MapPin size={16} color="#71717a" />
-                            <Text style={styles.metaText}>{post.location}</Text>
+                            <MapPin size={16} color={colors.textSecondary} />
+                            <Text style={[styles.metaText, themeStyles.textSecondary]}>{post.location}</Text>
                         </View>
                         <View style={styles.metaItem}>
                             <Clock size={16} color="#71717a" />
@@ -270,13 +284,13 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         </View>
                     </View>
 
-                    <View style={styles.userCard}>
+                    <View style={[styles.userCard, themeStyles.card]}>
                         <Image
                             source={{ uri: getAvatarUrl(post.user) }}
                             style={styles.userAvatar}
                         />
                         <View style={styles.userInfo}>
-                            <Text style={styles.userName}>{post.user?.displayName}</Text>
+                            <Text style={[styles.userName, themeStyles.text]}>{post.user?.displayName}</Text>
                             <View style={styles.verifiedRow}>
                                 <Shield size={12} color="#22c55e" />
                                 <Text style={styles.verifiedText}>Verified Local Provider</Text>
@@ -291,24 +305,24 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     </View>
 
                     <View style={styles.descriptionContainer}>
-                        <Text style={styles.sectionTitle}>Description</Text>
-                        <Text style={styles.descriptionText}>{post.description}</Text>
+                        <Text style={[styles.sectionTitle, themeStyles.text]}>Description</Text>
+                        <Text style={[styles.descriptionText, themeStyles.textSecondary]}>{post.description}</Text>
                     </View>
 
                     {/* Comments Section */}
                     <View style={styles.commentsContainer}>
-                        <Text style={styles.sectionTitle}>Comments ({comments.length})</Text>
+                        <Text style={[styles.sectionTitle, themeStyles.text]}>Comments ({comments.length})</Text>
 
                         {comments.map((comment: any, index: number) => (
-                            <View key={index} style={styles.commentCard}>
+                            <View key={index} style={[styles.commentCard, themeStyles.card]}>
                                 <Image
                                     source={{ uri: getAvatarUrl(comment.user) }}
                                     style={styles.commentAvatar}
                                 />
                                 <View style={styles.commentContent}>
-                                    <Text style={styles.commentUser}>{comment.user?.displayName}</Text>
-                                    <Text style={styles.commentText}>{comment.text}</Text>
-                                    <Text style={styles.commentTime}>
+                                    <Text style={[styles.commentUser, themeStyles.text]}>{comment.user?.displayName}</Text>
+                                    <Text style={[styles.commentText, themeStyles.textSecondary]}>{comment.text}</Text>
+                                    <Text style={[styles.commentTime, themeStyles.textSecondary]}>
                                         {new Date(comment.createdAt).toLocaleDateString()}
                                     </Text>
                                 </View>
@@ -316,7 +330,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         ))}
 
                         {comments.length === 0 && (
-                            <Text style={styles.noCommentsText}>No comments yet. Be the first!</Text>
+                            <Text style={[styles.noCommentsText, themeStyles.textSecondary]}>No comments yet. Be the first!</Text>
                         )}
                     </View>
                 </View>
@@ -324,11 +338,11 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
             {!isOwnPost && (
                 <>
-                    <View style={styles.commentInputContainer}>
+                    <View style={[styles.commentInputContainer, themeStyles.container, themeStyles.border]}>
                         <TextInput
-                            style={styles.commentInput}
+                            style={[styles.commentInput, themeStyles.input]}
                             placeholder="Write a comment..."
-                            placeholderTextColor="#52525b"
+                            placeholderTextColor={colors.textSecondary}
                             value={commentText}
                             onChangeText={setCommentText}
                             multiline
@@ -336,30 +350,30 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         <TouchableOpacity
                             onPress={handlePostComment}
                             disabled={postingComment || !commentText.trim()}
-                            style={[styles.sendButton, (!commentText.trim() || postingComment) && styles.sendButtonDisabled]}
+                            style={[styles.sendButton, themeStyles.border, themeStyles.card, (!commentText.trim() || postingComment) && styles.sendButtonDisabled]}
                         >
                             {postingComment ? (
-                                <ActivityIndicator size="small" color="#8b5cf6" />
+                                <ActivityIndicator size="small" color={colors.primary} />
                             ) : (
-                                <MessageCircle size={20} color="#8b5cf6" />
+                                <MessageCircle size={20} color={colors.primary} />
                             )}
                         </TouchableOpacity>
                     </View>
-                    <View style={styles.bottomBar}>
+                    <View style={[styles.bottomBar, themeStyles.container, themeStyles.border]}>
                         <TouchableOpacity
                             onPress={handleMessage}
-                            style={styles.messageButton}
+                            style={[styles.messageButton, themeStyles.card, themeStyles.border]}
                         >
                             <View style={styles.buttonInner}>
-                                <MessageCircle size={20} color="#8b5cf6" />
-                                <Text style={styles.messageButtonText}>Message</Text>
+                                <MessageCircle size={20} color={colors.primary} />
+                                <Text style={[styles.messageButtonText, { color: colors.text }]}>Message</Text>
                             </View>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={handleRequestContact}
-                            style={styles.requestButton}
+                            style={[styles.requestButton, { backgroundColor: colors.primary }]}
                         >
-                            <Text style={styles.requestButtonText}>Request Contact</Text>
+                            <Text style={[styles.requestButtonText, { color: '#ffffff' }]}>Request Contact</Text>
                         </TouchableOpacity>
                     </View>
                 </>

@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Clipboard, Alert } from 'react-native';
-import { MapPin, Clock, ArrowUpRight, MessageCircle, Heart, Share2 } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Clipboard, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { MapPin, Clock, ArrowUpRight, MessageCircle, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+
+if (Platform.OS === 'android') {
+    if (UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+}
 
 interface PostCardProps {
     post: {
@@ -31,10 +38,17 @@ interface PostCardProps {
 const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: PostCardProps & { navigation?: any }) => {
     const { user: currentUser } = useAuth();
     const { success, error } = useToast();
+    const { colors } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
     const [shares, setShares] = useState(post.shares || 0);
+    const [expanded, setExpanded] = useState(false);
 
     const isLiked = currentUser && likes.includes(currentUser._id);
+
+    const toggleExpand = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpanded(!expanded);
+    };
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -81,20 +95,32 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
         }
     };
 
+    // Dynamic styles
+    const themeStyles = {
+        card: {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+        },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        divider: { backgroundColor: colors.border },
+        icon: colors.textSecondary,
+    };
+
     return (
         <TouchableOpacity
             onPress={onPress}
-            activeOpacity={0.7}
-            style={styles.card}
+            activeOpacity={0.9}
+            style={[styles.card, themeStyles.card]}
         >
             <View style={styles.header}>
                 <Image
                     source={{ uri: getAvatarUrl(post.user as any) }}
                     style={styles.avatar}
                 />
-                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })}>
+                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })} style={{ flex: 1 }}>
                     <View style={styles.userInfo}>
-                        <Text style={styles.displayName}>{post.user.displayName}</Text>
+                        <Text style={[styles.displayName, themeStyles.text]}>{post.user.displayName}</Text>
                         <Text style={[styles.type, { color: getTypeColor(post.type) }]}>
                             {post.type}
                         </Text>
@@ -113,133 +139,144 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
                 )}
             </View>
 
-            <Text style={styles.title}>
+            <Text style={[styles.title, themeStyles.text]} numberOfLines={1}>
                 {post.title}
             </Text>
 
-            <Text style={styles.description} numberOfLines={3}>
+            <Text style={[styles.description, themeStyles.textSecondary]} numberOfLines={expanded ? undefined : 2}>
                 {post.description}
             </Text>
 
-            <View style={styles.metaContainer}>
-                <View style={styles.metaItem}>
-                    <MapPin size={14} color="#71717a" />
-                    <Text style={styles.metaText}>{post.location}</Text>
+            {expanded && (
+                <View style={styles.metaContainer}>
+                    <View style={styles.metaItem}>
+                        <MapPin size={14} color={colors.textSecondary} />
+                        <Text style={[styles.metaText, themeStyles.textSecondary]}>{post.location}</Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                        <Clock size={14} color={colors.textSecondary} />
+                        <Text style={[styles.metaText, themeStyles.textSecondary]}>{formatDate(post.createdAt)}</Text>
+                    </View>
                 </View>
-                <View style={styles.metaItem}>
-                    <Clock size={14} color="#71717a" />
-                    <Text style={styles.metaText}>{formatDate(post.createdAt)}</Text>
-                </View>
-            </View>
+            )}
 
-            {/* Social Actions Section */}
+            {/* Social Actions Section - Always visible but compact */}
             <View style={styles.socialActions}>
-                <TouchableOpacity onPress={handleLike} style={styles.socialButton}>
-                    <Heart size={18} color={isLiked ? "#ef4444" : "#71717a"} fill={isLiked ? "#ef4444" : "transparent"} />
-                    <Text style={[styles.socialCount, isLiked && { color: "#ef4444" }]}>{likes.length}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={handleShare} style={styles.socialButton}>
-                    <Share2 size={18} color="#71717a" />
-                    <Text style={styles.socialCount}>{shares}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={onPress} style={styles.socialButton}>
-                    <MessageCircle size={18} color="#71717a" />
-                    <Text style={styles.socialCount}>Details</Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.footer}>
-                <TouchableOpacity
-                    onPress={onPress}
-                    style={styles.detailsButton}
-                >
-                    <Text style={styles.detailsText}>Full View</Text>
-                    <ArrowUpRight size={14} color="#71717a" />
-                </TouchableOpacity>
-
-                {!isOwnPost && (
-                    <TouchableOpacity
-                        onPress={onRequestContact}
-                        style={styles.contactButton}
-                    >
-                        <MessageCircle size={14} color="#8b5cf6" />
-                        <Text style={styles.contactButtonText}>Request Contact</Text>
+                <View style={styles.socialLeft}>
+                    <TouchableOpacity onPress={handleLike} style={styles.socialButton}>
+                        <Heart size={18} color={isLiked ? "#ef4444" : colors.textSecondary} fill={isLiked ? "#ef4444" : "transparent"} />
+                        <Text style={[styles.socialCount, themeStyles.textSecondary, isLiked && { color: "#ef4444" }]}>{likes.length}</Text>
                     </TouchableOpacity>
-                )}
+
+                    <TouchableOpacity onPress={handleShare} style={styles.socialButton}>
+                        <Share2 size={18} color={colors.textSecondary} />
+                        <Text style={[styles.socialCount, themeStyles.textSecondary]}>{shares}</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Collapsible toggle */}
+                <TouchableOpacity onPress={toggleExpand} style={styles.expandButton}>
+                    {expanded ? <ChevronUp size={20} color={colors.textSecondary} /> : <ChevronDown size={20} color={colors.textSecondary} />}
+                </TouchableOpacity>
             </View>
+
+            {expanded && (
+                <>
+                    <View style={[styles.divider, themeStyles.divider]} />
+
+                    <View style={styles.footer}>
+                        <TouchableOpacity
+                            onPress={onPress}
+                            style={styles.detailsButton}
+                        >
+                            <Text style={[styles.detailsText, themeStyles.textSecondary]}>Full View</Text>
+                            <ArrowUpRight size={14} color={colors.textSecondary} />
+                        </TouchableOpacity>
+
+                        {!isOwnPost && (
+                            <TouchableOpacity
+                                onPress={onRequestContact}
+                                style={styles.contactButton}
+                            >
+                                <MessageCircle size={14} color={colors.primary} />
+                                <Text style={[styles.contactButtonText, { color: colors.primary }]}>Request Contact</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </>
+            )}
         </TouchableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: 'rgba(24, 24, 27, 0.8)', // zinc-900 with opacity
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 20,
+        borderRadius: 20, // Slightly reduced
+        padding: 16, // Reduced from 20
+        marginBottom: 16, // Reduced from 20
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        // shadowColor: "#000",
+        // shadowOffset: {
+        // 	width: 0,
+        // 	height: 1,
+        // },
+        // shadowOpacity: 0.1,
+        // shadowRadius: 2,
+        // elevation: 2,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12, // Reduced from 16
     },
     avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36, // Reduced from 40
+        height: 36,
+        borderRadius: 18,
         backgroundColor: '#27272a',
     } as any,
     userInfo: {
-        marginLeft: 12,
+        marginLeft: 10,
         flex: 1,
     },
     displayName: {
-        color: '#ffffff',
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 15, // Reduced from 16
     },
     type: {
-        fontSize: 10,
+        fontSize: 9, // Reduced from 10
         fontWeight: 'bold',
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     priceTag: {
         backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
         borderWidth: 1,
         borderColor: 'rgba(139, 92, 246, 0.2)',
     },
     priceText: {
-        color: '#a78bfa',
+        color: '#8b5cf6',
         fontWeight: 'bold',
-        fontSize: 14,
+        fontSize: 13,
     },
     title: {
-        fontSize: 20,
+        fontSize: 18, // Reduced from 20
         fontWeight: 'bold',
-        color: '#ffffff',
-        marginBottom: 8,
-        lineHeight: 24,
+        marginBottom: 6,
+        lineHeight: 22,
     },
     description: {
-        color: '#a1a1aa', // zinc-400
-        fontSize: 14,
-        marginBottom: 16,
-        lineHeight: 20,
+        fontSize: 13, // Reduced from 14
+        marginBottom: 12,
+        lineHeight: 18,
     },
     metaContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 16,
     },
     metaItem: {
         flexDirection: 'row',
@@ -247,15 +284,18 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     metaText: {
-        color: '#71717a', // zinc-500
-        fontSize: 12,
+        fontSize: 11,
         marginLeft: 4,
     },
     socialActions: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 0, // Removed bottom margin when collapsed
+    },
+    socialLeft: {
+        flexDirection: 'row',
         gap: 20,
-        marginBottom: 16,
     },
     socialButton: {
         flexDirection: 'row',
@@ -263,15 +303,16 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     socialCount: {
-        color: '#71717a',
         fontSize: 13,
         fontWeight: '600',
     },
+    expandButton: {
+        padding: 4,
+    },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         width: '100%',
-        marginBottom: 16,
+        marginVertical: 12,
     },
     footer: {
         flexDirection: 'row',
@@ -283,40 +324,38 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     detailsText: {
-        color: '#a1a1aa',
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '500',
         marginRight: 4,
     },
     contactButton: {
-        backgroundColor: 'rgba(139, 92, 246, 0.2)', // violet-600/20
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        backgroundColor: 'rgba(139, 92, 246, 0.1)', // violet-600/10
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: 9999,
         borderWidth: 1,
-        borderColor: 'rgba(139, 92, 246, 0.3)',
+        borderColor: 'rgba(139, 92, 246, 0.2)',
         flexDirection: 'row',
         alignItems: 'center',
     },
     contactButtonText: {
-        color: '#a78bfa', // violet-400
         fontWeight: 'bold',
-        fontSize: 14,
-        marginLeft: 8,
+        fontSize: 13,
+        marginLeft: 6,
     },
     requestBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#ef4444',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 10,
         marginLeft: 8,
         gap: 4,
     },
     requestBadgeText: {
         color: '#ffffff',
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: 'bold',
     },
 });

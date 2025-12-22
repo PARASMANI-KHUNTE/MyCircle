@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import { ArrowLeft, Send, MoreVertical } from 'lucide-react-native';
 
@@ -11,6 +12,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const { id, recipient } = route.params;
     const auth = useAuth() as any;
     const { socket } = useSocket() as any;
+    const { colors } = useTheme();
 
     const [messages, setMessages] = useState<any[]>([]);
     const [conversation, setConversation] = useState<any>(null);
@@ -168,12 +170,13 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
     const displayUser = recipient || conversation?.participants.find((p: any) => p._id !== auth?.user?._id);
 
-    if (loading) return (
-        <View style={[styles.container, styles.centerContent]}>
-            <ActivityIndicator color="#8b5cf6" size="large" />
-        </View>
-    );
-
+    if (loading) {
+        return (
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 50 }} />
+            </SafeAreaView>
+        );
+    }
     const handleBlockUser = async () => {
         Alert.alert(
             "Block User",
@@ -240,27 +243,27 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+            <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft color="white" size={24} />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
+                        <ArrowLeft color={colors.text} size={24} />
                     </TouchableOpacity>
                     <Image
                         source={{ uri: displayUser?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${displayUser?.displayName}` }}
                         style={styles.headerAvatar}
                     />
                     <View style={styles.headerInfo}>
-                        <Text style={styles.headerName}>{displayUser?.displayName}</Text>
+                        <Text style={[styles.headerName, { color: colors.text }]}>{displayUser?.displayName}</Text>
                         {isOtherUserTyping ? (
-                            <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>Typing...</Text>
+                            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Typing...</Text>
                         ) : (
-                            <Text style={styles.onlineStatus}>Online</Text>
+                            <Text style={[styles.onlineStatus, { color: colors.textSecondary }]}>Online</Text>
                         )}
                     </View>
                 </View>
                 <TouchableOpacity onPress={showMenu} style={{ padding: 8 }}>
-                    <MoreVertical color="white" size={24} />
+                    <MoreVertical color={colors.text} size={24} />
                 </TouchableOpacity>
             </View >
 
@@ -281,9 +284,9 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                             <View style={[styles.messageRow, isMe ? styles.myMessageRow : styles.otherMessageRow]}>
                                 <View style={[
                                     styles.messageBubble,
-                                    isMe ? styles.myBubble : styles.otherBubble
+                                    isMe ? { backgroundColor: colors.primary } : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }
                                 ]}>
-                                    <Text style={styles.messageText}>{item.text}</Text>
+                                    <Text style={[styles.messageText, { color: isMe ? '#ffffff' : colors.text }]}>{item.text}</Text>
                                     <View style={styles.messageFooter}>
                                         <Text style={styles.timeText}>
                                             {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -303,24 +306,17 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     contentContainerStyle={styles.listContent}
                 />
 
-                <View style={styles.inputArea}>
+                <View style={[styles.inputArea, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
                         placeholder="Type a message..."
-                        placeholderTextColor="#71717a"
+                        placeholderTextColor={colors.textSecondary}
                         value={inputText}
                         onChangeText={handleTextChange}
                         multiline
                     />
-                    <TouchableOpacity
-                        onPress={handleSend}
-                        disabled={!inputText.trim()}
-                        style={[
-                            styles.sendButton,
-                            inputText.trim() ? styles.sendButtonActive : styles.sendButtonDisabled
-                        ]}
-                    >
-                        <Send color="white" size={20} />
+                    <TouchableOpacity onPress={handleSend} style={[styles.sendButton, { backgroundColor: colors.primary }]}>
+                        <Send size={20} color="white" />
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>

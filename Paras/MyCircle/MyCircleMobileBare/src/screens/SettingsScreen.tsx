@@ -1,11 +1,24 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Switch, ScrollView, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Bell, Lock, Eye, Trash2, ChevronRight, UserX } from 'lucide-react-native';
+import { ArrowLeft, Bell, Lock, Eye, Trash2, ChevronRight, UserX, Moon, Sun } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const SettingsScreen = ({ navigation }: any) => {
     const { logout } = useAuth() as any;
+    const { theme, toggleTheme, colors } = useTheme();
+
+    // Dynamic styles based on theme
+    const themeStyles = {
+        container: { backgroundColor: colors.background },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        card: { backgroundColor: colors.card },
+        border: { borderColor: colors.border },
+        iconContainer: { backgroundColor: colors.card, borderColor: colors.border }
+    };
+
     const [notifications, setNotifications] = useState({
         push: true,
         email: true,
@@ -33,36 +46,46 @@ const SettingsScreen = ({ navigation }: any) => {
     };
 
     const SettingItem = ({ icon: Icon, label, value, onValueChange, type = 'switch' }: any) => (
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, themeStyles.border]}>
             <View style={styles.settingLeft}>
-                <View style={styles.iconContainer}>
-                    <Icon size={20} color="#a1a1aa" />
+                <View style={[styles.iconContainer, themeStyles.iconContainer]}>
+                    <Icon size={20} color={colors.textSecondary} />
                 </View>
-                <Text style={styles.settingLabel}>{label}</Text>
+                <Text style={[styles.settingLabel, themeStyles.text]}>{label}</Text>
             </View>
             {type === 'switch' ? (
                 <Switch
                     value={value}
                     onValueChange={onValueChange}
-                    trackColor={{ false: '#27272a', true: '#8b5cf6' }}
+                    trackColor={{ false: colors.card, true: colors.primary }}
                     thumbColor="#fff"
                 />
             ) : (
-                <ChevronRight size={20} color="#52525b" />
+                <ChevronRight size={20} color={colors.textSecondary} />
             )}
         </View>
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft color="white" size={24} />
+                    <ArrowLeft color={colors.text} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Settings</Text>
+                <Text style={[styles.headerTitle, themeStyles.text]}>Settings</Text>
             </View>
 
             <ScrollView style={styles.scrollView}>
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Appearance</Text>
+                </View>
+                <SettingItem
+                    icon={theme === 'dark' ? Moon : Sun}
+                    label="Dark Mode"
+                    value={theme === 'dark'}
+                    onValueChange={toggleTheme}
+                />
+
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Notifications</Text>
                 </View>

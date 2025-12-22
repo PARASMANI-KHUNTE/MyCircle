@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
 import { ArrowLeft, MessageCircle } from 'lucide-react-native';
 
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 const ChatListScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
     const { socket } = useSocket() as any;
+    const { colors } = useTheme();
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -70,6 +72,16 @@ const ChatListScreen = ({ navigation }: any) => {
         }
     };
 
+    const themeStyles = {
+        container: { backgroundColor: colors.background },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        card: { backgroundColor: colors.card, borderColor: colors.border },
+        border: { borderColor: colors.border },
+        highlight: { backgroundColor: colors.primary + '10', borderLeftColor: colors.primary },
+        icon: colors.text
+    };
+
     const renderItem = ({ item }: { item: any }) => {
         const otherUser = item.participants.find((p: any) => p._id !== auth?.user?._id);
         const lastMsg = item.lastMessage;
@@ -78,31 +90,35 @@ const ChatListScreen = ({ navigation }: any) => {
         return (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ChatWindow', { id: item._id, recipient: otherUser })}
-                style={[styles.conversationItem, hasUnread && styles.unreadConversation]}
+                style={[
+                    styles.conversationItem,
+                    themeStyles.border,
+                    hasUnread ? themeStyles.highlight : { backgroundColor: colors.card }
+                ]}
             >
                 <Image
                     source={{ uri: otherUser?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${otherUser?.displayName}` }}
-                    style={styles.avatar}
+                    style={[styles.avatar, { backgroundColor: colors.input }]}
                 />
                 <View style={styles.contentContainer}>
                     <View style={styles.nameRow}>
-                        <Text style={[styles.userName, hasUnread && styles.unreadText]}>{otherUser?.displayName}</Text>
-                        <Text style={styles.timeText}>
+                        <Text style={[styles.userName, themeStyles.text, hasUnread && styles.unreadText]}>{otherUser?.displayName}</Text>
+                        <Text style={[styles.timeText, themeStyles.textSecondary]}>
                             {item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </Text>
                     </View>
                     {typingUsers[item._id] ? (
-                        <Text style={[styles.lastMessage, { color: '#8b5cf6', fontWeight: '600' }]} numberOfLines={1}>
+                        <Text style={[styles.lastMessage, { color: colors.primary, fontWeight: '600' }]} numberOfLines={1}>
                             Typing...
                         </Text>
                     ) : (
-                        <Text style={[styles.lastMessage, hasUnread && styles.unreadMessage]} numberOfLines={1}>
+                        <Text style={[styles.lastMessage, hasUnread ? { color: colors.text, fontWeight: '600' } : themeStyles.textSecondary]} numberOfLines={1}>
                             {lastMsg ? lastMsg.text : 'Start a conversation'}
                         </Text>
                     )}
                 </View>
                 {hasUnread && (
-                    <View style={styles.unreadBadge}>
+                    <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
                         <Text style={styles.unreadCount}>{item.unreadCount}</Text>
                     </View>
                 )}
@@ -111,23 +127,23 @@ const ChatListScreen = ({ navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+            <View style={[styles.header, themeStyles.border]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft color="white" size={24} />
+                        <ArrowLeft color={colors.text} size={24} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Messages</Text>
+                    <Text style={[styles.headerTitle, themeStyles.text]}>Messages</Text>
                 </View>
                 {/* Requests Button */}
                 <TouchableOpacity onPress={() => navigation.navigate('Requests')} style={{ padding: 8 }}>
-                    <MessageCircle color="#8b5cf6" size={24} />
+                    <MessageCircle color={colors.primary} size={24} />
                 </TouchableOpacity>
             </View>
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator color="#8b5cf6" size="large" />
+                    <ActivityIndicator color={colors.primary} size="large" />
                 </View>
             ) : (
                 <FlatList
@@ -135,12 +151,12 @@ const ChatListScreen = ({ navigation }: any) => {
                     keyExtractor={item => (item as any)._id}
                     renderItem={renderItem}
                     refreshControl={
-                        <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor="#8b5cf6" />
+                        <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor={colors.primary} />
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
-                            <MessageCircle size={48} color="#27272a" />
-                            <Text style={styles.emptyText}>No conversations yet.</Text>
+                            <MessageCircle size={48} color={colors.textSecondary} />
+                            <Text style={[styles.emptyText, themeStyles.textSecondary]}>No conversations yet.</Text>
                         </View>
                     }
                 />
@@ -158,9 +174,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
     },
     backButton: {
         marginRight: 16,
@@ -168,21 +184,17 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#ffffff',
     },
     conversationItem: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-        backgroundColor: 'rgba(24, 24, 27, 0.3)', // zinc-900/30
     },
     avatar: {
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#27272a',
     },
     contentContainer: {
         flex: 1,
@@ -194,16 +206,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     userName: {
-        color: '#ffffff',
         fontWeight: 'bold',
         fontSize: 18,
     },
     timeText: {
-        color: '#71717a',
         fontSize: 12,
     },
     lastMessage: {
-        color: '#a1a1aa',
         fontSize: 14,
         marginTop: 4,
     },

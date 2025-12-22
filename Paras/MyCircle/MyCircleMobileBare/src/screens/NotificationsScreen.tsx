@@ -2,14 +2,29 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotifications } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
 import { Bell, MessageSquare, CheckCircle, Heart, Info, Trash2, X, CheckSquare, Square } from 'lucide-react-native';
 import api from '../services/api';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const NotificationsScreen = ({ navigation }: any) => {
     const { notifications, loading, refresh, markAllRead, handleNotificationClick } = useNotifications();
+    const { colors } = useTheme();
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+
+    const themeStyles = {
+        container: { backgroundColor: colors.background },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        card: { backgroundColor: colors.card, borderColor: colors.border },
+        border: { borderColor: colors.border },
+        highlight: { backgroundColor: colors.primary + '10' },
+        unreadCard: { backgroundColor: colors.card }, // Or slightly different?
+        readCard: { backgroundColor: colors.background },
+        selectedCard: { backgroundColor: colors.primary + '15' },
+        icon: colors.text
+    };
 
     const getIcon = (type: string) => {
         const size = 20;
@@ -18,7 +33,7 @@ const NotificationsScreen = ({ navigation }: any) => {
             case 'approval': return <CheckCircle size={size} color="#4ade80" />;
             case 'like': return <Heart size={size} color="#f472b6" />;
             case 'info': return <Info size={size} color="#c084fc" />;
-            default: return <Bell size={size} color="#a1a1aa" />;
+            default: return <Bell size={size} color={colors.textSecondary} />;
         }
     };
 
@@ -136,8 +151,9 @@ const NotificationsScreen = ({ navigation }: any) => {
                 delayLongPress={300}
                 style={[
                     styles.notificationCard,
-                    item.read ? styles.readCard : styles.unreadCard,
-                    isSelected && styles.selectedCard
+                    themeStyles.border,
+                    item.read ? themeStyles.readCard : themeStyles.unreadCard,
+                    isSelected && themeStyles.selectedCard
                 ]}
                 activeOpacity={0.7}
             >
@@ -145,14 +161,14 @@ const NotificationsScreen = ({ navigation }: any) => {
                     {isSelectionMode && (
                         <View style={styles.checkboxContainer}>
                             {isSelected ? (
-                                <CheckSquare size={20} color="#8b5cf6" />
+                                <CheckSquare size={20} color={colors.primary} />
                             ) : (
-                                <Square size={20} color="#71717a" />
+                                <Square size={20} color={colors.textSecondary} />
                             )}
                         </View>
                     )}
 
-                    <View style={styles.iconContainer}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.input }]}>
                         {getIcon(item.type)}
                     </View>
 
@@ -160,15 +176,15 @@ const NotificationsScreen = ({ navigation }: any) => {
                         <View style={styles.titleRow}>
                             <Text style={[
                                 styles.notificationTitle,
-                                item.read ? styles.readText : styles.unreadText
+                                item.read ? themeStyles.textSecondary : { color: colors.text }
                             ]} numberOfLines={1}>
                                 {item.title}
                             </Text>
-                            <Text style={styles.timeText}>
+                            <Text style={[styles.timeText, themeStyles.textSecondary]}>
                                 {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </Text>
                         </View>
-                        <Text style={styles.messageText} numberOfLines={2}>{item.message}</Text>
+                        <Text style={[styles.messageText, themeStyles.textSecondary]} numberOfLines={2}>{item.message}</Text>
                     </View>
                 </View>
             </TouchableOpacity>
@@ -187,30 +203,30 @@ const NotificationsScreen = ({ navigation }: any) => {
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={styles.container} edges={['top']}>
-                <View style={styles.header}>
+            <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+                <View style={[styles.header, themeStyles.border, { backgroundColor: colors.background }]}>
                     {isSelectionMode ? (
                         <View style={styles.selectionHeader}>
                             <TouchableOpacity onPress={() => {
                                 setIsSelectionMode(false);
                                 setSelectedItems(new Set());
                             }}>
-                                <X size={24} color="#ffffff" />
+                                <X size={24} color={colors.text} />
                             </TouchableOpacity>
-                            <Text style={styles.selectionTitle}>{selectedItems.size} Selected</Text>
+                            <Text style={[styles.selectionTitle, themeStyles.text]}>{selectedItems.size} Selected</Text>
                             <TouchableOpacity onPress={handleBulkDelete}>
-                                <Trash2 size={24} color="#ef4444" />
+                                <Trash2 size={24} color={colors.danger} />
                             </TouchableOpacity>
                         </View>
                     ) : (
                         <View style={styles.defaultHeader}>
                             <View>
-                                <Text style={styles.headerTitle}>Notifications</Text>
-                                <Text style={styles.headerSubtitle}>Updates and alerts</Text>
+                                <Text style={[styles.headerTitle, themeStyles.text]}>Notifications</Text>
+                                <Text style={[styles.headerSubtitle, themeStyles.textSecondary]}>Updates and alerts</Text>
                             </View>
                             {notifications.some(n => !n.read) && (
                                 <TouchableOpacity onPress={markAllRead}>
-                                    <Text style={styles.clearAllText}>Mark all read</Text>
+                                    <Text style={[styles.clearAllText, { color: colors.primary }]}>Mark all read</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -219,7 +235,7 @@ const NotificationsScreen = ({ navigation }: any) => {
 
                 {loading && notifications.length === 0 ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#8b5cf6" />
+                        <ActivityIndicator size="large" color={colors.primary} />
                     </View>
                 ) : (
                     <SectionList
@@ -227,17 +243,17 @@ const NotificationsScreen = ({ navigation }: any) => {
                         keyExtractor={item => item._id}
                         renderItem={renderItem}
                         renderSectionHeader={({ section: { title } }) => (
-                            <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionHeaderText}>{title}</Text>
+                            <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
+                                <Text style={[styles.sectionHeaderText, themeStyles.textSecondary]}>{title}</Text>
                             </View>
                         )}
                         refreshControl={
-                            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#8b5cf6" />
+                            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
                         }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Bell size={48} color="#27272a" />
-                                <Text style={styles.emptyText}>
+                                <Bell size={48} color={colors.textSecondary} />
+                                <Text style={[styles.emptyText, themeStyles.textSecondary]}>
                                     All caught up! No new notifications.
                                 </Text>
                             </View>

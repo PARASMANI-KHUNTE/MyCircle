@@ -4,8 +4,10 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { Camera, X } from 'lucide-react-native';
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 const CreatePostScreen = ({ navigation }: any) => {
+    const { colors } = useTheme();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState('job');
@@ -70,27 +72,40 @@ const CreatePostScreen = ({ navigation }: any) => {
         }
     };
 
+    const themeStyles = {
+        container: { backgroundColor: colors.background },
+        text: { color: colors.text },
+        textSecondary: { color: colors.textSecondary },
+        card: { backgroundColor: colors.card, borderColor: colors.border },
+        input: { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
+        border: { borderColor: colors.border },
+        active: { backgroundColor: colors.primary, borderColor: colors.primary },
+        inactive: { backgroundColor: colors.card, borderColor: colors.border },
+        activeText: { color: '#ffffff' },
+        inactiveText: { color: colors.textSecondary }
+    };
+
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>New Post</Text>
-                {loading && <ActivityIndicator color="#8b5cf6" />}
+        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+            <View style={[styles.header, themeStyles.border]}>
+                <Text style={[styles.headerTitle, themeStyles.text]}>New Post</Text>
+                {loading && <ActivityIndicator color={colors.primary} />}
             </View>
 
             <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Title</Text>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Title</Text>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, themeStyles.input]}
                         placeholder="What are you posting?"
-                        placeholderTextColor="#52525b"
+                        placeholderTextColor={colors.textSecondary}
                         value={title}
                         onChangeText={setTitle}
                     />
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Type</Text>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScrollContent}>
                         {['job', 'service', 'sell', 'rent'].map((t) => (
                             <TouchableOpacity
@@ -98,12 +113,12 @@ const CreatePostScreen = ({ navigation }: any) => {
                                 onPress={() => setType(t)}
                                 style={[
                                     styles.typeButton,
-                                    type === t ? styles.typeButtonActive : styles.typeButtonInactive
+                                    type === t ? themeStyles.active : themeStyles.inactive
                                 ]}
                             >
                                 <Text style={[
                                     styles.typeText,
-                                    type === t ? styles.typeTextActive : styles.typeTextInactive
+                                    type === t ? themeStyles.activeText : themeStyles.inactiveText
                                 ]}>{t}</Text>
                             </TouchableOpacity>
                         ))}
@@ -111,11 +126,11 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Description</Text>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Description</Text>
                     <TextInput
-                        style={[styles.input, styles.textArea]}
+                        style={[styles.input, styles.textArea, themeStyles.input]}
                         placeholder="Describe your post in detail..."
-                        placeholderTextColor="#52525b"
+                        placeholderTextColor={colors.textSecondary}
                         multiline
                         textAlignVertical="top"
                         value={description}
@@ -125,21 +140,21 @@ const CreatePostScreen = ({ navigation }: any) => {
 
                 <View style={styles.row}>
                     <View style={styles.flex1}>
-                        <Text style={styles.label}>Location</Text>
+                        <Text style={[styles.label, themeStyles.textSecondary]}>Location</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, themeStyles.input]}
                             placeholder="Area / City"
-                            placeholderTextColor="#52525b"
+                            placeholderTextColor={colors.textSecondary}
                             value={location}
                             onChangeText={setLocation}
                         />
                     </View>
                     <View style={styles.flex1}>
-                        <Text style={styles.label}>Price (₹)</Text>
+                        <Text style={[styles.label, themeStyles.textSecondary]}>Price (₹)</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, themeStyles.input]}
                             placeholder="0"
-                            placeholderTextColor="#52525b"
+                            placeholderTextColor={colors.textSecondary}
                             keyboardType="numeric"
                             value={price}
                             onChangeText={setPrice}
@@ -148,19 +163,19 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
 
                 <View style={styles.imageSection}>
-                    <Text style={styles.label}>Images</Text>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Images</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoScrollContent}>
                         <TouchableOpacity
                             onPress={pickImage}
-                            style={styles.addPhotoButton}
+                            style={[styles.addPhotoButton, { backgroundColor: colors.input, borderColor: colors.border }]}
                         >
-                            <Camera size={24} color="#71717a" />
-                            <Text style={styles.addPhotoText}>Add Photo</Text>
+                            <Camera size={24} color={colors.textSecondary} />
+                            <Text style={[styles.addPhotoText, themeStyles.textSecondary]}>Add Photo</Text>
                         </TouchableOpacity>
 
                         {images.map((img, index) => (
                             <View key={index} style={styles.imageWrapper}>
-                                <Image source={{ uri: img.uri }} style={styles.imagePreview} />
+                                <Image source={{ uri: img.uri }} style={[styles.imagePreview, { backgroundColor: colors.input }]} />
                                 <TouchableOpacity
                                     onPress={() => removeImage(index)}
                                     style={styles.removeImageButton}
@@ -173,12 +188,12 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
 
                 <TouchableOpacity
-                    style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                    style={[styles.submitButton, loading && styles.submitButtonDisabled, { backgroundColor: colors.text }]}
                     onPress={handleCreate}
                     disabled={loading}
                     activeOpacity={0.9}
                 >
-                    <Text style={styles.submitButtonText}>
+                    <Text style={[styles.submitButtonText, { color: colors.background }]}>
                         {loading ? 'Posting...' : 'Create Post'}
                     </Text>
                 </TouchableOpacity>
@@ -204,7 +219,6 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#ffffff',
     },
     scrollContainer: {
         flex: 1,
@@ -218,20 +232,16 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        color: '#a1a1aa', // zinc-400
         marginBottom: 8,
         marginLeft: 4,
         fontSize: 14,
         fontWeight: '500',
     },
     input: {
-        backgroundColor: '#18181b', // zinc-900
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 14,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        color: '#ffffff',
         fontSize: 16,
     },
     typeScrollContent: {
@@ -257,12 +267,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
     },
-    typeTextActive: {
-        color: '#ffffff',
-    },
-    typeTextInactive: {
-        color: '#a1a1aa',
-    },
     textArea: {
         height: 120,
         textAlignVertical: 'top',
@@ -285,9 +289,7 @@ const styles = StyleSheet.create({
     addPhotoButton: {
         width: 100,
         height: 100,
-        backgroundColor: '#18181b',
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
         borderStyle: 'dashed',
         borderRadius: 16,
         justifyContent: 'center',
@@ -295,7 +297,6 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     addPhotoText: {
-        color: '#71717a',
         fontSize: 12,
         marginTop: 6,
     },
@@ -309,7 +310,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 16,
-        backgroundColor: '#27272a',
     },
     removeImageButton: {
         position: 'absolute',
@@ -323,11 +323,9 @@ const styles = StyleSheet.create({
         borderColor: '#000000',
     },
     submitButton: {
-        backgroundColor: '#ffffff',
         paddingVertical: 16,
         borderRadius: 18,
         alignItems: 'center',
-        shadowColor: '#ffffff',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
@@ -337,7 +335,6 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     submitButtonText: {
-        color: '#000000',
         fontWeight: 'bold',
         fontSize: 18,
     },

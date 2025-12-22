@@ -1,0 +1,7 @@
+{
+  "name": "MyCircle Marketplace",
+  "description": "A unified platform for local jobs, services, and marketplace listings with real-time collaboration features.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

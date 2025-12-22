@@ -1,0 +1,3 @@
+﻿src/components/ui/Toast.tsx(2,19): error TS2307: Cannot find module 'react-native-toast-message' or its corresponding type declarations.
+src/screens/LandingScreen.tsx(21,38): error TS2339: Property 'idToken' does not exist on type 'SignInResponse'.
+  Property 'idToken' does not exist on type 'SignInSuccessResponse'.

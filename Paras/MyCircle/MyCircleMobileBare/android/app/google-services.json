@@ -1,0 +1,47 @@
+{
+    "project_info": {
+        "project_number": "409923546170",
+        "project_id": "portfolio-478913",
+        "storage_bucket": "portfolio-478913.appspot.com"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:409923546170:android:3e0202521e065306",
+                "android_client_info": {
+                    "package_name": "com.mycirclemobilebare"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "409923546170-6e8hlc2p7eu09cndqhrd3ejg79lsk3ei.apps.googleusercontent.com",
+                    "client_type": 1,
+                    "android_info": {
+                        "package_name": "com.mycirclemobilebare",
+                        "certificate_hash": "E769180BE2549304D4C0AB7E7B4AF568C7EA944E"
+                    }
+                },
+                {
+                    "client_id": "409923546170-grbbbamkm473v8pumnahcboqk7bc3qn9.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "dummy_api_key_not_strictly_needed_for_signin_but_good_to_have"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "409923546170-grbbbamkm473v8pumnahcboqk7bc3qn9.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

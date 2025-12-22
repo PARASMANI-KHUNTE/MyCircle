@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Rocket } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import { useAuth } from '../src/context/AuthContext';
 import * as Google from 'expo-auth-session/providers/google';
@@ -14,24 +13,28 @@ const Landing = () => {
     const router = useRouter();
     const { login, token, isLoading: authLoading } = useAuth();
 
-    // FORCING EXACT ALIGNMENT WITH YOUR GOOGLE CONSOLE SCREENSHOT
+    // FORCING compliant Redirect URI for Google (must be https for Web Client IDs)
     const redirectUri = 'https://auth.expo.io/@paras/MyCircleMobile';
 
     const webId = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+    const iosId = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+    const androidId = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
     const [request, response, promptAsync] = Google.useAuthRequest({
-        expoClientId: webId,
-        iosClientId: webId, // Force Web ID to avoid mismatch
-        androidClientId: webId, // Force Web ID to avoid mismatch while satisfying "must be defined"
+        webClientId: webId,
+        iosClientId: iosId,
+        androidClientId: androidId,
         redirectUri,
+        // Requesting ID token explicitly as requested by backend in previous iterations
+        responseType: AuthSession.ResponseType.IdToken,
         scopes: ['profile', 'email'],
     } as any);
 
     useEffect(() => {
         if (request) {
-            console.log('🌐 FULL REQUEST DETAILS:');
-            console.log('- URL:', request.url);
-            console.log('- Redirect:', request.redirectUri);
+            console.log('🌐 OAUTH CONFIG:');
+            console.log('- Redirect URI:', request.redirectUri);
+            console.log('- Client ID (Expo/Web):', webId);
             console.log('------------------------');
         }
     }, [request]);
@@ -44,7 +47,7 @@ const Landing = () => {
 
     useEffect(() => {
         if (response) {
-            console.log('📦 OAUTH RESPONSE:', JSON.stringify(response, null, 2));
+            console.log('📦 OAUTH RESPONSE:', response.type);
         }
         if (response?.type === 'success') {
             const { id_token } = response.params;
@@ -85,32 +88,36 @@ const Landing = () => {
 
     if (authLoading) {
         return (
-            <View className="flex-1 bg-background items-center justify-center">
+            <View className="flex-1 bg-zinc-950 items-center justify-center">
                 <ActivityIndicator size="large" color="#8b5cf6" />
             </View>
         );
     }
 
     return (
-        <View className="flex-1 bg-background items-center justify-center p-6">
+        <View className="flex-1 bg-zinc-950 items-center justify-center p-6">
             <View className="items-center mb-10">
-                <View className="w-20 h-20 bg-primary rounded-2xl items-center justify-center mb-4">
-                    <Rocket color="white" size={40} />
+                <View className="w-24 h-24 items-center justify-center mb-6">
+                    <Image
+                        source={require('../assets/logo.png')}
+                        className="w-full h-full"
+                        resizeMode="contain"
+                    />
                 </View>
-                <Text className="text-4xl font-bold text-white text-center">MyCircle</Text>
-                <Text className="text-gray-400 text-center mt-2 text-lg">Hyperlocal Exchange Reimagined</Text>
+                <Text className="text-5xl font-bold text-white tracking-tighter">MyCircle</Text>
+                <Text className="text-zinc-400 text-center mt-3 text-lg font-medium">Hyperlocal Exchange Reimagined</Text>
             </View>
 
             <TouchableOpacity
                 disabled={!request}
-                onPress={() => (promptAsync as any)({ useProxy: true })}
-                className="bg-primary w-full py-4 rounded-xl items-center shadow-lg shadow-purple-500/30 mb-8"
+                onPress={() => promptAsync()}
+                className="bg-white w-full py-4 rounded-2xl items-center shadow-2xl shadow-white/5 mb-8"
             >
-                <Text className="text-white font-bold text-lg">Sign in with Google</Text>
+                <Text className="text-black font-bold text-lg">Sign in with Google</Text>
             </TouchableOpacity>
 
-            <Text className="text-gray-500 mt-6 text-xs text-center px-4">
-                By continuing, you agree to our Terms of Service and Privacy Policy.
+            <Text className="text-zinc-500 mt-6 text-xs text-center px-4 leading-5">
+                By continuing, you agree to our <Text className="text-zinc-300">Terms of Service</Text> and <Text className="text-zinc-300">Privacy Policy</Text>.
             </Text>
         </View>
     );

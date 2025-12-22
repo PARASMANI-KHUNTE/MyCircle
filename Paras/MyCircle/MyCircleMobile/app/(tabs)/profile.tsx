@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import { Settings, LogOut, MapPin } from 'lucide-react-native';
+import { Settings, LogOut, MapPin, MessageCircle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 
 export default function Profile() {
     const { logout } = useAuth();
+    const router = useRouter();
     const [user, setUser] = useState(null);
 
     useEffect(() => {
@@ -36,9 +38,17 @@ export default function Profile() {
             <ScrollView className="flex-1 px-4 py-4">
                 <View className="flex-row justify-between items-center mb-6">
                     <Text className="text-3xl font-bold text-white">Profile</Text>
-                    <TouchableOpacity onPress={handleLogout} className="p-2 bg-zinc-900 rounded-full">
-                        <LogOut size={20} color="#ef4444" />
-                    </TouchableOpacity>
+                    <View className="flex-row gap-3">
+                        <TouchableOpacity onPress={() => router.push('/chat' as any)} className="p-2 bg-zinc-900 rounded-full border border-white/5">
+                            <MessageCircle size={20} color="#8b5cf6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push('/profile/settings' as any)} className="p-2 bg-zinc-900 rounded-full border border-white/5">
+                            <Settings size={20} color="#a1a1aa" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleLogout} className="p-2 bg-zinc-900 rounded-full border border-white/5">
+                            <LogOut size={20} color="#ef4444" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Profile Card */}
@@ -100,7 +110,10 @@ export default function Profile() {
                     </View>
                 </View>
 
-                <TouchableOpacity className="bg-white py-3 rounded-xl items-center mt-4">
+                <TouchableOpacity
+                    onPress={() => router.push('/profile/edit' as any)}
+                    className="bg-white py-3 rounded-xl items-center mt-4"
+                >
                     <Text className="font-bold text-black">Edit Profile</Text>
                 </TouchableOpacity>
 

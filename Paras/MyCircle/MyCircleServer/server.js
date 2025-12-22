@@ -87,6 +87,7 @@ app.use(passport.initialize());
 
 // Routes
 app.use('/auth', require('./src/routes/authRoutes'));
+app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/posts', require('./src/routes/postRoutes'));
 app.use('/api/contacts', require('./src/routes/contactRoutes'));
 app.use('/api/user', require('./src/routes/userRoutes'));

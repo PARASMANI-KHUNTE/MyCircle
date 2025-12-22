@@ -1,7 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Home, PlusSquare, Inbox, Grid, User } from 'lucide-react-native';
+import { Home, PlusSquare, Inbox, Grid, User, Bell } from 'lucide-react-native';
+import { useNotifications } from '../../src/context/NotificationContext';
+import { View, Text } from 'react-native';
 
 export default function TabLayout() {
+    const { unreadCount } = useNotifications();
+
     return (
         <Tabs
             screenOptions={{
@@ -32,17 +36,26 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="requests"
+                name="notifications"
                 options={{
-                    title: 'Requests',
-                    tabBarIcon: ({ color }) => <Inbox size={24} color={color} />,
+                    title: 'Alerts',
+                    tabBarIcon: ({ color }) => (
+                        <View>
+                            <Bell size={24} color={color} />
+                            {unreadCount > 0 && (
+                                <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[16px] h-4 items-center justify-center px-1">
+                                    <Text className="text-[10px] text-white font-bold">{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                                </View>
+                            )}
+                        </View>
+                    ),
                 }}
             />
             <Tabs.Screen
-                name="myposts"
+                name="requests"
                 options={{
-                    title: 'My Posts',
-                    tabBarIcon: ({ color }) => <Grid size={24} color={color} />,
+                    title: 'Inbox',
+                    tabBarIcon: ({ color }) => <Inbox size={24} color={color} />,
                 }}
             />
             <Tabs.Screen
@@ -50,6 +63,12 @@ export default function TabLayout() {
                 options={{
                     title: 'Profile',
                     tabBarIcon: ({ color }) => <User size={24} color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="myposts"
+                options={{
+                    href: null, // Hide from bar if needed, or keep for quick access
                 }}
             />
         </Tabs>

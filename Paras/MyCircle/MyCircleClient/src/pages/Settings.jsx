@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import Button from '../components/ui/Button';
-import { Bell, Lock, Trash2, Save } from 'lucide-react';
+import { Bell, Lock, Trash2, Save, Moon, Sun } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const Settings = () => {
+    const { theme, toggleTheme, isDark } = useTheme();
     const [preferences, setPreferences] = useState({
         emailNotifications: true,
         profileVisibility: 'public'
@@ -78,6 +80,39 @@ const Settings = () => {
                             />
                             <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                         </label>
+                    </div>
+                </div>
+
+                {/* Theme */}
+                <div className="glass rounded-2xl p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-500">
+                            {isDark ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
+                        </div>
+                        <h2 className="text-xl font-bold text-white">Appearance</h2>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-white font-medium">Theme</p>
+                            <p className="text-sm text-gray-400">Switch between dark and light mode</p>
+                        </div>
+                        <button
+                            onClick={toggleTheme}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+                        >
+                            {isDark ? (
+                                <>
+                                    <Moon className="w-4 h-4 text-gray-400" />
+                                    <span className="text-white text-sm">Dark</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Sun className="w-4 h-4 text-yellow-500" />
+                                    <span className="text-white text-sm">Light</span>
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
 

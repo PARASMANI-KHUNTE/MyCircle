@@ -18,40 +18,43 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider } from './context/ThemeContext';
 import DialogProvider from './components/ui/DialogProvider';
 
 function App() {
   return (
-    <ToastProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AuthProvider>
-          <SocketProvider>
-            <NotificationProvider>
-              <DialogProvider>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/feed" element={<Feed />} />
-                    <Route path="/create-post" element={<CreatePost />} />
-                    <Route path="/my-posts" element={<MyPosts />} />
-                    <Route path="/requests" element={<Requests />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/edit-profile" element={<EditProfile />} />
-                    <Route path="/post/:id" element={<PostDetails />} />
-                    <Route path="/notifications" element={<Notifications />} />
-                    <Route path="/chat" element={<Chat />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/blocked-users" element={<BlockedUsers />} />
-                    <Route path="/login/success" element={<Home />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Layout>
-              </DialogProvider>
-            </NotificationProvider>
-          </SocketProvider>
-        </AuthProvider>
-      </Router>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AuthProvider>
+            <SocketProvider>
+              <NotificationProvider>
+                <DialogProvider>
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/feed" element={<Feed />} />
+                      <Route path="/create-post" element={<CreatePost />} />
+                      <Route path="/my-posts" element={<MyPosts />} />
+                      <Route path="/requests" element={<Requests />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/edit-profile" element={<EditProfile />} />
+                      <Route path="/post/:id" element={<PostDetails />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/chat" element={<Chat />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/blocked-users" element={<BlockedUsers />} />
+                      <Route path="/login/success" element={<Home />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Layout>
+                </DialogProvider>
+              </NotificationProvider>
+            </SocketProvider>
+          </AuthProvider>
+        </Router>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

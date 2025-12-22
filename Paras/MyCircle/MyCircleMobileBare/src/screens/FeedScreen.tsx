@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, Dimensions, PermissionsAndroid, Platform, Modal } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check } from 'lucide-react-native';
 import api from '../services/api';
@@ -7,6 +8,7 @@ import PostCard from '../components/ui/PostCard';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
 import { useTheme } from '../context/ThemeContext';
+import { getCurrentLocation } from '../utils/location';
 
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: Zap },
@@ -31,6 +33,8 @@ const FeedScreen = ({ navigation }: any) => {
     const [locationFilter, setLocationFilter] = useState('All');
     const [availableLocations, setAvailableLocations] = useState<string[]>(['All']);
     const [showLocationModal, setShowLocationModal] = useState(false);
+    const [isNearby, setIsNearby] = useState(false);
+    const [nearbyLoading, setNearbyLoading] = useState(false);
 
     // For date, simple string match or picker? User said "select date". 
     // Implementing a simple text match for now or a list of available dates would be better but let's stick to simple "Date" sort/filter.
@@ -74,7 +78,7 @@ const FeedScreen = ({ navigation }: any) => {
             setAvailableLocations(['All', ...locs]);
         }
         filterPosts();
-    }, [posts, searchQuery, selectedCategory, sortOrder, locationFilter, selectedDate]);
+    }, [posts, searchQuery, selectedCategory, sortOrder, locationFilter, selectedDate, isNearby]);
 
     const requestLocationPermission = async () => {
         if (Platform.OS === 'android') {
@@ -101,9 +105,14 @@ const FeedScreen = ({ navigation }: any) => {
         }
     };
 
-    const fetchPosts = async () => {
+    const fetchPosts = async (locationParams?: { latitude: number, longitude: number }) => {
         try {
-            const res = await api.get('/posts');
+            setLoading(true);
+            let url = '/posts';
+            if (locationParams) {
+                url += `?latitude=${locationParams.latitude}&longitude=${locationParams.longitude}&radius=50`; // 50km radius
+            }
+            const res = await api.get(url);
             setPosts(res.data);
             setFilteredPosts(res.data);
         } catch (err) {
@@ -111,6 +120,24 @@ const FeedScreen = ({ navigation }: any) => {
             Alert.alert("Connection Error", "Could not connect to server.");
         } finally {
             setLoading(false);
+            setNearbyLoading(false);
+        }
+    };
+
+    const handleNearbyToggle = async () => {
+        if (!isNearby) {
+            setNearbyLoading(true);
+            const loc = await getCurrentLocation() as any;
+            if (loc) {
+                setIsNearby(true);
+                setLocationFilter('All'); // Reset other location filters
+                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude });
+            } else {
+                setNearbyLoading(false);
+            }
+        } else {
+            setIsNearby(false);
+            fetchPosts(); // Refetch standard feed
         }
     };
 
@@ -151,6 +178,144 @@ const FeedScreen = ({ navigation }: any) => {
         });
 
         setFilteredPosts(result);
+    };
+
+    const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [selectedPost, setSelectedPost] = useState<any | null>(null);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+    // Filter posts that have location coordinates for the map
+    const mapPosts = React.useMemo(() => {
+        return filteredPosts.filter(p => p.locationCoords && p.locationCoords.coordinates);
+    }, [filteredPosts]);
+
+    // Pre-fuzz coordinates to ensure stability (only re-fuzz if posts change)
+    const fuzzedPosts = React.useMemo(() => {
+        return mapPosts.map(p => {
+            // Check if we already have cached fuzz for this ID (in a real app), here we just deterministic-ish fuzz based on ID chars or random if fresh
+            // Simple random fuzzing: +/- 0.0025 degrees (~250m)
+            // To keep it stable per post, we could use a hash of the ID, but for now standard random is okay as long as useMemo holds
+            const latOffset = (Math.random() - 0.5) * 0.005;
+            const lngOffset = (Math.random() - 0.5) * 0.005;
+            return {
+                ...p,
+                fuzzedLat: p.locationCoords.coordinates[1] + latOffset,
+                fuzzedLng: p.locationCoords.coordinates[0] + lngOffset
+            };
+        });
+    }, [mapPosts]);
+
+    const toggleViewMode = async () => {
+        if (viewMode === 'list') {
+            // Fetch user location when switching to map
+            const loc = await getCurrentLocation();
+            console.log('Fetched location:', loc);
+            if (loc) {
+                setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+            }
+            setViewMode('map');
+        } else {
+            setViewMode('list');
+        }
+    };
+
+    const mapHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+          <style>
+            body { margin: 0; padding: 0; background-color: #000; }
+            #map { height: 100vh; width: 100vw; }
+            .leaflet-container { background: #121212; }
+          </style>
+        </head>
+        <body>
+          <div id="map"></div>
+          <script>
+            var userLoc = ${userLocation ? JSON.stringify(userLocation) : 'null'};
+            var defaultCenter = [28.6139, 77.2090];
+            var center = userLoc ? [userLoc.lat, userLoc.lng] : defaultCenter;
+            
+            var map = L.map('map', { zoomControl: false }).setView(center, userLoc ? 13 : 10);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            // Add user location marker if available
+            if (userLoc) {
+                L.circleMarker([userLoc.lat, userLoc.lng], {
+                    radius: 10,
+                    fillColor: '#8b5cf6',
+                    color: '#fff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(map);
+                
+                L.circle([userLoc.lat, userLoc.lng], {
+                    radius: 100,
+                    fillColor: '#8b5cf6',
+                    color: '#8b5cf6',
+                    weight: 1,
+                    opacity: 0.3,
+                    fillOpacity: 0.1
+                }).addTo(map);
+            }
+
+            var posts = ${JSON.stringify(fuzzedPosts.map(p => ({
+        id: p._id,
+        lat: p.fuzzedLat,
+        lng: p.fuzzedLng,
+        type: p.type,
+        color: p.type === 'job' ? '#3b82f6' : p.type === 'service' ? '#eab308' : '#ec4899' // Blue, Yellow, Pink
+    })))};
+
+            var bounds = [];
+            if (userLoc) {
+                bounds.push([userLoc.lat, userLoc.lng]);
+            }
+
+            posts.forEach(function(p) {
+                var marker = L.circleMarker([p.lat, p.lng], {
+                    radius: 8,
+                    fillColor: p.color,
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                marker.on('click', function() {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', postId: p.id }));
+                });
+
+                bounds.push([p.lat, p.lng]);
+            });
+
+            if (bounds.length > 1) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    const handleWebMessage = (event: any) => {
+        try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === 'markerClick') {
+                const post = filteredPosts.find(p => p._id === data.postId);
+                if (post) setSelectedPost(post);
+            }
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const handleRequestContact = async (postId: string) => {
@@ -222,6 +387,20 @@ const FeedScreen = ({ navigation }: any) => {
                     style={styles.filtersScroll}
                     contentContainerStyle={styles.categoriesContent}
                 >
+                    <TouchableOpacity onPress={toggleViewMode} style={[
+                        styles.filterChip,
+                        { borderColor: colors.border },
+                        viewMode === 'map' ? { backgroundColor: colors.primary + '20', borderColor: colors.primary } : { backgroundColor: colors.card }
+                    ]}>
+                        <MapPin size={14} color={viewMode === 'map' ? colors.primary : colors.textSecondary} />
+                        <Text style={[
+                            styles.filterText,
+                            viewMode === 'map' ? { color: colors.primary } : { color: colors.textSecondary }
+                        ]}>
+                            {viewMode === 'map' ? 'Map' : 'List'}
+                        </Text>
+                    </TouchableOpacity>
+
                     <TouchableOpacity onPress={toggleSort} style={[
                         styles.filterChip,
                         { backgroundColor: colors.card, borderColor: colors.border }
@@ -245,6 +424,20 @@ const FeedScreen = ({ navigation }: any) => {
                         </Text>
                     </TouchableOpacity>
 
+                    <TouchableOpacity onPress={handleNearbyToggle} style={[
+                        styles.filterChip,
+                        { borderColor: colors.border },
+                        isNearby ? { backgroundColor: colors.primary + '20', borderColor: colors.primary } : { backgroundColor: colors.card }
+                    ]} disabled={nearbyLoading}>
+                        {nearbyLoading ? <ActivityIndicator size="small" color={colors.primary} /> : <MapPin size={14} color={isNearby ? colors.primary : colors.textSecondary} />}
+                        <Text style={[
+                            styles.filterText,
+                            isNearby ? { color: colors.primary } : { color: colors.textSecondary }
+                        ]}>
+                            Nearby
+                        </Text>
+                    </TouchableOpacity>
+
                     {/* Simple Date Simulation: Toggle Today/All for MVP or clear */}
                     <TouchableOpacity onPress={() => setSelectedDate(selectedDate ? null : new Date().toISOString().split('T')[0])} style={[
                         styles.filterChip,
@@ -264,33 +457,73 @@ const FeedScreen = ({ navigation }: any) => {
                 </ScrollView>
             </View>
 
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#8b5cf6" />
-                </View>
+            {viewMode === 'list' ? (
+                loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#8b5cf6" />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={filteredPosts}
+                        keyExtractor={item => (item as any)._id}
+                        renderItem={({ item }) => (
+                            <PostCard
+                                post={item}
+                                onPress={() => navigation.navigate('PostDetails', { id: item._id })}
+                                onRequestContact={() => handleRequestContact(item._id)}
+                                navigation={navigation}
+                            />
+                        )}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <Text style={styles.emptyText}>No posts found</Text>
+                                <TouchableOpacity onPress={() => { setSearchQuery(''); setSelectedCategory('all'); setLocationFilter('All'); setSelectedDate(null); }}>
+                                    <Text style={styles.clearFilterText}>Clear filters</Text>
+                                </TouchableOpacity>
+                            </View>
+                        }
+                    />
+                )
             ) : (
-                <FlatList
-                    data={filteredPosts}
-                    keyExtractor={item => (item as any)._id}
-                    renderItem={({ item }) => (
-                        <PostCard
-                            post={item}
-                            onPress={() => navigation.navigate('PostDetails', { id: item._id })}
-                            onRequestContact={() => handleRequestContact(item._id)}
-                            navigation={navigation}
-                        />
-                    )}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>No posts found</Text>
-                            <TouchableOpacity onPress={() => { setSearchQuery(''); setSelectedCategory('all'); setLocationFilter('All'); setSelectedDate(null); }}>
-                                <Text style={styles.clearFilterText}>Clear filters</Text>
+                <View style={{ flex: 1 }}>
+                    <WebView
+                        originWhitelist={['*']}
+                        source={{ html: mapHTML }}
+                        style={{ flex: 1, backgroundColor: '#000' }}
+                        onMessage={handleWebMessage}
+                    />
+                    {selectedPost && (
+                        <View style={styles.bottomSheet}>
+                            <View style={styles.bottomSheetHandle} />
+                            <TouchableOpacity style={styles.closeSheetButton} onPress={() => setSelectedPost(null)}>
+                                <X size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                <View style={[styles.typeBadge, {
+                                    backgroundColor: selectedPost.type === 'job' ? '#3b82f6' : selectedPost.type === 'service' ? '#eab308' : '#ec4899'
+                                }]}>
+                                    <Text style={styles.typeBadgeText}>{selectedPost.type}</Text>
+                                </View>
+                                <Text style={{ color: colors.textSecondary, marginLeft: 8, fontSize: 12 }}>
+                                    {selectedPost.location}
+                                </Text>
+                            </View>
+                            <Text style={styles.sheetTitle} numberOfLines={1}>{selectedPost.title}</Text>
+                            <Text style={styles.sheetPrice}>₹{selectedPost.price}</Text>
+                            <TouchableOpacity
+                                style={[styles.viewDetailsButton, { backgroundColor: colors.primary }]}
+                                onPress={() => {
+                                    navigation.navigate('PostDetails', { id: selectedPost._id });
+                                    setSelectedPost(null);
+                                }}
+                            >
+                                <Text style={styles.viewDetailsText}>View Details</Text>
                             </TouchableOpacity>
                         </View>
-                    }
-                />
+                    )}
+                </View>
             )}
 
             {/* Location Selection Modal */}
@@ -318,7 +551,7 @@ const FeedScreen = ({ navigation }: any) => {
                     </View>
                 </TouchableOpacity>
             </Modal>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 
@@ -475,6 +708,68 @@ const styles = StyleSheet.create({
     modalItemText: {
         color: '#d4d4d8',
         fontSize: 16,
+    },
+    bottomSheet: {
+        position: 'absolute',
+        bottom: 20,
+        left: 16,
+        right: 16,
+        backgroundColor: '#18181b', // zinc-900
+        borderRadius: 24,
+        padding: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
+    },
+    bottomSheetHandle: {
+        width: 40,
+        height: 4,
+        backgroundColor: '#3f3f46',
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 16,
+    },
+    closeSheetButton: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 10
+    },
+    sheetTitle: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    sheetPrice: {
+        color: '#4ade80', // green-400
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 16,
+    },
+    viewDetailsButton: {
+        paddingVertical: 12,
+        borderRadius: 14,
+        alignItems: 'center',
+    },
+    viewDetailsText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    typeBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    typeBadgeText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
     },
 });
 

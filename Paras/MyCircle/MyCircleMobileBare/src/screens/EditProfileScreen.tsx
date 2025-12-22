@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone } from 'lucide-react-native';
+import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Loader } from 'lucide-react-native';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -60,6 +60,8 @@ const EditProfileScreen = ({ navigation }: any) => {
             });
         }
     };
+
+
 
     const handleSave = async () => {
         setSaving(true);

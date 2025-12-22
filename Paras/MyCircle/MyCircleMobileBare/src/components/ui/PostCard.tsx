@@ -27,8 +27,10 @@ interface PostCardProps {
         user: {
             _id: string;
             displayName: string;
+
             avatar: string;
         };
+        distance?: string;
     };
     isOwnPost?: boolean;
     onPress?: () => void;
@@ -126,7 +128,7 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
                         </Text>
                     </View>
                 </TouchableOpacity>
-                {post.price && (
+                {post.price != null && (
                     <View style={styles.priceTag}>
                         <Text style={styles.priceText}>₹{post.price}</Text>
                     </View>
@@ -151,7 +153,7 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
                 <View style={styles.metaContainer}>
                     <View style={styles.metaItem}>
                         <MapPin size={14} color={colors.textSecondary} />
-                        <Text style={[styles.metaText, themeStyles.textSecondary]}>{post.location}</Text>
+                        <Text style={[styles.metaText, themeStyles.textSecondary]}>{post.distance || post.location}</Text>
                     </View>
                     <View style={styles.metaItem}>
                         <Clock size={14} color={colors.textSecondary} />

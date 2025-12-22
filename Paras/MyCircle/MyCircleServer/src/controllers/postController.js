@@ -31,6 +31,10 @@ exports.createPost = async (req, res) => {
             description,
             price,
             location,
+            locationCoords: (req.body.latitude && req.body.longitude) ? {
+                type: 'Point',
+                coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
+            } : undefined,
             images,
             contactPhone,
             contactWhatsapp
@@ -57,19 +61,86 @@ exports.createPost = async (req, res) => {
 // @access  Public
 exports.getPosts = async (req, res) => {
     try {
-        // Only return active posts in the public feed
-        const posts = await Post.find({ isActive: true })
-            .sort({ createdAt: -1 })
-            .populate('user', ['displayName', 'avatar']);
+        const { latitude, longitude, radius = 50, type, filter } = req.query; // radius in km
 
-        // Add application count for each post
+        let pipeline = [];
+
+        // 1. Geospatial Stage (Must be first if present)
+        if (latitude && longitude) {
+            pipeline.push({
+                $geoNear: {
+                    near: {
+                        type: 'Point',
+                        coordinates: [parseFloat(longitude), parseFloat(latitude)]
+                    },
+                    distanceField: 'dist.calculated', // Output field
+                    maxDistance: parseFloat(radius) * 1000, // Meters
+                    spherical: true,
+                    query: { isActive: true } // Filter for active posts
+                }
+            });
+        } else {
+            // If no location, just match active posts
+            pipeline.push({ $match: { isActive: true } });
+        }
+
+        // 2. Additional Filters
+        if (type && type !== 'all') {
+            pipeline.push({ $match: { type: type } });
+        }
+
+        // Handle 'filter' param (e.g., 'active', 'sold' - though getPosts usually just shows active)
+        // The original code only showed { isActive: true }, so we stick to that for public feed.
+
+        // 3. Sorting
+        // $geoNear sorts by distance automatically. If not using geoNear, sort by date.
+        if (!latitude || !longitude) {
+            pipeline.push({ $sort: { createdAt: -1 } });
+        }
+
+        // 4. Lookup (Populate) User
+        pipeline.push({
+            $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user'
+            }
+        });
+        pipeline.push({ $unwind: '$user' }); // Lookup returns array, flatten it
+
+        // 5. Project (Select Fields & Formatting)
+        pipeline.push({
+            $project: {
+                // Include all post fields
+                user: { _id: '$user._id', displayName: '$user.displayName', avatar: '$user.avatar' }, // Select specific user fields
+                type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
+                isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
+                // Do NOT include locationCoords (Privacy)
+                distance: { $ifNull: ['$dist.calculated', null] } // Flatten distance
+            }
+        });
+
+        const posts = await Post.aggregate(pipeline);
+
+        // Add application count for each post (Aggregation makes this harder to do efficiently in one go without complex lookups)
+        // We can do it in parallel
         const ContactRequest = require('../models/ContactRequest');
         const postsWithCount = await Promise.all(posts.map(async (post) => {
+            // Convert distance to km/m string if present
+            let distanceDisplay = null;
+            if (post.distance !== null) {
+                if (post.distance < 1000) {
+                    distanceDisplay = `${Math.round(post.distance)}m away`;
+                } else {
+                    distanceDisplay = `${(post.distance / 1000).toFixed(1)}km away`;
+                }
+            }
+
             const applicationCount = await ContactRequest.countDocuments({ post: post._id });
-            // Debug log to verify counts
-            // console.log(`Post ${post.title}: ${applicationCount} requests`);
             return {
-                ...post.toObject(),
+                ...post,
+                distance: distanceDisplay,
                 applicationCount
             };
         }));

@@ -25,6 +25,7 @@ import RequestsScreen from './src/screens/RequestsScreen';
 import BlockedUsersScreen from './src/screens/BlockedUsersScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
+
 const Stack = createStackNavigator();
 
 const RootNavigator = () => {

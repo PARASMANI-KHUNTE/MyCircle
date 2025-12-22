@@ -8,7 +8,7 @@ const PostSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['job', 'service', 'sell', 'rent'],
+        enum: ['job', 'service', 'sell', 'rent', 'barter'],
         required: true,
     },
     title: {
@@ -26,6 +26,17 @@ const PostSchema = new mongoose.Schema({
     location: {
         type: String,
         required: true,
+    },
+    locationCoords: {
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point'
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            index: '2dsphere'
+        }
     },
     images: [{
         type: String, // URL from Cloudinary

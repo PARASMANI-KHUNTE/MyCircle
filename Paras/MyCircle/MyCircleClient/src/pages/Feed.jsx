@@ -16,6 +16,8 @@ const Feed = () => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [sortOrder, setSortOrder] = useState('latest');
+    const [locationFilter, setLocationFilter] = useState('all');
 
     const { socket } = useSocket(); // Get socket from context
 
@@ -44,12 +46,30 @@ const Feed = () => {
         }
     };
 
-    const filteredPosts = posts.filter(post => {
-        const matchesFilter = filter === 'all' || post.type === filter;
-        const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            post.description.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesFilter && matchesSearch;
-    });
+    // Get unique locations for filter dropdown
+    const availableLocations = React.useMemo(() => {
+        const locations = [...new Set(posts.map(p => p.location).filter(Boolean))];
+        return locations.sort();
+    }, [posts]);
+
+    const filteredPosts = React.useMemo(() => {
+        let result = posts.filter(post => {
+            const matchesFilter = filter === 'all' || post.type === filter;
+            const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                post.description.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesLocation = locationFilter === 'all' || post.location === locationFilter;
+            return matchesFilter && matchesSearch && matchesLocation;
+        });
+
+        // Sort posts
+        result.sort((a, b) => {
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+        });
+
+        return result;
+    }, [posts, filter, searchTerm, locationFilter, sortOrder]);
 
     const handlePostClick = (postId) => {
         navigate(`/post/${postId}`);
@@ -65,6 +85,28 @@ const Feed = () => {
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                    {/* Sort Dropdown */}
+                    <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all cursor-pointer"
+                    >
+                        <option value="latest" className="bg-zinc-900">Latest First</option>
+                        <option value="oldest" className="bg-zinc-900">Oldest First</option>
+                    </select>
+
+                    {/* Location Dropdown */}
+                    <select
+                        value={locationFilter}
+                        onChange={(e) => setLocationFilter(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all cursor-pointer"
+                    >
+                        <option value="all" className="bg-zinc-900">All Locations</option>
+                        {availableLocations.map(loc => (
+                            <option key={loc} value={loc} className="bg-zinc-900">{loc}</option>
+                        ))}
+                    </select>
+
                     <div className="relative group flex-1 md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
                         <input
@@ -78,7 +120,7 @@ const Feed = () => {
 
                     <div className="flex gap-3 overflow-x-auto pb-2 md:pb-0">
                         {/* Simple Filter Buttons */}
-                        {['all', 'job', 'service', 'sell', 'rent'].map((f) => (
+                        {['all', 'job', 'service', 'sell', 'rent', 'barter'].map((f) => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}

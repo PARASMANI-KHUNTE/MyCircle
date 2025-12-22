@@ -176,8 +176,8 @@ const CreatePost = () => {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
                     {/* Category Selection */}
-                    <div className="grid grid-cols-4 gap-2">
-                        {['job', 'service', 'sell', 'rent'].map(type => (
+                    <div className="grid grid-cols-5 gap-2">
+                        {['job', 'service', 'sell', 'rent', 'barter'].map(type => (
                             <button
                                 key={type}
                                 type="button"

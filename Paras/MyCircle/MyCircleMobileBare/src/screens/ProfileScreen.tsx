@@ -20,7 +20,8 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
     const fetchProfile = async () => {
         try {
-            const res = await api.get(`/user/profile/${userId}`);
+            const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
+            const res = await api.get(endpoint);
             setUser(res.data);
 
             // Mock stats if not provided by backend yet

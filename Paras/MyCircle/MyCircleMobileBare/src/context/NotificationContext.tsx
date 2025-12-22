@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/ui/Toast';
+import notificationService from '../services/notificationService';
 
 interface Notification {
     _id: string;
@@ -41,6 +42,11 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     const { info } = useToast();
 
     useEffect(() => {
+        // Initialize notification service
+        notificationService.initialize();
+    }, []);
+
+    useEffect(() => {
         if (isAuthenticated) {
             fetchNotifications();
         } else {
@@ -52,10 +58,34 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     useEffect(() => {
         if (!socket) return;
 
-        const handleNewNotification = (notification: Notification) => {
+        const handleNewNotification = async (notification: Notification) => {
             setNotifications(prev => [notification, ...prev]);
             setUnreadCount(prev => prev + 1);
+
+            // Show toast
             info(notification.title || notification.message);
+
+            // Show push notification with sound
+            if (notification.type === 'request') {
+                await notificationService.showRequestNotification(
+                    notification.title,
+                    notification.message,
+                    notification.relatedId || ''
+                );
+            } else if (notification.type === 'message') {
+                await notificationService.showMessageNotification(
+                    notification.title,
+                    notification.message,
+                    notification.relatedId || ''
+                );
+            } else {
+                await notificationService.showNotification(
+                    notification.title,
+                    notification.message,
+                    notification.type,
+                    { relatedId: notification.relatedId }
+                );
+            }
         };
 
         socket.on('new_notification', handleNewNotification);

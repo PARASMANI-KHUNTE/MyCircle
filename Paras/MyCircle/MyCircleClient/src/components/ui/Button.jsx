@@ -11,8 +11,10 @@ const Button = ({ children, className, variant = 'primary', ...props }) => {
         accent: 'bg-accent text-accent-foreground hover:brightness-110 shadow-lg shadow-accent/25',
     };
 
+    const Component = props.href ? motion.a : motion.button;
+
     return (
-        <motion.button
+        <Component
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={cn(
@@ -23,7 +25,7 @@ const Button = ({ children, className, variant = 'primary', ...props }) => {
             {...props}
         >
             {children}
-        </motion.button>
+        </Component>
     );
 };
 

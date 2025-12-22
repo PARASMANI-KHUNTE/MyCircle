@@ -5,6 +5,10 @@ import { Camera, X } from 'lucide-react-native';
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { getCurrentLocation } from '../utils/location';
+import { MapPin, ChevronDown, Check, Map } from 'lucide-react-native';
+import { Modal } from 'react-native';
+
 
 const CreatePostScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
@@ -12,9 +16,14 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [description, setDescription] = useState('');
     const [type, setType] = useState('job');
     const [location, setLocation] = useState('');
+    const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [price, setPrice] = useState('');
+
     const [images, setImages] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [locationLoading, setLocationLoading] = useState(false);
+    const [showCityModal, setShowCityModal] = useState(false);
+    const [searchResults, setSearchResults] = useState<any[]>([]);
 
     const pickImage = async () => {
         const result = await launchImageLibrary({
@@ -37,6 +46,16 @@ const CreatePostScreen = ({ navigation }: any) => {
         setImages(images.filter((_, i) => i !== index));
     };
 
+    const handleGetLocation = async () => {
+        setLocationLoading(true);
+        const loc = await getCurrentLocation();
+        if (loc) {
+            setLocation(loc.address);
+            setCoordinates({ lat: loc.latitude, lng: loc.longitude });
+        }
+        setLocationLoading(false);
+    };
+
     const handleCreate = async () => {
         if (!title || !description || !location || !price) {
             Alert.alert('Error', 'Please fill all required fields');
@@ -49,7 +68,14 @@ const CreatePostScreen = ({ navigation }: any) => {
             formData.append('title', title);
             formData.append('description', description);
             formData.append('type', type);
+            if (type === 'barter') {
+                formData.append('acceptsBarter', 'true');
+            }
             formData.append('location', location);
+            if (coordinates) {
+                formData.append('latitude', coordinates.lat.toString());
+                formData.append('longitude', coordinates.lng.toString());
+            }
             formData.append('price', price);
 
             images.forEach((image) => {
@@ -107,7 +133,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                 <View style={styles.inputGroup}>
                     <Text style={[styles.label, themeStyles.textSecondary]}>Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScrollContent}>
-                        {['job', 'service', 'sell', 'rent'].map((t) => (
+                        {['job', 'service', 'sell', 'rent', 'barter'].map((t) => (
                             <TouchableOpacity
                                 key={t}
                                 onPress={() => setType(t)}
@@ -138,16 +164,30 @@ const CreatePostScreen = ({ navigation }: any) => {
                     />
                 </View>
 
+
                 <View style={styles.row}>
                     <View style={styles.flex1}>
-                        <Text style={[styles.label, themeStyles.textSecondary]}>Location</Text>
-                        <TextInput
-                            style={[styles.input, themeStyles.input]}
-                            placeholder="Area / City"
-                            placeholderTextColor={colors.textSecondary}
-                            value={location}
-                            onChangeText={setLocation}
-                        />
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text style={[styles.label, themeStyles.textSecondary, { marginBottom: 0 }]}>Location</Text>
+                            <TouchableOpacity onPress={handleGetLocation} disabled={locationLoading}>
+                                {locationLoading ? <ActivityIndicator size="small" color={colors.primary} /> : <MapPin size={16} color={colors.primary} />}
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.locationInputWrapper}>
+                            <TextInput
+                                style={[styles.input, themeStyles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
+                                placeholder="Area / City"
+                                placeholderTextColor={colors.textSecondary}
+                                value={location}
+                                onChangeText={setLocation}
+                            />
+                            <TouchableOpacity
+                                style={[styles.selectCityButton, { borderColor: colors.border, backgroundColor: colors.input }]}
+                                onPress={() => setShowCityModal(true)}
+                            >
+                                <ChevronDown size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                     <View style={styles.flex1}>
                         <Text style={[styles.label, themeStyles.textSecondary]}>Price (₹)</Text>
@@ -198,7 +238,70 @@ const CreatePostScreen = ({ navigation }: any) => {
                     </Text>
                 </TouchableOpacity>
             </ScrollView>
-        </SafeAreaView>
+
+            {/* Search Location Modal */}
+            <Modal
+                visible={showCityModal}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowCityModal(false)}
+            >
+                <View style={[styles.modalContent, { backgroundColor: colors.background, flex: 1, width: '100%', padding: 0, borderWidth: 0 }]}>
+                    <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                        <Text style={[styles.headerTitle, { fontSize: 18, color: colors.text }]}>Search Location</Text>
+                        <TouchableOpacity onPress={() => setShowCityModal(false)}>
+                            <X size={24} color={colors.text} />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={{ padding: 16 }}>
+                        <TextInput
+                            style={[styles.input, themeStyles.input, { marginBottom: 16 }]}
+                            placeholder="Type a city, area, or colony..."
+                            placeholderTextColor={colors.textSecondary}
+                            autoFocus
+                            onChangeText={async (text) => {
+                                if (text.length > 2) {
+                                    try {
+                                        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&addressdetails=1&limit=5`, {
+                                            headers: { 'User-Agent': 'MyCircleApp/1.0' }
+                                        });
+                                        const data = await response.json();
+                                        setSearchResults(data);
+                                    } catch (error) {
+                                        console.error(error);
+                                    }
+                                }
+                            }}
+                        />
+                        <ScrollView keyboardShouldPersistTaps="handled">
+                            {searchResults.map((item: any, idx: number) => (
+                                <TouchableOpacity
+                                    key={idx}
+                                    style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                                    onPress={() => {
+                                        let display = item.display_name;
+                                        const parts = display.split(', ');
+                                        if (parts.length > 2) {
+                                            display = `${parts[0]}, ${parts[1]}`;
+                                        }
+
+                                        setLocation(display);
+                                        if (item.lat && item.lon) {
+                                            setCoordinates({ lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
+                                        }
+                                        setShowCityModal(false);
+                                        setSearchResults([]);
+                                    }}
+                                >
+                                    <Text style={{ color: colors.text, fontSize: 16, fontWeight: 'bold' }}>{item.display_name.split(',')[0]}</Text>
+                                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{item.display_name}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </SafeAreaView >
     );
 };
 
@@ -337,6 +440,48 @@ const styles = StyleSheet.create({
     submitButtonText: {
         fontWeight: 'bold',
         fontSize: 18,
+    },
+    locationInputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    selectCityButton: {
+        paddingHorizontal: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderLeftWidth: 0,
+        borderTopRightRadius: 14,
+        borderBottomRightRadius: 14,
+        height: 50, // Match typical input height
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: '80%',
+        borderRadius: 24,
+        padding: 24,
+        borderWidth: 1,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    modalItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+    },
+    modalItemText: {
+        fontSize: 16,
     },
 });
 

@@ -94,7 +94,7 @@ const MyPostsScreen = ({ navigation }: any) => {
         <View style={styles.postCardWrapper}>
             <PostCard post={item} isOwnPost={true} navigation={navigation} />
 
-            <View style={styles.actionsToolbar}>
+            <View style={[styles.actionsToolbar, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.actionGroup}>
                     <TouchableOpacity
                         onPress={() => handleShowAnalytics(item)}
@@ -137,13 +137,13 @@ const MyPostsScreen = ({ navigation }: any) => {
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
             <View style={styles.innerContainer}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft size={20} color="white" />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: colors.card }]}>
+                        <ArrowLeft size={20} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>My Posts</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>My Posts</Text>
                 </View>
 
                 <View style={styles.filtersContainer}>
@@ -153,12 +153,16 @@ const MyPostsScreen = ({ navigation }: any) => {
                             onPress={() => setFilter(f)}
                             style={[
                                 styles.filterItem,
-                                filter === f ? styles.activeFilter : styles.inactiveFilter
+                                filter === f
+                                    ? [styles.activeFilter, { backgroundColor: colors.primary, borderColor: colors.primary }]
+                                    : [styles.inactiveFilter, { backgroundColor: colors.card, borderColor: colors.border }]
                             ]}
                         >
                             <Text style={[
                                 styles.filterText,
-                                filter === f ? styles.activeFilterText : styles.inactiveFilterText
+                                filter === f
+                                    ? [styles.activeFilterText, { color: '#ffffff' }]
+                                    : [styles.inactiveFilterText, { color: colors.textSecondary }]
                             ]}>{f}</Text>
                         </TouchableOpacity>
                     ))}
@@ -166,7 +170,7 @@ const MyPostsScreen = ({ navigation }: any) => {
 
                 {loading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator color="#8b5cf6" size="large" />
+                        <ActivityIndicator color={colors.primary} size="large" />
                     </View>
                 ) : (
                     <FlatList
@@ -177,7 +181,7 @@ const MyPostsScreen = ({ navigation }: any) => {
                         showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>No posts found with this status.</Text>
+                                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No posts found with this status.</Text>
                             </View>
                         }
                     />
@@ -195,17 +199,17 @@ const MyPostsScreen = ({ navigation }: any) => {
                     style={styles.modalOverlay}
                     onPress={() => setShowAnalytics(false)}
                 >
-                    <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                    <Pressable style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle} numberOfLines={1}>{currentPostTitle}</Text>
+                            <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={1}>{currentPostTitle}</Text>
                             <TouchableOpacity onPress={() => setShowAnalytics(false)}>
-                                <X size={20} color="#71717a" />
+                                <X size={20} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
                         {analyticsLoading ? (
                             <View style={styles.modalLoading}>
-                                <ActivityIndicator color="#8b5cf6" />
+                                <ActivityIndicator color={colors.primary} />
                             </View>
                         ) : analyticsData && (
                             <View style={styles.analyticsGrid}>
@@ -237,10 +241,10 @@ const MyPostsScreen = ({ navigation }: any) => {
                         )}
 
                         <TouchableOpacity
-                            style={styles.closeModalButton}
+                            style={[styles.closeModalButton, { backgroundColor: colors.text }]}
                             onPress={() => setShowAnalytics(false)}
                         >
-                            <Text style={styles.closeModalButtonText}>Close Analytics</Text>
+                            <Text style={[styles.closeModalButtonText, { color: colors.background }]}>Close Analytics</Text>
                         </TouchableOpacity>
                     </Pressable>
                 </Pressable>
@@ -319,11 +323,11 @@ const styles = StyleSheet.create({
     actionsToolbar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        backgroundColor: '#18181b',
+        // backgroundColor: '#18181b', // Removed hardcoded
         borderLeftWidth: 1,
         borderRightWidth: 1,
         borderBottomWidth: 1,
-        borderColor: '#27272a',
+        // borderColor: '#27272a', // Removed hardcoded
         borderBottomLeftRadius: 16,
         borderBottomRightRadius: 16,
         padding: 12,

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../components/ui/Button';
 import HeroScene from '../components/3d/HeroScene';
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronRight, Download } from 'lucide-react';
 
 const Home = () => {
     const navigate = useNavigate();
@@ -43,6 +43,14 @@ const Home = () => {
                             onClick={() => navigate('/feed')}
                         >
                             Explore Feed
+                        </Button>
+                        <Button
+                            variant="accent"
+                            className="h-12 px-8 text-lg"
+                            href="/mycircle.apk"
+                            download="MyCircle.apk"
+                        >
+                            Download App <Download className="w-5 h-5" />
                         </Button>
                     </div>
                 </motion.div>

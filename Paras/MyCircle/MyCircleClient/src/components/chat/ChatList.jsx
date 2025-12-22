@@ -4,7 +4,7 @@ import api from '../../utils/api';
 import { useDialog } from '../../hooks/useDialog';
 import { useToast } from '../ui/Toast';
 
-const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId, onConversationDeleted }) => {
+const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId, onConversationDeleted, typingUsers = {} }) => {
     const dialog = useDialog();
     const { success, error } = useToast();
 
@@ -42,7 +42,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
             {conversations.map(conv => {
                 const otherParticipant = conv.participants.find(p => p._id !== currentUserId) || conv.participants[0];
                 const isSelected = selectedId === conv._id;
-                const isUnread = conv.lastMessage && conv.lastMessage.sender !== currentUserId && conv.lastMessage.status !== 'read';
+                const isUnread = conv.unreadCount > 0;
 
                 return (
                     <div key={conv._id} className="group relative">
@@ -71,7 +71,9 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <p className={`text-sm truncate ${isUnread ? 'text-white font-medium' : 'text-gray-400'}`}>
-                                        {conv.lastMessage ? (
+                                        {typingUsers[conv._id] ? (
+                                            <span className="text-primary font-semibold animate-pulse">Typing...</span>
+                                        ) : conv.lastMessage ? (
                                             <span>
                                                 {conv.lastMessage.sender === currentUserId && 'You: '}
                                                 {conv.lastMessage.text}
@@ -80,8 +82,10 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                                             <span className="italic">Start a conversation</span>
                                         )}
                                     </p>
-                                    {isUnread && (
-                                        <div className="w-2.5 h-2.5 bg-primary rounded-full ml-2"></div>
+                                    {conv.unreadCount > 0 && (
+                                        <div className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2">
+                                            {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                                        </div>
                                     )}
                                 </div>
                             </div>

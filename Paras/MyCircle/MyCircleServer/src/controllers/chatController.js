@@ -5,19 +5,35 @@ const ContactRequest = require('../models/ContactRequest');
 const { containsProfanity } = require('../utils/profanityFilter');
 const { createNotification } = require('./notificationController');
 
-// @desc    Get all conversations for current user
+// @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
 // @access  Private
 exports.getConversations = async (req, res) => {
     try {
         const conversations = await Conversation.find({
-            participants: { $in: [req.user.id] }
+            participants: req.user.id
         })
-            .populate('participants', ['displayName', 'avatar', 'isOnline'])
+            .populate('participants', 'displayName avatar')
             .populate('lastMessage')
             .sort({ updatedAt: -1 });
 
-        res.json(conversations);
+        // Add unread count for each conversation
+        const conversationsWithUnread = await Promise.all(
+            conversations.map(async (conv) => {
+                const unreadCount = await Message.countDocuments({
+                    conversationId: conv._id,
+                    sender: { $ne: req.user.id },
+                    readBy: { $ne: req.user.id }
+                });
+
+                return {
+                    ...conv.toObject(),
+                    unreadCount
+                };
+            })
+        );
+
+        res.json(conversationsWithUnread);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -35,6 +51,41 @@ exports.getMessages = async (req, res) => {
             .sort({ createdAt: 1 }); // Oldest first
 
         res.json(messages);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get or Create Conversation with specific user
+// @route   GET /api/chat/conversation/:userId
+// @access  Private
+exports.getOrCreateConversation = async (req, res) => {
+    try {
+        const recipientId = req.params.userId;
+
+        // Check if conversation exists
+        let conversation = await Conversation.findOne({
+            participants: { $all: [req.user.id, recipientId] }
+        })
+            .populate('participants', ['displayName', 'avatar', 'isOnline'])
+            .populate('lastMessage');
+
+        // If conversation doesn't exist, return conversation structure without creating
+        if (!conversation) {
+            // Get recipient details
+            const recipient = await User.findById(recipientId).select('displayName avatar isOnline');
+            const currentUser = await User.findById(req.user.id).select('displayName avatar isOnline');
+
+            return res.json({
+                _id: null,
+                participants: [currentUser, recipient],
+                lastMessage: null,
+                unreadCount: 0
+            });
+        }
+
+        res.json(conversation);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -79,6 +130,19 @@ exports.sendMessage = async (req, res) => {
             return res.status(400).json({ msg: 'Message contains inappropriate content. Please be respectful.' });
         }
 
+        // Check if users have blocked each other
+        const User = require('../models/User');
+        const currentUser = await User.findById(req.user.id);
+        const recipientUser = await User.findById(recipientId);
+
+        if (currentUser.blockedUsers.includes(recipientId)) {
+            return res.status(403).json({ msg: 'You have blocked this user.' });
+        }
+
+        if (recipientUser.blockedUsers.includes(req.user.id)) {
+            return res.status(403).json({ msg: 'You cannot message this user.' });
+        }
+
         const sender = await User.findById(req.user.id).select('displayName avatar');
 
         const newMessage = new Message({
@@ -118,7 +182,8 @@ exports.sendMessage = async (req, res) => {
             });
         }
 
-        // Create notification for the recipient
+        // Notification removed as per user request (showing badges instead)
+        /*
         await createNotification(io, {
             recipient: recipientId,
             sender: req.user.id,
@@ -128,6 +193,7 @@ exports.sendMessage = async (req, res) => {
             relatedId: conversation._id,
             link: '/chat'
         });
+        */
 
         res.json(populatedMessage);
     } catch (err) {
@@ -217,15 +283,37 @@ exports.markRead = async (req, res) => {
         const conversation = await Conversation.findById(req.params.conversationId);
         if (conversation) {
             const recipientId = conversation.participants.find(p => p.toString() !== req.user.id);
-            if (io && recipientId) {
-                io.to(`user:${recipientId.toString()}`).emit('messages_read', {
-                    conversationId: req.params.conversationId,
-                    readerId: req.user.id
-                });
+            if (io) {
+                // Notify sender that message was read
+                if (recipientId) {
+                    io.to(`user:${recipientId.toString()}`).emit('messages_read', {
+                        conversationId: req.params.conversationId,
+                        readerId: req.user.id
+                    });
+                }
+                // Notify reader (current user) to update unread count
+                io.to(`user:${req.user.id}`).emit('unread_count_update');
             }
         }
 
         res.json({ msg: 'Messages marked as read' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get total unread message count
+// @route   GET /api/chat/unread/count
+// @access  Private
+exports.getTotalUnreadCount = async (req, res) => {
+    try {
+        const count = await Message.countDocuments({
+            sender: { $ne: req.user.id },
+            readBy: { $ne: req.user.id },
+            conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') }
+        });
+        res.json({ count });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

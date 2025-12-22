@@ -14,6 +14,8 @@ const ChatDrawer = ({ isOpen, onClose }) => {
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const [typingUsers, setTypingUsers] = useState({});
+
     useEffect(() => {
         if (isOpen) {
             fetchConversations();
@@ -34,11 +36,15 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                     const updated = {
                         ...current,
                         lastMessage: data.message,
+                        unreadCount: (current.unreadCount || 0) + 1,
                         updatedAt: new Date().toISOString()
                     };
                     return [updated, ...other];
                 }
 
+                // If it's a new conversation, we might want to fetch it or ignore
+                // For now, let's refresh to be safe if we don't have it
+                fetchConversations();
                 return prev;
             });
         };
@@ -55,11 +61,32 @@ const ChatDrawer = ({ isOpen, onClose }) => {
             }));
         };
 
+        const handleUnreadUpdate = () => {
+            // Re-fetch to get accurate counts when we read messages on another device
+            // or when we mark messages as read in this drawer
+            fetchConversations();
+        };
+
+        const handleTypingStart = (data) => {
+            setTypingUsers(prev => ({ ...prev, [data.conversationId]: true }));
+        };
+
+        const handleTypingStop = (data) => {
+            setTypingUsers(prev => ({ ...prev, [data.conversationId]: false }));
+        };
+
         socket.on('receive_message', handleReceiveMessage);
         socket.on('messages_read', handleReadReceipt);
+        socket.on('unread_count_update', handleUnreadUpdate);
+        socket.on('user_typing', handleTypingStart);
+        socket.on('user_stop_typing', handleTypingStop);
+
         return () => {
             socket.off('receive_message', handleReceiveMessage);
             socket.off('messages_read', handleReadReceipt);
+            socket.off('unread_count_update', handleUnreadUpdate);
+            socket.off('user_typing', handleTypingStart);
+            socket.off('user_stop_typing', handleTypingStop);
         };
     }, [socket]);
 
@@ -156,6 +183,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                                             loading={loading}
                                             currentUserId={user?._id || user?.id}
                                             onConversationDeleted={handleConversationDeleted}
+                                            typingUsers={typingUsers}
                                         />
                                     </motion.div>
                                 )}

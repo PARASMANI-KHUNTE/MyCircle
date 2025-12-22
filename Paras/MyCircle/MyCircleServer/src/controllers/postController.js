@@ -1,6 +1,7 @@
 const Post = require('../models/Post');
 const { checkContentSafety } = require('../config/gemini');
 const { createNotification } = require('./notificationController');
+const { containsProfanity } = require('../utils/profanityFilter');
 
 // @desc    Create a post
 // @route   POST /api/posts
@@ -417,6 +418,11 @@ exports.commentOnPost = async (req, res) => {
 
         if (!post) {
             return res.status(404).json({ msg: 'Post not found' });
+        }
+
+        // Check for profanity in comment
+        if (containsProfanity(req.body.text)) {
+            return res.status(400).json({ msg: 'Comment contains inappropriate language. Please be respectful.' });
         }
 
         const newComment = {

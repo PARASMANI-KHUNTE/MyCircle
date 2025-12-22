@@ -7,12 +7,17 @@ import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useNotifications } from '../../context/NotificationContext';
+import { useSocket } from '../../context/SocketContext';
+import api from '../../utils/api';
 import ChatDrawer from '../chat/ChatDrawer';
 
 const Navbar = () => {
 
     const { user, login, isAuthenticated } = useAuth();
     const { unreadCount } = useNotifications();
+    const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+    const { socket } = useSocket();
+
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
@@ -35,6 +40,52 @@ const Navbar = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchUnreadMsgCount();
+        }
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (!socket || !isAuthenticated) return;
+
+        const handleUpdate = () => {
+            fetchUnreadMsgCount();
+        };
+
+        const handleNewMessage = () => {
+            fetchUnreadMsgCount();
+            try {
+                const audio = new Audio('/notification.mp3');
+                audio.play().catch(e => console.log('Audio play failed - user interaction needed first?', e));
+            } catch (error) {
+                console.error("Error playing sound:", error);
+            }
+        };
+
+        socket.on('receive_message', handleNewMessage);
+        socket.on('messages_read', handleUpdate);
+        socket.on('unread_count_update', handleUpdate);
+
+        return () => {
+            socket.off('receive_message', handleNewMessage);
+            socket.off('messages_read', handleUpdate);
+            socket.off('unread_count_update', handleUpdate);
+        };
+    }, [socket, isAuthenticated]);
+
+    const fetchUnreadMsgCount = async () => {
+        try {
+            const res = await api.get('/chat/unread/count');
+            setUnreadMsgCount(res.data.count);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // ... existing scroll effect ...
+
     const navLinks = [
         { name: 'Feed', path: '/feed', public: true },
         { name: 'My Posts', path: '/my-posts', public: false },
@@ -92,7 +143,11 @@ const Navbar = () => {
                                 title="Messages"
                             >
                                 <MessageCircle className="w-5 h-5" />
-                                {/* Optional: Add unread message badge here if available */}
+                                {unreadMsgCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20 border-2 border-background">
+                                        {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                                    </span>
+                                )}
                             </button>
 
                             <Link to="/create-post">

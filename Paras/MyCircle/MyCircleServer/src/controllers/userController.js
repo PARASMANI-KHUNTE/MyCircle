@@ -147,6 +147,19 @@ exports.unblockUser = async (req, res) => {
     }
 };
 
+// @desc    Get blocked users list
+// @route   GET /api/user/blocked
+// @access  Private
+exports.getBlockedUsers = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).populate('blockedUsers', 'displayName avatar');
+        res.json(user.blockedUsers || []);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 // @desc    Report a user
 // @route   POST /api/user/report
 // @access  Private

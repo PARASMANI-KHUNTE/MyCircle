@@ -122,7 +122,8 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         } else {
             socket.emit('typing_start', {
                 conversationId: conversation._id,
-                userId: currentUser?._id || currentUser?.id
+                userId: currentUser?._id || currentUser?.id,
+                recipientId: otherParticipant?._id
             });
         }
 
@@ -130,7 +131,8 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         typingTimeoutRef.current = setTimeout(() => {
             socket.emit('typing_stop', {
                 conversationId: conversation._id,
-                userId: currentUser?._id || currentUser?.id
+                userId: currentUser?._id || currentUser?.id,
+                recipientId: otherParticipant?._id
             });
             typingTimeoutRef.current = null;
         }, 1000);

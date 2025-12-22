@@ -13,6 +13,7 @@ import Notifications from './pages/Notifications';
 import NotFound from './pages/NotFound';
 import MyPosts from './pages/MyPosts';
 import Settings from './pages/Settings';
+import BlockedUsers from './pages/BlockedUsers';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import { SocketProvider } from './context/SocketContext';
@@ -40,6 +41,7 @@ function App() {
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/chat" element={<Chat />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/blocked-users" element={<BlockedUsers />} />
                     <Route path="/login/success" element={<Home />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

@@ -1,4 +1,5 @@
 const { analyzeText, analyzeImage } = require('../services/aiService');
+const { containsProfanity } = require('../utils/profanityFilter');
 const fs = require('fs').promises;
 
 /**
@@ -8,7 +9,22 @@ async function validatePostContent(req, res, next) {
     try {
         const { title, description } = req.body;
 
-        // Analyze title
+        // Quick profanity check first (faster than AI)
+        if (title && containsProfanity(title)) {
+            return res.status(400).json({
+                error: 'Content Violation',
+                message: 'Post title contains inappropriate language. Please be respectful.'
+            });
+        }
+
+        if (description && containsProfanity(description)) {
+            return res.status(400).json({
+                error: 'Content Violation',
+                message: 'Post description contains inappropriate language. Please be respectful.'
+            });
+        }
+
+        // Analyze title with AI
         if (title) {
             const titleAnalysis = await analyzeText(title);
             if (!titleAnalysis.safe) {
@@ -19,7 +35,7 @@ async function validatePostContent(req, res, next) {
             }
         }
 
-        // Analyze description
+        // Analyze description with AI
         if (description) {
             const descAnalysis = await analyzeText(description);
             if (!descAnalysis.safe) {

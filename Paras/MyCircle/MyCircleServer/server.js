@@ -46,18 +46,22 @@ io.on('connection', (socket) => {
 
     // Typing indicators
     socket.on('typing_start', (data) => {
-        // data: { conversationId, userId }
-        socket.to(data.conversationId).emit('user_typing', {
-            userId: data.userId,
-            conversationId: data.conversationId
-        });
+        // data: { recipientId, conversationId }
+        if (data.recipientId) {
+            io.to(`user:${data.recipientId}`).emit('user_typing', {
+                userId: socket.userId,
+                conversationId: data.conversationId
+            });
+        }
     });
 
     socket.on('typing_stop', (data) => {
-        socket.to(data.conversationId).emit('user_stop_typing', {
-            userId: data.userId,
-            conversationId: data.conversationId
-        });
+        if (data.recipientId) {
+            io.to(`user:${data.recipientId}`).emit('user_stop_typing', {
+                userId: socket.userId,
+                conversationId: data.conversationId
+            });
+        }
     });
 
     socket.on('disconnect', () => {

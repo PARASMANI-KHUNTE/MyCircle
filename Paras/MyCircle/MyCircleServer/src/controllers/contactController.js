@@ -12,6 +12,7 @@ exports.createRequest = async (req, res) => {
         const postId = bodyPostId || req.params.postId;
 
         if (!postId) {
+            console.log('400: Post ID is missing');
             return res.status(400).json({ msg: 'Post ID is required' });
         }
 
@@ -24,12 +25,13 @@ exports.createRequest = async (req, res) => {
 
         const finalRecipientId = recipientId || post.user;
         if (!finalRecipientId) {
-            console.error(`Post ${postId} has no owner (user field missing)`);
+            console.log(`400: Post ${postId} has no owner`);
             return res.status(400).json({ msg: 'Post has no valid owner' });
         }
 
         // Check if user is the owner
         if (post.user.toString() === requesterId) {
+            console.log(`400: User ${requesterId} tried to contact their own post ${postId}`);
             return res.status(400).json({ msg: 'Cannot request contact for your own post' });
         }
 
@@ -41,6 +43,7 @@ exports.createRequest = async (req, res) => {
         });
 
         if (existingRequest) {
+            console.log(`400: Duplicate request from ${requesterId} for post ${postId}`);
             return res.status(400).json({ msg: 'Contact request already sent for this post' });
         }
 

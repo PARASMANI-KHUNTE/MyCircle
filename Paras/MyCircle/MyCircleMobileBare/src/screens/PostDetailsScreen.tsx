@@ -96,9 +96,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             }
             setCommentText('');
             Alert.alert("Success", "Posted!");
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            Alert.alert("Error", "Failed to post.");
+            const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Failed to post.";
+            Alert.alert("Error", errorMsg);
         } finally {
             setPostingComment(false);
         }
@@ -173,7 +174,8 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             await api.post(`/contacts/${id}`);
             Alert.alert("Success", "Contact Request Sent!");
         } catch (err: any) {
-            Alert.alert("Error", err.response?.data?.msg || "Failed to send request");
+            const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Failed to send request";
+            Alert.alert("Error", errorMsg);
         }
     };
 
@@ -209,8 +211,9 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                 contentId: id
             });
             Alert.alert("Reported", "Thank you for reporting.");
-        } catch (err) {
-            Alert.alert("Error", "Failed to submit report");
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Failed to submit report";
+            Alert.alert("Error", errorMsg);
         }
     };
 
@@ -227,8 +230,9 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                             await api.post(`/user/block/${post.user._id}`);
                             Alert.alert("Blocked", "User blocked");
                             navigation.goBack();
-                        } catch (err) {
-                            Alert.alert("Error", "Failed to block user");
+                        } catch (err: any) {
+                            const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Failed to block user";
+                            Alert.alert("Error", errorMsg);
                         }
                     }
                 }
@@ -290,8 +294,9 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             await api.delete(`/posts/${id}`);
             Alert.alert("Deleted", "Post removed");
             navigation.goBack();
-        } catch (err) {
-            Alert.alert("Error", "Failed to delete post");
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Failed to delete post";
+            Alert.alert("Error", errorMsg);
         }
     };
 

@@ -11,21 +11,19 @@ exports.createRequest = async (req, res) => {
         const postId = bodyPostId || req.params.postId;
 
         if (!postId) {
-            return res.status(400).json({ message: 'Post ID is required' });
+            return res.status(400).json({ msg: 'Post ID is required' });
         }
 
         // Fetch the post to get recipient
         const post = await Post.findById(postId);
         if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
+            return res.status(404).json({ msg: 'Post not found' });
         }
 
         const finalRecipientId = recipientId || post.user;
 
         // Check if user is the owner
-        if (post.user.toString() === requesterId) {
-            return res.status(400).json({ message: 'Cannot request contact for your own post' });
-        }
+        return res.status(400).json({ msg: 'Cannot request contact for your own post' });
 
         // Check for existing request
         const existingRequest = await ContactRequest.findOne({
@@ -35,7 +33,7 @@ exports.createRequest = async (req, res) => {
         });
 
         if (existingRequest) {
-            return res.status(400).json({ message: 'Contact request already sent for this post' });
+            return res.status(400).json({ msg: 'Contact request already sent for this post' });
         }
 
         // Check if users have blocked each other
@@ -44,11 +42,11 @@ exports.createRequest = async (req, res) => {
         const recipientUser = await User.findById(finalRecipientId);
 
         if (currentUser.blockedUsers.includes(finalRecipientId)) {
-            return res.status(403).json({ message: 'You have blocked this user' });
+            return res.status(403).json({ msg: 'You have blocked this user' });
         }
 
         if (recipientUser.blockedUsers.includes(requesterId)) {
-            return res.status(403).json({ message: 'You cannot make a request to this user' });
+            return res.status(403).json({ msg: 'You cannot make a request to this user' });
         }
 
         // Create new request
@@ -77,7 +75,7 @@ exports.createRequest = async (req, res) => {
         res.json(contactRequest);
     } catch (err) {
         console.error(err.message);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(500).json({ msg: 'Server Error' });
     }
 };
 
@@ -143,18 +141,18 @@ exports.updateRequestStatus = async (req, res) => {
     try {
         const { status } = req.body; // 'approved' or 'rejected'
         if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({ message: 'Invalid status' });
+            return res.status(400).json({ msg: 'Invalid status' });
         }
 
         let request = await ContactRequest.findById(req.params.id);
 
         if (!request) {
-            return res.status(404).json({ message: 'Request not found' });
+            return res.status(404).json({ msg: 'Request not found' });
         }
 
         // Verify recipient is the logged in user
         if (request.recipient.toString() !== req.user.id) {
-            return res.status(401).json({ message: 'Not authorized' });
+            return res.status(401).json({ msg: 'Not authorized' });
         }
 
         request.status = status;

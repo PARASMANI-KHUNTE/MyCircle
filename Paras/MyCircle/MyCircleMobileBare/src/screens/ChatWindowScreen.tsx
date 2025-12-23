@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image, StyleSheet, Alert, Modal } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image, StyleSheet, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import { ArrowLeft, Send, MoreVertical, Sparkles } from 'lucide-react-native';
 import { moderateContent, getChatSuggestions } from '../services/aiService';
+import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
     const { id, recipient } = route.params;
@@ -25,6 +26,10 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(true);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // ActionSheet State
+    const [actionSheetVisible, setActionSheetVisible] = useState(false);
+    const [actionSheetConfig, setActionSheetConfig] = useState<{ title?: string; description?: string; actions: ActionItem[] }>({ actions: [] });
 
     useEffect(() => {
         if (id) {
@@ -208,44 +213,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             </SafeAreaView>
         );
     }
-    const handleBlockUser = async () => {
-        Alert.alert(
-            "Block User",
-            "Are you sure you want to block this user? You won't be able to message each other.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Block",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            const userIdToBlock = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
-                            await api.post(`/user/block/${userIdToBlock}`);
-                            Alert.alert("Blocked", "User has been blocked.");
-                            navigation.goBack();
-                        } catch (err) {
-                            Alert.alert("Error", "Failed to block user");
-                        }
-                    }
-                }
-            ]
-        );
-    };
 
-    const handleReportUser = () => {
-        const userIdToReport = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
-
-        Alert.alert(
-            "Report User",
-            "Select a reason for reporting this user:",
-            [
-                { text: "Spam", onPress: () => submitReport(userIdToReport, "Spam") },
-                { text: "Harassment", onPress: () => submitReport(userIdToReport, "Harassment") },
-                { text: "Inappropriate Content", onPress: () => submitReport(userIdToReport, "Inappropriate Content") },
-                { text: "Cancel", style: "cancel" }
-            ]
-        );
-    };
 
     const submitReport = async (userId: string, reason: string) => {
         try {
@@ -255,22 +223,70 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                 contentType: 'chat',
                 contentId: id // conversation ID
             });
-            Alert.alert("Reported", "Thank you for reporting. We will check it.");
+            // We can add a toast here if we had one, or a simple transient alert
+            console.log("Report submitted");
         } catch (err) {
-            Alert.alert("Error", "Failed to submit report");
+            console.error("Failed to submit report");
         }
     };
 
     const showMenu = () => {
-        Alert.alert(
-            "Options",
-            undefined,
-            [
-                { text: "Report User", onPress: handleReportUser },
-                { text: "Block User", onPress: handleBlockUser, style: 'destructive' },
-                { text: "Cancel", style: "cancel" }
+        setActionSheetConfig({
+            title: "Options",
+            actions: [
+                {
+                    label: "Report User",
+                    onPress: () => {
+                        setTimeout(() => handleReportUser(), 500); // Delay to allow sheet to close and next one to open if needed
+                    }
+                },
+                {
+                    label: "Block User",
+                    isDestructive: true,
+                    onPress: () => {
+                        setTimeout(() => handleBlockUser(), 500);
+                    }
+                }
             ]
-        );
+        });
+        setActionSheetVisible(true);
+    };
+
+    const handleReportUser = () => {
+        const userIdToReport = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
+        setActionSheetConfig({
+            title: "Report User",
+            description: "Select a reason for reporting:",
+            actions: [
+                { label: "Spam", onPress: () => submitReport(userIdToReport, "Spam") },
+                { label: "Harassment", onPress: () => submitReport(userIdToReport, "Harassment") },
+                { label: "Inappropriate Content", onPress: () => submitReport(userIdToReport, "Inappropriate Content") }
+            ]
+        });
+        setActionSheetVisible(true);
+    };
+
+    const handleBlockUser = () => {
+        const userIdToBlock = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
+        setActionSheetConfig({
+            title: "Block User",
+            description: "Are you sure? You won't receive messages from them.",
+            actions: [
+                {
+                    label: "Block",
+                    isDestructive: true,
+                    onPress: async () => {
+                        try {
+                            await api.post(`/user/block/${userIdToBlock}`);
+                            navigation.goBack();
+                        } catch (err) {
+                            console.error("Failed to block user");
+                        }
+                    }
+                }
+            ]
+        });
+        setActionSheetVisible(true);
     };
 
     return (
@@ -377,6 +393,14 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     </View>
                 </View>
             </KeyboardAvoidingView>
+
+            <ActionSheet
+                visible={actionSheetVisible}
+                onClose={() => setActionSheetVisible(false)}
+                title={actionSheetConfig.title}
+                description={actionSheetConfig.description}
+                actions={actionSheetConfig.actions}
+            />
         </SafeAreaView >
     );
 };

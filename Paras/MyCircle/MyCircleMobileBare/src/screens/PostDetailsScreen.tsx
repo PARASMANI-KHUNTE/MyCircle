@@ -8,6 +8,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getPostInsights } from '../services/aiService';
+import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -22,6 +23,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [comments, setComments] = useState<any[]>([]);
     const [commentText, setCommentText] = useState('');
     const [postingComment, setPostingComment] = useState(false);
+
+    // ActionSheet State
+    const [actionSheetVisible, setActionSheetVisible] = useState(false);
+    const [actionSheetConfig, setActionSheetConfig] = useState<{ title?: string; description?: string; actions: ActionItem[] }>({ actions: [] });
 
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);
 
@@ -128,16 +133,16 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleReportPost = () => {
-        Alert.alert(
-            "Report Post",
-            "Select a reason:",
-            [
-                { text: "Spam", onPress: () => submitReport("Spam") },
-                { text: "Inappropriate Content", onPress: () => submitReport("Inappropriate") },
-                { text: "Scam/Fraud", onPress: () => submitReport("Scam") },
-                { text: "Cancel", style: "cancel" }
+        setActionSheetConfig({
+            title: "Report Post",
+            description: "Select a reason:",
+            actions: [
+                { label: "Spam", onPress: () => submitReport("Spam") },
+                { label: "Inappropriate Content", onPress: () => submitReport("Inappropriate") },
+                { label: "Scam/Fraud", onPress: () => submitReport("Scam") }
             ]
-        );
+        });
+        setActionSheetVisible(true);
     };
 
     const submitReport = async (reason: string) => {
@@ -155,14 +160,13 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleBlockUser = () => {
-        Alert.alert(
-            "Block User",
-            "Are you sure? You won't see their posts.",
-            [
-                { text: "Cancel", style: "cancel" },
+        setActionSheetConfig({
+            title: "Block User",
+            description: "Are you sure? You won't see their posts.",
+            actions: [
                 {
-                    text: "Block",
-                    style: "destructive",
+                    label: "Block",
+                    isDestructive: true,
                     onPress: async () => {
                         try {
                             await api.post(`/user/block/${post.user._id}`);
@@ -174,31 +178,46 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     }
                 }
             ]
-        );
+        });
+        setActionSheetVisible(true);
     };
 
-    // Dynamic Menu Colors (using hardcoded for alerts usually, but can't customize native alert colors easily)
+    // Dynamic Menu Colors
     const showMenu = () => {
         if (isOwnPost) {
-            Alert.alert(
-                "Options",
-                undefined,
-                [
-                    { text: "Delete Post", style: 'destructive', onPress: handleDeletePost }, // Assuming handleDeletePost exists or need to add
-                    { text: "Cancel", style: "cancel" }
+            setActionSheetConfig({
+                title: "Options",
+                actions: [
+                    {
+                        label: "Delete Post",
+                        isDestructive: true,
+                        onPress: () => {
+                            setTimeout(handleDeletePost, 500);
+                        }
+                    }
                 ]
-            );
+            });
         } else {
-            Alert.alert(
-                "Options",
-                undefined,
-                [
-                    { text: "Report Post", onPress: handleReportPost },
-                    { text: "Block Author", onPress: handleBlockUser, style: 'destructive' },
-                    { text: "Cancel", style: "cancel" }
+            setActionSheetConfig({
+                title: "Options",
+                actions: [
+                    {
+                        label: "Report Post",
+                        onPress: () => {
+                            setTimeout(handleReportPost, 500);
+                        }
+                    },
+                    {
+                        label: "Block Author",
+                        isDestructive: true,
+                        onPress: () => {
+                            setTimeout(handleBlockUser, 500);
+                        }
+                    }
                 ]
-            );
+            });
         }
+        setActionSheetVisible(true);
     };
 
     // Quick fix: Add handleDeletePost if it doesn't exist in original (it likely does or I should add it)
@@ -400,6 +419,14 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     </View>
                 </>
             )}
+
+            <ActionSheet
+                visible={actionSheetVisible}
+                onClose={() => setActionSheetVisible(false)}
+                title={actionSheetConfig.title}
+                description={actionSheetConfig.description}
+                actions={actionSheetConfig.actions}
+            />
         </SafeAreaView>
     );
 };

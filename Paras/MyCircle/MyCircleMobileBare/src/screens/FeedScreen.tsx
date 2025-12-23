@@ -163,7 +163,7 @@ const FeedScreen = ({ navigation }: any) => {
             setLoading(true);
             let url = '/posts';
             if (locationParams) {
-                url += `? latitude = ${locationParams.latitude}& longitude=${locationParams.longitude}& radius=50`;
+                url += `?latitude=${locationParams.latitude}&longitude=${locationParams.longitude}&radius=50`;
             }
             const res = await api.get(url);
             setPosts(res.data);
@@ -375,7 +375,7 @@ const FeedScreen = ({ navigation }: any) => {
 
     const handleRequestContact = async (postId: string) => {
         try {
-            await api.post(`/ contacts / ${postId} `);
+            await api.post(`/contacts/${postId}`);
             Alert.alert("Success", "Contact Request Sent!");
         } catch (err: any) {
             Alert.alert("Error", err.response?.data?.msg || "Failed to send request");

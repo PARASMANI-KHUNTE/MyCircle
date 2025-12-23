@@ -58,9 +58,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             setLikes(res.data.likes || []);
             setShares(res.data.shares || 0);
             setComments(res.data.comments || []);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            Alert.alert("Error", "Could not fetch post details.");
+            const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Could not fetch post details.";
+            Alert.alert("Error", errorMsg);
             navigation.goBack();
         } finally {
             setLoading(false);

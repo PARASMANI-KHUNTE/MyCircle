@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .then(res => setUser(res.data))
                 .catch(err => {
                     console.error('Failed to fetch user profile', err);
-                    if (err.response?.status === 401) {
+                    if (err.response?.status === 401 || err.response?.status === 404) {
                         logout();
                     }
                 });

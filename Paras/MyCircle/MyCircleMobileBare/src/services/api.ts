@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
 import { API_URL } from '@env';
 
-export const BASE_URL = API_URL || 'http://10.0.2.2:5000/api';
+export const BASE_URL = API_URL || 'https://mycircleserver.onrender.com/api';
 
 const api = axios.create({
     baseURL: BASE_URL,

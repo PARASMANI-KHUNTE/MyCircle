@@ -179,6 +179,14 @@ app.get('/', (req, res) => {
     res.send('MyCircle API is running...');
 });
 
+app.get('/api/test', (req, res) => {
+    res.json({
+        message: 'MyCircle API test endpoint is working!',
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV
+    });
+});
+
 // Global error handler (must be last)
 app.use(errorHandler);
 

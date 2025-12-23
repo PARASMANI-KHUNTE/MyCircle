@@ -23,6 +23,8 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [location, setLocation] = useState('');
     const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [price, setPrice] = useState('');
+    // 'search' | 'detect' | 'pin'
+    const [locationMethod, setLocationMethod] = useState<'search' | 'detect' | 'pin'>('search');
     const [images, setImages] = useState<any[]>([]);
 
     // UI State
@@ -220,45 +222,91 @@ const CreatePostScreen = ({ navigation }: any) => {
             </View>
 
             <View style={styles.inputGroup}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <Text style={[styles.label, themeStyles.textSecondary, { marginBottom: 0 }]}>Location</Text>
-                    <TouchableOpacity onPress={handleGetLocation} disabled={locationLoading} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        {locationLoading ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
-                        ) : (
-                            <>
-                                <Crosshair size={14} color={colors.primary} />
-                                <Text style={{ color: colors.primary, fontSize: 12, marginLeft: 4 }}>Detect Current</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.locationInputWrapper}>
-                    <TextInput
-                        style={[styles.input, themeStyles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
-                        placeholder="Search City / Area"
-                        placeholderTextColor={colors.textSecondary}
-                        value={location}
-                        onChangeText={setLocation}
-                    />
-                    <TouchableOpacity
-                        style={[styles.selectCityButton, { borderColor: colors.border, backgroundColor: colors.input }]}
-                        onPress={() => setShowCityModal(true)}
-                    >
-                        <ChevronDown size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Location Method</Text>
+                <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+                    {['search', 'detect', 'pin'].map((method) => {
+                        const isActive = locationMethod === method;
+                        return (
+                            <TouchableOpacity
+                                key={method}
+                                onPress={() => {
+                                    setLocationMethod(method as any);
+                                    // Optional: Clear location when switching to avoid confusion?
+                                    // For now, let's keep it to allow correcting a wrong pick without retyping if switching back.
+                                }}
+                                style={[
+                                    styles.methodTab,
+                                    isActive ? { backgroundColor: colors.primary, borderColor: colors.primary } : { borderColor: colors.border }
+                                ]}
+                            >
+                                <Text style={{ color: isActive ? 'white' : colors.textSecondary, fontWeight: isActive ? 'bold' : 'normal', textTransform: 'capitalize' }}>
+                                    {method === 'detect' ? 'Detect GPS' : method}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
 
-                <TouchableOpacity
-                    onPress={() => setShowMapModal(true)}
-                    style={[styles.pinMapButton, { borderColor: colors.border, marginTop: 12 }]}
-                >
-                    <Map size={18} color={coordinates ? colors.primary : colors.textSecondary} />
-                    <Text style={{ color: coordinates ? colors.primary : colors.textSecondary, marginLeft: 8, fontWeight: '500' }}>
-                        {coordinates ? 'Location Pinned on Map' : 'Pin Exact Location on Map'}
-                    </Text>
-                    {coordinates && <Check size={16} color={colors.primary} style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
+                {locationMethod === 'search' && (
+                    <View style={styles.locationInputWrapper}>
+                        <TextInput
+                            style={[styles.input, themeStyles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
+                            placeholder="Search City / Area"
+                            placeholderTextColor={colors.textSecondary}
+                            value={location}
+                            onChangeText={setLocation}
+                        />
+                        <TouchableOpacity
+                            style={[styles.selectCityButton, { borderColor: colors.border, backgroundColor: colors.input }]}
+                            onPress={() => setShowCityModal(true)}
+                        >
+                            <ChevronDown size={20} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {locationMethod === 'detect' && (
+                    <View style={{ alignItems: 'center', padding: 20, borderWidth: 1, borderColor: colors.border, borderRadius: 12 }}>
+                        <TouchableOpacity onPress={handleGetLocation} disabled={locationLoading} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '20', padding: 12, borderRadius: 8 }}>
+                            {locationLoading ? (
+                                <ActivityIndicator size="small" color={colors.primary} />
+                            ) : (
+                                <>
+                                    <Crosshair size={20} color={colors.primary} />
+                                    <Text style={{ color: colors.primary, fontWeight: 'bold', marginLeft: 8 }}>Detect Current Location</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                        {location ? (
+                            <Text style={[themeStyles.text, { marginTop: 12, textAlign: 'center' }]}>Detected: {location}</Text>
+                        ) : null}
+                    </View>
+                )}
+
+                {locationMethod === 'pin' && (
+                    <View>
+                        <TouchableOpacity
+                            onPress={() => setShowMapModal(true)}
+                            style={[styles.pinMapButton, { borderColor: colors.primary, backgroundColor: colors.primary + '10', justifyContent: 'center', paddingVertical: 16 }]}
+                        >
+                            <Map size={24} color={colors.primary} />
+                            <Text style={{ color: colors.primary, marginLeft: 8, fontWeight: 'bold', fontSize: 16 }}>
+                                {coordinates ? 'Update Pin' : 'Open Map'}
+                            </Text>
+                        </TouchableOpacity>
+                        {coordinates && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, justifyContent: 'center' }}>
+                                <Check size={16} color={colors.success} />
+                                <Text style={{ color: colors.success, marginLeft: 6 }}>Location Pinned Successfully</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 12, fontStyle: 'italic', textAlign: 'center' }}>
+                    *Please use a valid location to list your post on the Feed Map
+                </Text>
+
             </View>
         </View>
     );
@@ -466,7 +514,8 @@ const styles = StyleSheet.create({
     reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
     reviewLabel: { color: '#71717a', fontSize: 14 },
     reviewValue: { fontSize: 16, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
-    modalContent: { flex: 1, backgroundColor: '#000' }
+    modalContent: { flex: 1, backgroundColor: '#000' },
+    methodTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, marginRight: 8 }
 });
 
 export default CreatePostScreen;

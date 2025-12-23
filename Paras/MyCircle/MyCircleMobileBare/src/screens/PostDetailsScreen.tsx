@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getPostInsights } from '../services/aiService';
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
+import ImagePreviewModal from '../components/ui/ImagePreviewModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -27,6 +28,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     // ActionSheet State
     const [actionSheetVisible, setActionSheetVisible] = useState(false);
     const [actionSheetConfig, setActionSheetConfig] = useState<{ title?: string; description?: string; actions: ActionItem[] }>({ actions: [] });
+
+    // Image Preview State
+    const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);
 
@@ -291,7 +296,16 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                 {post.images && post.images.length > 0 ? (
                     <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.imageGallery}>
                         {post.images.map((img: string, idx: number) => (
-                            <Image key={idx} source={{ uri: img }} style={styles.postImage} resizeMode="cover" />
+                            <TouchableOpacity
+                                key={idx}
+                                activeOpacity={0.9}
+                                onPress={() => {
+                                    setSelectedImageIndex(idx);
+                                    setImagePreviewVisible(true);
+                                }}
+                            >
+                                <Image source={{ uri: img }} style={styles.postImage} resizeMode="cover" />
+                            </TouchableOpacity>
                         ))}
                     </ScrollView>
                 ) : (
@@ -419,6 +433,13 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     </View>
                 </>
             )}
+
+            <ImagePreviewModal
+                visible={imagePreviewVisible}
+                images={post?.images || []}
+                initialIndex={selectedImageIndex}
+                onClose={() => setImagePreviewVisible(false)}
+            />
 
             <ActionSheet
                 visible={actionSheetVisible}

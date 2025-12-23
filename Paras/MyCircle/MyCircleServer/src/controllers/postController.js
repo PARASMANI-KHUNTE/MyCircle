@@ -8,7 +8,19 @@ const { containsProfanity } = require('../utils/profanityFilter');
 // @access  Private
 exports.createPost = async (req, res) => {
     try {
-        const { type, title, description, price, location, contactPhone, contactWhatsapp } = req.body;
+        const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
+
+        // Calculate expiresAt based on duration
+        let expiresAt = null;
+        if (duration) {
+            const durationInMinutes = parseInt(duration, 10);
+            if (!isNaN(durationInMinutes)) {
+                expiresAt = new Date(Date.now() + durationInMinutes * 60000);
+            }
+        }
+        // Default to null (never expire) or maybe a default validity like 28 days if client doesn't send it?
+        // User requested selection, so let's stick to user input. If no input, maybe default is undefined/null (no expiry).
+        // Actually, let's enforce a default on client side, but here if missing, let it be null (persistent).
 
         let images = [];
         if (req.files) {
@@ -37,7 +49,10 @@ exports.createPost = async (req, res) => {
             } : undefined,
             images,
             contactPhone,
-            contactWhatsapp
+            images,
+            contactPhone,
+            contactWhatsapp,
+            expiresAt
         });
 
         const post = await newPost.save();
@@ -83,6 +98,18 @@ exports.getPosts = async (req, res) => {
             // If no location, just match active posts
             pipeline.push({ $match: { isActive: true } });
         }
+
+        // Filter expired posts (if expiresAt is set)
+        // We match where expiresAt is null OR expiresAt > now
+        pipeline.push({
+            $match: {
+                $or: [
+                    { expiresAt: { $exists: false } },
+                    { expiresAt: null },
+                    { expiresAt: { $gt: new Date() } }
+                ]
+            }
+        });
 
         // 2. Additional Filters
         if (type && type !== 'all') {

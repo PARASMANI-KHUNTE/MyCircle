@@ -64,6 +64,10 @@ const PostSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    expiresAt: {
+        type: Date,
+        index: true, // Index for efficient querying/expiration
+    },
     barterPreferences: {
         type: String, // e.g., "Looking for: Laptop, Books, or similar services"
     },

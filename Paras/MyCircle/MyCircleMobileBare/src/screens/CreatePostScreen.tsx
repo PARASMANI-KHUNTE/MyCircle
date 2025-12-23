@@ -5,7 +5,7 @@ import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
-import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera, Briefcase, Wrench, ShoppingBag, Package, ArrowRight, ArrowLeft, Handshake } from 'lucide-react-native';
+import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera, Briefcase, Wrench, ShoppingBag, Package, ArrowRight, ArrowLeft, Handshake, Clock } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import Stepper from '../components/ui/Stepper';
 
@@ -25,6 +25,14 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [price, setPrice] = useState('');
     const [acceptsBarter, setAcceptsBarter] = useState(false);
+    // Duration in minutes. Default 28 days (40320)
+    const durations = [
+        { label: '15 Mins', value: 15 },
+        { label: '3 Hours', value: 180 },
+        { label: '7 Days', value: 10080 },
+        { label: '28 Days', value: 40320 },
+    ];
+    const [duration, setDuration] = useState(40320); // Default to 28 days
     // 'search' | 'detect' | 'pin'
     const [locationMethod, setLocationMethod] = useState<'search' | 'detect' | 'pin'>('search');
     const [images, setImages] = useState<any[]>([]);
@@ -93,6 +101,7 @@ const CreatePostScreen = ({ navigation }: any) => {
             }
             // Default price to 0 if barter or empty
             formData.append('price', price || '0');
+            formData.append('duration', duration.toString());
 
             images.forEach((image) => {
                 formData.append('images', image as any);
@@ -235,6 +244,36 @@ const CreatePostScreen = ({ navigation }: any) => {
                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 32, marginTop: 4 }}>
                     Enable this if you are willing to exchange goods/services instead of money.
                 </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Duration (Auto-disable post after)</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', gap: 8 }}>
+                    {durations.map((d) => {
+                        const isSelected = duration === d.value;
+                        return (
+                            <TouchableOpacity
+                                key={d.value}
+                                onPress={() => setDuration(d.value)}
+                                style={{
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 10,
+                                    borderRadius: 20,
+                                    borderWidth: 1,
+                                    backgroundColor: isSelected ? colors.primary : colors.card,
+                                    borderColor: isSelected ? colors.primary : colors.border,
+                                    flexDirection: 'row',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                {isSelected && <Check size={14} color="white" style={{ marginRight: 6 }} />}
+                                <Text style={{ color: isSelected ? 'white' : colors.textSecondary, fontWeight: isSelected ? 'bold' : 'normal' }}>
+                                    {d.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
             </View>
 
             <View style={styles.inputGroup}>
@@ -393,6 +432,13 @@ const CreatePostScreen = ({ navigation }: any) => {
                                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 4 }}>Barter/Favour</Text>
                             </View>
                         )}
+                    </View>
+                </View>
+                <View style={styles.reviewRow}>
+                    <Text style={styles.reviewLabel}>Duration</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Clock size={14} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                        <Text style={[styles.reviewValue, themeStyles.text]}>{durations.find(d => d.value === duration)?.label}</Text>
                     </View>
                 </View>
                 <View style={styles.reviewRow}>

@@ -7,19 +7,21 @@ class NotificationService {
     async initialize() {
         // Create notification channel for Android
         await notifee.createChannel({
-            id: 'default',
-            name: 'Default Channel',
+            id: 'mycircle_channel_v1',
+            name: 'MyCircle Notifications',
             importance: AndroidImportance.HIGH,
             sound: 'default',
             vibration: true,
+            vibrationPattern: [300, 500],
         });
 
         await notifee.createChannel({
-            id: 'requests',
+            id: 'mycircle_requests_v1',
             name: 'Contact Requests',
             importance: AndroidImportance.HIGH,
             sound: 'default',
             vibration: true,
+            vibrationPattern: [300, 500],
         });
 
         // Load notification sound
@@ -44,7 +46,7 @@ class NotificationService {
         }
 
         // Determine channel based on type
-        const channelId = type === 'request' ? 'requests' : 'default';
+        const channelId = type === 'request' ? 'mycircle_requests_v1' : 'mycircle_channel_v1';
 
         // Convert data to string values (notifee requirement)
         const notificationData: Record<string, string> = {};
@@ -62,7 +64,7 @@ class NotificationService {
                 channelId,
                 importance: AndroidImportance.HIGH,
                 sound: 'default',
-                vibrationPattern: [300, 500, 300],
+                vibrationPattern: [300, 500], // Must be even number of values
                 pressAction: {
                     id: 'default',
                 },

@@ -125,22 +125,7 @@ const MainTabs = () => {
                     tabBarIcon: ({ color }) => <TabBarIcon icon={PlusSquare} color={color} />,
                 }}
             />
-            <Tab.Screen
-                name="Notifications"
-                component={NotificationsScreen}
-                options={{
-                    title: 'Alerts',
-                    tabBarIcon: ({ color }) => <TabBarIcon icon={Bell} color={color} count={unreadCount} />,
-                }}
-            />
-            <Tab.Screen
-                name="ChatList"
-                component={ChatListScreen}
-                options={{
-                    title: 'Messages',
-                    tabBarIcon: ({ color }) => <TabBarIcon icon={MessageCircle} color={color} count={unreadMsgCount} />,
-                }}
-            />
+            {/* Notifications and Chat moved to Home Header */}
             <Tab.Screen
                 name="Requests"
                 component={RequestsScreen}

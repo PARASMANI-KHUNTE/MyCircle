@@ -62,30 +62,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             setNotifications(prev => [notification, ...prev]);
             setUnreadCount(prev => prev + 1);
 
-            // Show toast
-            info(notification.title || notification.message);
-
-            // Show push notification with sound
-            if (notification.type === 'request') {
-                await notificationService.showRequestNotification(
-                    notification.title,
-                    notification.message,
-                    notification.relatedId || ''
-                );
-            } else if (notification.type === 'message') {
-                await notificationService.showMessageNotification(
-                    notification.title,
-                    notification.message,
-                    notification.relatedId || ''
-                );
-            } else {
-                await notificationService.showNotification(
-                    notification.title,
-                    notification.message,
-                    notification.type,
-                    { relatedId: notification.relatedId }
-                );
-            }
+            // Note: Native notification is handled in SocketContext.tsx
+            // Note: Toast is disabled as per user request to rely on native notification
         };
 
         socket.on('new_notification', handleNewNotification);

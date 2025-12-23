@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Linking, StyleSheet, Dimensions, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles } from 'lucide-react-native';
+import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles, X } from 'lucide-react-native';
 import { Clipboard } from 'react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getPostInsights } from '../services/aiService';
+import { getPostInsights, getPostExplanation } from '../services/aiService';
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 import ImagePreviewModal from '../components/ui/ImagePreviewModal';
 
@@ -24,6 +24,16 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [comments, setComments] = useState<any[]>([]);
     const [commentText, setCommentText] = useState('');
     const [postingComment, setPostingComment] = useState(false);
+    const [replyTo, setReplyTo] = useState<{ id: string; username: string } | null>(null);
+
+    // AI State
+    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [aiResult, setAiResult] = useState<{
+        type: 'owner' | 'viewer',
+        summary: string,
+        details: string,
+        listItems: string[]
+    } | null>(null);
 
     // ActionSheet State
     const [actionSheetVisible, setActionSheetVisible] = useState(false);
@@ -34,6 +44,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);
+    const isOwnPost = auth?.user?._id === post?.user?._id;
 
     useEffect(() => {
         fetchPostDetails();
@@ -61,13 +72,33 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
         setPostingComment(true);
         try {
-            const res = await api.post(`/posts/${id}/comment`, { text: commentText });
-            setComments([...comments, res.data]);
+            if (replyTo) {
+                // Handle Reply
+                const res = await api.post(`/posts/${id}/comment/${replyTo.id}/reply`, { text: commentText });
+
+                // Update local state: Find parent comment and append reply
+                const updatedComments = comments.map(c => {
+                    if (c._id === replyTo.id) {
+                        return {
+                            ...c,
+                            replies: [...(c.replies || []), res.data]
+                        };
+                    }
+                    return c;
+                });
+
+                setComments(updatedComments);
+                setReplyTo(null);
+            } else {
+                // Handle New Comment
+                const res = await api.post(`/posts/${id}/comment`, { text: commentText });
+                setComments([res.data, ...comments]); // Prepend new comment
+            }
             setCommentText('');
-            Alert.alert("Success", "Comment posted!");
+            Alert.alert("Success", "Posted!");
         } catch (err) {
             console.error(err);
-            Alert.alert("Error", "Failed to post comment");
+            Alert.alert("Error", "Failed to post.");
         } finally {
             setPostingComment(false);
         }
@@ -103,18 +134,37 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleGetInsights = async () => {
-        setLoading(true);
+        setIsGeneratingAI(true);
         try {
-            const insights = await getPostInsights(post);
-            Alert.alert(
-                "⚡ AI Insights",
-                `Quality Score: ${insights.score}/100\n\n${insights.summary}\n\nTips:\n• ${insights.tips.join('\n• ')}`,
-                [{ text: "Awesome!" }]
-            );
+            if (isOwnPost) {
+                // Owner View: Performance & Quality
+                const insights = await getPostInsights(post);
+                setAiResult({
+                    type: 'owner',
+                    summary: `Quality Score: ${insights.score}/100`,
+                    details: insights.summary,
+                    listItems: insights.tips
+                });
+            } else {
+                // Public View: Explanation & Context
+                const explanation = await getPostExplanation(post);
+
+                const summary = explanation?.summary || "No summary available.";
+                const context = explanation?.context || "No context provided.";
+                const highlights = Array.isArray(explanation?.interestingFacts) ? explanation.interestingFacts : ["Check details manually"];
+
+                setAiResult({
+                    type: 'viewer',
+                    summary,
+                    details: context,
+                    listItems: highlights
+                });
+            }
         } catch (error) {
+            console.error(error);
             Alert.alert("Error", "Could not analyze post.");
         } finally {
-            setLoading(false);
+            setIsGeneratingAI(false);
         }
     };
 
@@ -255,8 +305,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
     if (!post) return null;
 
-    const isOwnPost = auth?.user?._id === post.user?._id;
-
     const themeStyles = {
         container: { backgroundColor: colors.background },
         text: { color: colors.text },
@@ -281,11 +329,9 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
                         <Share2 size={24} color={colors.text} />
                     </TouchableOpacity>
-                    {isOwnPost && (
-                        <TouchableOpacity onPress={handleGetInsights} style={styles.headerButton}>
-                            <Sparkles size={24} color="#8b5cf6" />
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity onPress={handleGetInsights} style={styles.headerButton}>
+                        <Sparkles size={24} color="#8b5cf6" />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={showMenu} style={styles.headerButton}>
                         <MoreVertical size={24} color={colors.text} />
                     </TouchableOpacity>
@@ -364,23 +410,125 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         <Text style={[styles.descriptionText, themeStyles.textSecondary]}>{post.description}</Text>
                     </View>
 
+                    {/* AI Insights Section (Inline) */}
+                    {(isGeneratingAI || aiResult) && (
+                        <View style={{
+                            marginTop: 16,
+                            padding: 16,
+                            borderRadius: 16,
+                            backgroundColor: aiResult?.type === 'owner' ? '#f0fdf4' : '#f5f3ff', // Green or Purple background
+                            borderWidth: 1,
+                            borderColor: aiResult?.type === 'owner' ? '#bbf7d0' : '#ddd6fe',
+                            overflow: 'hidden'
+                        }}>
+                            {isGeneratingAI ? (
+                                <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                                    <ActivityIndicator size="small" color="#7c3aed" />
+                                    <Text style={{ marginTop: 12, color: '#7c3aed', fontWeight: '500', fontSize: 14 }}>
+                                        Generating Insights...
+                                    </Text>
+                                </View>
+                            ) : (
+                                <>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                                        <Sparkles size={20} color={aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'} fill={aiResult?.type === 'owner' ? '#16a34a' : 'transparent'} />
+                                        <Text style={{
+                                            fontSize: 18,
+                                            fontWeight: 'bold',
+                                            marginLeft: 8,
+                                            color: aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'
+                                        }}>
+                                            {aiResult?.type === 'owner' ? 'Performance Insights' : 'About this Post'}
+                                        </Text>
+                                        <TouchableOpacity
+                                            onPress={() => setAiResult(null)}
+                                            style={{ marginLeft: 'auto' }}
+                                        >
+                                            <X size={16} color={aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#1f2937', marginBottom: 8, lineHeight: 22 }}>
+                                        {aiResult?.summary}
+                                    </Text>
+
+                                    <Text style={{ fontSize: 14, color: '#4b5563', marginBottom: 16, lineHeight: 20 }}>
+                                        {aiResult?.details}
+                                    </Text>
+
+                                    <View style={{ gap: 8 }}>
+                                        {aiResult?.listItems.map((item, idx) => (
+                                            <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                                <Text style={{ color: aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed', fontSize: 14, marginTop: 2 }}>{aiResult?.type === 'owner' ? '✔' : '✨'}</Text>
+                                                <Text style={{ fontSize: 14, color: '#374151', flex: 1, lineHeight: 20 }}>{item}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    )}
+
                     {/* Comments Section */}
                     <View style={styles.commentsContainer}>
                         <Text style={[styles.sectionTitle, themeStyles.text]}>Comments ({comments.length})</Text>
 
                         {comments.map((comment: any, index: number) => (
                             <View key={index} style={[styles.commentCard, themeStyles.card]}>
-                                <Image
-                                    source={{ uri: getAvatarUrl(comment.user) }}
-                                    style={styles.commentAvatar}
-                                />
-                                <View style={styles.commentContent}>
-                                    <Text style={[styles.commentUser, themeStyles.text]}>{comment.user?.displayName}</Text>
-                                    <Text style={[styles.commentText, themeStyles.textSecondary]}>{comment.text}</Text>
-                                    <Text style={[styles.commentTime, themeStyles.textSecondary]}>
-                                        {new Date(comment.createdAt).toLocaleDateString()}
-                                    </Text>
+                                <View style={styles.commentMain}>
+                                    <Image
+                                        source={{ uri: getAvatarUrl(comment.user) }}
+                                        style={styles.commentAvatar}
+                                    />
+                                    <View style={styles.commentContent}>
+                                        <Text style={[styles.commentUser, themeStyles.text]}>{comment.user?.displayName}</Text>
+                                        <Text style={[styles.commentText, themeStyles.textSecondary]}>{comment.text}</Text>
+                                        <View style={styles.commentFooter}>
+                                            <Text style={[styles.commentTime, themeStyles.textSecondary]}>
+                                                {new Date(comment.createdAt).toLocaleDateString()}
+                                            </Text>
+                                            {!isOwnPost && (
+                                                <TouchableOpacity
+                                                    onPress={() => setReplyTo({ id: comment._id, username: comment.user?.displayName })}
+                                                    style={styles.replyButton}
+                                                >
+                                                    <Text style={styles.replyButtonText}>Reply</Text>
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    </View>
                                 </View>
+
+                                {/* Render Replies */}
+                                {comment.replies && comment.replies.length > 0 && (
+                                    <View style={styles.repliesContainer}>
+                                        {comment.replies.map((reply: any, rIdx: number) => (
+                                            <View key={rIdx} style={styles.replyItem}>
+                                                <Image
+                                                    source={{ uri: getAvatarUrl(reply.user) }}
+                                                    style={styles.replyAvatar}
+                                                />
+                                                <View style={styles.commentContent}>
+                                                    <Text style={[styles.commentUser, themeStyles.text]}>{reply.user?.displayName}</Text>
+                                                    <Text style={[styles.commentText, themeStyles.textSecondary]}>{reply.text}</Text>
+                                                    <View style={styles.commentFooter}>
+                                                        <Text style={[styles.commentTime, themeStyles.textSecondary]}>
+                                                            {new Date(reply.createdAt).toLocaleDateString()}
+                                                        </Text>
+                                                        {!isOwnPost && (
+                                                            <TouchableOpacity
+                                                                onPress={() => setReplyTo({ id: comment._id, username: reply.user?.displayName })}
+                                                                style={styles.replyButton}
+                                                            >
+                                                                <Text style={styles.replyButtonText}>Reply</Text>
+                                                            </TouchableOpacity>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
                         ))}
 
@@ -394,25 +542,35 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             {!isOwnPost && (
                 <>
                     <View style={[styles.commentInputContainer, themeStyles.container, themeStyles.border]}>
-                        <TextInput
-                            style={[styles.commentInput, themeStyles.input]}
-                            placeholder="Write a comment..."
-                            placeholderTextColor={colors.textSecondary}
-                            value={commentText}
-                            onChangeText={setCommentText}
-                            multiline
-                        />
-                        <TouchableOpacity
-                            onPress={handlePostComment}
-                            disabled={postingComment || !commentText.trim()}
-                            style={[styles.sendButton, themeStyles.border, themeStyles.card, (!commentText.trim() || postingComment) && styles.sendButtonDisabled]}
-                        >
-                            {postingComment ? (
-                                <ActivityIndicator size="small" color={colors.primary} />
-                            ) : (
-                                <MessageCircle size={20} color={colors.primary} />
-                            )}
-                        </TouchableOpacity>
+                        {replyTo && (
+                            <View style={styles.replyingToBar}>
+                                <Text style={styles.replyingToText}>Replying to {replyTo.username}</Text>
+                                <TouchableOpacity onPress={() => setReplyTo(null)}>
+                                    <X size={16} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={[styles.commentInput, themeStyles.input]}
+                                placeholder={replyTo ? `Reply to ${replyTo.username}...` : "Write a comment..."}
+                                placeholderTextColor={colors.textSecondary}
+                                value={commentText}
+                                onChangeText={setCommentText}
+                                multiline
+                            />
+                            <TouchableOpacity
+                                onPress={handlePostComment}
+                                disabled={postingComment || !commentText.trim()}
+                                style={[styles.sendButton, themeStyles.border, themeStyles.card, (!commentText.trim() || postingComment) && styles.sendButtonDisabled]}
+                            >
+                                {postingComment ? (
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                ) : (
+                                    <MessageCircle size={20} color={colors.primary} />
+                                )}
+                            </TouchableOpacity>
+                        </View>
                     </View>
                     <View style={[styles.bottomBar, themeStyles.container, themeStyles.border]}>
                         <TouchableOpacity
@@ -451,6 +609,8 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         </SafeAreaView>
     );
 };
+
+
 
 const styles = StyleSheet.create({
     container: {
@@ -623,13 +783,32 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     commentCard: {
-        flexDirection: 'row',
         marginTop: 16,
         padding: 12,
         backgroundColor: '#18181b',
         borderRadius: 12,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    commentMain: {
+        flexDirection: 'row',
+    },
+    repliesContainer: {
+        marginTop: 12,
+        marginLeft: 48, // Indent replies
+        paddingLeft: 12,
+        borderLeftWidth: 2,
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    replyItem: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
+    replyAvatar: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#27272a',
     },
     commentAvatar: {
         width: 36,
@@ -656,6 +835,7 @@ const styles = StyleSheet.create({
     commentTime: {
         color: '#71717a',
         fontSize: 11,
+        marginRight: 12,
     },
     noCommentsText: {
         color: '#71717a',
@@ -663,14 +843,43 @@ const styles = StyleSheet.create({
         marginTop: 16,
         fontSize: 14,
     },
-    commentInputContainer: {
+    commentFooter: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginTop: 4,
+    },
+    replyButton: {
+        paddingVertical: 2,
+        paddingHorizontal: 8,
+    },
+    replyButtonText: {
+        color: '#a1a1aa',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    replyingToBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+        paddingHorizontal: 4,
+    },
+    replyingToText: {
+        color: '#a78bfa',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    commentInputContainer: {
+        // Removed flexDirection: 'row' to stack reply bar
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderTopWidth: 1,
         borderTopColor: 'rgba(255, 255, 255, 0.05)',
         backgroundColor: '#0a0a0a',
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     commentInput: {
         flex: 1,

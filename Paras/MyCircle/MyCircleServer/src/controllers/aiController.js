@@ -51,3 +51,22 @@ exports.analyzePost = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+// @desc    Explain post (Public)
+// @route   POST /api/ai/explain-post
+// @access  Private (Authenticated users)
+exports.explainPost = async (req, res) => {
+    try {
+        const { post } = req.body;
+        console.log("explainPost Request received for:", post?.title);
+        if (!post) {
+            return res.status(400).json({ message: 'Post data required' });
+        }
+
+        const explanation = await require('../config/gemini').explainPost(post);
+        console.log("explainPost Result:", explanation);
+        res.json(explanation);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};

@@ -15,6 +15,7 @@ import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import MainTabs from './src/navigation/MainTabs';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import PostDetailsScreen from './src/screens/PostDetailsScreen';
 import ChatListScreen from './src/screens/ChatListScreen';
 import ChatWindowScreen from './src/screens/ChatWindowScreen';
@@ -50,6 +51,7 @@ const RootNavigator = () => {
       ) : (
         <>
           <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="PostDetails" component={PostDetailsScreen} />
           <Stack.Screen name="ChatList" component={ChatListScreen} />
           <Stack.Screen name="ChatWindow" component={ChatWindowScreen} />

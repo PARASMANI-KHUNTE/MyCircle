@@ -87,7 +87,7 @@ exports.createRequest = async (req, res) => {
 exports.getReceivedRequests = async (req, res) => {
     try {
         const requests = await ContactRequest.find({ recipient: req.user.id })
-            .populate('post', ['title', 'type'])
+            .populate('post', ['title', 'type', 'images'])
             .populate('requester', ['displayName', 'avatar'])
             .sort({ createdAt: -1 });
 
@@ -104,7 +104,7 @@ exports.getReceivedRequests = async (req, res) => {
 exports.getSentRequests = async (req, res) => {
     try {
         const requests = await ContactRequest.find({ requester: req.user.id })
-            .populate('post', ['title', 'type', 'contactPhone', 'contactWhatsapp'])
+            .populate('post', ['title', 'type', 'contactPhone', 'contactWhatsapp', 'images'])
             .populate('recipient', ['displayName', 'avatar'])
             .sort({ createdAt: -1 });
 

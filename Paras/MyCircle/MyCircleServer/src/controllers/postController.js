@@ -232,9 +232,20 @@ exports.deletePost = async (req, res) => {
             return res.status(401).json({ msg: 'User not authorized' });
         }
 
+        // Cascade Delete: Remove related data
+        const ContactRequest = require('../models/ContactRequest');
+        const Notification = require('../models/Notification');
+
+        // 1. Delete Contact Requests for this post
+        await ContactRequest.deleteMany({ post: req.params.id });
+
+        // 2. Delete Notifications related to this post
+        await Notification.deleteMany({ relatedId: req.params.id });
+
+        // 3. Delete the post (which deletes embedded comments automatically)
         await Post.findByIdAndDelete(req.params.id);
 
-        res.json({ msg: 'Post removed' });
+        res.json({ msg: 'Post and related data removed' });
     } catch (err) {
         console.error(err.message);
         if (err.kind === 'ObjectId') {
@@ -386,15 +397,21 @@ exports.likePost = async (req, res) => {
 
         // Notify if liked and not self
         if (likeIndex === -1 && post.user.toString() !== req.user.id) {
+            const User = require('../models/User');
+            const sender = await User.findById(req.user.id);
+            const senderName = sender ? sender.displayName : 'Someone';
+            const postTitle = post.title.length > 25 ? post.title.substring(0, 25) + '...' : post.title;
+
             const io = req.app.get('io');
             await createNotification(io, {
                 recipient: post.user,
                 sender: req.user.id,
                 type: 'like',
                 title: 'New Like',
-                message: 'Someone liked your post.',
+                message: `${senderName} liked your post: "${postTitle}"`,
                 link: `/post/${post._id}`,
-                relatedId: post._id
+                relatedId: post._id,
+                postId: post._id
             });
         }
 
@@ -580,15 +597,21 @@ exports.commentOnPost = async (req, res) => {
 
         // Emit notification to post owner (if not self)
         if (post.user.toString() !== req.user.id) {
+            const User = require('../models/User');
+            const sender = await User.findById(req.user.id);
+            const senderName = sender ? sender.displayName : 'Someone';
+            const postTitle = post.title.length > 25 ? post.title.substring(0, 25) + '...' : post.title;
+
             const io = req.app.get('io');
             await createNotification(io, {
                 recipient: post.user,
                 sender: req.user.id,
-                type: 'request', // Map 'comment' to available enum type or expand enum. Using 'request' (message circle) for now or 'info'
+                type: 'comment',
                 title: 'New Comment',
-                message: `New comment on your post: ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''}`,
+                message: `${senderName} commented on "${postTitle}": ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''}`,
                 link: `/post/${post._id}`,
-                relatedId: post._id
+                relatedId: post._id,
+                postId: post._id // Explicitly add postId for mobile navigation
             });
         }
 
@@ -690,6 +713,11 @@ exports.replyToComment = async (req, res) => {
             return res.status(404).json({ msg: 'Comment not found' });
         }
 
+        // Check for profanity in reply
+        if (containsProfanity(req.body.text)) {
+            return res.status(400).json({ msg: 'Reply contains inappropriate language. Please be respectful.' });
+        }
+
         // Check block status (with comment owner)
         if (comment.user.toString() !== req.user.id) {
             const User = require('../models/User');
@@ -728,12 +756,16 @@ exports.replyToComment = async (req, res) => {
         if (comment.user.toString() !== req.user.id) {
             const io = req.app.get('io');
             if (io) {
+                const User = require('../models/User');
+                const sender = await User.findById(req.user.id);
+                const senderName = sender ? sender.displayName : 'Someone';
+
                 await createNotification(io, {
                     recipient: comment.user,
                     sender: req.user.id,
                     type: 'request', // Using 'request' as generic 'reply' or add 'reply' to enum
                     title: 'New Reply',
-                    message: `Reply to your comment: ${req.body.text.substring(0, 30)}...`,
+                    message: `${senderName} replied: ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''}`,
                     link: `/post/${post._id}`,
                     relatedId: post._id
                 });

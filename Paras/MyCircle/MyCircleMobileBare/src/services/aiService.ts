@@ -29,3 +29,14 @@ export const getPostInsights = async (post: any): Promise<{ summary: string; tip
         return { summary: 'Analysis unavailable', tips: [], score: 0 };
     }
 };
+
+export const getPostExplanation = async (post: any): Promise<{ summary: string; context: string; interestingFacts: string[] }> => {
+    try {
+        const response = await api.post('/ai/explain-post', { post });
+        console.log("AI Service Response:", response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Explanation error:', error);
+        return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
+    }
+};

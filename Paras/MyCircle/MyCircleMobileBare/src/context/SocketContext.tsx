@@ -117,16 +117,36 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         // Listen for new notifications
         newSocket.on('new_notification', async (data: any) => {
             try {
+                // Ensure channel exists (use new ID to escape immutable bad config)
+                const channelId = await notifee.createChannel({
+                    id: 'mycircle_channel_v1',
+                    name: 'MyCircle Notifications',
+                    importance: AndroidImportance.HIGH,
+                    sound: 'default',
+                    vibration: true,
+                    vibrationPattern: [300, 500],
+                });
+
+                // Sanitize data for Notifee (must be flat object with strings)
+                const notifeeData: any = {
+                    type: String(data.type || ''),
+                };
+                if (data.postId) notifeeData.postId = String(data.postId);
+                if (data.conversationId) notifeeData.conversationId = String(data.conversationId);
+                if (data.relatedId) notifeeData.relatedId = String(data.relatedId);
+                if (data.link) notifeeData.link = String(data.link);
+
                 // Display a notification
                 await notifee.displayNotification({
                     title: getNotificationTitle(data.type),
                     body: generateNotificationBody(data),
-                    data: data, // Pass data for press handling
+                    data: notifeeData,
                     android: {
-                        channelId: 'default',
+                        channelId,
                         pressAction: {
                             id: 'default',
                         },
+                        vibrationPattern: [300, 500],
                         // sound: 'default', // System default sound
                     },
                 });

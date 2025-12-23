@@ -83,100 +83,146 @@ const RequestsScreen = ({ navigation }: any) => {
         Linking.openURL(`tel:${number}`);
     };
 
-    const renderReceivedItem = ({ item }: any) => (
-        <View style={[styles.requestCard, themeStyles.card]}>
-            <View style={styles.cardHeader}>
-                <Image
-                    source={{ uri: getAvatarUrl(item.requester) }}
-                    style={[styles.avatar, themeStyles.avatarBg]}
-                />
-                <View style={styles.headerText}>
-                    <Text style={[styles.userName, themeStyles.text]}>{item.requester?.displayName}</Text>
-                    <Text style={[styles.requestContext, themeStyles.textSecondary]}>wants to contact regarding your post:</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('PostDetails', { id: item.post._id })}>
-                        <Text style={[styles.postTitle, { textDecorationLine: 'underline' }]}>{item.post?.title}</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
 
-            {item.status === 'pending' ? (
-                <View style={styles.buttonRow}>
-                    <TouchableOpacity
-                        onPress={() => handleAction(item._id, 'rejected')}
-                        style={[styles.actionButton, styles.rejectButton]}
-                    >
-                        <X size={16} color="#ef4444" />
-                        <Text style={styles.rejectText}>Reject</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => handleAction(item._id, 'approved')}
-                        style={[styles.actionButton, styles.approveButton]}
-                    >
-                        <Check size={16} color="#22c55e" />
-                        <Text style={styles.approveText}>Approve</Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <View style={[
-                    styles.statusBadge,
-                    item.status === 'approved' ? styles.approvedBadge : styles.rejectedBadge
-                ]}>
-                    <Text style={[
-                        styles.statusText,
-                        item.status === 'approved' ? styles.approvedText : styles.rejectedText
-                    ]}>{item.status}</Text>
-                </View>
-            )}
-        </View>
-    );
+    const renderReceivedItem = ({ item }: any) => {
+        if (!item.post) return null; // Skip if post is deleted (cascade delete handles new ones, this hides old orphans)
 
-    const renderSentItem = ({ item }: any) => (
-        <View style={[styles.requestCard, themeStyles.card]}>
-            <View style={styles.cardHeader}>
-                <View style={styles.headerText}>
-                    <Text style={[styles.sentToText, themeStyles.textSecondary]}>Request sent to <Text style={{ fontWeight: 'bold', color: colors.text }}>{item.recipient?.displayName}</Text></Text>
-                    <Text style={[styles.postTitleLarge, themeStyles.text]}>{item.post?.title}</Text>
-                    <Text style={[styles.postType, themeStyles.textSecondary]}>{item.post?.type}</Text>
-                </View>
-            </View>
-
-            <View style={[styles.divider, themeStyles.divider]} />
-
-            <View style={styles.footerRow}>
-                <View>
-                    <Text style={[styles.statusLabel, themeStyles.textSecondary]}>Status</Text>
-                    <Text style={[
-                        styles.statusTextLarge,
-                        item.status === 'approved' ? styles.approvedText :
-                            item.status === 'rejected' ? styles.rejectedText : styles.pendingText
-                    ]}>{item.status}</Text>
+        return (
+            <View style={[styles.requestCard, themeStyles.card]}>
+                <View style={styles.cardHeader}>
+                    {item.post.images && item.post.images[0] ? (
+                        <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
+                    ) : (
+                        <View style={[styles.postThumbnail, styles.placeholderThumbnail]}>
+                            <Image source={require('../assets/logo.png')} style={{ width: 24, height: 24, opacity: 0.5 }} />
+                        </View>
+                    )}
+                    <View style={styles.headerText}>
+                        <TouchableOpacity onPress={() => navigation.navigate('PostDetails', { id: item.post._id })}>
+                            <Text style={[styles.postTitle, themeStyles.text]} numberOfLines={1}>{item.post.title}</Text>
+                        </TouchableOpacity>
+                        <View style={styles.metaRow}>
+                            <Text style={[styles.postType, themeStyles.textSecondary]}>{item.post.type}</Text>
+                            <Text style={[styles.dateText, themeStyles.textSecondary]}>• {formatDate(item.createdAt)}</Text>
+                        </View>
+                    </View>
                 </View>
 
-                {item.status === 'approved' && (
-                    <View style={styles.contactActions}>
-                        {item.post?.contactWhatsapp && (
-                            <TouchableOpacity
-                                onPress={() => handleWhatsApp(item.post.contactWhatsapp)}
-                                style={styles.whatsappButton}
-                            >
-                                <MessageCircle size={20} color="white" />
-                                <Text style={styles.actionButtonLabel}>WhatsApp</Text>
-                            </TouchableOpacity>
-                        )}
-                        {item.post?.contactPhone && (
-                            <TouchableOpacity
-                                onPress={() => handleCall(item.post.contactPhone)}
-                                style={styles.callButton}
-                            >
-                                <Phone size={20} color="white" />
-                                <Text style={styles.actionButtonLabel}>Call</Text>
-                            </TouchableOpacity>
-                        )}
+                <View style={[styles.divider, themeStyles.divider]} />
+
+                <View style={styles.requesterSection}>
+                    <Image
+                        source={{ uri: getAvatarUrl(item.requester) }}
+                        style={[styles.avatar, themeStyles.avatarBg]}
+                    />
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text style={[styles.userName, themeStyles.text]}>{item.requester?.displayName}</Text>
+                        <Text style={[styles.requestContext, themeStyles.textSecondary]}>wants to contact you</Text>
+                    </View>
+                </View>
+
+                {item.status === 'pending' ? (
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity
+                            onPress={() => handleAction(item._id, 'rejected')}
+                            style={[styles.actionButton, styles.rejectButton]}
+                        >
+                            <X size={16} color="#ef4444" />
+                            <Text style={styles.rejectText}>Reject</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => handleAction(item._id, 'approved')}
+                            style={[styles.actionButton, styles.approveButton]}
+                        >
+                            <Check size={16} color="#22c55e" />
+                            <Text style={styles.approveText}>Approve</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={[
+                        styles.statusBadge,
+                        item.status === 'approved' ? styles.approvedBadge : styles.rejectedBadge,
+                        { marginTop: 12 }
+                    ]}>
+                        <Text style={[
+                            styles.statusText,
+                            item.status === 'approved' ? styles.approvedText : styles.rejectedText
+                        ]}>Request {item.status}</Text>
                     </View>
                 )}
             </View>
-        </View>
-    );
+        );
+    };
+
+    const renderSentItem = ({ item }: any) => {
+        if (!item.post) return null;
+
+        return (
+            <View style={[styles.requestCard, themeStyles.card]}>
+                <View style={styles.cardHeader}>
+                    {item.post.images && item.post.images[0] ? (
+                        <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
+                    ) : (
+                        <View style={[styles.postThumbnail, styles.placeholderThumbnail]}>
+                            <Image source={require('../assets/logo.png')} style={{ width: 24, height: 24, opacity: 0.5 }} />
+                        </View>
+                    )}
+                    <View style={styles.headerText}>
+                        <Text style={[styles.postTitleLarge, themeStyles.text]} numberOfLines={1}>{item.post?.title}</Text>
+                        <View style={styles.metaRow}>
+                            <Text style={[styles.sentToText, themeStyles.textSecondary]}>To: <Text style={{ fontWeight: 'bold', color: colors.text }}>{item.recipient?.displayName}</Text></Text>
+                            <Text style={[styles.dateText, themeStyles.textSecondary]}>• {formatDate(item.createdAt)}</Text>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={[styles.divider, themeStyles.divider]} />
+
+                <View style={styles.footerRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={[styles.statusLabel, themeStyles.textSecondary, { marginRight: 8 }]}>Status:</Text>
+                        <View style={[
+                            styles.statusChip,
+                            item.status === 'approved' ? styles.approvedBadge :
+                                item.status === 'rejected' ? styles.rejectedBadge : styles.pendingBadge
+                        ]}>
+                            <Text style={[
+                                styles.statusText,
+                                item.status === 'approved' ? styles.approvedText :
+                                    item.status === 'rejected' ? styles.rejectedText : styles.pendingText,
+                                { fontSize: 12 }
+                            ]}>{item.status}</Text>
+                        </View>
+                    </View>
+
+                    {item.status === 'approved' && (
+                        <View style={styles.contactActions}>
+                            {item.post?.contactWhatsapp && (
+                                <TouchableOpacity
+                                    onPress={() => handleWhatsApp(item.post.contactWhatsapp)}
+                                    style={[styles.iconButton, { backgroundColor: '#16a34a' }]}
+                                >
+                                    <MessageCircle size={18} color="white" />
+                                </TouchableOpacity>
+                            )}
+                            {item.post?.contactPhone && (
+                                <TouchableOpacity
+                                    onPress={() => handleCall(item.post.contactPhone)}
+                                    style={[styles.iconButton, { backgroundColor: '#2563eb' }]}
+                                >
+                                    <Phone size={18} color="white" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    )}
+                </View>
+            </View>
+        );
+    };
 
     return (
         <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
@@ -268,7 +314,38 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         borderWidth: 1,
     },
+
     cardHeader: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
+    postThumbnail: {
+        width: 60,
+        height: 60,
+        borderRadius: 8,
+        backgroundColor: '#27272a',
+        marginRight: 12,
+    },
+    placeholderThumbnail: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    headerText: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+    },
+    dateText: {
+        fontSize: 12,
+        marginLeft: 6,
+    },
+    requesterSection: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
@@ -279,10 +356,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         backgroundColor: '#27272a',
     },
-    headerText: {
-        flex: 1,
-        marginLeft: 12,
-    },
+
     userName: {
         color: '#ffffff',
         fontWeight: 'bold',
@@ -426,6 +500,24 @@ const styles = StyleSheet.create({
     },
     callButtonText: { // Keeping for fallback if logic changes
         color: 'white',
+    },
+    statusChip: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+    },
+    pendingBadge: {
+        backgroundColor: 'rgba(234, 179, 8, 0.1)', // yellow-500/10
+        borderColor: 'rgba(234, 179, 8, 0.2)',
+    },
+    iconButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
     },
     loadingContainer: {
         marginTop: 40,

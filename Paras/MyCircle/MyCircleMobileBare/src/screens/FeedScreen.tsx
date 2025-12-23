@@ -2,13 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, Dimensions, PermissionsAndroid, Platform, Modal } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check } from 'lucide-react-native';
+import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check, Repeat, MessageCircle, Bell } from 'lucide-react-native';
 import api from '../services/api';
 import PostCard from '../components/ui/PostCard';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
 import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
+import { useNotifications } from '../context/NotificationContext';
+import Sound from 'react-native-sound';
+
+// Enable playback in silent mode
+Sound.setCategory('Playback');
 
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: Zap },
@@ -16,17 +21,65 @@ const CATEGORIES = [
     { id: 'service', label: 'Services', icon: Zap },
     { id: 'sell', label: 'Market', icon: ShoppingCart },
     { id: 'rent', label: 'Rentals', icon: Key },
+    { id: 'barter', label: 'Barter', icon: Repeat },
 ];
 
 const FeedScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
-    const { socket } = useSocket();
+    const { socket } = useSocket() as any; // Type assertion if needed
     const { success } = useToast();
+    const { unreadCount } = useNotifications();
     const [posts, setPosts] = useState<any[]>([]);
     const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+
+    // Chat Badge Logic
+    const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+
+    const fetchUnreadMsgCount = async () => {
+        try {
+            const res = await api.get('/chat/unread/count');
+            setUnreadMsgCount(res.data.count);
+        } catch (err) {
+            console.error('Failed to fetch unread messages count', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchUnreadMsgCount();
+    }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewMessage = () => {
+            fetchUnreadMsgCount();
+            // Sound logic could be optional here if we don't want double sounds (if main tabs also has it running)
+            // But since we are removing it from main tabs, it should be here.
+            const ding = new Sound('notification.mp3', Sound.MAIN_BUNDLE, (error) => {
+                if (error) {
+                    return;
+                }
+                ding.play();
+            });
+        };
+
+        const handleMessagesRead = () => {
+            fetchUnreadMsgCount();
+        };
+
+        socket.on('receive_message', handleNewMessage);
+        socket.on('messages_read', handleMessagesRead);
+        socket.on('unread_count_update', handleMessagesRead);
+
+        return () => {
+            socket.off('receive_message', handleNewMessage);
+            socket.off('messages_read', handleMessagesRead);
+            socket.off('unread_count_update', handleMessagesRead);
+        };
+    }, [socket]);
 
     // Filters
     const [sortOrder, setSortOrder] = useState<'latest' | 'oldest'>('latest');
@@ -110,7 +163,7 @@ const FeedScreen = ({ navigation }: any) => {
             setLoading(true);
             let url = '/posts';
             if (locationParams) {
-                url += `?latitude=${locationParams.latitude}&longitude=${locationParams.longitude}&radius=50`; // 50km radius
+                url += `? latitude = ${locationParams.latitude}& longitude=${locationParams.longitude}& radius=50`;
             }
             const res = await api.get(url);
             setPosts(res.data);
@@ -153,7 +206,9 @@ const FeedScreen = ({ navigation }: any) => {
         }
 
         // 2. Category
-        if (selectedCategory !== 'all') {
+        if (selectedCategory === 'barter') {
+            result = result.filter((p: any) => p.acceptsBarter === true);
+        } else if (selectedCategory !== 'all') {
             result = result.filter((p: any) => p.type === selectedCategory);
         }
 
@@ -220,46 +275,46 @@ const FeedScreen = ({ navigation }: any) => {
     };
 
     const mapHTML = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-          <style>
-            body { margin: 0; padding: 0; background-color: #000; }
-            #map { height: 100vh; width: 100vw; }
-            .leaflet-container { background: #121212; }
-          </style>
-        </head>
-        <body>
-          <div id="map"></div>
-          <script>
-            var userLoc = ${userLocation ? JSON.stringify(userLocation) : 'null'};
-            var defaultCenter = [28.6139, 77.2090];
-            var center = userLoc ? [userLoc.lat, userLoc.lng] : defaultCenter;
-            
-            var map = L.map('map', { zoomControl: false }).setView(center, userLoc ? 13 : 10);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
+    < !DOCTYPE html >
+        <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+                <style>
+                    body {margin: 0; padding: 0; background-color: #000; }
+                    #map {height: 100vh; width: 100vw; }
+                    .leaflet-container {background: #121212; }
+                </style>
+            </head>
+            <body>
+                <div id="map"></div>
+                <script>
+                    var userLoc = ${userLocation ? JSON.stringify(userLocation) : 'null'};
+                    var defaultCenter = [28.6139, 77.2090];
+                    var center = userLoc ? [userLoc.lat, userLoc.lng] : defaultCenter;
+
+                    var map = L.map('map', {zoomControl: false }).setView(center, userLoc ? 13 : 10);
+
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 20
             }).addTo(map);
 
-            // Add user location marker if available
-            if (userLoc) {
-                L.circleMarker([userLoc.lat, userLoc.lng], {
-                    radius: 10,
-                    fillColor: '#8b5cf6',
-                    color: '#fff',
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(map);
-                
-                L.circle([userLoc.lat, userLoc.lng], {
-                    radius: 100,
+                    // Add user location marker if available
+                    if (userLoc) {
+                        L.circleMarker([userLoc.lat, userLoc.lng], {
+                            radius: 10,
+                            fillColor: '#8b5cf6',
+                            color: '#fff',
+                            weight: 3,
+                            opacity: 1,
+                            fillOpacity: 0.9
+                        }).addTo(map);
+
+                    L.circle([userLoc.lat, userLoc.lng], {
+                        radius: 100,
                     fillColor: '#8b5cf6',
                     color: '#8b5cf6',
                     weight: 1,
@@ -268,7 +323,7 @@ const FeedScreen = ({ navigation }: any) => {
                 }).addTo(map);
             }
 
-            var posts = ${JSON.stringify(fuzzedPosts.map(p => ({
+                    var posts = ${JSON.stringify(fuzzedPosts.map(p => ({
         id: p._id,
         lat: p.fuzzedLat,
         lng: p.fuzzedLng,
@@ -276,35 +331,35 @@ const FeedScreen = ({ navigation }: any) => {
         color: p.type === 'job' ? '#3b82f6' : p.type === 'service' ? '#eab308' : '#ec4899' // Blue, Yellow, Pink
     })))};
 
-            var bounds = [];
-            if (userLoc) {
-                bounds.push([userLoc.lat, userLoc.lng]);
+                    var bounds = [];
+                    if (userLoc) {
+                        bounds.push([userLoc.lat, userLoc.lng]);
             }
 
-            posts.forEach(function(p) {
+                    posts.forEach(function(p) {
                 var marker = L.circleMarker([p.lat, p.lng], {
-                    radius: 8,
+                        radius: 8,
                     fillColor: p.color,
                     color: "#000",
                     weight: 1,
                     opacity: 1,
                     fillOpacity: 0.8
                 }).addTo(map);
-                
-                marker.on('click', function() {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', postId: p.id }));
+
+                    marker.on('click', function() {
+                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', postId: p.id }));
                 });
 
-                bounds.push([p.lat, p.lng]);
+                    bounds.push([p.lat, p.lng]);
             });
 
             if (bounds.length > 1) {
-                map.fitBounds(bounds, { padding: [50, 50] });
+                        map.fitBounds(bounds, { padding: [50, 50] });
             }
-          </script>
-        </body>
-      </html>
-    `;
+                </script>
+            </body>
+        </html>
+`;
 
     const handleWebMessage = (event: any) => {
         try {
@@ -320,7 +375,7 @@ const FeedScreen = ({ navigation }: any) => {
 
     const handleRequestContact = async (postId: string) => {
         try {
-            await api.post(`/contacts/${postId}`);
+            await api.post(`/ contacts / ${postId} `);
             Alert.alert("Success", "Contact Request Sent!");
         } catch (err: any) {
             Alert.alert("Error", err.response?.data?.msg || "Failed to send request");
@@ -334,7 +389,35 @@ const FeedScreen = ({ navigation }: any) => {
     return (
         <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
             <View style={styles.header}>
-                <Text style={[styles.title, themeStyles.text]}>Explore</Text>
+                <View style={styles.topBar}>
+                    <Text style={[styles.title, themeStyles.text]}>Explore</Text>
+                    <View style={styles.headerIcons}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.iconButton}>
+                            <View>
+                                <Bell size={24} color={colors.text} />
+                                {unreadCount > 0 && (
+                                    <View style={styles.badge}>
+                                        <Text style={styles.badgeText}>
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('ChatList')} style={styles.iconButton}>
+                            <View>
+                                <MessageCircle size={24} color={colors.text} />
+                                {unreadMsgCount > 0 && (
+                                    <View style={styles.badge}>
+                                        <Text style={styles.badgeText}>
+                                            {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
 
                 <View style={[styles.searchContainer, themeStyles.input]}>
                     <Search size={20} color={colors.textSecondary} />
@@ -564,6 +647,37 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 8,
+    },
+    topBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    headerIcons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    iconButton: {
+        padding: 4,
+    },
+    badge: {
+        position: 'absolute',
+        top: -5,
+        right: -5,
+        backgroundColor: '#ef4444',
+        borderRadius: 10,
+        minWidth: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 2,
+    },
+    badgeText: {
+        fontSize: 10,
+        color: '#ffffff',
+        fontWeight: 'bold',
     },
     title: {
         fontSize: 32,

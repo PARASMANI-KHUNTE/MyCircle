@@ -6,5 +6,6 @@ const aiController = require('../controllers/aiController');
 router.post('/moderate', auth, aiController.moderateContent);
 router.post('/suggest', auth, aiController.getSuggestions);
 router.post('/analyze-post', auth, aiController.analyzePost);
+router.post('/explain-post', auth, aiController.explainPost);
 
 module.exports = router;

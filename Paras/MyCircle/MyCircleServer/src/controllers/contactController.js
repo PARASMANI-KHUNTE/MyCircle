@@ -23,7 +23,9 @@ exports.createRequest = async (req, res) => {
         const finalRecipientId = recipientId || post.user;
 
         // Check if user is the owner
-        return res.status(400).json({ msg: 'Cannot request contact for your own post' });
+        if (post.user.toString() === requesterId) {
+            return res.status(400).json({ msg: 'Cannot request contact for your own post' });
+        }
 
         // Check for existing request
         const existingRequest = await ContactRequest.findOne({

@@ -1,0 +1,82 @@
+/**
+ * Generate a colorful, unique avatar based on user's name
+ * Uses a deterministic algorithm to create consistent avatars
+ */
+
+// Simple btoa polyfill for React Native if not present
+const btoa = (input: string) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    let str = input;
+    let output = '';
+
+    for (let block = 0, charCode, i = 0, map = chars;
+        str.charAt(i | 0) || (map = '=', i % 1);
+        output += map.charAt(63 & block >> 8 - i % 1 * 8)) {
+
+        charCode = str.charCodeAt(i += 3 / 4);
+
+        if (charCode > 0xFF) {
+            throw new Error("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
+        }
+
+        block = block << 8 | charCode;
+    }
+
+    return output;
+};
+
+export function generateAvatar(name: string, size: number = 128): string {
+    // Create a hash from the name for consistent colors
+    const hash = name.split('').reduce((acc, char) => {
+        return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+
+    // Generate colors from hash
+    const hue = Math.abs(hash % 360);
+    const saturation = 65 + (Math.abs(hash) % 20);
+    const lightness = 50 + (Math.abs(hash) % 15);
+
+    const backgroundColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    const textColor = lightness > 60 ? '#1a1a1a' : '#ffffff';
+
+    // Get initials (max 2 characters)
+    const initials = name
+        .split(' ')
+        .map(word => word[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
+    // Create SVG
+    const svg = `
+        <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+            <rect width="${size}" height="${size}" fill="${backgroundColor}"/>
+            <text
+                x="50%"
+                y="50%"
+                dominant-baseline="middle"
+                text-anchor="middle"
+                font-family="system-ui, -apple-system, sans-serif"
+                font-size="${size * 0.4}"
+                font-weight="600"
+                fill="${textColor}"
+            >${initials}</text>
+        </svg>
+    `;
+
+    // Convert to data URL
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+/**
+ * Get avatar URL - returns user's avatar or generates one
+ */
+export function getAvatarUrl(user: { avatar?: string; displayName?: string; email?: string } | null): string {
+    if (user?.avatar && user.avatar.length > 0) {
+        return user.avatar;
+    }
+
+    const displayName = user?.displayName || user?.email || 'User';
+    return generateAvatar(displayName);
+}

@@ -1,7 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Home, PlusSquare, Inbox } from 'lucide-react-native';
+import { Home, PlusSquare, Inbox, Grid, User, Bell } from 'lucide-react-native';
+import { useNotifications } from '../../src/context/NotificationContext';
+import { View, Text } from 'react-native';
 
 export default function TabLayout() {
+    const { unreadCount } = useNotifications();
+
     return (
         <Tabs
             screenOptions={{
@@ -32,10 +36,39 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
+                name="notifications"
+                options={{
+                    title: 'Alerts',
+                    tabBarIcon: ({ color }) => (
+                        <View>
+                            <Bell size={24} color={color} />
+                            {unreadCount > 0 && (
+                                <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[16px] h-4 items-center justify-center px-1">
+                                    <Text className="text-[10px] text-white font-bold">{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                                </View>
+                            )}
+                        </View>
+                    ),
+                }}
+            />
+            <Tabs.Screen
                 name="requests"
                 options={{
-                    title: 'Requests',
+                    title: 'Inbox',
                     tabBarIcon: ({ color }) => <Inbox size={24} color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: 'Profile',
+                    tabBarIcon: ({ color }) => <User size={24} color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="myposts"
+                options={{
+                    href: null, // Hide from bar if needed, or keep for quick access
                 }}
             />
         </Tabs>

@@ -1,21 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Rocket, PlusCircle } from 'lucide-react';
+import { Menu, X, PlusCircle, MessageCircle } from 'lucide-react';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
+import { getAvatarUrl } from '../../utils/avatar';
+import { useNotifications } from '../../context/NotificationContext';
+import { useSocket } from '../../context/SocketContext';
+import api from '../../utils/api';
+import ChatDrawer from '../chat/ChatDrawer';
 
 const Navbar = () => {
 
     const { user, login, isAuthenticated } = useAuth();
+    const { unreadCount } = useNotifications();
+    const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+    const { socket } = useSocket();
+
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
     const location = useLocation();
+
+    const isProduction = import.meta.env.PROD;
+    const apiURL = isProduction
+        ? (import.meta.env.VITE_API_URL || '')
+        : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
 
     // Google OAuth Login Handler
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:5000/auth/google';
+        window.location.href = `${apiURL}/auth/google`;
     };
 
     useEffect(() => {
@@ -25,6 +40,52 @@ const Navbar = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchUnreadMsgCount();
+        }
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (!socket || !isAuthenticated) return;
+
+        const handleUpdate = () => {
+            fetchUnreadMsgCount();
+        };
+
+        const handleNewMessage = () => {
+            fetchUnreadMsgCount();
+            try {
+                const audio = new Audio('/notification.mp3');
+                audio.play().catch(e => console.log('Audio play failed - user interaction needed first?', e));
+            } catch (error) {
+                console.error("Error playing sound:", error);
+            }
+        };
+
+        socket.on('receive_message', handleNewMessage);
+        socket.on('messages_read', handleUpdate);
+        socket.on('unread_count_update', handleUpdate);
+
+        return () => {
+            socket.off('receive_message', handleNewMessage);
+            socket.off('messages_read', handleUpdate);
+            socket.off('unread_count_update', handleUpdate);
+        };
+    }, [socket, isAuthenticated]);
+
+    const fetchUnreadMsgCount = async () => {
+        try {
+            const res = await api.get('/chat/unread/count');
+            setUnreadMsgCount(res.data.count);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // ... existing scroll effect ...
+
     const navLinks = [
         { name: 'Feed', path: '/feed', public: true },
         { name: 'My Posts', path: '/my-posts', public: false },
@@ -46,9 +107,7 @@ const Navbar = () => {
             <div className="container mx-auto px-6 flex items-center justify-between">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 group">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                        <Rocket className="text-white w-5 h-5 group-hover:animate-pulse" />
-                    </div>
+                    <img src="/logo.png" alt="MyCircle" className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" />
                     <span className="text-xl font-bold font-display tracking-tight text-white group-hover:text-primary transition-colors">
                         MyCircle
                     </span>
@@ -60,11 +119,16 @@ const Navbar = () => {
                             key={link.path}
                             to={link.path}
                             className={cn(
-                                'text-sm font-medium transition-colors hover:text-primary',
+                                'text-sm font-medium transition-colors hover:text-primary flex items-center gap-1.5',
                                 location.pathname === link.path ? 'text-white' : 'text-gray-400'
                             )}
                         >
                             {link.name}
+                            {link.name === 'Notifications' && unreadCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20">
+                                    {unreadCount}
+                                </span>
+                            )}
                         </Link>
                     ))}
                 </div>
@@ -73,6 +137,19 @@ const Navbar = () => {
                 <div className="hidden md:flex items-center gap-4">
                     {isAuthenticated ? (
                         <>
+                            <button
+                                onClick={() => setIsChatDrawerOpen(true)}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors relative"
+                                title="Messages"
+                            >
+                                <MessageCircle className="w-5 h-5" />
+                                {unreadMsgCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20 border-2 border-background">
+                                        {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                                    </span>
+                                )}
+                            </button>
+
                             <Link to="/create-post">
                                 <Button variant="primary" className="pl-3 pr-4">
                                     <PlusCircle className="w-4 h-4" />
@@ -82,8 +159,8 @@ const Navbar = () => {
                             <Link to="/profile">
                                 <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden border border-white/10 hover:border-primary transition-colors cursor-pointer">
                                     <img
-                                        src={user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"}
-                                        alt="User"
+                                        src={getAvatarUrl(user)}
+                                        alt={user.displayName}
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
@@ -125,6 +202,17 @@ const Navbar = () => {
                                     {link.name}
                                 </Link>
                             ))}
+                            {isAuthenticated && (
+                                <button
+                                    onClick={() => {
+                                        setIsMobileMenuOpen(false);
+                                        setIsChatDrawerOpen(true);
+                                    }}
+                                    className="text-gray-300 hover:text-white py-2 flex items-center gap-2"
+                                >
+                                    Messages
+                                </button>
+                            )}
                             <div className="h-px bg-white/10 my-2" />
                             {!isAuthenticated && (
                                 <Button
@@ -139,6 +227,9 @@ const Navbar = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Chat Drawer */}
+            <ChatDrawer isOpen={isChatDrawerOpen} onClose={() => setIsChatDrawerOpen(false)} />
         </motion.nav>
     );
 };

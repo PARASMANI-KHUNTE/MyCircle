@@ -1,31 +1,43 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, StyleSheet, Modal } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
-import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera } from 'lucide-react-native';
-import { Modal } from 'react-native';
+import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera, Briefcase, Wrench, ShoppingBag, Package, ArrowRight, ArrowLeft } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
-
+import Stepper from '../components/ui/Stepper';
 
 const CreatePostScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
+
+    // Wizard State
+    const [step, setStep] = useState(1);
+    const steps = ['Category', 'Details', 'Exchange', 'Review'];
+
+    // Form Data
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState('job');
     const [location, setLocation] = useState('');
     const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [price, setPrice] = useState('');
-
     const [images, setImages] = useState<any[]>([]);
+
+    // UI State
     const [loading, setLoading] = useState(false);
     const [locationLoading, setLocationLoading] = useState(false);
     const [showCityModal, setShowCityModal] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
+
+    const categories = [
+        { id: 'job', label: 'Post a Job', sub: 'Hire help for tasks', icon: Briefcase },
+        { id: 'service', label: 'Offer Service', sub: 'Share your skills', icon: Wrench },
+        { id: 'sell', label: 'Sell Item', sub: 'Declutter your home', icon: ShoppingBag },
+        { id: 'rent', label: 'Rent Item', sub: 'Lend out equipment', icon: Package },
+    ];
 
     const pickImage = async () => {
         const result = await launchImageLibrary({
@@ -59,19 +71,16 @@ const CreatePostScreen = ({ navigation }: any) => {
     };
 
     const handleCreate = async () => {
-        if (!title || !description || !location || !price) {
-            Alert.alert('Error', 'Please fill all required fields');
-            return;
-        }
-
         setLoading(true);
         try {
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', description);
             formData.append('type', type);
-            if (type === 'barter') {
-                formData.append('acceptsBarter', 'true');
+            if (type === 'barter') { // Should consider if we want to keep barter as a separate type or just a payment method? sticking to types for now
+                // Assuming barter is not a category anymore but maybe a feature? 
+                // For now, let's stick to the 4 categories + maybe 'barter' if user selects it in stepper logic manually? 
+                // Design showed 4 categories. I can add 'Barter' as a checkbox in Exchange step if needed, but for now strict to logic.
             }
             formData.append('location', location);
             if (coordinates) {
@@ -107,206 +116,280 @@ const CreatePostScreen = ({ navigation }: any) => {
         card: { backgroundColor: colors.card, borderColor: colors.border },
         input: { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
         border: { borderColor: colors.border },
-        active: { backgroundColor: colors.primary, borderColor: colors.primary },
+        active: { backgroundColor: colors.primary + '20', borderColor: colors.primary }, // 20 opacity
         inactive: { backgroundColor: colors.card, borderColor: colors.border },
-        activeText: { color: '#ffffff' },
-        inactiveText: { color: colors.textSecondary }
+    };
+
+    const renderStep1 = () => (
+        <View style={styles.stepContainer}>
+            <Text style={[styles.stepTitle, themeStyles.text]}>Select a Category</Text>
+            <View style={styles.grid}>
+                {categories.map((cat) => {
+                    const Icon = cat.icon;
+                    const isSelected = type === cat.id;
+                    return (
+                        <TouchableOpacity
+                            key={cat.id}
+                            style={[
+                                styles.card,
+                                isSelected ? themeStyles.active : themeStyles.inactive,
+                            ]}
+                            onPress={() => setType(cat.id)}
+                        >
+                            <View style={[styles.iconCircle, { backgroundColor: isSelected ? colors.primary : colors.input }]}>
+                                <Icon size={24} color={isSelected ? '#fff' : colors.textSecondary} />
+                            </View>
+                            <Text style={[styles.cardTitle, themeStyles.text, isSelected && { color: colors.primary }]}>{cat.label}</Text>
+                            <Text style={[styles.cardSub, themeStyles.textSecondary]}>{cat.sub}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+        </View>
+    );
+
+    const renderStep2 = () => (
+        <View style={styles.stepContainer}>
+            <Text style={[styles.stepTitle, themeStyles.text]}>Post Details</Text>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Title</Text>
+                <TextInput
+                    style={[styles.input, themeStyles.input]}
+                    placeholder="E.g., Need a plumber, Selling iPhone 13"
+                    placeholderTextColor={colors.textSecondary}
+                    value={title}
+                    onChangeText={setTitle}
+                />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Description</Text>
+                <TextInput
+                    style={[styles.input, styles.textArea, themeStyles.input]}
+                    placeholder="Describe what you need or what you are offering..."
+                    placeholderTextColor={colors.textSecondary}
+                    multiline
+                    textAlignVertical="top"
+                    value={description}
+                    onChangeText={setDescription}
+                />
+            </View>
+
+            <View style={styles.imageSection}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Images (Optional)</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoScrollContent}>
+                    <TouchableOpacity
+                        onPress={pickImage}
+                        style={[styles.addPhotoButton, { backgroundColor: colors.input, borderColor: colors.border }]}
+                    >
+                        <Camera size={24} color={colors.textSecondary} />
+                        <Text style={[styles.addPhotoText, themeStyles.textSecondary]}>Add</Text>
+                    </TouchableOpacity>
+
+                    {images.map((img, index) => (
+                        <View key={index} style={styles.imageWrapper}>
+                            <Image source={{ uri: img.uri }} style={[styles.imagePreview, { backgroundColor: colors.input }]} />
+                            <TouchableOpacity
+                                onPress={() => removeImage(index)}
+                                style={styles.removeImageButton}
+                            >
+                                <X size={12} color="white" />
+                            </TouchableOpacity>
+                        </View>
+                    ))}
+                </ScrollView>
+            </View>
+        </View>
+    );
+
+    const renderStep3 = () => (
+        <View style={styles.stepContainer}>
+            <Text style={[styles.stepTitle, themeStyles.text]}>Exchange & Location</Text>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Price / Budget ({type === 'job' ? '₹ Budget' : '₹ Price'})</Text>
+                <TextInput
+                    style={[styles.input, themeStyles.input]}
+                    placeholder="0"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numeric"
+                    value={price}
+                    onChangeText={setPrice}
+                />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={[styles.label, themeStyles.textSecondary, { marginBottom: 0 }]}>Location</Text>
+                    <TouchableOpacity onPress={handleGetLocation} disabled={locationLoading} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {locationLoading ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                            <>
+                                <Crosshair size={14} color={colors.primary} />
+                                <Text style={{ color: colors.primary, fontSize: 12, marginLeft: 4 }}>Detect Current</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.locationInputWrapper}>
+                    <TextInput
+                        style={[styles.input, themeStyles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
+                        placeholder="Search City / Area"
+                        placeholderTextColor={colors.textSecondary}
+                        value={location}
+                        onChangeText={setLocation}
+                    />
+                    <TouchableOpacity
+                        style={[styles.selectCityButton, { borderColor: colors.border, backgroundColor: colors.input }]}
+                        onPress={() => setShowCityModal(true)}
+                    >
+                        <ChevronDown size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                    onPress={() => setShowMapModal(true)}
+                    style={[styles.pinMapButton, { borderColor: colors.border, marginTop: 12 }]}
+                >
+                    <Map size={18} color={coordinates ? colors.primary : colors.textSecondary} />
+                    <Text style={{ color: coordinates ? colors.primary : colors.textSecondary, marginLeft: 8, fontWeight: '500' }}>
+                        {coordinates ? 'Location Pinned on Map' : 'Pin Exact Location on Map'}
+                    </Text>
+                    {coordinates && <Check size={16} color={colors.primary} style={{ marginLeft: 'auto' }} />}
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const renderStep4 = () => (
+        <View style={styles.stepContainer}>
+            <Text style={[styles.stepTitle, themeStyles.text]}>Review</Text>
+
+            <View style={[styles.reviewCard, themeStyles.card]}>
+                <View style={styles.reviewRow}>
+                    <Text style={styles.reviewLabel}>Type</Text>
+                    <Text style={[styles.reviewValue, themeStyles.text]}>{categories.find(c => c.id === type)?.label}</Text>
+                </View>
+                <View style={styles.reviewRow}>
+                    <Text style={styles.reviewLabel}>Title</Text>
+                    <Text style={[styles.reviewValue, themeStyles.text]}>{title}</Text>
+                </View>
+                <View style={styles.reviewRow}>
+                    <Text style={styles.reviewLabel}>Price/Budget</Text>
+                    <Text style={[styles.reviewValue, { color: colors.primary, fontWeight: 'bold' }]}>₹ {price}</Text>
+                </View>
+                <View style={styles.reviewRow}>
+                    <Text style={styles.reviewLabel}>Location</Text>
+                    <Text style={[styles.reviewValue, themeStyles.text]} numberOfLines={1}>{location}</Text>
+                </View>
+
+                <View style={{ marginTop: 16 }}>
+                    <Text style={styles.reviewLabel}>Description</Text>
+                    <Text style={[styles.reviewValue, themeStyles.text, { marginTop: 4, lineHeight: 20 }]}>{description}</Text>
+                </View>
+
+                {images.length > 0 && (
+                    <View style={{ marginTop: 16 }}>
+                        <Text style={styles.reviewLabel}>Images ({images.length})</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                            {images.map((img, i) => (
+                                <Image key={i} source={{ uri: img.uri }} style={{ width: 60, height: 60, borderRadius: 8, marginRight: 8, backgroundColor: colors.input }} />
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
+            </View>
+        </View>
+    );
+
+    const goNext = () => {
+        if (step === 1 && !type) return Alert.alert('Error', 'Please select a category');
+        if (step === 2 && (!title || !description)) return Alert.alert('Error', 'Please fill in title and description');
+        if (step === 3 && (!price || !location)) return Alert.alert('Error', 'Please enter price and location');
+
+        if (step < 4) setStep(step + 1);
+        else handleCreate();
+    };
+
+    const goBack = () => {
+        if (step > 1) setStep(step - 1);
+        else navigation.goBack();
     };
 
     return (
         <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
             <View style={[styles.header, themeStyles.border]}>
-                <Text style={[styles.headerTitle, themeStyles.text]}>New Post</Text>
-                {loading && <ActivityIndicator color={colors.primary} />}
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <X size={24} color={colors.text} />
+                </TouchableOpacity>
+                <Text style={[styles.headerTitle, themeStyles.text]}>Create New Post</Text>
+                <View style={{ width: 24 }} />
+            </View>
+
+            <View style={{ padding: 16 }}>
+                <Stepper currentStep={step} steps={steps} />
             </View>
 
             <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.inputGroup}>
-                    <Text style={[styles.label, themeStyles.textSecondary]}>Title</Text>
-                    <TextInput
-                        style={[styles.input, themeStyles.input]}
-                        placeholder="What are you posting?"
-                        placeholderTextColor={colors.textSecondary}
-                        value={title}
-                        onChangeText={setTitle}
-                    />
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={[styles.label, themeStyles.textSecondary]}>Type</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScrollContent}>
-                        {['job', 'service', 'sell', 'rent', 'barter'].map((t) => (
-                            <TouchableOpacity
-                                key={t}
-                                onPress={() => setType(t)}
-                                style={[
-                                    styles.typeButton,
-                                    type === t ? themeStyles.active : themeStyles.inactive
-                                ]}
-                            >
-                                <Text style={[
-                                    styles.typeText,
-                                    type === t ? themeStyles.activeText : themeStyles.inactiveText
-                                ]}>{t}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={[styles.label, themeStyles.textSecondary]}>Description</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea, themeStyles.input]}
-                        placeholder="Describe your post in detail..."
-                        placeholderTextColor={colors.textSecondary}
-                        multiline
-                        textAlignVertical="top"
-                        value={description}
-                        onChangeText={setDescription}
-                    />
-                </View>
-
-
-                <View style={styles.row}>
-                    <View style={styles.flex1}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <Text style={[styles.label, themeStyles.textSecondary, { marginBottom: 0 }]}>Location</Text>
-                            <TouchableOpacity onPress={handleGetLocation} disabled={locationLoading}>
-                                {locationLoading ? <ActivityIndicator size="small" color={colors.primary} /> : <MapPin size={16} color={colors.primary} />}
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.locationInputWrapper}>
-                            <TextInput
-                                style={[styles.input, themeStyles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
-                                placeholder="Area / City"
-                                placeholderTextColor={colors.textSecondary}
-                                value={location}
-                                onChangeText={setLocation}
-                            />
-                            <TouchableOpacity
-                                style={[styles.selectCityButton, { borderColor: colors.border, backgroundColor: colors.input }]}
-                                onPress={() => setShowCityModal(true)}
-                            >
-                                <ChevronDown size={20} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4, fontStyle: 'italic' }}>
-                            *Pin location to appear on the Feed Map
-                        </Text>
-                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-                            <TouchableOpacity
-                                onPress={() => setShowMapModal(true)}
-                                style={[styles.pinMapButton, { borderColor: colors.primary, backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}
-                            >
-                                <Map size={16} color={colors.primary} />
-                                <Text style={{ color: colors.primary, fontWeight: 'bold', marginLeft: 6 }}>Pin on Map</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    <View style={styles.flex1}>
-                        <Text style={[styles.label, themeStyles.textSecondary]}>Price (₹)</Text>
-                        <TextInput
-                            style={[styles.input, themeStyles.input]}
-                            placeholder="0"
-                            placeholderTextColor={colors.textSecondary}
-                            keyboardType="numeric"
-                            value={price}
-                            onChangeText={setPrice}
-                        />
-                    </View>
-                </View>
-
-                <View style={styles.imageSection}>
-                    <Text style={[styles.label, themeStyles.textSecondary]}>Images</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoScrollContent}>
-                        <TouchableOpacity
-                            onPress={pickImage}
-                            style={[styles.addPhotoButton, { backgroundColor: colors.input, borderColor: colors.border }]}
-                        >
-                            <Camera size={24} color={colors.textSecondary} />
-                            <Text style={[styles.addPhotoText, themeStyles.textSecondary]}>Add Photo</Text>
-                        </TouchableOpacity>
-
-                        {images.map((img, index) => (
-                            <View key={index} style={styles.imageWrapper}>
-                                <Image source={{ uri: img.uri }} style={[styles.imagePreview, { backgroundColor: colors.input }]} />
-                                <TouchableOpacity
-                                    onPress={() => removeImage(index)}
-                                    style={styles.removeImageButton}
-                                >
-                                    <X size={12} color="white" />
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-                    </ScrollView>
-                </View>
-
-                <TouchableOpacity
-                    style={[styles.submitButton, loading && styles.submitButtonDisabled, { backgroundColor: colors.text }]}
-                    onPress={handleCreate}
-                    disabled={loading}
-                    activeOpacity={0.9}
-                >
-                    <Text style={[styles.submitButtonText, { color: colors.background }]}>
-                        {loading ? 'Posting...' : 'Create Post'}
-                    </Text>
-                </TouchableOpacity>
+                {step === 1 && renderStep1()}
+                {step === 2 && renderStep2()}
+                {step === 3 && renderStep3()}
+                {step === 4 && renderStep4()}
             </ScrollView>
 
-            {/* Search Location Modal */}
-            <Modal
-                visible={showCityModal}
-                animationType="slide"
-                presentationStyle="pageSheet"
-                onRequestClose={() => setShowCityModal(false)}
-            >
-                <View style={[styles.modalContent, { backgroundColor: colors.background, flex: 1, width: '100%', padding: 0, borderWidth: 0 }]}>
+            <View style={[styles.footer, themeStyles.border]}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={{ color: colors.textSecondary }}>{step === 1 ? 'Cancel' : 'Back'}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={goNext} style={[styles.nextButton, { backgroundColor: colors.primary }]}>
+                    {loading ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <>
+                            <Text style={{ color: 'white', fontWeight: 'bold' }}>{step === 4 ? 'Create Post' : 'Next Step'}</Text>
+                            {step < 4 && <ArrowRight size={18} color="white" style={{ marginLeft: 8 }} />}
+                        </>
+                    )}
+                </TouchableOpacity>
+            </View>
+
+            {/* Modals for Location (Existing logic reused) */}
+            <Modal visible={showCityModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowCityModal(false)}>
+                <View style={[styles.modalContent, { backgroundColor: colors.background, flex: 1, width: '100%', padding: 0 }]}>
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
                         <Text style={[styles.headerTitle, { fontSize: 18, color: colors.text }]}>Search Location</Text>
-                        <TouchableOpacity onPress={() => setShowCityModal(false)}>
-                            <X size={24} color={colors.text} />
-                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setShowCityModal(false)}><X size={24} color={colors.text} /></TouchableOpacity>
                     </View>
                     <View style={{ padding: 16 }}>
                         <TextInput
                             style={[styles.input, themeStyles.input, { marginBottom: 16 }]}
-                            placeholder="Type a city, area, or colony..."
+                            placeholder="Type a city..."
                             placeholderTextColor={colors.textSecondary}
                             autoFocus
                             onChangeText={async (text) => {
                                 if (text.length > 2) {
                                     try {
-                                        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&addressdetails=1&limit=5`, {
-                                            headers: { 'User-Agent': 'MyCircleApp/1.0' }
-                                        });
+                                        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&addressdetails=1&limit=5`, { headers: { 'User-Agent': 'MyCircleApp/1.0' } });
                                         const data = await response.json();
                                         setSearchResults(data);
-                                    } catch (error) {
-                                        console.error(error);
-                                    }
+                                    } catch (e) { console.error(e); }
                                 }
                             }}
                         />
                         <ScrollView keyboardShouldPersistTaps="handled">
                             {searchResults.map((item: any, idx: number) => (
-                                <TouchableOpacity
-                                    key={idx}
-                                    style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}
-                                    onPress={() => {
-                                        let display = item.display_name;
-                                        const parts = display.split(', ');
-                                        if (parts.length > 2) {
-                                            display = `${parts[0]}, ${parts[1]}`;
-                                        }
-
-                                        setLocation(display);
-                                        if (item.lat && item.lon) {
-                                            setCoordinates({ lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
-                                        }
-                                        setShowCityModal(false);
-                                        setSearchResults([]);
-                                    }}
-                                >
+                                <TouchableOpacity key={idx} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }} onPress={() => {
+                                    let display = item.display_name;
+                                    const parts = display.split(', ');
+                                    if (parts.length > 2) display = `${parts[0]}, ${parts[1]}`;
+                                    setLocation(display);
+                                    if (item.lat && item.lon) setCoordinates({ lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
+                                    setShowCityModal(false);
+                                    setSearchResults([]);
+                                }}>
                                     <Text style={{ color: colors.text, fontSize: 16, fontWeight: 'bold' }}>{item.display_name.split(',')[0]}</Text>
                                     <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{item.display_name}</Text>
                                 </TouchableOpacity>
@@ -316,51 +399,22 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
             </Modal>
 
-            {/* Pin on Map Modal */}
-            <Modal
-                visible={showMapModal}
-                animationType="slide"
-                presentationStyle="pageSheet"
-                onRequestClose={() => setShowMapModal(false)}
-            >
+            <Modal visible={showMapModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowMapModal(false)}>
                 <View style={{ flex: 1, backgroundColor: colors.background }}>
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
                         <Text style={[styles.headerTitle, { fontSize: 18, color: colors.text }]}>Pin Location</Text>
-                        <TouchableOpacity onPress={() => setShowMapModal(false)}>
-                            <X size={24} color={colors.text} />
-                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setShowMapModal(false)}><X size={24} color={colors.text} /></TouchableOpacity>
                     </View>
                     <WebView
                         originWhitelist={['*']}
                         source={{
                             html: `
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-                                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-                                <style>body { margin: 0; padding: 0; } #map { height: 100vh; width: 100vw; }</style>
-                            </head>
-                            <body>
-                                <div id="map"></div>
-                                <script>
-                                    var map = L.map('map').setView([${coordinates?.lat || 28.6139}, ${coordinates?.lng || 77.2090}], 13);
-                                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                                        attribution: '&copy; OpenStreetMap contributors'
-                                    }).addTo(map);
-
-                                    var marker;
-                                    ${coordinates ? `marker = L.marker([${coordinates.lat}, ${coordinates.lng}]).addTo(map);` : ''}
-
-                                    map.on('click', function(e) {
-                                        if (marker) map.removeLayer(marker);
-                                        marker = L.marker(e.latlng).addTo(map);
-                                        window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng }));
-                                    });
-                                </script>
-                            </body>
-                            </html>
+                            <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>body { margin: 0; padding: 0; } #map { height: 100vh; width: 100vw; }</style></head><body><div id="map"></div><script>
+                                var map = L.map('map').setView([${coordinates?.lat || 28.6139}, ${coordinates?.lng || 77.2090}], 13);
+                                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+                                var marker; ${coordinates ? `marker = L.marker([${coordinates.lat}, ${coordinates.lng}]).addTo(map);` : ''}
+                                map.on('click', function(e) { if (marker) map.removeLayer(marker); marker = L.marker(e.latlng).addTo(map); window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng })); });
+                            </script></body></html>
                         `}}
                         onMessage={(event) => {
                             try {
@@ -368,204 +422,51 @@ const CreatePostScreen = ({ navigation }: any) => {
                                 setCoordinates({ lat: data.lat, lng: data.lng });
                                 Alert.alert("Location Pinned", "Coordinates updated!");
                                 setShowMapModal(false);
-                            } catch (e) {
-                                console.error(e);
-                            }
+                            } catch (e) { console.error(e); }
                         }}
                     />
                 </View>
             </Modal>
+
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000000',
-    },
-    header: {
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    scrollContainer: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 40,
-    },
-    inputGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        marginBottom: 8,
-        marginLeft: 4,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    input: {
-        borderWidth: 1,
-        borderRadius: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 16,
-    },
-    typeScrollContent: {
-        paddingBottom: 4,
-    },
-    typeButton: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 999,
-        borderWidth: 1,
-        marginRight: 10,
-    },
-    typeButtonActive: {
-        backgroundColor: '#4f46e5', // indigo-600
-        borderColor: '#6366f1', // indigo-500
-    },
-    typeButtonInactive: {
-        backgroundColor: '#18181b',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    typeText: {
-        textTransform: 'capitalize',
-        fontWeight: 'bold',
-        fontSize: 14,
-    },
-    textArea: {
-        height: 120,
-        textAlignVertical: 'top',
-        paddingTop: 12,
-    },
-    row: {
-        flexDirection: 'row',
-        gap: 16,
-        marginBottom: 20,
-    },
-    flex1: {
-        flex: 1,
-    },
-    imageSection: {
-        marginBottom: 32,
-    },
-    photoScrollContent: {
-        paddingBottom: 8,
-    },
-    addPhotoButton: {
-        width: 100,
-        height: 100,
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    addPhotoText: {
-        fontSize: 12,
-        marginTop: 6,
-    },
-    imageWrapper: {
-        width: 100,
-        height: 100,
-        marginRight: 12,
-        position: 'relative',
-    },
-    imagePreview: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 16,
-    },
-    removeImageButton: {
-        position: 'absolute',
-        top: -6,
-        right: -6,
-        backgroundColor: '#ef4444',
-        borderRadius: 12,
-        padding: 4,
-        zIndex: 10,
-        borderWidth: 2,
-        borderColor: '#000000',
-    },
-    submitButton: {
-        paddingVertical: 16,
-        borderRadius: 18,
-        alignItems: 'center',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-    },
-    submitButtonDisabled: {
-        opacity: 0.5,
-    },
-    submitButtonText: {
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-    locationInputWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    selectCityButton: {
-        paddingHorizontal: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderLeftWidth: 0,
-        borderTopRightRadius: 14,
-        borderBottomRightRadius: 14,
-        height: 50, // Match typical input height
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        width: '80%',
-        borderRadius: 24,
-        padding: 24,
-        borderWidth: 1,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    modalItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-    },
-    modalItemText: {
-        fontSize: 16,
-    },
-    pinMapButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        borderWidth: 1,
-        alignSelf: 'flex-start'
-    }
+    container: { flex: 1, backgroundColor: '#000' },
+    header: { padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1 },
+    headerTitle: { fontSize: 18, fontWeight: 'bold' },
+    scrollContainer: { flex: 1 },
+    scrollContent: { padding: 16, paddingBottom: 100 },
+    stepContainer: { flex: 1 },
+    stepTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 24 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    card: { width: '48%', padding: 16, borderRadius: 16, borderWidth: 1, alignItems: 'center', marginBottom: 12 },
+    iconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    cardTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
+    cardSub: { fontSize: 12, textAlign: 'center' },
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#000' }, // dark bg for footer
+    backButton: { padding: 16 },
+    nextButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
+    inputGroup: { marginBottom: 20 },
+    label: { marginBottom: 8, fontSize: 14, marginLeft: 4 },
+    input: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 16 },
+    textArea: { height: 120, paddingTop: 12 },
+    imageSection: { marginBottom: 24 },
+    photoScrollContent: { paddingVertical: 8 },
+    addPhotoButton: { width: 80, height: 80, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    addPhotoText: { fontSize: 10, marginTop: 4 },
+    imageWrapper: { width: 80, height: 80, marginRight: 12, position: 'relative' },
+    imagePreview: { width: '100%', height: '100%', borderRadius: 12 },
+    removeImageButton: { position: 'absolute', top: -5, right: -5, backgroundColor: 'red', borderRadius: 10, padding: 2 },
+    locationInputWrapper: { flexDirection: 'row', alignItems: 'center' },
+    selectCityButton: { width: 50, height: 50, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderLeftWidth: 0, borderTopRightRadius: 12, borderBottomRightRadius: 12 },
+    pinMapButton: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
+    reviewCard: { padding: 20, borderRadius: 16, borderWidth: 1 },
+    reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+    reviewLabel: { color: '#71717a', fontSize: 14 },
+    reviewValue: { fontSize: 16, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
+    modalContent: { flex: 1, backgroundColor: '#000' }
 });
 
 export default CreatePostScreen;

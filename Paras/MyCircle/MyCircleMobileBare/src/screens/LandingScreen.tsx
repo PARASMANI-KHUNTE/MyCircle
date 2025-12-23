@@ -20,6 +20,11 @@ const LandingScreen = ({ navigation }: any) => {
     const handleGoogleLogin = async () => {
         try {
             await GoogleSignin.hasPlayServices();
+            try {
+                await GoogleSignin.signOut();
+            } catch (error) {
+                // Ignore if not signed in
+            }
             const googleResponse = await GoogleSignin.signIn();
             const idToken = googleResponse.data?.idToken;
 

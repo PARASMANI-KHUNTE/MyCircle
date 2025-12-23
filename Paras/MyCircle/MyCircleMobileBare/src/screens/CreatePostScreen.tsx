@@ -5,7 +5,7 @@ import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
-import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera, Briefcase, Wrench, ShoppingBag, Package, ArrowRight, ArrowLeft } from 'lucide-react-native';
+import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera, Briefcase, Wrench, ShoppingBag, Package, ArrowRight, ArrowLeft, Handshake } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import Stepper from '../components/ui/Stepper';
 
@@ -24,6 +24,7 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [location, setLocation] = useState('');
     const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [price, setPrice] = useState('');
+    const [acceptsBarter, setAcceptsBarter] = useState(false);
     // 'search' | 'detect' | 'pin'
     const [locationMethod, setLocationMethod] = useState<'search' | 'detect' | 'pin'>('search');
     const [images, setImages] = useState<any[]>([]);
@@ -80,10 +81,9 @@ const CreatePostScreen = ({ navigation }: any) => {
             formData.append('title', title);
             formData.append('description', description);
             formData.append('type', type);
-            if (type === 'barter') { // Should consider if we want to keep barter as a separate type or just a payment method? sticking to types for now
-                // Assuming barter is not a category anymore but maybe a feature? 
-                // For now, let's stick to the 4 categories + maybe 'barter' if user selects it in stepper logic manually? 
-                // Design showed 4 categories. I can add 'Barter' as a checkbox in Exchange step if needed, but for now strict to logic.
+            formData.append('type', type);
+            if (acceptsBarter) {
+                formData.append('acceptsBarter', 'true');
             }
             formData.append('location', location);
             if (coordinates) {
@@ -220,6 +220,19 @@ const CreatePostScreen = ({ navigation }: any) => {
                     value={price}
                     onChangeText={setPrice}
                 />
+                <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}
+                    onPress={() => setAcceptsBarter(!acceptsBarter)}
+                >
+                    <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: acceptsBarter ? colors.primary : colors.textSecondary, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: acceptsBarter ? colors.primary : 'transparent' }}>
+                        {acceptsBarter && <Check size={16} color="white" />}
+                    </View>
+                    <Handshake size={20} color={acceptsBarter ? colors.primary : colors.textSecondary} style={{ marginRight: 8 }} />
+                    <Text style={{ color: colors.text, fontSize: 16 }}>Open to Barter / Favour</Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 32, marginTop: 4 }}>
+                    Enable this if you are willing to exchange goods/services instead of money.
+                </Text>
             </View>
 
             <View style={styles.inputGroup}>
@@ -370,7 +383,15 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
                 <View style={styles.reviewRow}>
                     <Text style={styles.reviewLabel}>Price/Budget</Text>
-                    <Text style={[styles.reviewValue, { color: colors.primary, fontWeight: 'bold' }]}>₹ {price}</Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.reviewValue, { color: colors.primary, fontWeight: 'bold' }]}>₹ {price}</Text>
+                        {acceptsBarter && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                <Handshake size={12} color={colors.textSecondary} />
+                                <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 4 }}>Barter/Favour</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
                 <View style={styles.reviewRow}>
                     <Text style={styles.reviewLabel}>Location</Text>

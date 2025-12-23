@@ -109,6 +109,10 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                 socket.off('user_typing');
                 socket.off('user_stop_typing');
             }
+            // Clear typing timeout to prevent memory leaks
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
         };
     }, [id, socket]);
 
@@ -268,6 +272,12 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
     const handleBlockUser = () => {
         const userIdToBlock = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
+
+        if (!userIdToBlock) {
+            console.error('Cannot block user: user ID not found');
+            return;
+        }
+
         setActionSheetConfig({
             title: "Block User",
             description: "Are you sure? You won't receive messages from them.",

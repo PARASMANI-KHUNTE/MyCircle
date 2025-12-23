@@ -18,11 +18,6 @@ const checkContentSafety = async (text) => {
             return { safe: true };
         }
 
-        if (!process.env.GEMINI_API_KEY) {
-            console.warn("GEMINI_API_KEY is missing. Skipping safety check (Dev Mode).");
-            return { safe: true };
-        }
-
         const model = getModel();
         if (!model) return { safe: true, warning: 'AI unavailable' };
 

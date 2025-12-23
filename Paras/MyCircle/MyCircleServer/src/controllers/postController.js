@@ -18,9 +18,6 @@ exports.createPost = async (req, res) => {
                 expiresAt = new Date(Date.now() + durationInMinutes * 60000);
             }
         }
-        // Default to null (never expire) or maybe a default validity like 28 days if client doesn't send it?
-        // User requested selection, so let's stick to user input. If no input, maybe default is undefined/null (no expiry).
-        // Actually, let's enforce a default on client side, but here if missing, let it be null (persistent).
 
         let images = [];
         if (req.files) {
@@ -47,8 +44,6 @@ exports.createPost = async (req, res) => {
                 type: 'Point',
                 coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
             } : undefined,
-            images,
-            contactPhone,
             images,
             contactPhone,
             contactWhatsapp,

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import * as Keychain from 'react-native-keychain';
 import api from '../services/api';
 
@@ -41,7 +42,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .catch(err => {
                     console.error('Failed to fetch user profile', err);
                     if (err.response?.status === 401 || err.response?.status === 404) {
-                        logout();
+                        // Notify user before logging out
+                        Alert.alert(
+                            'Session Expired',
+                            'Your session has expired. Please log in again.',
+                            [{ text: 'OK', onPress: () => logout() }]
+                        );
                     }
                 });
         } else {

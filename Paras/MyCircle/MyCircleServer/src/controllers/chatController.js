@@ -152,14 +152,6 @@ exports.sendMessage = async (req, res) => {
             readBy: [req.user.id] // Mark message as read by sender immediately
         });
 
-        // Check if sender is blocked by recipient
-        // This check is now done in the notificationHelper or should be done here before saving the message
-        // For now, assuming it's handled elsewhere or will be added.
-        // const recipientUser = await User.findById(recipientId);
-        // if (recipientUser.blockedUsers.includes(req.user.id)) {
-        //     return res.status(403).json({ msg: 'You cannot message this user' });
-        // }
-
         const savedMessage = await newMessage.save();
 
         // Populate the message with sender details for real-time emission
@@ -181,19 +173,6 @@ exports.sendMessage = async (req, res) => {
                 message: populatedMessage
             });
         }
-
-        // Notification removed as per user request (showing badges instead)
-        /*
-        await createNotification(io, {
-            recipient: recipientId,
-            sender: req.user.id,
-            type: 'message',
-            title: `New message from ${sender.displayName}`,
-            message: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
-            relatedId: conversation._id,
-            link: '/chat'
-        });
-        */
 
         res.json(populatedMessage);
     } catch (err) {

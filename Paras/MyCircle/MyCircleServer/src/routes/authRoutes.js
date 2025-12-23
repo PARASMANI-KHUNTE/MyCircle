@@ -35,7 +35,10 @@ router.get(
             process.env.JWT_SECRET,
             { expiresIn: '30d' },
             (err, token) => {
-                if (err) throw err;
+                if (err) {
+                    console.error('JWT signing error:', err);
+                    return res.status(500).json({ msg: 'Error generating token' });
+                }
                 // Redirect to frontend with token
                 const isProduction = process.env.NODE_ENV === 'production';
                 const clientUrl = isProduction
@@ -125,7 +128,10 @@ router.post('/google-mobile', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '30d' },
             (err, token) => {
-                if (err) throw err;
+                if (err) {
+                    console.error('JWT signing error:', err);
+                    return res.status(500).json({ msg: 'Error generating token' });
+                }
                 res.json({ token });
             }
         );

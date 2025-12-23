@@ -109,7 +109,8 @@ const corsOptions = {
             process.env.CLIENT_URL,
             'http://localhost:5173',
             'http://localhost:3000',
-            'http://localhost:19006', // Expo web
+            'http://localhost:19006',
+            'https://mycircle-9gm5.onrender.com'
         ].filter(Boolean);
 
         // In development, allow all origins

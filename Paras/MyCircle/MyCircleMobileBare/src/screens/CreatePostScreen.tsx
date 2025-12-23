@@ -81,16 +81,18 @@ const CreatePostScreen = ({ navigation }: any) => {
             formData.append('title', title);
             formData.append('description', description);
             formData.append('type', type);
-            formData.append('type', type);
             if (acceptsBarter) {
                 formData.append('acceptsBarter', 'true');
             }
-            formData.append('location', location);
+            // Fallback for location text if only coordinates are provided
+            formData.append('location', location || (coordinates ? `Pinned Location (${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)})` : 'Unknown Location'));
+
             if (coordinates) {
                 formData.append('latitude', coordinates.lat.toString());
                 formData.append('longitude', coordinates.lng.toString());
             }
-            formData.append('price', price);
+            // Default price to 0 if barter or empty
+            formData.append('price', price || '0');
 
             images.forEach((image) => {
                 formData.append('images', image as any);
@@ -420,7 +422,17 @@ const CreatePostScreen = ({ navigation }: any) => {
     const goNext = () => {
         if (step === 1 && !type) return Alert.alert('Error', 'Please select a category');
         if (step === 2 && (!title || !description)) return Alert.alert('Error', 'Please fill in title and description');
-        if (step === 3 && (!price || !location)) return Alert.alert('Error', 'Please enter price and location');
+
+        if (step === 3) {
+            // Price is optional if Barter is accepted
+            if (!acceptsBarter && !price) {
+                return Alert.alert('Error', 'Please enter a price or enable Barter');
+            }
+            // Location is valid if text exists OR coordinates are pinned
+            if (!location && !coordinates) {
+                return Alert.alert('Error', 'Please select a location');
+            }
+        }
 
         if (step < 4) setStep(step + 1);
         else handleCreate();

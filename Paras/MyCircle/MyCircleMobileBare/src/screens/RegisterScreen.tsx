@@ -20,10 +20,7 @@ const RegisterScreen = ({ navigation }: any) => {
 
         setLoading(true);
         try {
-            const baseURL = api.defaults.baseURL || 'http://10.0.2.2:5000/api';
-            const authUrl = baseURL.replace('/api', '') + '/auth/register';
-
-            const res = await axios.post(authUrl, {
+            const res = await api.post('/auth/register', {
                 displayName,
                 email,
                 password

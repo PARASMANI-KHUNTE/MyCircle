@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import { ArrowLeft, Send, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, Send, MoreVertical, Sparkles } from 'lucide-react-native';
+import { moderateContent, getChatSuggestions } from '../services/aiService';
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
     const { id, recipient } = route.params;
@@ -21,6 +22,8 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const flatListRef = useRef<FlatList>(null);
 
     const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(true);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -28,6 +31,26 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             fetchMessages();
         }
     }, [id]);
+
+    useEffect(() => {
+        if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            const senderId = typeof lastMessage.sender === 'string' ? lastMessage.sender : lastMessage.sender?._id;
+            const isMe = senderId === (auth?.user?._id || auth?.user?.id);
+
+            if (!isMe && showSuggestions) {
+                // Fetch suggestions if last message was from other user
+                const context = messages.slice(-5).map(m => ({
+                    sender: (typeof m.sender === 'string' ? m.sender : m.sender?._id) === (auth?.user?._id || auth?.user?.id) ? 'user' : 'other',
+                    text: m.text
+                })) as { sender: 'user' | 'other'; text: string }[];
+
+                getChatSuggestions(context).then(setSuggestions);
+            } else {
+                setSuggestions([]);
+            }
+        }
+    }, [messages]);
 
     // Refresh messages when screen gains focus (e.g., after unblocking user)
     useFocusEffect(
@@ -125,8 +148,16 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     };
 
 
-    const handleSend = async () => {
-        if (!inputText.trim()) return;
+    const handleSend = async (textToSend?: string) => {
+        const text = textToSend || inputText;
+        if (!text.trim()) return;
+
+        // AI Moderation
+        const moderation = await moderateContent(text);
+        if (!moderation.safe) {
+            Alert.alert('Message Blocked', `Your message was flagged: ${moderation.reason}. Please be respectful.`);
+            return;
+        }
 
         // Stop typing immediately when sending
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -138,7 +169,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         try {
             const messageData = {
                 recipientId: recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id,
-                text: inputText.trim()
+                text: text.trim()
             };
 
             const res = await api.post('/chat/message', messageData);
@@ -306,18 +337,44 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     contentContainerStyle={styles.listContent}
                 />
 
-                <View style={[styles.inputArea, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-                    <TextInput
-                        style={[styles.input, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
-                        placeholder="Type a message..."
-                        placeholderTextColor={colors.textSecondary}
-                        value={inputText}
-                        onChangeText={handleTextChange}
-                        multiline
-                    />
-                    <TouchableOpacity onPress={handleSend} style={[styles.sendButton, { backgroundColor: colors.primary }]}>
-                        <Send size={20} color="white" />
-                    </TouchableOpacity>
+                <View style={[styles.inputArea, { backgroundColor: colors.card, borderTopColor: colors.border, flexDirection: 'column', alignItems: 'stretch' }]}>
+                    {suggestions.length > 0 && (
+                        <View style={{ flexDirection: 'row', marginBottom: 8, paddingHorizontal: 4 }}>
+                            {suggestions.map((s, i) => (
+                                <TouchableOpacity
+                                    key={i}
+                                    style={{
+                                        backgroundColor: colors.primary + '20',
+                                        borderColor: colors.primary,
+                                        borderWidth: 1,
+                                        borderRadius: 16,
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 6,
+                                        marginRight: 8
+                                    }}
+                                    onPress={() => handleSend(s)}
+                                >
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Sparkles size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                                        <Text style={{ color: colors.primary, fontSize: 12 }}>{s}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TextInput
+                            style={[styles.input, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
+                            placeholder="Type a message..."
+                            placeholderTextColor={colors.textSecondary}
+                            value={inputText}
+                            onChangeText={handleTextChange}
+                            multiline
+                        />
+                        <TouchableOpacity onPress={() => handleSend()} style={[styles.sendButton, { backgroundColor: colors.primary }]}>
+                            <Send size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView >

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { Camera, X } from 'lucide-react-native';
+
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
-import { MapPin, ChevronDown, Check, Map } from 'lucide-react-native';
+import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera } from 'lucide-react-native';
 import { Modal } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 
 const CreatePostScreen = ({ navigation }: any) => {
@@ -23,6 +24,7 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(false);
     const [locationLoading, setLocationLoading] = useState(false);
     const [showCityModal, setShowCityModal] = useState(false);
+    const [showMapModal, setShowMapModal] = useState(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
 
     const pickImage = async () => {
@@ -188,6 +190,18 @@ const CreatePostScreen = ({ navigation }: any) => {
                                 <ChevronDown size={20} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
+                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4, fontStyle: 'italic' }}>
+                            *Pin location to appear on the Feed Map
+                        </Text>
+                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                            <TouchableOpacity
+                                onPress={() => setShowMapModal(true)}
+                                style={[styles.pinMapButton, { borderColor: colors.primary, backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}
+                            >
+                                <Map size={16} color={colors.primary} />
+                                <Text style={{ color: colors.primary, fontWeight: 'bold', marginLeft: 6 }}>Pin on Map</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                     <View style={styles.flex1}>
                         <Text style={[styles.label, themeStyles.textSecondary]}>Price (₹)</Text>
@@ -301,7 +315,67 @@ const CreatePostScreen = ({ navigation }: any) => {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView >
+
+            {/* Pin on Map Modal */}
+            <Modal
+                visible={showMapModal}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowMapModal(false)}
+            >
+                <View style={{ flex: 1, backgroundColor: colors.background }}>
+                    <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                        <Text style={[styles.headerTitle, { fontSize: 18, color: colors.text }]}>Pin Location</Text>
+                        <TouchableOpacity onPress={() => setShowMapModal(false)}>
+                            <X size={24} color={colors.text} />
+                        </TouchableOpacity>
+                    </View>
+                    <WebView
+                        originWhitelist={['*']}
+                        source={{
+                            html: `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+                                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                                <style>body { margin: 0; padding: 0; } #map { height: 100vh; width: 100vw; }</style>
+                            </head>
+                            <body>
+                                <div id="map"></div>
+                                <script>
+                                    var map = L.map('map').setView([${coordinates?.lat || 28.6139}, ${coordinates?.lng || 77.2090}], 13);
+                                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                                        attribution: '&copy; OpenStreetMap contributors'
+                                    }).addTo(map);
+
+                                    var marker;
+                                    ${coordinates ? `marker = L.marker([${coordinates.lat}, ${coordinates.lng}]).addTo(map);` : ''}
+
+                                    map.on('click', function(e) {
+                                        if (marker) map.removeLayer(marker);
+                                        marker = L.marker(e.latlng).addTo(map);
+                                        window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng }));
+                                    });
+                                </script>
+                            </body>
+                            </html>
+                        `}}
+                        onMessage={(event) => {
+                            try {
+                                const data = JSON.parse(event.nativeEvent.data);
+                                setCoordinates({ lat: data.lat, lng: data.lng });
+                                Alert.alert("Location Pinned", "Coordinates updated!");
+                                setShowMapModal(false);
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        }}
+                    />
+                </View>
+            </Modal>
+        </SafeAreaView>
     );
 };
 
@@ -483,6 +557,15 @@ const styles = StyleSheet.create({
     modalItemText: {
         fontSize: 16,
     },
+    pinMapButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        alignSelf: 'flex-start'
+    }
 });
 
 export default CreatePostScreen;

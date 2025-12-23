@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Linking, StyleSheet, Dimensions, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical } from 'lucide-react-native';
+import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles } from 'lucide-react-native';
 import { Clipboard } from 'react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getPostInsights } from '../services/aiService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -88,6 +89,22 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             Alert.alert("Link Copied", "Post link copied to clipboard!");
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const handleGetInsights = async () => {
+        setLoading(true);
+        try {
+            const insights = await getPostInsights(post);
+            Alert.alert(
+                "⚡ AI Insights",
+                `Quality Score: ${insights.score}/100\n\n${insights.summary}\n\nTips:\n• ${insights.tips.join('\n• ')}`,
+                [{ text: "Awesome!" }]
+            );
+        } catch (error) {
+            Alert.alert("Error", "Could not analyze post.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -240,6 +257,11 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
                         <Share2 size={24} color={colors.text} />
                     </TouchableOpacity>
+                    {isOwnPost && (
+                        <TouchableOpacity onPress={handleGetInsights} style={styles.headerButton}>
+                            <Sparkles size={24} color="#8b5cf6" />
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity onPress={showMenu} style={styles.headerButton}>
                         <MoreVertical size={24} color={colors.text} />
                     </TouchableOpacity>

@@ -116,7 +116,8 @@ exports.getPosts = async (req, res) => {
                 user: { _id: '$user._id', displayName: '$user.displayName', avatar: '$user.avatar' }, // Select specific user fields
                 type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
                 isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
-                // Do NOT include locationCoords (Privacy)
+                // Include locationCoords for map visibility
+                locationCoords: 1,
                 distance: { $ifNull: ['$dist.calculated', null] } // Flatten distance
             }
         });

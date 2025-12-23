@@ -11,6 +11,7 @@ import Stepper from '../components/ui/Stepper';
 
 const CreatePostScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
+    const searchTimeout = React.useRef<any>(null);
 
     // Wizard State
     const [step, setStep] = useState(1);
@@ -248,20 +249,63 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
 
                 {locationMethod === 'search' && (
-                    <View style={styles.locationInputWrapper}>
-                        <TextInput
-                            style={[styles.input, themeStyles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
-                            placeholder="Search City / Area"
-                            placeholderTextColor={colors.textSecondary}
-                            value={location}
-                            onChangeText={setLocation}
-                        />
-                        <TouchableOpacity
-                            style={[styles.selectCityButton, { borderColor: colors.border, backgroundColor: colors.input }]}
-                            onPress={() => setShowCityModal(true)}
-                        >
-                            <ChevronDown size={20} color={colors.textSecondary} />
-                        </TouchableOpacity>
+                    <View style={{ marginBottom: 16, zIndex: 10 }}>
+                        <View style={styles.locationInputWrapper}>
+                            <TextInput
+                                style={[styles.input, themeStyles.input, { flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
+                                placeholder="Search City / Area"
+                                placeholderTextColor={colors.textSecondary}
+                                value={location}
+                                onChangeText={(text) => {
+                                    setLocation(text);
+                                    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+                                    if (text.length > 2) {
+                                        searchTimeout.current = setTimeout(async () => {
+                                            try {
+                                                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&addressdetails=1&limit=5`, { headers: { 'User-Agent': 'MyCircleApp/1.0' } });
+                                                const data = await response.json();
+                                                setSearchResults(data);
+                                            } catch (e) { console.error(e); }
+                                        }, 500);
+                                    } else {
+                                        setSearchResults([]);
+                                    }
+                                }}
+                            />
+                            {/* Keep Chevron as visual indicator or manual trigger if needed, but for now it just focuses or does nothing special */}
+                            <TouchableOpacity
+                                style={[styles.selectCityButton, { borderColor: colors.border, backgroundColor: colors.input }]}
+                                onPress={() => { }}
+                            >
+                                <ChevronDown size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Suggestions Dropdown */}
+                        {searchResults.length > 0 && (
+                            <View style={[styles.suggestionsList, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                {searchResults.map((item: any, idx: number) => (
+                                    <TouchableOpacity
+                                        key={idx}
+                                        style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
+                                        onPress={() => {
+                                            let display = item.display_name;
+                                            const parts = display.split(', ');
+                                            if (parts.length > 2) display = `${parts[0]}, ${parts[1]}`;
+                                            setLocation(display);
+                                            if (item.lat && item.lon) setCoordinates({ lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
+                                            setSearchResults([]);
+                                        }}
+                                    >
+                                        <MapPin size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={{ color: colors.text, fontWeight: 'bold' }}>{item.display_name.split(',')[0]}</Text>
+                                            <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{item.display_name}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -515,7 +559,9 @@ const styles = StyleSheet.create({
     reviewLabel: { color: '#71717a', fontSize: 14 },
     reviewValue: { fontSize: 16, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
     modalContent: { flex: 1, backgroundColor: '#000' },
-    methodTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, marginRight: 8 }
+    methodTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, marginRight: 8 },
+    suggestionsList: { maxHeight: 200, borderWidth: 1, borderTopWidth: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: 'hidden' },
+    suggestionItem: { padding: 12, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center' }
 });
 
 export default CreatePostScreen;

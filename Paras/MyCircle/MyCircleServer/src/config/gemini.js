@@ -1,194 +1,154 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const getModel = () => {
-    if (!process.env.GEMINI_API_KEY) return null;
+/**
+ * Validates the existence and basic format of the Gemini API Key.
+ * @returns {boolean}
+ */
+const isKeyValid = () => {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key || key.trim() === '' || key === 'your_gemini_api_key_here') {
+        return false;
+    }
+    return true;
+};
+
+const getModel = (modelName = "gemini-1.5-flash") => {
+    if (!isKeyValid()) return null;
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        return genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        return genAI.getGenerativeModel({ model: modelName });
     } catch (e) {
-        console.error("Gemini Init Error:", e);
+        console.error("Gemini Initialization Error:", e.message);
         return null;
     }
 };
 
+/**
+ * Unified text safety check
+ */
 const checkContentSafety = async (text) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            console.warn("GEMINI_API_KEY is missing. Skipping safety check (Dev Mode).");
-            return { safe: true };
-        }
+        if (!text || text.trim().length === 0) return { safe: true };
 
         const model = getModel();
-        if (!model) return { safe: true, warning: 'AI unavailable' };
-
-        const prompt = `
-        You are a content moderation AI. Analyze the following text for:
-        1. Fraud/Scams
-        2. Toxicity/Hate Speech
-        3. Illegal content
-        
-        Text: "${text}"
-        
-        Respond with valid JSON only:
-        {
-            "safe": boolean,
-            "reason": "string (brief explanation if unsafe, else null)"
+        if (!model) {
+            console.warn("GEMINI_API_KEY missing or invalid. Skipping safety check.");
+            return { safe: true, warning: 'AI moderation disabled' };
         }
-        `;
+
+        const prompt = `Analyze the following text for inappropriate content (sexual content, hate speech, violence, illegal acts, scams).
+        Respond in JSON format: {"safe": boolean, "reason": "why if unsafe, else null"}
+        Text: "${text}"`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const textResponse = response.text();
 
-        // Clean up markdown code blocks if present
-        const jsonString = textResponse.replace(/^```json\n|\n```$/g, '').trim();
-
-        const safetyResult = JSON.parse(jsonString);
-        return safetyResult;
-
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        return { safe: true };
     } catch (error) {
-        console.error("Gemini Safety Check Error:", error);
-        // Fallback: Fail open or closed? 
-        // For MVP, fail open (allow) but log error to avoid blocking users if AI is down.
-        // Or fail closed (secure). Let's fail open for now with a warning log.
-        return { safe: true, warning: "AI check failed" };
+        console.error("Gemini Safety Check Error:", error.message);
+        return { safe: true, error: "AI service error" };
+    }
+};
+
+/**
+ * Image safety check
+ */
+const checkImageSafety = async (imageBuffer, mimeType) => {
+    try {
+        if (!imageBuffer) return { safe: true };
+
+        const model = getModel();
+        if (!model) return { safe: true, warning: 'AI image moderation disabled' };
+
+        const imagePart = {
+            inlineData: {
+                data: imageBuffer.toString('base64'),
+                mimeType: mimeType
+            }
+        };
+
+        const prompt = `Analyze this image for inappropriate content (explicit, violence, hate symbols, illegal).
+        Respond in JSON format: {"safe": boolean, "reason": "why if unsafe, else null"}`;
+
+        const result = await model.generateContent([prompt, imagePart]);
+        const response = await result.response;
+        const textResponse = response.text();
+
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        return { safe: true };
+    } catch (error) {
+        console.error("Gemini Image Safety Error:", error.message);
+        return { safe: true };
     }
 };
 
 const generateSuggestions = async (contextMessages) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            return ["Hello", "How are you?", "Is this still available?"];
-        }
-
         const model = getModel();
-        if (!model) throw new Error("AI unavailable");
+        if (!model) return ["Interested", "Available?", "Thanks"];
 
-        // Format last few messages for context
-        // contextMessages should be array of { sender: 'user'|'other', text: '...' }
         const contextStr = contextMessages.map(m => `${m.sender}: ${m.text}`).join('\n');
-
-        const prompt = `
-        Based on the following chat conversation, suggest 3 short, relevant, and polite quick replies for the user.
-        Conversation:
-        ${contextStr}
-        
-        Respond with valid JSON only:
-        {
-            "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
-        }
-        `;
+        const prompt = `Based on this chat, suggest 3 short, polite quick replies.
+        Respond in JSON: {"suggestions": ["s1", "s2", "s3"]}
+        Chat:\n${contextStr}`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        const textResponse = response.text();
-        const jsonString = textResponse.replace(/^```json\n|\n```$/g, '').trim();
-        const data = JSON.parse(jsonString);
-
+        const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)[0]);
         return data.suggestions || [];
     } catch (error) {
-        console.error("Gemini Suggestion Error:", error);
+        console.error("Gemini Suggestion Error:", error.message);
         return ["Interested", "Available?", "Thanks"];
     }
 };
 
 const analyzePost = async (postData) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            return {
-                summary: "Your post is performing well.",
-                tips: ["Try adding more photos to increase engagement.", "Share on social media."],
-                score: 85
-            };
-        }
-
         const model = getModel();
-        if (!model) throw new Error("AI unavailable");
+        if (!model) return { summary: "Post analysis unavailable.", tips: ["Add more details."], score: 80 };
 
-        const prompt = `
-        Analyze this post performance and content:
-        Title: ${postData.title}
-        Description: ${postData.description}
-        Likes: ${postData.likes || 0}
-        Shares: ${postData.shares || 0}
-        
-        Provide:
-        1. A brief performance summary (1 sentence).
-        2. 2 specific tips to improve engagement.
-        3. A quality score (0-100).
-
-        Respond with valid JSON only:
-        {
-            "summary": "string",
-            "tips": ["tip1", "tip2"],
-            "score": number
-        }
-        `;
+        const prompt = `Analyze this post: Title: ${postData.title}, Desc: ${postData.description}.
+        Provide JSON: {"summary": "string", "tips": ["t1", "t2"], "score": 0-100}`;
 
         const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const textResponse = response.text();
-        const jsonString = textResponse.replace(/^```json\n|\n```$/g, '').trim();
-        return JSON.parse(jsonString);
-
+        const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);
+        return data;
     } catch (error) {
-        console.error("Gemini Analysis Error:", error);
-        return {
-            summary: "Analysis unavailable.",
-            tips: ["Check back later."],
-            score: 0
-        };
-    }
-}
-
-const explainPost = async (postData) => {
-    try {
-        if (!process.env.GEMINI_API_KEY) {
-            return {
-                summary: "This is a great post about " + postData.title,
-                context: "It appears to be a good opportunity.",
-                interestingFacts: ["Good price", "Verified seller"]
-            };
-        }
-
-        const model = getModel();
-        if (!model) throw new Error("AI unavailable");
-
-        const prompt = `
-        Explain this post to a potential interested user.
-        Title: ${postData.title}
-        Description: ${postData.description}
-        Type: ${postData.type}
-        Location: ${postData.location}
-        Price: ${postData.price || 'N/A'}
-        
-        Provide:
-        1. A friendly summary of what is being offered/asked (1-2 sentences).
-        2. Context on why this might be valuable or interesting.
-        3. 2 key interesting facts or highlights.
-
-        Respond with valid JSON only:
-        {
-            "summary": "string",
-            "context": "string",
-            "interestingFacts": ["fact1", "fact2"]
-        }
-        `;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const textResponse = response.text();
-        const jsonString = textResponse.replace(/^```json\n|\n```$/g, '').trim();
-        return JSON.parse(jsonString);
-
-    } catch (error) {
-        console.error("Gemini Explanation Error:", error);
-        return {
-            summary: `This is a post about ${postData.title}.`,
-            context: postData.description ? postData.description.substring(0, 50) + '...' : "Please check the details manually.",
-            interestingFacts: ["Check the price", "Contact the seller for more info"]
-        };
+        console.error("Gemini Analysis Error:", error.message);
+        return { summary: "Analysis failed.", tips: ["Try again later."], score: 0 };
     }
 };
 
-module.exports = { checkContentSafety, generateSuggestions, analyzePost, explainPost };
+const explainPost = async (postData) => {
+    try {
+        const model = getModel();
+        if (!model) return { summary: "Post explanation unavailable.", context: "Details in description.", interestingFacts: [] };
+
+        const prompt = `Explain this post: Title: ${postData.title}, Desc: ${postData.description}.
+        Provide JSON: {"summary": "string", "context": "string", "interestingFacts": ["f1", "f2"]}`;
+
+        const result = await model.generateContent(prompt);
+        const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);
+        return data;
+    } catch (error) {
+        console.error("Gemini Explanation Error:", error.message);
+        return { summary: "Explanation unavailable.", context: "", interestingFacts: [] };
+    }
+};
+
+module.exports = {
+    checkContentSafety,
+    checkImageSafety,
+    generateSuggestions,
+    analyzePost,
+    explainPost
+};
+

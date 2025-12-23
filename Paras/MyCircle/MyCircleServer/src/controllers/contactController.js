@@ -8,7 +8,7 @@ const User = require('../models/User');
 exports.createRequest = async (req, res) => {
     try {
         const requesterId = req.user.id;
-        const { postId: bodyPostId, recipientId } = req.body;
+        const { postId: bodyPostId, recipientId } = req.body || {};
         const postId = bodyPostId || req.params.postId;
 
         if (!postId) {

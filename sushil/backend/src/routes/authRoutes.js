@@ -36,7 +36,7 @@ router.get(
             (err, token) => {
                 if (err) throw err;
                 // Redirect to frontend with token (HashRouter expects #)
-                const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
+                const frontendBase = process.env.FRONTEND_URL || 'https://mycircle-1.onrender.com';
                 res.redirect(`${frontendBase}/#/login/success?token=${token}`);
             }
         );

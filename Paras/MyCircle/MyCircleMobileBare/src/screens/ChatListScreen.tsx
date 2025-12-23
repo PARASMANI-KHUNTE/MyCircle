@@ -136,32 +136,31 @@ const ChatListScreen = ({ navigation }: any) => {
                     <Text style={[styles.headerTitle, themeStyles.text]}>Messages</Text>
                 </View>
                 {/* Requests Button */}
-                <TouchableOpacity onPress={() => navigation.navigate('Requests')} style={{ padding: 8 }}>
-                    <MessageCircle color={colors.primary} size={24} />
-                </TouchableOpacity>
             </View>
 
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator color={colors.primary} size="large" />
-                </View>
-            ) : (
-                <FlatList
-                    data={conversations}
-                    keyExtractor={item => (item as any)._id}
-                    renderItem={renderItem}
-                    refreshControl={
-                        <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor={colors.primary} />
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <MessageCircle size={48} color={colors.textSecondary} />
-                            <Text style={[styles.emptyText, themeStyles.textSecondary]}>No conversations yet.</Text>
-                        </View>
-                    }
-                />
-            )}
-        </SafeAreaView>
+
+            {
+                loading ? (
+                    <View style={styles.loadingContainer} >
+                        <ActivityIndicator color={colors.primary} size="large" />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={conversations}
+                        keyExtractor={item => (item as any)._id}
+                        renderItem={renderItem}
+                        refreshControl={
+                            <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor={colors.primary} />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <MessageCircle size={48} color={colors.textSecondary} />
+                                <Text style={[styles.emptyText, themeStyles.textSecondary]}>No conversations yet.</Text>
+                            </View>
+                        }
+                    />
+                )}
+        </SafeAreaView >
     );
 };
 

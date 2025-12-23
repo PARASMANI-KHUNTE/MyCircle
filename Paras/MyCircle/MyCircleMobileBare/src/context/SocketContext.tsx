@@ -4,6 +4,7 @@ import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { useAuth } from './AuthContext';
 import { BASE_URL } from '../services/api';
 import { Platform } from 'react-native';
+import { navigate } from '../services/navigationService';
 
 // Derive socket URL from BASE_URL (strip /api)
 const SOCKET_URL = BASE_URL.replace('/api', '');
@@ -40,7 +41,47 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             });
         }
         setupNotifications();
+
+        // Foreground/Background Event Listener
+        return notifee.onForegroundEvent(({ type, detail }) => {
+            if (type === EventType.PRESS) {
+                handleNotificationPress(detail.notification?.data);
+            }
+        });
     }, []);
+
+    // Check for initial notification (App opened from quit state)
+    useEffect(() => {
+        async function checkInitialNotification() {
+            const initialNotification = await notifee.getInitialNotification();
+            if (initialNotification) {
+                handleNotificationPress(initialNotification.notification.data);
+            }
+        }
+        checkInitialNotification();
+    }, []);
+
+    const handleNotificationPress = (data: any) => {
+        if (!data) return;
+
+        console.log("Notification Pressed:", data);
+
+        if (data.type === 'request_received' || data.type === 'request_approved' || data.type === 'request_rejected') {
+            navigate('Requests');
+        } else if (data.type === 'message') {
+            // For messages, we need conversation ID. 
+            // If data contains conversationId, navigate to ChatWindow
+            if (data.conversationId) {
+                navigate('ChatWindow', { id: data.conversationId });
+            } else {
+                navigate('ChatList');
+            }
+        } else if (data.type === 'comment' || data.type === 'like') {
+            if (data.postId) {
+                navigate('PostDetails', { id: data.postId });
+            }
+        }
+    };
 
     useEffect(() => {
         if (!user) {
@@ -80,6 +121,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 await notifee.displayNotification({
                     title: getNotificationTitle(data.type),
                     body: generateNotificationBody(data),
+                    data: data, // Pass data for press handling
                     android: {
                         channelId: 'default',
                         pressAction: {

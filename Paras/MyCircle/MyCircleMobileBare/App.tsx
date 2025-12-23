@@ -7,10 +7,10 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { ToastProvider } from './src/components/ui/Toast';
-import { ThemeProvider } from './src/context/ThemeContext'; // Import ThemeProvider
-// CSS import moved to index.js
+import { ThemeProvider } from './src/context/ThemeContext';
+import { navigationRef } from './src/services/navigationService';
 
-// Screen Placeholders (We will port these next)
+// Screen Placeholders
 import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -73,7 +73,7 @@ const App = () => {
           <AuthProvider>
             <SocketProvider>
               <NotificationProvider>
-                <NavigationContainer>
+                <NavigationContainer ref={navigationRef}>
                   <RootNavigator />
                 </NavigationContainer>
               </NotificationProvider>

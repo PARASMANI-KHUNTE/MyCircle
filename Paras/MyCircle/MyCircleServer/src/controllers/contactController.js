@@ -1,5 +1,6 @@
 const ContactRequest = require('../models/ContactRequest');
 const Post = require('../models/Post');
+const User = require('../models/User');
 
 // @desc    Create a contact request
 // @route   POST /api/contacts/request or POST /api/contacts/:postId
@@ -17,10 +18,15 @@ exports.createRequest = async (req, res) => {
         // Fetch the post to get recipient
         const post = await Post.findById(postId);
         if (!post) {
+            console.error(`Post not found with ID: ${postId}`);
             return res.status(404).json({ msg: 'Post not found' });
         }
 
         const finalRecipientId = recipientId || post.user;
+        if (!finalRecipientId) {
+            console.error(`Post ${postId} has no owner (user field missing)`);
+            return res.status(400).json({ msg: 'Post has no valid owner' });
+        }
 
         // Check if user is the owner
         if (post.user.toString() === requesterId) {
@@ -39,15 +45,27 @@ exports.createRequest = async (req, res) => {
         }
 
         // Check if users have blocked each other
-        const User = require('../models/User');
         const currentUser = await User.findById(requesterId);
         const recipientUser = await User.findById(finalRecipientId);
 
-        if (currentUser.blockedUsers.includes(finalRecipientId)) {
+        if (!currentUser) {
+            console.error(`Requester not found in DB: ${requesterId}`);
+            return res.status(404).json({ msg: 'User account not found' });
+        }
+
+        if (!recipientUser) {
+            console.error(`Recipient not found in DB: ${finalRecipientId}`);
+            return res.status(404).json({ msg: 'Recipient no longer exists' });
+        }
+
+        // Use .some() for safer ID comparison in arrays
+        const isBlockedByCurrent = currentUser.blockedUsers?.some(id => id.toString() === finalRecipientId.toString());
+        if (isBlockedByCurrent) {
             return res.status(403).json({ msg: 'You have blocked this user' });
         }
 
-        if (recipientUser.blockedUsers.includes(requesterId)) {
+        const isCurrentBlockedByRecipient = recipientUser.blockedUsers?.some(id => id.toString() === requesterId);
+        if (isCurrentBlockedByRecipient) {
             return res.status(403).json({ msg: 'You cannot make a request to this user' });
         }
 
@@ -76,8 +94,8 @@ exports.createRequest = async (req, res) => {
 
         res.json(contactRequest);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ msg: 'Server Error' });
+        console.error('Create Request Error:', err); // Log full error object
+        res.status(500).json({ msg: 'Server Error', details: err.message });
     }
 };
 

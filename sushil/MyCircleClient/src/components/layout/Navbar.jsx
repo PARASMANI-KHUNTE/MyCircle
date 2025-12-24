@@ -108,7 +108,7 @@ const Navbar = () => {
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 group">
                     <img src="/logo.png" alt="MyCircle" className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" />
-                    <span className="text-xl font-bold font-display tracking-tight text-white group-hover:text-primary transition-colors">
+                    <span className="text-xl font-bold font-display tracking-tight text-slate-900 group-hover:text-primary transition-colors">
                         MyCircle
                     </span>
                 </Link>
@@ -120,7 +120,7 @@ const Navbar = () => {
                             to={link.path}
                             className={cn(
                                 'text-sm font-medium transition-colors hover:text-primary flex items-center gap-1.5',
-                                location.pathname === link.path ? 'text-white' : 'text-gray-400'
+                                location.pathname === link.path ? 'text-slate-900' : 'text-slate-500'
                             )}
                         >
                             {link.name}
@@ -139,7 +139,7 @@ const Navbar = () => {
                         <>
                             <button
                                 onClick={() => setIsChatDrawerOpen(true)}
-                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors relative"
+                                className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors relative"
                                 title="Messages"
                             >
                                 <MessageCircle className="w-5 h-5" />
@@ -175,7 +175,7 @@ const Navbar = () => {
 
                 {/* Mobile Toggle */}
                 <button
-                    className="md:hidden text-white"
+                    className="md:hidden text-slate-700"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 >
                     {isMobileMenuOpen ? <X /> : <Menu />}

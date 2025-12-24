@@ -2,6 +2,7 @@ import React from 'react';
 import Navbar from './Navbar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { cn } from '../../utils/cn';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -14,7 +15,10 @@ const Layout = ({ children }) => {
 
             <Navbar />
 
-            <main className="pt-24 min-h-[calc(100vh-6rem)]">
+            <main className={cn(
+                "min-h-[calc(100vh-6rem)]",
+                location.pathname === "/" ? "pt-0" : "pt-24"
+            )}>
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={location.pathname}
@@ -22,7 +26,10 @@ const Layout = ({ children }) => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3 }}
-                        className="container mx-auto px-6 pb-12"
+                        className={cn(
+                            "pb-12 w-full",
+                            location.pathname !== "/" && "container mx-auto px-6"
+                        )}
                     >
                         {children}
                     </motion.div>

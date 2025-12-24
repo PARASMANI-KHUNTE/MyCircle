@@ -7,35 +7,42 @@ export default {
     theme: {
         extend: {
             colors: {
-                background: "#09090b", // Zinc 950
-                foreground: "#fafafa", // Zinc 50
+                background: "#ffffff", // White background for fresh look
+                foreground: "#0f172a", // Slate 900 for text
                 primary: {
-                    DEFAULT: "#8b5cf6", // Violet 500
+                    DEFAULT: "#0ea5e9", // Sky Blue - Trust
                     foreground: "#ffffff",
-                    hover: "#7c3aed",
+                    hover: "#0284c7",
+                    light: "#e0f2fe", // Very light blue for backgrounds
                 },
                 secondary: {
-                    DEFAULT: "#27272a", // Zinc 800
-                    foreground: "#fafafa",
-                    hover: "#3f3f46",
+                    DEFAULT: "#f8fafc", // Slate 50 - Light background
+                    foreground: "#1e293b",
+                    hover: "#f1f5f9",
                 },
                 accent: {
-                    DEFAULT: "#e11d48", // Rose 600
+                    DEFAULT: "#f97316", // Orange
                     foreground: "#ffffff",
+                    light: "#ffedd5", // Light orange bg
+                },
+                success: {
+                    DEFAULT: "#22c55e", // Green - "Join Circle" button color
+                    foreground: "#ffffff",
+                    light: "#dcfce7",
                 },
                 muted: {
-                    DEFAULT: "#18181b", // Zinc 900
-                    foreground: "#a1a1aa", // Zinc 400
+                    DEFAULT: "#f1f5f9", // Light gray
+                    foreground: "#64748b", // Slate 500
                 },
                 card: {
-                    DEFAULT: "rgba(24, 24, 27, 0.6)", // Glassmorphism base
-                    foreground: "#fafafa",
-                    border: "rgba(255, 255, 255, 0.1)",
+                    DEFAULT: "#ffffff",
+                    foreground: "#0f172a",
+                    border: "#e2e8f0", // Slate 200
                 }
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],
-                display: ['Outfit', 'sans-serif'], // For Headings
+                display: ['Playfair Display', 'serif'], // New Serif font
             },
             animation: {
                 'fade-in': 'fadeIn 0.5s ease-out',

@@ -4,87 +4,99 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-    /* Dark Mode (Default) - Deep Slate & Violet Theme */
-    --background: #020617;
-    /* Slate 950 */
-    --foreground: #f8fafc;
-    /* Slate 50 */
+@layer base {
+    :root {
+        /* Light Mode - Crisp Slate & Violet */
+        --background: 210 40% 98%;
+        /* slate-50 #f8fafc */
+        --foreground: 222.2 84% 4.9%;
+        /* slate-950 #020617 (mapped close to 900) */
 
-    --primary: 139 92 246;
-    /* Violet 500 */
-    --primary-foreground: 255 255 255;
-    --primary-hover: 124 58 237;
-    /* Violet 600 */
+        --card: 0 0% 100%;
+        /* white */
+        --card-foreground: 222.2 84% 4.9%;
+        --card-border: 215.4 16.3% 46.9%;
+        /* slate-400 */
 
-    --secondary: 15 23 42;
-    /* Slate 900 */
-    --secondary-foreground: 226 232 240;
-    /* Slate 200 */
-    --secondary-hover: 30 41 59;
-    /* Slate 800 */
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
 
-    --accent: 244 63 94;
-    /* Rose 500 */
-    --accent-foreground: 255 255 255;
+        --primary: 262.1 83.3% 57.8%;
+        /* violet-600 #7c3aed */
+        --primary-foreground: 210 40% 98%;
 
-    --muted: 15 23 42;
-    /* Slate 900 */
-    --muted-foreground: 148 163 184;
-    /* Slate 400 */
+        --secondary: 210 40% 96.1%;
+        /* slate-100 #f1f5f9 */
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        --secondary-hover: 214.3 31.8% 91.4%;
+        /* slate-200 */
 
-    --card: 15 23 42;
-    /* Slate 900 */
-    --card-foreground: 248 250 252;
-    /* Slate 50 */
-    --card-border: 255 255 255;
-    /* White (opacity handled in utility) */
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
 
-    --glass-bg: 15 23 42;
-    /* Matching card/slate base */
-    --glass-opacity: 0.6;
-    /* Higher opacity for better readability on deep bg */
-    --glass-border-opacity: 0.05;
-    /* Extremely subtle */
-}
+        --accent: 343 87% 48%;
+        /* rose-600 #e11d48 */
+        --accent-foreground: 210 40% 98%;
 
-[data-theme='light'] {
-    /* Light Mode - Crisp Slate & Violet */
-    --background: #f8fafc;
-    /* Slate 50 */
-    --foreground: #0f172a;
-    /* Slate 900 */
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
 
-    --primary: 124 58 237;
-    /* Violet 600 */
-    --primary-foreground: 255 255 255;
-    --primary-hover: 109 40 217;
-    /* Violet 700 */
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 262.1 83.3% 57.8%;
 
-    --secondary: 241 245 249;
-    /* Slate 100 */
-    --secondary-foreground: 30 41 59;
-    /* Slate 800 */
-    --secondary-hover: 226 232 240;
-    /* Slate 200 */
+        --radius: 0.75rem;
 
-    --accent: 225 29 72;
-    /* Rose 600 */
-    --accent-foreground: 255 255 255;
+        --glass-bg: 0 0% 100%;
+        --glass-opacity: 0.7;
+        --glass-border-opacity: 0.1;
+    }
 
-    --muted: 241 245 249;
-    /* Slate 100 */
-    --muted-foreground: 100 116 139;
-    /* Slate 500 */
+    .dark {
+        /* Dark Mode (Default) - Deep Slate & Violet */
+        --background: 222.2 84% 4.9%;
+        /* slate-950 #020617 */
+        --foreground: 210 40% 98%;
+        /* slate-50 #f8fafc */
 
-    --card: 255 255 255;
-    --card-foreground: 15 23 42;
-    --card-border: 148 163 184;
-    /* Slate 400 */
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --card-border: 0 0% 100%;
 
-    --glass-bg: 255 255 255;
-    --glass-opacity: 0.7;
-    --glass-border-opacity: 0.1;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+
+        --primary: 263.4 70% 50.4%;
+        /* violet-500 equivalent adjusted */
+        --primary-foreground: 210 40% 98%;
+        --primary-hover: 262.1 83.3% 57.8%;
+        /* violet-600 */
+
+        --secondary: 217.2 32.6% 17.5%;
+        /* slate-900 equivalent */
+        --secondary-foreground: 210 40% 98%;
+        --secondary-hover: 215 27.9% 16.9%;
+        /* slate-800 */
+
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        /* slate-400 */
+
+        --accent: 346.8 77.2% 49.8%;
+        /* rose-500 */
+        --accent-foreground: 210 40% 98%;
+
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 263.4 70% 50.4%;
+
+        --glass-bg: 222.2 84% 4.9%;
+        --glass-opacity: 0.6;
+        --glass-border-opacity: 0.05;
+    }
 }
 
 @layer base {

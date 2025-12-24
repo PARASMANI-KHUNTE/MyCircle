@@ -5,46 +5,68 @@ export default {
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
     theme: {
+        container: {
+            center: true,
+            padding: "2rem",
+            screens: {
+                "2xl": "1400px",
+            },
+        },
         extend: {
             colors: {
-                background: "var(--background)",
-                foreground: "var(--foreground)",
+                border: "hsl(var(--border))",
+                input: "hsl(var(--input))",
+                ring: "hsl(var(--ring))",
+                background: "hsl(var(--background))",
+                foreground: "hsl(var(--foreground))",
                 primary: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary) / ${opacityValue})` : "rgb(var(--primary))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-foreground) / ${opacityValue})` : "rgb(var(--primary-foreground))",
-                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-hover) / ${opacityValue})` : "rgb(var(--primary-hover))",
+                    DEFAULT: "hsl(var(--primary))",
+                    foreground: "hsl(var(--primary-foreground))",
+                    hover: "hsl(var(--primary-hover))",
                 },
                 secondary: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary) / ${opacityValue})` : "rgb(var(--secondary))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-foreground) / ${opacityValue})` : "rgb(var(--secondary-foreground))",
-                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-hover) / ${opacityValue})` : "rgb(var(--secondary-hover))",
+                    DEFAULT: "hsl(var(--secondary))",
+                    foreground: "hsl(var(--secondary-foreground))",
+                    hover: "hsl(var(--secondary-hover))",
                 },
-                accent: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent) / ${opacityValue})` : "rgb(var(--accent))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent-foreground) / ${opacityValue})` : "rgb(var(--accent-foreground))",
+                destructive: {
+                    DEFAULT: "hsl(var(--destructive))",
+                    foreground: "hsl(var(--destructive-foreground))",
                 },
                 muted: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted) / ${opacityValue})` : "rgb(var(--muted))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted-foreground) / ${opacityValue})` : "rgb(var(--muted-foreground))",
+                    DEFAULT: "hsl(var(--muted))",
+                    foreground: "hsl(var(--muted-foreground))",
+                },
+                accent: {
+                    DEFAULT: "hsl(var(--accent))",
+                    foreground: "hsl(var(--accent-foreground))",
+                },
+                popover: {
+                    DEFAULT: "hsl(var(--popover))",
+                    foreground: "hsl(var(--popover-foreground))",
                 },
                 card: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card) / ${opacityValue})` : "rgb(var(--card) / 0.6)",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card-foreground) / ${opacityValue})` : "rgb(var(--card-foreground))",
-                    border: ({ opacityValue }) => {
-                        // Light theme uses higher opacity for border
-                        return opacityValue !== undefined ? `rgb(var(--card-border) / ${opacityValue})` : "rgb(var(--card-border) / 0.15)";
-                    },
-                }
+                    DEFAULT: "hsl(var(--card))",
+                    foreground: "hsl(var(--card-foreground))",
+                    border: "hsl(var(--card-border))", // Custom
+                },
+            },
+            borderRadius: {
+                lg: "var(--radius)",
+                md: "calc(var(--radius) - 2px)",
+                sm: "calc(var(--radius) - 4px)",
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],
-                display: ['Outfit', 'sans-serif'], // For Headings
+                display: ['Outfit', 'sans-serif'],
             },
             animation: {
                 'fade-in': 'fadeIn 0.5s ease-out',
                 'slide-up': 'slideUp 0.5s ease-out',
                 'pulse-slow': 'pulse 3s infinite',
                 'float': 'float 3s ease-in-out infinite',
+                "accordion-down": "accordion-down 0.2s ease-out",
+                "accordion-up": "accordion-up 0.2s ease-out",
             },
             keyframes: {
                 fadeIn: {
@@ -58,12 +80,20 @@ export default {
                 float: {
                     '0%, 100%': { transform: 'translateY(0)' },
                     '50%': { transform: 'translateY(-10px)' },
-                }
+                },
+                "accordion-down": {
+                    from: { height: "0" },
+                    to: { height: "var(--radix-accordion-content-height)" },
+                },
+                "accordion-up": {
+                    from: { height: "var(--radix-accordion-content-height)" },
+                    to: { height: "0" },
+                },
             },
             backdropBlur: {
                 xs: '2px',
             }
         },
     },
-    plugins: [],
+    plugins: [require("tailwindcss-animate")],
 }

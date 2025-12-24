@@ -7,8 +7,9 @@ const Layout = ({ children }) => {
     const location = useLocation();
     const isHome = location.pathname === '/';
     const isFeed = location.pathname === '/feed';
+    const isPostDetails = location.pathname.startsWith('/post/');
 
-    if (isHome || isFeed) {
+    if (isHome || isFeed || isPostDetails) {
         return children;
     }
 

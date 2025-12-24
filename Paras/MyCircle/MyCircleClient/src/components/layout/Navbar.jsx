@@ -89,13 +89,16 @@ const Navbar = () => {
     // ... existing scroll effect ...
 
     const navLinks = [
-        { name: 'Feed', path: '/feed', public: true },
+        { name: 'Feed', path: '/feed', public: true, guestOnly: true }, // Only for guests
         { name: 'My Posts', path: '/my-posts', public: false },
         { name: 'My Requests', path: '/requests', public: false },
         { name: 'Notifications', path: '/notifications', public: false },
     ];
 
-    const visibleLinks = navLinks.filter(link => link.public || !!user);
+    const visibleLinks = navLinks.filter(link => {
+        if (link.guestOnly && user) return false; // Hide guest-only links for logged-in users
+        return link.public || !!user;
+    });
 
     return (
         <motion.nav
@@ -160,12 +163,7 @@ const Navbar = () => {
                                 {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                             </button>
 
-                            <Link to="/create-post">
-                                <Button variant="primary" className="pl-3 pr-4">
-                                    <PlusCircle className="w-4 h-4" />
-                                    <span>Post</span>
-                                </Button>
-                            </Link>
+
                             <Link to="/profile">
                                 <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden border border-white/10 hover:border-primary transition-colors cursor-pointer">
                                     <img

@@ -7,7 +7,11 @@ import Button from '../components/ui/Button';
 import { getAvatarUrl } from '../utils/avatar';
 import { Check, X, Clock, Phone, MessageCircle, ArrowRight, Layers, User, Package, Trash2 } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+import LoginRequired from '../components/LoginRequired';
+
 const Requests = () => {
+    const { user } = useAuth();
     const { error: showError } = useToast();
     const [activeTab, setActiveTab] = useState('received'); // 'received' or 'sent'
     const [receivedRequests, setReceivedRequests] = useState([]);
@@ -15,8 +19,8 @@ const Requests = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchRequests();
-    }, [activeTab]);
+        if (user) fetchRequests();
+    }, [activeTab, user]);
 
     const fetchRequests = async () => {
         setLoading(true);
@@ -74,6 +78,12 @@ const Requests = () => {
             showError('Failed to remove request');
         }
     };
+
+
+
+    if (!user) {
+        return <LoginRequired message="Please sign in to view your requests." />;
+    }
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">

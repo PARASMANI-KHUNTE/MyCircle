@@ -65,12 +65,7 @@ const Navbar = ({ user, navigate }) => {
                 <div className="flex items-center gap-4">
                     {user ? (
                         <>
-                            <button
-                                onClick={() => navigate('/create-post')}
-                                className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-slate-800 transition-all shadow-lg shadow-black/20"
-                            >
-                                + Create Post
-                            </button>
+
                             <img
                                 src={!imgError && user.avatar ? user.avatar : `https://ui-avatars.com/api/?name=${user.displayName || 'User'}&background=000&color=fff`}
                                 alt="Profile"

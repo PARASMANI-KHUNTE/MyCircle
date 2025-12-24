@@ -26,7 +26,8 @@ const MapView = () => {
         const fetchPosts = async () => {
             try {
                 const res = await api.get('/posts');
-                setPosts(res.data.posts || []);
+                // API returns array directly or { posts: [] }
+                setPosts(Array.isArray(res.data) ? res.data : (res.data.posts || []));
             } catch (err) {
                 console.error("Failed to load map posts", err);
             }
@@ -71,17 +72,19 @@ const Dashboard = () => {
     const { isAuthenticated, loading } = useAuth();
     const navigate = useNavigate();
 
+    // Redirect guests to feed (Dashboard is for logged-in users only)
     useEffect(() => {
         if (!loading && !isAuthenticated) {
-            navigate('/');
+            navigate('/feed');
         }
     }, [loading, isAuthenticated, navigate]);
 
     if (loading) return null;
+    if (!isAuthenticated) return null; // Don't render while redirecting
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'home': return <Feed />;
+            case 'home': return <Feed isDashboard={true} />;
             case 'notifications': return <Notifications />;
             case 'posts': return <MyPosts />;
             case 'create': return <CreatePost />;
@@ -94,8 +97,8 @@ const Dashboard = () => {
         <div className="flex min-h-screen bg-[#FAFAF9]">
             <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-            <main className="flex-1 ml-64 p-8 h-screen overflow-y-auto">
-                <div className="max-w-7xl mx-auto h-full">
+            <main className="flex-1 ml-72 p-0 h-screen overflow-y-auto w-full relative">
+                <div className="max-w-[1600px] mx-auto h-full px-8 pb-10">
                     {renderContent()}
                 </div>
             </main>

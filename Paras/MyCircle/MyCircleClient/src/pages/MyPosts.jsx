@@ -8,7 +8,11 @@ import Button from '../components/ui/Button';
 import { Plus, Filter, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { useAuth } from '../context/AuthContext';
+import LoginRequired from '../components/LoginRequired';
+
 const MyPosts = () => {
+    const { user } = useAuth();
     const { success, error: showError } = useToast();
     const dialog = useDialog();
     const [posts, setPosts] = useState([]);
@@ -17,8 +21,8 @@ const MyPosts = () => {
     const [viewMode, setViewMode] = useState('grid'); // grid, list
 
     useEffect(() => {
-        fetchMyPosts();
-    }, []);
+        if (user) fetchMyPosts();
+    }, [user]);
 
     const fetchMyPosts = async () => {
         try {
@@ -61,6 +65,10 @@ const MyPosts = () => {
         if (filter === 'sold') return post.status === 'sold';
         return true;
     });
+
+    if (!user) {
+        return <LoginRequired message="Please sign in to view your posts." />;
+    }
 
     if (loading) return <div className="text-white text-center py-20">Loading posts...</div>;
 

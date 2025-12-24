@@ -6,9 +6,12 @@ import api from '../utils/api';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
 import { useNotifications } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 import { getAvatarUrl } from '../utils/avatar';
+import LoginRequired from '../components/LoginRequired';
 
 const Notifications = () => {
+    const { user } = useAuth();
     const { notifications, markAsRead, markAllRead, refresh, loading, handleNotificationClick } = useNotifications();
     const { success, error: showError } = useToast();
 
@@ -30,6 +33,12 @@ const Notifications = () => {
             default: return <Bell className="w-5 h-5 text-gray-400" />;
         }
     };
+
+
+
+    if (!user) {
+        return <LoginRequired message="Please sign in to view your notifications." />;
+    }
 
     return (
         <div className="container mx-auto px-6 py-24 max-w-3xl min-h-screen">

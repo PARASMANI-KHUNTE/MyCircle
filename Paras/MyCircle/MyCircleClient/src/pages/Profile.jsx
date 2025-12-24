@@ -9,6 +9,7 @@ import { getAvatarUrl } from '../utils/avatar';
 import PostCard from '../components/ui/PostCard';
 import EditPostModal from '../components/ui/EditPostModal';
 import { useToast } from '../components/ui/Toast';
+import LoginRequired from '../components/LoginRequired';
 
 const Profile = () => {
     const { user: authUser, logout } = useAuth();
@@ -125,11 +126,7 @@ const Profile = () => {
     };
 
     if (!authUser && !userId) {
-        return (
-            <div className="min-h-screen flex items-center justify-center text-white">
-                <p>Please sign in to view your profile.</p>
-            </div>
-        );
+        return <LoginRequired message="Please sign in to view your profile." />;
     }
 
     if (loading || !profile) {

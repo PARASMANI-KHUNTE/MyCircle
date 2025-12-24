@@ -10,7 +10,7 @@ const Layout = ({ children }) => {
     const isPostDetails = location.pathname.startsWith('/post/');
     const isDashboard = location.pathname === '/dashboard';
 
-    if (isHome || isFeed || isPostDetails || isDashboard) {
+    if (isHome || isPostDetails || isDashboard) {
         return children;
     }
 

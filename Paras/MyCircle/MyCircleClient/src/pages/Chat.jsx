@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import LoginRequired from '../components/LoginRequired';
 import { useLocation } from 'react-router-dom';
 import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
@@ -88,6 +89,12 @@ const Chat = () => {
             setLoading(false);
         }
     };
+
+
+
+    if (!user) {
+        return <LoginRequired message="Please sign in to view your messages." />;
+    }
 
     return (
         <div className="flex flex-col h-[calc(100vh-12rem)] w-full max-w-6xl mx-auto">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Added useEffect import explicitly
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
@@ -7,11 +7,11 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { AlertCircle, CheckCircle, Upload, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import LoginRequired from '../components/LoginRequired';
 
 const CreatePost = () => {
     const navigate = useNavigate();
-    const { user } = useAuth(); // Get user from context
-    console.log('CreatePost Render:', { user });
+    const { user } = useAuth();
     const { error: showError } = useToast();
     const [formData, setFormData] = useState({
         type: 'job',
@@ -34,9 +34,6 @@ const CreatePost = () => {
     // Initial check for profile contact info
     useEffect(() => {
         if (user) {
-            // Removed redundant toast to prevent infinite render loop
-            // The UI alert below is sufficient
-            // Auto-fill form
             setFormData(prev => ({
                 ...prev,
                 contactPhone: user.contactPhone || '',
@@ -147,6 +144,10 @@ const CreatePost = () => {
             setLoading(false);
         }
     };
+
+    if (!user) {
+        return <LoginRequired message="Please sign in to create a post." />;
+    }
 
     return (
         <div className="max-w-2xl mx-auto pb-20">

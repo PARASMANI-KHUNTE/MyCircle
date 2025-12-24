@@ -8,8 +8,9 @@ const Layout = ({ children }) => {
     const isHome = location.pathname === '/';
     const isFeed = location.pathname === '/feed';
     const isPostDetails = location.pathname.startsWith('/post/');
+    const isDashboard = location.pathname === '/dashboard';
 
-    if (isHome || isFeed || isPostDetails) {
+    if (isHome || isFeed || isPostDetails || isDashboard) {
         return children;
     }
 

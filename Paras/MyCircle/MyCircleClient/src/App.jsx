@@ -20,6 +20,7 @@ import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider } from './context/ThemeContext';
 import DialogProvider from './components/ui/DialogProvider';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
                   <Layout>
                     <Routes>
                       <Route path="/" element={<Home />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/feed" element={<Feed />} />
                       <Route path="/create-post" element={<CreatePost />} />
                       <Route path="/my-posts" element={<MyPosts />} />

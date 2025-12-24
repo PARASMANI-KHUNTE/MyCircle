@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
                 window.history.replaceState({}, document.title, window.location.pathname);
                 const userData = await fetchUserProfile();
                 if (userData) {
-                    navigate('/feed');
+                    navigate('/dashboard');
                 }
             } else {
                 const storedToken = localStorage.getItem('token');

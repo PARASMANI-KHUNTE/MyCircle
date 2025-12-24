@@ -108,7 +108,7 @@ exports.createRequest = async (req, res) => {
 exports.getReceivedRequests = async (req, res) => {
     try {
         const requests = await ContactRequest.find({ recipient: req.user.id })
-            .populate('post', ['title', 'type', 'images'])
+            .populate('post', ['title', 'type', 'images', 'price'])
             .populate('requester', ['displayName', 'avatar'])
             .sort({ createdAt: -1 });
 
@@ -125,7 +125,7 @@ exports.getReceivedRequests = async (req, res) => {
 exports.getSentRequests = async (req, res) => {
     try {
         const requests = await ContactRequest.find({ requester: req.user.id })
-            .populate('post', ['title', 'type', 'contactPhone', 'contactWhatsapp', 'images'])
+            .populate('post', ['title', 'type', 'contactPhone', 'contactWhatsapp', 'images', 'price'])
             .populate('recipient', ['displayName', 'avatar'])
             .sort({ createdAt: -1 });
 
@@ -196,6 +196,30 @@ exports.updateRequestStatus = async (req, res) => {
         }
 
         res.json(request);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+// @desc    Delete a contact request (Withdraw/Clear)
+// @route   DELETE /api/contact/:id
+// @access  Private
+exports.deleteRequest = async (req, res) => {
+    try {
+        const request = await ContactRequest.findById(req.params.id);
+
+        if (!request) {
+            return res.status(404).json({ msg: 'Request not found' });
+        }
+
+        // Verify user is either requester or recipient
+        if (request.requester.toString() !== req.user.id && request.recipient.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'Not authorized' });
+        }
+
+        await ContactRequest.findByIdAndDelete(req.params.id);
+
+        res.json({ msg: 'Request removed' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

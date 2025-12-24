@@ -130,26 +130,31 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.',
-    standardHeaders: true,
-    legacyHeaders: false,
-});
+// Rate limiting - Only in production
+if (isProduction) {
+    const limiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 100, // Limit each IP to 100 requests per windowMs
+        message: 'Too many requests from this IP, please try again later.',
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
 
-// Apply rate limiting to all routes
-app.use('/api/', limiter);
+    // Apply rate limiting to all routes
+    app.use('/api/', limiter);
 
-// Stricter rate limiting for auth routes
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5, // 5 requests per 15 minutes
-    message: 'Too many authentication attempts, please try again later.',
-});
+    // Stricter rate limiting for auth routes
+    const authLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 5, // 5 requests per 15 minutes
+        message: 'Too many authentication attempts, please try again later.',
+    });
 
-app.use('/auth/', authLimiter);
+    app.use('/auth/', authLimiter);
+    console.log('Rate limiting enabled (production mode)');
+} else {
+    console.log('Rate limiting disabled (development mode)');
+}
 
 // Middleware
 app.use(express.json());

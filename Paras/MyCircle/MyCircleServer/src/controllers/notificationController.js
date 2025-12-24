@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 exports.getNotifications = async (req, res) => {
     try {
         const notifications = await Notification.find({ recipient: req.user.id })
+            .populate('sender', 'displayName avatar')
             .sort({ createdAt: -1 })
             .limit(50); // Limit to last 50
         res.json(notifications);

@@ -7,30 +7,33 @@ export default {
     theme: {
         extend: {
             colors: {
-                background: "#09090b", // Zinc 950
-                foreground: "#fafafa", // Zinc 50
+                background: "var(--background)",
+                foreground: "var(--foreground)",
                 primary: {
-                    DEFAULT: "#8b5cf6", // Violet 500
-                    foreground: "#ffffff",
-                    hover: "#7c3aed",
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary) / ${opacityValue})` : "rgb(var(--primary))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-foreground) / ${opacityValue})` : "rgb(var(--primary-foreground))",
+                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-hover) / ${opacityValue})` : "rgb(var(--primary-hover))",
                 },
                 secondary: {
-                    DEFAULT: "#27272a", // Zinc 800
-                    foreground: "#fafafa",
-                    hover: "#3f3f46",
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary) / ${opacityValue})` : "rgb(var(--secondary))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-foreground) / ${opacityValue})` : "rgb(var(--secondary-foreground))",
+                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-hover) / ${opacityValue})` : "rgb(var(--secondary-hover))",
                 },
                 accent: {
-                    DEFAULT: "#e11d48", // Rose 600
-                    foreground: "#ffffff",
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent) / ${opacityValue})` : "rgb(var(--accent))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent-foreground) / ${opacityValue})` : "rgb(var(--accent-foreground))",
                 },
                 muted: {
-                    DEFAULT: "#18181b", // Zinc 900
-                    foreground: "#a1a1aa", // Zinc 400
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted) / ${opacityValue})` : "rgb(var(--muted))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted-foreground) / ${opacityValue})` : "rgb(var(--muted-foreground))",
                 },
                 card: {
-                    DEFAULT: "rgba(24, 24, 27, 0.6)", // Glassmorphism base
-                    foreground: "#fafafa",
-                    border: "rgba(255, 255, 255, 0.1)",
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card) / ${opacityValue})` : "rgb(var(--card) / 0.6)",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card-foreground) / ${opacityValue})` : "rgb(var(--card-foreground))",
+                    border: ({ opacityValue }) => {
+                        // Light theme uses higher opacity for border
+                        return opacityValue !== undefined ? `rgb(var(--card-border) / ${opacityValue})` : "rgb(var(--card-border) / 0.15)";
+                    },
                 }
             },
             fontFamily: {

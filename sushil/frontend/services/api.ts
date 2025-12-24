@@ -9,7 +9,7 @@ import {
   User,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mycircle-qrl4.onrender.com';
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Neighbor';
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=800&q=80';
 

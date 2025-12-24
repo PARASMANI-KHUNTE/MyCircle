@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mycircle-qrl4.onrender.com';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Switch, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet } from 'react-native';
+import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Bell, Lock, Eye, Trash2, ChevronRight, UserX, Moon, Sun } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
@@ -28,21 +29,43 @@ const SettingsScreen = ({ navigation }: any) => {
         publicProfile: true,
         showLocation: true
     });
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        onConfirm: () => void;
+        isDestructive: boolean;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        onConfirm: () => { },
+        isDestructive: false,
+    });
 
     const handleDeleteAccount = () => {
-        Alert.alert(
-            "Delete Account",
-            "This action is permanent. All your posts and messages will be removed.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete", style: "destructive", onPress: () => {
-                        Alert.alert("Account Deleted", "Your account has been successfully removed.");
+        setAlertConfig({
+            visible: true,
+            title: "Delete Account",
+            message: "This action is permanent. All your posts and messages will be removed.",
+            confirmText: 'Delete',
+            isDestructive: true,
+            onConfirm: () => {
+                setAlertConfig({
+                    visible: true,
+                    title: "Account Deleted",
+                    message: "Your account has been successfully removed.",
+                    confirmText: 'OK',
+                    isDestructive: false,
+                    onConfirm: () => {
+                        setAlertConfig(prev => ({ ...prev, visible: false }));
                         logout();
                     }
-                }
-            ]
-        );
+                });
+            }
+        });
     };
 
     const SettingItem = ({ icon: Icon, label, value, onValueChange, type = 'switch' }: any) => (
@@ -147,6 +170,16 @@ const SettingsScreen = ({ navigation }: any) => {
                     <Text style={styles.copyrightText}>© 2025 Antigravity Technologies</Text>
                 </View>
             </ScrollView>
+
+            <ThemedAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText}
+                isDestructive={alertConfig.isDestructive}
+                onCancel={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+                onConfirm={alertConfig.onConfirm}
+            />
         </SafeAreaView>
     );
 };
@@ -154,7 +187,6 @@ const SettingsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
     },
     header: {
         paddingHorizontal: 16,

@@ -10,6 +10,12 @@ exports.createPost = async (req, res) => {
     try {
         const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
 
+        // Validation for price
+        const numericPrice = parseFloat(price);
+        if (price !== undefined && price !== '' && isNaN(numericPrice)) {
+            return res.status(400).json({ msg: 'Price must be a valid number' });
+        }
+
         // Calculate expiresAt based on duration
         let expiresAt = null;
         if (duration) {
@@ -47,7 +53,8 @@ exports.createPost = async (req, res) => {
             images,
             contactPhone,
             contactWhatsapp,
-            expiresAt
+            expiresAt,
+            price: numericPrice || 0
         });
 
         const post = await newPost.save();
@@ -198,9 +205,29 @@ exports.getPostById = async (req, res) => {
         const ContactRequest = require('../models/ContactRequest');
         const applicationCount = await ContactRequest.countDocuments({ post: post._id });
 
+        // Check if current user has already requested contact
+        let hasRequested = false;
+        const token = req.header('x-auth-token');
+        if (token) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const requesterId = decoded.user.id;
+
+                const existingRequest = await ContactRequest.findOne({
+                    requester: requesterId,
+                    post: post._id
+                });
+                hasRequested = !!existingRequest;
+            } catch (err) {
+                // Token invalid or expired, just ignore and keep hasRequested as false
+            }
+        }
+
         res.json({
             ...post.toObject(),
-            applicationCount
+            applicationCount,
+            hasRequested
         });
     } catch (err) {
         console.error(err.message);
@@ -329,16 +356,31 @@ exports.updatePost = async (req, res) => {
             return res.status(401).json({ msg: 'User not authorized' });
         }
 
-        const { type, title, description, price, location, contactPhone, contactWhatsapp } = req.body;
+        const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
+
+        // Validation for price
+        const numericPrice = parseFloat(price);
+        if (price !== undefined && price !== '' && isNaN(numericPrice)) {
+            return res.status(400).json({ msg: 'Price must be a valid number' });
+        }
 
         // Update fields
         if (type) post.type = type;
         if (title) post.title = title;
         if (description) post.description = description;
-        if (price !== undefined) post.price = price;
+        if (price !== undefined) post.price = numericPrice || 0;
         if (location) post.location = location;
         if (contactPhone !== undefined) post.contactPhone = contactPhone;
         if (contactWhatsapp !== undefined) post.contactWhatsapp = contactWhatsapp;
+
+        // Recalculate expiresAt if duration is changed
+        if (duration) {
+            const durationInMinutes = parseInt(duration, 10);
+            if (!isNaN(durationInMinutes)) {
+                post.duration = durationInMinutes;
+                post.expiresAt = new Date(Date.now() + durationInMinutes * 60000);
+            }
+        }
 
         await post.save();
         res.json(post);

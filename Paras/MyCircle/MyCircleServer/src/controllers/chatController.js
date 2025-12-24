@@ -104,16 +104,18 @@ exports.sendMessage = async (req, res) => {
             participants: { $all: [req.user.id, recipientId] }
         });
 
-        // Connectivity Check: Ensure an approved contact request exists
-        const connection = await ContactRequest.findOne({
-            $or: [
-                { requester: req.user.id, recipient: recipientId, status: 'approved' },
-                { requester: recipientId, recipient: req.user.id, status: 'approved' }
-            ]
-        });
+        // Connectivity Check: Ensure an approved contact request exists OR they already have a conversation
+        if (!conversation) {
+            const connection = await ContactRequest.findOne({
+                $or: [
+                    { requester: req.user.id, recipient: recipientId, status: 'approved' },
+                    { requester: recipientId, recipient: req.user.id, status: 'approved' }
+                ]
+            });
 
-        if (!connection) {
-            return res.status(403).json({ msg: 'You can only message connected users (accepted requests)' });
+            if (!connection) {
+                return res.status(403).json({ msg: 'You can only message connected users (accepted requests)' });
+            }
         }
 
         // Create new conversation if not exists

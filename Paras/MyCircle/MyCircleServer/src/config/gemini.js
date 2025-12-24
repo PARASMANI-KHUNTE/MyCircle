@@ -12,7 +12,7 @@ const isKeyValid = () => {
     return true;
 };
 
-const getModel = (modelName = "gemini-2.5-flash") => {
+const getModel = (modelName = "gemini-1.5-flash-latest") => {
     if (!isKeyValid()) return null;
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -93,17 +93,38 @@ const checkImageSafety = async (imageBuffer, mimeType) => {
 const generateSuggestions = async (contextMessages) => {
     try {
         const model = getModel();
-        if (!model) return ["Interested", "Available?", "Thanks"];
+        if (!model) {
+            console.warn("Gemini model not initialized. Returning fallback suggestions.");
+            return ["Interested", "Available?", "Thanks"];
+        }
 
         const contextStr = contextMessages.map(m => `${m.sender}: ${m.text}`).join('\n');
-        const prompt = `Based on this chat, suggest 3 short, polite quick replies.
-        Respond in JSON: {"suggestions": ["s1", "s2", "s3"]}
-        Chat:\n${contextStr}`;
+        const prompt = `Based on this chat history, suggest 3 short, polite quick replies for the user to send next.
+        Respond ONLY with a JSON object in this format: {"suggestions": ["suggestion1", "suggestion2", "suggestion3"]}
+        
+        Chat History:
+        ${contextStr}`;
+
+        console.log("Generating suggestions for context:", contextStr);
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)[0]);
-        return data.suggestions || [];
+        const textResponse = response.text();
+
+        console.log("Gemini Raw Response:", textResponse);
+
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            try {
+                const data = JSON.parse(jsonMatch[0]);
+                return data.suggestions || ["Interested", "Available?", "Thanks"];
+            } catch (pErr) {
+                console.error("JSON Parse Error in suggestions:", pErr.message);
+            }
+        }
+
+        console.warn("No valid JSON found in Gemini response. Using fallbacks.");
+        return ["Interested", "Available?", "Thanks"];
     } catch (error) {
         console.error("Gemini Suggestion Error:", error.message);
         return ["Interested", "Available?", "Thanks"];

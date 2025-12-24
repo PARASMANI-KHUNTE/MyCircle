@@ -168,6 +168,10 @@ app.use((req, res, next) => {
 // Database Connection
 connectDB();
 
+// Start Background Jobs
+const { startCronJobs } = require('./src/utils/cronJobs');
+startCronJobs(io);
+
 // Passport middleware
 app.use(passport.initialize());
 

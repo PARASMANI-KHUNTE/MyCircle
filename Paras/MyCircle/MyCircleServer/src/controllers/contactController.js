@@ -1,6 +1,7 @@
 const ContactRequest = require('../models/ContactRequest');
 const Post = require('../models/Post');
 const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // @desc    Create a contact request
 // @route   POST /api/contacts/request or POST /api/contacts/:postId
@@ -8,7 +9,7 @@ const User = require('../models/User');
 exports.createRequest = async (req, res) => {
     try {
         const requesterId = req.user.id;
-        const { postId: bodyPostId, recipientId } = req.body || {};
+        const { postId: bodyPostId, recipientId, message } = req.body || {};
         const postId = bodyPostId || req.params.postId;
 
         if (!postId) {
@@ -77,7 +78,7 @@ exports.createRequest = async (req, res) => {
             requester: requesterId,
             recipient: finalRecipientId,
             post: postId,
-            message: req.body.message,
+            message: message,
             status: 'pending'
         });
 
@@ -86,18 +87,24 @@ exports.createRequest = async (req, res) => {
 
         // Send real-time notification to recipient
         const io = req.app.get('io');
-        if (io) {
-            io.to(`user:${finalRecipientId}`).emit('new_notification', {
-                type: 'request_received',
-                requesterName: contactRequest.requester.displayName,
-                postId: postId,
-                requestId: contactRequest._id
+        try {
+            await createNotification(io, {
+                recipient: finalRecipientId,
+                sender: requesterId,
+                type: 'request',
+                title: 'New Contact Request',
+                message: `${contactRequest.requester?.displayName || 'Someone'} sent you a request for your post: ${post.title}`,
+                link: '/requests',
+                relatedId: postId
             });
+        } catch (notifErr) {
+            console.error('Failed to send notification for contact request:', notifErr);
+            // Don't fail the entire request if notification fails
         }
 
         res.json(contactRequest);
     } catch (err) {
-        console.error('Create Request Error:', err); // Log full error object
+        console.error('Create Request Error:', err);
         res.status(500).json({ msg: 'Server Error', details: err.message });
     }
 };
@@ -186,19 +193,24 @@ exports.updateRequestStatus = async (req, res) => {
 
         // Send real-time notification to requester
         const io = req.app.get('io');
-        if (io) {
-            io.to(`user:${request.requester}`).emit('new_notification', {
-                type: status === 'approved' ? 'request_approved' : 'request_rejected',
-                recipientName: request.recipient.displayName,
-                postId: request.post,
-                requestId: request._id
+        try {
+            await createNotification(io, {
+                recipient: request.requester,
+                sender: req.user.id,
+                type: status === 'approved' ? 'approval' : 'info',
+                title: status === 'approved' ? 'Request Approved' : 'Request Rejected',
+                message: `${request.recipient?.displayName || 'User'} has ${status} your contact request.`,
+                link: '/requests',
+                relatedId: request.post
             });
+        } catch (notifErr) {
+            console.error('Failed to send notification for request status update:', notifErr);
         }
 
         res.json(request);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('Update Request Status Error:', err);
+        res.status(500).json({ msg: 'Server Error', details: err.message });
     }
 };
 // @desc    Delete a contact request (Withdraw/Clear)

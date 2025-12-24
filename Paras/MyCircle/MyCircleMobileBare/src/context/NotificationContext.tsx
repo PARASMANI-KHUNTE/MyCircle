@@ -117,7 +117,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             } else if (notification.type === 'message') {
                 // Navigate to the specific chat window with the conversation ID
                 navigation.navigate('ChatWindow', { id: notification.relatedId });
-            } else if (notification.type === 'request') {
+            } else if (notification.type === 'request' || notification.type === 'approval' || notification.type === 'info') {
                 navigation.navigate('Requests');
             }
         }

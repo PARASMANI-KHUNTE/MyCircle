@@ -66,7 +66,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         console.log("Notification Pressed:", data);
 
-        if (data.type === 'request_received' || data.type === 'request_approved' || data.type === 'request_rejected') {
+        if (data.type === 'request' || data.type === 'approval' || data.type === 'info' || data.type === 'request_received' || data.type === 'request_approved') {
             navigate('Requests');
         } else if (data.type === 'message') {
             // For messages, we need conversation ID. 
@@ -138,8 +138,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
                 // Display a notification
                 await notifee.displayNotification({
-                    title: getNotificationTitle(data.type),
-                    body: generateNotificationBody(data),
+                    title: data.title || getNotificationTitle(data.type),
+                    body: data.message || generateNotificationBody(data),
                     data: notifeeData,
                     android: {
                         channelId,
@@ -147,7 +147,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                             id: 'default',
                         },
                         vibrationPattern: [300, 500],
-                        // sound: 'default', // System default sound
                     },
                 });
             } catch (err) {
@@ -164,6 +163,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     const getNotificationTitle = (type: string) => {
         switch (type) {
+            case 'request': return 'New Request';
+            case 'approval': return 'Request Approved';
+            case 'info': return 'Update';
             case 'request_received': return 'New Request';
             case 'request_approved': return 'Request Approved';
             case 'request_rejected': return 'Request Rejected';
@@ -174,11 +176,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const generateNotificationBody = (data: any) => {
-        if (data.type === 'request_received') return `${data.requesterName} sent you a request.`;
-        if (data.type === 'request_approved') return `${data.recipientName} approved your request.`;
+        if (data.type === 'request' || data.type === 'request_received') return data.message || 'Someone sent you a request.';
+        if (data.type === 'approval' || data.type === 'request_approved') return data.message || 'Your request was approved.';
         if (data.type === 'like') return data.message || 'Someone liked your post.';
         if (data.type === 'comment') return data.message || 'Someone commented on your post.';
-        return 'You have a new update.';
+        return data.message || 'You have a new update.';
     };
 
     return (

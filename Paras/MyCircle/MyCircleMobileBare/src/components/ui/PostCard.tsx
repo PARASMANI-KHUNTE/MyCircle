@@ -31,6 +31,7 @@ interface PostCardProps {
             avatar: string;
         };
         distance?: string;
+        images?: string[];
     };
     isOwnPost?: boolean;
     onPress?: () => void;
@@ -59,12 +60,26 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
 
     const getTypeColor = (type: string) => {
         switch (type) {
-            case 'job': return '#60a5fa'; // blue-400
-            case 'service': return '#c084fc'; // purple-400
-            case 'sell': return '#4ade80'; // green-400
-            case 'rent': return '#fb923c'; // orange-400
-            default: return '#a1a1aa'; // zinc-400
+            case 'job': return '#3b82f6'; // Blue
+            case 'service': return '#06b6d4'; // Cyan
+            case 'sell': return '#f59e0b'; // Amber
+            case 'rent': return '#8b5cf6'; // Violet
+            case 'barter': return '#ec4899'; // Pink
+            default: return colors.primary;
         }
+    };
+
+    const getPostImage = (post: any) => {
+        if (post.images && post.images.length > 0) return post.images[0];
+        const keywords: Record<string, string> = {
+            job: 'workspace,office',
+            service: 'tools,work',
+            sell: 'product,tech',
+            rent: 'key,house',
+            barter: 'deal,handshake'
+        };
+        const keyword = keywords[post.type] || 'abstract';
+        return `https://loremflickr.com/400/400/${keyword}?lock=${post._id.substring(post._id.length - 4)}`;
     };
 
     const handleLike = async () => {
@@ -113,7 +128,7 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
         <TouchableOpacity
             onPress={onPress}
             activeOpacity={0.9}
-            style={[styles.card, themeStyles.card]}
+            style={[styles.card, themeStyles.card, { borderLeftColor: getTypeColor(post.type), borderLeftWidth: 4 }]}
         >
             <View style={styles.header}>
                 <Image
@@ -148,6 +163,13 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
             <Text style={[styles.description, themeStyles.textSecondary]} numberOfLines={expanded ? undefined : 2}>
                 {post.description}
             </Text>
+
+            {expanded && (
+                <Image
+                    source={{ uri: getPostImage(post) }}
+                    style={[styles.expandedImage, { borderColor: getTypeColor(post.type) }]}
+                />
+            )}
 
             {expanded && (
                 <View style={styles.metaContainer}>
@@ -252,15 +274,15 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
     priceTag: {
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
         borderWidth: 1,
-        borderColor: 'rgba(139, 92, 246, 0.2)',
+        borderColor: 'rgba(59, 130, 246, 0.2)',
     },
     priceText: {
-        color: '#8b5cf6',
+        color: '#3b82f6',
         fontWeight: 'bold',
         fontSize: 13,
     },
@@ -359,6 +381,14 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         fontSize: 10,
         fontWeight: 'bold',
+    },
+    expandedImage: {
+        width: '100%',
+        height: 180,
+        borderRadius: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        resizeMode: 'cover',
     },
 });
 

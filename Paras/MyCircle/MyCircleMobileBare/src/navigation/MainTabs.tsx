@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
 import { Home, Bell, Inbox, User, PlusSquare, MessageCircle } from 'lucide-react-native';
+import Animated, { useAnimatedStyle, withSpring, useSharedValue, withSequence } from 'react-native-reanimated';
 import { useNotifications } from '../context/NotificationContext';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,18 +19,37 @@ import CreatePostScreen from '../screens/CreatePostScreen';
 const Tab = createBottomTabNavigator();
 
 // Extracted component to prevent re-render issues
-const TabBarIcon = ({ icon: Icon, color, count }: { icon: any, color: string, count?: number }) => (
-    <View>
-        <Icon size={24} color={color} />
-        {count && count > 0 ? (
-            <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                    {count > 99 ? '99+' : count}
-                </Text>
-            </View>
-        ) : null}
-    </View>
-);
+const TabBarIcon = ({ icon: Icon, color, focused, count }: { icon: any, color: string, focused: boolean, count?: number }) => {
+    const scale = useSharedValue(1);
+
+    useEffect(() => {
+        if (focused) {
+            scale.value = withSequence(
+                withSpring(1.2, { damping: 4 }),
+                withSpring(1.1)
+            );
+        } else {
+            scale.value = withSpring(1);
+        }
+    }, [focused]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+
+    return (
+        <Animated.View style={animatedStyle}>
+            <Icon size={24} color={color} />
+            {count && count > 0 ? (
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                        {count > 99 ? '99+' : count}
+                    </Text>
+                </View>
+            ) : null}
+        </Animated.View>
+    );
+};
 
 import Sound from 'react-native-sound';
 
@@ -37,7 +57,7 @@ import Sound from 'react-native-sound';
 Sound.setCategory('Playback');
 
 const MainTabs = () => {
-    const { unreadCount } = useNotifications();
+    const { unreadCount, notifications } = useNotifications();
     const { socket } = useSocket() as any;
     const { user } = useAuth();
     const { colors } = useTheme();
@@ -114,7 +134,7 @@ const MainTabs = () => {
                 name="Feed"
                 component={FeedScreen}
                 options={{
-                    tabBarIcon: ({ color }) => <TabBarIcon icon={Home} color={color} />,
+                    tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Home} color={color} focused={focused} />,
                 }}
             />
             <Tab.Screen
@@ -122,7 +142,7 @@ const MainTabs = () => {
                 component={CreatePostScreen}
                 options={{
                     title: 'Post',
-                    tabBarIcon: ({ color }) => <TabBarIcon icon={PlusSquare} color={color} />,
+                    tabBarIcon: ({ color, focused }) => <TabBarIcon icon={PlusSquare} color={color} focused={focused} />,
                 }}
             />
             {/* Notifications and Chat moved to Home Header */}
@@ -130,14 +150,21 @@ const MainTabs = () => {
                 name="Requests"
                 component={RequestsScreen}
                 options={{
-                    tabBarIcon: ({ color }) => <TabBarIcon icon={Inbox} color={color} />,
+                    tabBarIcon: ({ color, focused }) => (
+                        <TabBarIcon
+                            icon={Inbox}
+                            color={color}
+                            focused={focused}
+                            count={notifications.filter(n => !n.read && (n.type === 'request' || n.type === 'approval')).length}
+                        />
+                    ),
                 }}
             />
             <Tab.Screen
                 name="Profile"
                 component={ProfileScreen}
                 options={{
-                    tabBarIcon: ({ color }) => <TabBarIcon icon={User} color={color} />,
+                    tabBarIcon: ({ color, focused }) => <TabBarIcon icon={User} color={color} focused={focused} />,
                 }}
             />
         </Tab.Navigator>

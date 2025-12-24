@@ -76,7 +76,16 @@ exports.deleteNotification = async (req, res) => {
 // Helper to create and emit notification (internal use)
 exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId }) => {
     try {
-        if (recipient.toString() === sender?.toString()) return; // Don't notify self
+        if (!recipient) {
+            console.error("[Notification] No recipient provided.");
+            return;
+        }
+
+        // Safe ID comparison
+        const recipientIdStr = recipient._id ? recipient._id.toString() : recipient.toString();
+        const senderIdStr = sender?._id ? sender._id.toString() : sender?.toString();
+
+        if (senderIdStr && recipientIdStr === senderIdStr) return; // Don't notify self
 
         const notification = new Notification({
             recipient,

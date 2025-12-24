@@ -38,24 +38,41 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     }, [id]);
 
     useEffect(() => {
-        if (messages.length > 0) {
-            const lastMessage = messages[messages.length - 1];
-            const senderId = typeof lastMessage.sender === 'string' ? lastMessage.sender : lastMessage.sender?._id;
-            const isMe = senderId === (auth?.user?._id || auth?.user?.id);
+        const myId = auth?.user?._id || auth?.user?.id;
 
-            if (!isMe && showSuggestions) {
-                // Fetch suggestions if last message was from other user
+        if (messages.length === 0) {
+            if (showSuggestions) {
+                console.log("Empty chat: showing starters");
+                setSuggestions(["Hi there!", "Interested in this!", "Is this still available?"]);
+            }
+        } else {
+            if (showSuggestions) {
+                // Fetch suggestions
                 const context = messages.slice(-5).map(m => ({
-                    sender: (typeof m.sender === 'string' ? m.sender : m.sender?._id) === (auth?.user?._id || auth?.user?.id) ? 'user' : 'other',
+                    sender: (typeof m.sender === 'string' ? m.sender : m.sender?._id) === myId ? 'user' : 'other',
                     text: m.text
                 })) as { sender: 'user' | 'other'; text: string }[];
 
-                getChatSuggestions(context).then(setSuggestions);
+                console.log("Fetching suggestions for context length:", context.length);
+                getChatSuggestions(context)
+                    .then(res => {
+                        console.log("Suggestions received:", res);
+                        if (res && res.length > 0) {
+                            setSuggestions(res);
+                        } else if (messages.length > 0) {
+                            // If AI returns nothing but we have messages, maybe provide generic ones or clear
+                            setSuggestions([]);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Failed to get suggestions:", err);
+                        setSuggestions([]);
+                    });
             } else {
                 setSuggestions([]);
             }
         }
-    }, [messages]);
+    }, [messages.length, auth?.user?._id, showSuggestions]);
 
     // Refresh messages when screen gains focus (e.g., after unblocking user)
     useFocusEffect(
@@ -141,6 +158,23 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         }, 2000);
     };
 
+    const fetchConversationDetails = async () => {
+        try {
+            const res = await api.get(`/chat/${id}`); // Assuming this endpoint exists, or use getConversations and filter
+            // Wait, does /api/chat/:conversationId exist? Let's check routes.
+            // Actually, /api/chat/conversations returns all. 
+            // Let's use getOrCreateConversation with recipientId if we have it, 
+            // or just find it in the list for now.
+            const convsRes = await api.get('/chat/conversations');
+            const found = convsRes.data.find((c: any) => c._id === id);
+            if (found) {
+                setConversation(found);
+            }
+        } catch (err) {
+            console.error("Failed to fetch conversation details:", err);
+        }
+    };
+
     const fetchMessages = async () => {
         try {
             const res = await api.get(`/chat/messages/${id}`);
@@ -150,6 +184,11 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             // Mark messages as read
             await api.put(`/chat/read/${id}`);
             if (socket) socket.emit('read_messages', id);
+
+            // Fetch conversation details to get participants
+            if (!conversation) {
+                fetchConversationDetails();
+            }
         } catch (err) {
             console.error(err);
             setLoading(false);

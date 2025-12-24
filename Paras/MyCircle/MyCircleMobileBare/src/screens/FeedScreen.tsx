@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
 import { useNotifications } from '../context/NotificationContext';
 import Sound from 'react-native-sound';
+import Animated, { useAnimatedStyle, withSpring, withTiming, interpolateColor, useSharedValue } from 'react-native-reanimated';
 
 // Enable playback in silent mode
 Sound.setCategory('Playback');
@@ -23,6 +24,123 @@ const CATEGORIES = [
     { id: 'rent', label: 'Rentals', icon: Key },
     { id: 'barter', label: 'Barter', icon: Repeat },
 ];
+
+const CategoryButton = ({ cat, isSelected, onPress, catColor, colors }: any) => {
+    const scale = useSharedValue(1);
+    const Icon = cat.icon;
+
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: withSpring(isSelected ? 1.05 : 1) }],
+            backgroundColor: isSelected ? catColor + '25' : colors.card,
+            borderColor: isSelected ? catColor : catColor + '40',
+            borderWidth: isSelected ? 1.5 : 1,
+        };
+    });
+
+    const iconStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: withSpring(isSelected ? 1.2 : 1) }, { rotate: withSpring(isSelected ? '10deg' : '0deg') }],
+            color: isSelected ? catColor : catColor + '90',
+        };
+    });
+
+    return (
+        <TouchableOpacity
+            activeOpacity={0.7}
+            onPressIn={() => (scale.value = 0.95)}
+            onPressOut={() => (scale.value = 1)}
+            onPress={onPress}
+        >
+            <Animated.View style={[styles.categoryButton, animatedStyle]}>
+                <Animated.View style={iconStyle}>
+                    <Icon size={16} color={isSelected ? catColor : catColor + '90'} />
+                </Animated.View>
+                <Text style={[
+                    styles.categoryText,
+                    isSelected ? { color: catColor } : { color: colors.textSecondary }
+                ]}>
+                    {cat.label}
+                </Text>
+            </Animated.View>
+        </TouchableOpacity>
+    );
+};
+
+const AnimatedHeaderButton = ({ icon: Icon, badgeCount, onPress, colors }: any) => {
+    const scale = useSharedValue(1);
+    const badgeScale = useSharedValue(1);
+
+    useEffect(() => {
+        if (badgeCount > 0) {
+            badgeScale.value = withSpring(1.2, { damping: 2 }, () => {
+                badgeScale.value = withSpring(1);
+            });
+        }
+    }, [badgeCount]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withSpring(scale.value) }],
+    }));
+
+    const badgeStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withSpring(badgeScale.value) }],
+    }));
+
+    return (
+        <TouchableOpacity
+            onPress={onPress}
+            onPressIn={() => (scale.value = 0.9)}
+            onPressOut={() => (scale.value = 1)}
+            style={styles.iconButton}
+        >
+            <Animated.View style={animatedStyle}>
+                <Icon size={24} color={colors.text} />
+                {badgeCount > 0 && (
+                    <Animated.View style={[styles.badge, badgeStyle]}>
+                        <Text style={styles.badgeText}>
+                            {badgeCount > 99 ? '99+' : badgeCount}
+                        </Text>
+                    </Animated.View>
+                )}
+            </Animated.View>
+        </TouchableOpacity>
+    );
+};
+
+const AnimatedFilterChip = ({ icon: Icon, label, isActive, onPress, colors, loading, hasX }: any) => {
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withSpring(scale.value) }],
+        borderColor: isActive ? colors.primary : colors.border,
+        backgroundColor: isActive ? colors.primary + '20' : colors.card,
+    }));
+
+    return (
+        <TouchableOpacity
+            onPress={onPress}
+            onPressIn={() => (scale.value = 0.95)}
+            onPressOut={() => (scale.value = 1)}
+            disabled={loading}
+        >
+            <Animated.View style={[styles.filterChip, animatedStyle]}>
+                {loading ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                    <Icon size={14} color={isActive ? colors.primary : colors.textSecondary} />
+                )}
+                <Text style={[
+                    styles.filterText,
+                    isActive ? { color: colors.primary } : { color: colors.textSecondary }
+                ]}>
+                    {label}
+                </Text>
+                {hasX && <X size={12} color={colors.primary} style={{ marginLeft: 4 }} />}
+            </Animated.View>
+        </TouchableOpacity>
+    );
+};
 
 const FeedScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
@@ -37,6 +155,7 @@ const FeedScreen = ({ navigation }: any) => {
 
     // Chat Badge Logic
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+    const [mapLoading, setMapLoading] = useState(false);
 
     const fetchUnreadMsgCount = async () => {
         try {
@@ -94,6 +213,18 @@ const FeedScreen = ({ navigation }: any) => {
     // Actually, "Select Date" implies filtering by specific date.
     const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
     const [showDatePicker, setShowDatePicker] = useState(false); // Just a simulation of picker or simple list
+
+    const getCatColor = (catId: string) => {
+        switch (catId) {
+            case 'job': return '#3b82f6'; // Blue
+            case 'service': return '#06b6d4'; // Cyan
+            case 'sell': return '#f59e0b'; // Amber
+            case 'rent': return '#8b5cf6'; // Violet
+            case 'barter': return '#ec4899'; // Pink
+            case 'all': return colors.primary;
+            default: return colors.primary;
+        }
+    };
 
     // Theme Styles
     const themeStyles = {
@@ -262,29 +393,75 @@ const FeedScreen = ({ navigation }: any) => {
 
     const toggleViewMode = async () => {
         if (viewMode === 'list') {
-            // Fetch user location when switching to map
-            const loc = await getCurrentLocation();
-            console.log('Fetched location:', loc);
-            if (loc) {
-                setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+            setMapLoading(true);
+            try {
+                // Fetch user location when switching to map
+                const loc = await getCurrentLocation();
+                if (loc) {
+                    setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+                }
+            } catch (err) {
+                console.error('Error fetching location:', err);
+            } finally {
+                // Add a slight delay to ensure smooth transition
+                setTimeout(() => {
+                    setViewMode('map');
+                    setMapLoading(false);
+                }, 500);
             }
-            setViewMode('map');
         } else {
             setViewMode('list');
         }
     };
 
     const mapHTML = `
-    < !DOCTYPE html >
+    <!DOCTYPE html>
         <html>
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
                 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
                 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
                 <style>
-                    body {margin: 0; padding: 0; background-color: #000; }
+                    body {margin: 0; padding: 0; background-color: ${colors.background}; }
                     #map {height: 100vh; width: 100vw; }
-                    .leaflet-container {background: #121212; }
+                    .leaflet-container {background: ${colors.background}; }
+                    
+                    @keyframes pulse {
+                        0% { transform: scale(0.5); opacity: 1; }
+                        100% { transform: scale(2.5); opacity: 0; }
+                    }
+                    .user-loc-container {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .user-loc-dot {
+                        width: 14px;
+                        height: 14px;
+                        background: #8b5cf6;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        z-index: 2;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+                    }
+                    .user-loc-pulse {
+                        position: absolute;
+                        width: 30px;
+                        height: 30px;
+                        background: rgba(139, 92, 246, 0.4);
+                        border-radius: 50%;
+                        animation: pulse 2s infinite;
+                        z-index: 1;
+                    }
+                    
+                    @keyframes markerEntrance {
+                        0% { transform: scale(0); opacity: 0; }
+                        60% { transform: scale(1.2); }
+                        100% { transform: scale(1); opacity: 1; }
+                    }
+                    .post-marker-anim {
+                        animation: markerEntrance 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+                    }
                 </style>
             </head>
             <body>
@@ -296,66 +473,78 @@ const FeedScreen = ({ navigation }: any) => {
 
                     var map = L.map('map', {zoomControl: false }).setView(center, userLoc ? 13 : 10);
 
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    var isDark = ${colors.background === '#000000'};
+                    var mapStyle = isDark 
+                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+                    L.tileLayer(mapStyle, {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains: 'abcd',
-                    maxZoom: 20
-            }).addTo(map);
+                        subdomains: 'abcd',
+                        maxZoom: 20
+                    }).addTo(map);
 
-                    // Add user location marker if available
+                    // Add user location marker with animation
                     if (userLoc) {
-                        L.circleMarker([userLoc.lat, userLoc.lng], {
-                            radius: 10,
-                            fillColor: '#8b5cf6',
-                            color: '#fff',
-                            weight: 3,
-                            opacity: 1,
-                            fillOpacity: 0.9
-                        }).addTo(map);
+                        var userIcon = L.divIcon({
+                            className: 'user-loc-container',
+                            html: '<div class="user-loc-pulse"></div><div class="user-loc-dot"></div>',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        });
+                        L.marker([userLoc.lat, userLoc.lng], { icon: userIcon }).addTo(map);
 
-                    L.circle([userLoc.lat, userLoc.lng], {
-                        radius: 100,
-                    fillColor: '#8b5cf6',
-                    color: '#8b5cf6',
-                    weight: 1,
-                    opacity: 0.3,
-                    fillOpacity: 0.1
-                }).addTo(map);
-            }
+                        L.circle([userLoc.lat, userLoc.lng], {
+                            radius: 120,
+                            fillColor: '#8b5cf6',
+                            color: '#8b5cf6',
+                            weight: 1,
+                            opacity: 0.2,
+                            fillOpacity: 0.05
+                        }).addTo(map);
+                    }
 
                     var posts = ${JSON.stringify(fuzzedPosts.map(p => ({
         id: p._id,
         lat: p.fuzzedLat,
         lng: p.fuzzedLng,
         type: p.type,
-        color: p.type === 'job' ? '#3b82f6' : p.type === 'service' ? '#eab308' : '#ec4899' // Blue, Yellow, Pink
+        color: p.type === 'job' ? '#3b82f6' :
+            p.type === 'service' ? '#06b6d4' :
+                p.type === 'sell' ? '#f59e0b' :
+                    p.type === 'rent' ? '#8b5cf6' : '#ec4899'
     })))};
 
                     var bounds = [];
                     if (userLoc) {
                         bounds.push([userLoc.lat, userLoc.lng]);
-            }
+                    }
 
-                    posts.forEach(function(p) {
-                var marker = L.circleMarker([p.lat, p.lng], {
-                        radius: 8,
-                    fillColor: p.color,
-                    color: "#000",
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                }).addTo(map);
+                    posts.forEach(function(p, index) {
+                        setTimeout(function() {
+                            var marker = L.circleMarker([p.lat, p.lng], {
+                                radius: 8,
+                                fillColor: p.color,
+                                color: isDark ? "#000" : "#fff",
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.9,
+                                className: 'post-marker-anim'
+                            }).addTo(map);
 
-                    marker.on('click', function() {
-                        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', postId: p.id }));
-                });
+                            marker.on('click', function() {
+                                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', postId: p.id }));
+                            });
 
-                    bounds.push([p.lat, p.lng]);
-            });
+                            bounds.push([p.lat, p.lng]);
+                        }, index * 100); // Staggered entrance
+                    });
 
-            if (bounds.length > 1) {
-                        map.fitBounds(bounds, { padding: [50, 50] });
-            }
+                    if (userLoc) {
+                        map.setView([userLoc.lat, userLoc.lng], 14);
+                    } else if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+                    }
                 </script>
             </body>
         </html>
@@ -392,30 +581,18 @@ const FeedScreen = ({ navigation }: any) => {
                 <View style={styles.topBar}>
                     <Text style={[styles.title, themeStyles.text]}>Explore</Text>
                     <View style={styles.headerIcons}>
-                        <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.iconButton}>
-                            <View>
-                                <Bell size={24} color={colors.text} />
-                                {unreadCount > 0 && (
-                                    <View style={styles.badge}>
-                                        <Text style={styles.badgeText}>
-                                            {unreadCount > 99 ? '99+' : unreadCount}
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('ChatList')} style={styles.iconButton}>
-                            <View>
-                                <MessageCircle size={24} color={colors.text} />
-                                {unreadMsgCount > 0 && (
-                                    <View style={styles.badge}>
-                                        <Text style={styles.badgeText}>
-                                            {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        </TouchableOpacity>
+                        <AnimatedHeaderButton
+                            icon={Bell}
+                            badgeCount={unreadCount}
+                            onPress={() => navigation.navigate('Notifications')}
+                            colors={colors}
+                        />
+                        <AnimatedHeaderButton
+                            icon={MessageCircle}
+                            badgeCount={unreadMsgCount}
+                            onPress={() => navigation.navigate('ChatList')}
+                            colors={colors}
+                        />
                     </View>
                 </View>
 
@@ -437,30 +614,16 @@ const FeedScreen = ({ navigation }: any) => {
                     style={styles.categoriesScroll}
                     contentContainerStyle={styles.categoriesContent}
                 >
-                    {CATEGORIES.map((cat) => {
-                        const Icon = cat.icon;
-                        const isActive = selectedCategory === cat.id;
-                        return (
-                            <TouchableOpacity
-                                key={cat.id}
-                                onPress={() => setSelectedCategory(cat.id)}
-                                style={[
-                                    styles.categoryButton,
-                                    isActive
-                                        ? { backgroundColor: colors.primary + '20', borderColor: colors.primary }
-                                        : { backgroundColor: colors.card, borderColor: colors.border }
-                                ]}
-                            >
-                                <Icon size={16} color={isActive ? colors.primary : colors.textSecondary} />
-                                <Text style={[
-                                    styles.categoryText,
-                                    isActive ? { color: colors.primary } : { color: colors.textSecondary }
-                                ]}>
-                                    {cat.label}
-                                </Text>
-                            </TouchableOpacity>
-                        );
-                    })}
+                    {CATEGORIES.map((cat) => (
+                        <CategoryButton
+                            key={cat.id}
+                            cat={cat}
+                            isSelected={selectedCategory === cat.id}
+                            onPress={() => setSelectedCategory(cat.id)}
+                            catColor={getCatColor(cat.id)}
+                            colors={colors}
+                        />
+                    ))}
                 </ScrollView>
 
                 {/* Filters Row */}
@@ -470,73 +633,47 @@ const FeedScreen = ({ navigation }: any) => {
                     style={styles.filtersScroll}
                     contentContainerStyle={styles.categoriesContent}
                 >
-                    <TouchableOpacity onPress={toggleViewMode} style={[
-                        styles.filterChip,
-                        { borderColor: colors.border },
-                        viewMode === 'map' ? { backgroundColor: colors.primary + '20', borderColor: colors.primary } : { backgroundColor: colors.card }
-                    ]}>
-                        <MapPin size={14} color={viewMode === 'map' ? colors.primary : colors.textSecondary} />
-                        <Text style={[
-                            styles.filterText,
-                            viewMode === 'map' ? { color: colors.primary } : { color: colors.textSecondary }
-                        ]}>
-                            {viewMode === 'map' ? 'Map' : 'List'}
-                        </Text>
-                    </TouchableOpacity>
+                    <AnimatedFilterChip
+                        icon={MapPin}
+                        label={viewMode === 'map' ? 'Map' : 'List'}
+                        isActive={viewMode === 'map'}
+                        onPress={toggleViewMode}
+                        colors={colors}
+                    />
 
-                    <TouchableOpacity onPress={toggleSort} style={[
-                        styles.filterChip,
-                        { backgroundColor: colors.card, borderColor: colors.border }
-                    ]}>
-                        <ArrowUpDown size={14} color={colors.textSecondary} />
-                        <Text style={[styles.filterText, { color: colors.textSecondary }]}>{sortOrder === 'latest' ? 'Latest' : 'Oldest'}</Text>
-                    </TouchableOpacity>
+                    <AnimatedFilterChip
+                        icon={ArrowUpDown}
+                        label={sortOrder === 'latest' ? 'Latest' : 'Oldest'}
+                        isActive={false}
+                        onPress={toggleSort}
+                        colors={colors}
+                    />
 
-                    <TouchableOpacity onPress={() => setShowLocationModal(true)} style={[
-                        styles.filterChip,
-                        locationFilter !== 'All'
-                            ? { backgroundColor: colors.primary + '20', borderColor: colors.primary }
-                            : { backgroundColor: colors.card, borderColor: colors.border }
-                    ]}>
-                        <MapPin size={14} color={locationFilter !== 'All' ? colors.primary : colors.textSecondary} />
-                        <Text style={[
-                            styles.filterText,
-                            locationFilter !== 'All' ? { color: colors.primary } : { color: colors.textSecondary }
-                        ]}>
-                            {locationFilter === 'All' ? 'Location' : locationFilter}
-                        </Text>
-                    </TouchableOpacity>
+                    <AnimatedFilterChip
+                        icon={MapPin}
+                        label={locationFilter === 'All' ? 'Location' : locationFilter}
+                        isActive={locationFilter !== 'All'}
+                        onPress={() => setShowLocationModal(true)}
+                        colors={colors}
+                    />
 
-                    <TouchableOpacity onPress={handleNearbyToggle} style={[
-                        styles.filterChip,
-                        { borderColor: colors.border },
-                        isNearby ? { backgroundColor: colors.primary + '20', borderColor: colors.primary } : { backgroundColor: colors.card }
-                    ]} disabled={nearbyLoading}>
-                        {nearbyLoading ? <ActivityIndicator size="small" color={colors.primary} /> : <MapPin size={14} color={isNearby ? colors.primary : colors.textSecondary} />}
-                        <Text style={[
-                            styles.filterText,
-                            isNearby ? { color: colors.primary } : { color: colors.textSecondary }
-                        ]}>
-                            Nearby
-                        </Text>
-                    </TouchableOpacity>
+                    <AnimatedFilterChip
+                        icon={MapPin}
+                        label="Nearby"
+                        isActive={isNearby}
+                        onPress={handleNearbyToggle}
+                        colors={colors}
+                        loading={nearbyLoading}
+                    />
 
-                    {/* Simple Date Simulation: Toggle Today/All for MVP or clear */}
-                    <TouchableOpacity onPress={() => setSelectedDate(selectedDate ? null : new Date().toISOString().split('T')[0])} style={[
-                        styles.filterChip,
-                        selectedDate
-                            ? { backgroundColor: colors.primary + '20', borderColor: colors.primary }
-                            : { backgroundColor: colors.card, borderColor: colors.border }
-                    ]}>
-                        <Calendar size={14} color={selectedDate ? colors.primary : colors.textSecondary} />
-                        <Text style={[
-                            styles.filterText,
-                            selectedDate ? { color: colors.primary } : { color: colors.textSecondary }
-                        ]}>
-                            {selectedDate ? 'Today' : 'Date'}
-                        </Text>
-                        {selectedDate && <X size={12} color={colors.primary} style={{ marginLeft: 4 }} />}
-                    </TouchableOpacity>
+                    <AnimatedFilterChip
+                        icon={Calendar}
+                        label={selectedDate ? 'Today' : 'Date'}
+                        isActive={!!selectedDate}
+                        onPress={() => setSelectedDate(selectedDate ? null : new Date().toISOString().split('T')[0])}
+                        colors={colors}
+                        hasX={!!selectedDate}
+                    />
                 </ScrollView>
             </View>
 
@@ -574,7 +711,7 @@ const FeedScreen = ({ navigation }: any) => {
                     <WebView
                         originWhitelist={['*']}
                         source={{ html: mapHTML }}
-                        style={{ flex: 1, backgroundColor: '#000' }}
+                        style={{ flex: 1, backgroundColor: colors.background }}
                         onMessage={handleWebMessage}
                     />
                     {selectedPost && (
@@ -585,9 +722,9 @@ const FeedScreen = ({ navigation }: any) => {
                             </TouchableOpacity>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                                 <View style={[styles.typeBadge, {
-                                    backgroundColor: selectedPost.type === 'job' ? '#3b82f6' : selectedPost.type === 'service' ? '#eab308' : '#ec4899'
+                                    backgroundColor: getCatColor(selectedPost.type)
                                 }]}>
-                                    <Text style={styles.typeBadgeText}>{selectedPost.type}</Text>
+                                    <Text style={styles.typeBadgeText}>{selectedPost.type.toUpperCase()}</Text>
                                 </View>
                                 <Text style={{ color: colors.textSecondary, marginLeft: 8, fontSize: 12 }}>
                                     {selectedPost.location}
@@ -606,6 +743,13 @@ const FeedScreen = ({ navigation }: any) => {
                             </TouchableOpacity>
                         </View>
                     )}
+                </View>
+            )}
+
+            {mapLoading && (
+                <View style={[StyleSheet.absoluteFill, styles.loadingOverlay, { backgroundColor: colors.background + 'CC' }]}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[styles.loadingText, { color: colors.text }]}>Preparing Map...</Text>
                 </View>
             )}
 
@@ -641,7 +785,6 @@ const FeedScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
     },
     header: {
         paddingHorizontal: 16,
@@ -884,6 +1027,16 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
         textTransform: 'uppercase',
+    },
+    loadingOverlay: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
 

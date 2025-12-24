@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { View, Text, FlatList, TouchableOpacity, Image, Alert, ActivityIndicator, Linking, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Linking, StyleSheet } from 'react-native';
 import api from '../services/api';
-import { X, Check, Phone, MessageCircle, ArrowLeft } from 'lucide-react-native';
+import { X, Check, Phone, MessageCircle, ArrowLeft, Trash2 } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import ThemedAlert from '../components/ui/ThemedAlert';
+import { useAuth } from '../context/AuthContext';
 
 const RequestsScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
@@ -13,6 +15,21 @@ const RequestsScreen = ({ navigation }: any) => {
     const [sentRequests, setSentRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        onConfirm: () => void;
+        isDestructive: boolean;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        onConfirm: () => { },
+        isDestructive: false,
+    });
 
     const themeStyles = {
         container: { backgroundColor: colors.background },
@@ -38,7 +55,14 @@ const RequestsScreen = ({ navigation }: any) => {
             setSentRequests(sentRes.data);
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to fetch requests');
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to fetch requests',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
         } finally {
             setLoading(false);
         }
@@ -53,11 +77,55 @@ const RequestsScreen = ({ navigation }: any) => {
     const handleAction = async (id: string, status: string) => {
         try {
             await api.put(`/contacts/${id}/status`, { status });
-            Alert.alert('Success', `Request ${status}`);
-            fetchRequests();
+            setAlertConfig({
+                visible: true,
+                title: 'Success',
+                message: `Request ${status} successfully`,
+                confirmText: 'Great',
+                isDestructive: false,
+                onConfirm: () => {
+                    setAlertConfig(prev => ({ ...prev, visible: false }));
+                    fetchRequests();
+                }
+            });
         } catch (error) {
-            Alert.alert('Error', 'Failed to update status');
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to update status',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
         }
+    };
+
+    const handleDelete = (id: string, type: 'withdraw' | 'clear') => {
+        setAlertConfig({
+            visible: true,
+            title: type === 'withdraw' ? 'Withdraw Request' : 'Clear Request',
+            message: type === 'withdraw'
+                ? 'Are you sure you want to withdraw this contact request?'
+                : 'Are you sure you want to clear this request from your list?',
+            confirmText: 'Delete',
+            isDestructive: true,
+            onConfirm: async () => {
+                setAlertConfig(prev => ({ ...prev, visible: false }));
+                try {
+                    await api.delete(`/contacts/${id}`);
+                    fetchRequests();
+                } catch (error) {
+                    setAlertConfig({
+                        visible: true,
+                        title: 'Error',
+                        message: 'Failed to delete request',
+                        confirmText: 'OK',
+                        isDestructive: false,
+                        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+                    });
+                }
+            }
+        });
     };
 
     const handleWhatsApp = (number: string) => {
@@ -110,6 +178,12 @@ const RequestsScreen = ({ navigation }: any) => {
                             <Text style={[styles.dateText, themeStyles.textSecondary]}>• {formatDate(item.createdAt)}</Text>
                         </View>
                     </View>
+                    <TouchableOpacity
+                        onPress={() => handleDelete(item._id, 'clear')}
+                        style={styles.deleteIcon}
+                    >
+                        <Trash2 size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
                 </View>
 
                 <View style={[styles.divider, themeStyles.divider]} />
@@ -178,6 +252,12 @@ const RequestsScreen = ({ navigation }: any) => {
                             <Text style={[styles.dateText, themeStyles.textSecondary]}>• {formatDate(item.createdAt)}</Text>
                         </View>
                     </View>
+                    <TouchableOpacity
+                        onPress={() => handleDelete(item._id, 'withdraw')}
+                        style={styles.deleteIcon}
+                    >
+                        <Trash2 size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
                 </View>
 
                 <View style={[styles.divider, themeStyles.divider]} />
@@ -262,6 +342,16 @@ const RequestsScreen = ({ navigation }: any) => {
                     />
                 )}
             </View>
+
+            <ThemedAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText}
+                isDestructive={alertConfig.isDestructive}
+                onCancel={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+                onConfirm={alertConfig.onConfirm}
+            />
         </SafeAreaView>
     );
 };
@@ -335,6 +425,10 @@ const styles = StyleSheet.create({
     headerText: {
         flex: 1,
         justifyContent: 'center',
+    },
+    deleteIcon: {
+        padding: 4,
+        marginLeft: 8,
     },
     metaRow: {
         flexDirection: 'row',

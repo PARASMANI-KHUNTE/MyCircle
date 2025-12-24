@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
+import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Settings, LogOut, MessageCircle, Star } from 'lucide-react-native';
+import { ArrowLeft, Settings, LogOut, MessageCircle, Star, User, Edit3, Clock, Edit } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
@@ -14,6 +15,24 @@ const ProfileScreen = ({ navigation, route }: any) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ posts: 0, requests: 0, rating: 0 });
+    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+    const [myPosts, setMyPosts] = useState<any[]>([]);
+    const [postsLoading, setPostsLoading] = useState(false);
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        onConfirm: () => void;
+        isDestructive: boolean;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        onConfirm: () => { },
+        isDestructive: false,
+    });
 
     const userId = route.params?.userId || authUser?._id || authUser?.id;
     const isOwnProfile = userId === (authUser?._id || authUser?.id);
@@ -24,19 +43,50 @@ const ProfileScreen = ({ navigation, route }: any) => {
             const res = await api.get(endpoint);
             setUser(res.data);
 
-            // Mock stats if not provided by backend yet
-            setStats({
-                posts: res.data.postsCount || 0,
-                requests: res.data.requestsCount || 0,
-                rating: res.data.rating || 5.0
-            });
+            if (isOwnProfile) {
+                const statsRes = await api.get('/user/stats');
+                setStats({
+                    posts: statsRes.data.stats.totalPosts || 0,
+                    requests: statsRes.data.stats.receivedRequests || 0,
+                    rating: statsRes.data.rating || 5.0
+                });
+                fetchMyPosts();
+            } else {
+                setStats({
+                    posts: res.data.postsCount || 0,
+                    requests: res.data.requestsCount || 0,
+                    rating: res.data.rating || 5.0
+                });
+            }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to load profile');
-            navigation.goBack();
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to load profile',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => {
+                    setAlertConfig(prev => ({ ...prev, visible: false }));
+                    navigation.goBack();
+                }
+            });
         } finally {
             setLoading(false);
             setRefreshing(false);
+        }
+    };
+
+    const fetchMyPosts = async () => {
+        if (!isOwnProfile) return;
+        try {
+            setPostsLoading(true);
+            const res = await api.get('/posts/my-posts');
+            setMyPosts(res.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setPostsLoading(false);
         }
     };
 
@@ -52,43 +102,135 @@ const ProfileScreen = ({ navigation, route }: any) => {
     };
 
     const handleLogout = () => {
-        Alert.alert(
-            "Logout",
-            "Are you sure you want to logout?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Logout",
-                    style: "destructive",
-                    onPress: async () => {
-                        await logout();
-                        // Navigation is handled by AuthContext/AppNavigator
-                    }
-                }
-            ]
-        );
+        setAlertConfig({
+            visible: true,
+            title: "Logout",
+            message: "Are you sure you want to logout?",
+            confirmText: "Logout",
+            isDestructive: true,
+            onConfirm: async () => {
+                setAlertConfig(prev => ({ ...prev, visible: false }));
+                await logout();
+            }
+        });
     };
 
     const handleBlock = () => {
-        Alert.alert(
-            "Block User",
-            "Are you sure you want to block this user?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Block",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await api.post(`/user/block/${userId}`);
-                            Alert.alert("Blocked", "User has been blocked");
+        setAlertConfig({
+            visible: true,
+            title: "Block User",
+            message: "Are you sure you want to block this user?",
+            confirmText: "Block",
+            isDestructive: true,
+            onConfirm: async () => {
+                try {
+                    await api.post(`/user/block/${userId}`);
+                    setAlertConfig({
+                        visible: true,
+                        title: "Blocked",
+                        message: "User has been blocked",
+                        confirmText: "OK",
+                        isDestructive: false,
+                        onConfirm: () => {
+                            setAlertConfig(prev => ({ ...prev, visible: false }));
                             navigation.goBack();
-                        } catch (error) {
-                            Alert.alert("Error", "Failed to block user");
                         }
-                    }
+                    });
+                } catch (error) {
+                    setAlertConfig({
+                        visible: true,
+                        title: "Error",
+                        message: "Failed to block user",
+                        confirmText: "OK",
+                        isDestructive: false,
+                        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+                    });
                 }
-            ]
+            }
+        });
+    };
+
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNow(new Date());
+        }, 60000); // Update every minute
+        return () => clearInterval(timer);
+    }, []);
+
+    const formatTimeLeft = (expiresAt: string) => {
+        const diff = new Date(expiresAt).getTime() - now.getTime();
+        if (diff <= 0) return 'Expired';
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (days > 0) return `${days}d ${hours}h left`;
+        if (hours > 0) return `${hours}h ${mins}m left`;
+        return `${mins}m left`;
+    };
+
+    const getTypeColor = (type: string) => {
+        switch (type) {
+            case 'job': return '#3b82f6'; // Blue
+            case 'service': return '#06b6d4'; // Cyan
+            case 'sell': return '#f59e0b'; // Amber
+            case 'rent': return '#8b5cf6'; // Violet
+            case 'barter': return '#ec4899'; // Pink
+            default: return colors.primary;
+        }
+    };
+
+    const getPostImage = (post: any) => {
+        if (post.images && post.images.length > 0) return post.images[0];
+        const keywords: Record<string, string> = {
+            job: 'workspace,office',
+            service: 'tools,work',
+            sell: 'product,tech',
+            rent: 'key,house',
+            barter: 'deal,handshake'
+        };
+        const keyword = keywords[post.type] || 'abstract';
+        return `https://loremflickr.com/400/400/${keyword}?lock=${post._id.substring(post._id.length - 4)}`;
+    };
+
+    const getProgress = (createdAt: string, expiresAt: string, durationMinutes: number) => {
+        const total = durationMinutes * 60000;
+        const remaining = new Date(expiresAt).getTime() - now.getTime();
+        const progress = Math.max(0, Math.min(1, remaining / total));
+        return progress;
+    };
+
+    const renderExpirationBar = (post: any) => {
+        if (post.status === 'archived' || !post.expiresAt) return null;
+
+        const timeLeft = formatTimeLeft(post.expiresAt);
+        const progress = getProgress(post.createdAt, post.expiresAt, post.duration || 40320);
+        const typeColor = getTypeColor(post.type);
+        const isUrgent = progress < 0.1; // Less than 10% time left
+
+        return (
+            <View style={styles.expirationContainer}>
+                <View style={styles.expirationHeader}>
+                    <Clock size={10} color={isUrgent ? '#ef4444' : (viewMode === 'grid' ? '#fff' : colors.textSecondary)} />
+                    <Text style={[styles.expirationText, { color: isUrgent ? '#ef4444' : (viewMode === 'grid' ? '#fff' : colors.textSecondary) }]}>
+                        {timeLeft}
+                    </Text>
+                </View>
+                <View style={[styles.progressBarBg, { backgroundColor: viewMode === 'grid' ? 'rgba(255,255,255,0.2)' : colors.border }]}>
+                    <View
+                        style={[
+                            styles.progressBarFill,
+                            {
+                                width: `${progress * 100}%`,
+                                backgroundColor: isUrgent ? '#ef4444' : typeColor
+                            }
+                        ]}
+                    />
+                </View>
+            </View>
         );
     };
 
@@ -100,26 +242,39 @@ const ProfileScreen = ({ navigation, route }: any) => {
         );
     }
 
-    if (!user) return null;
+    if (!user) {
+        return (
+            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <Text style={{ color: colors.text }}>User not found</Text>
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-            <View style={styles.header}>
-                {!isOwnProfile ? (
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-                        <ArrowLeft size={24} color={colors.text} />
-                    </TouchableOpacity>
-                ) : (
-                    <View /> // Spacer
-                )}
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <ArrowLeft size={24} color={colors.text} />
+                </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
-                {isOwnProfile ? (
-                    <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
-                        <Settings size={24} color={colors.text} />
-                    </TouchableOpacity>
-                ) : (
-                    <View style={{ width: 40 }} />
-                )}
+                <View style={styles.headerRight}>
+                    {isOwnProfile && (
+                        <>
+                            <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={[styles.iconButton, { marginRight: 15 }]}>
+                                <Edit size={22} color={colors.text} />
+                                <Text style={[styles.headerIconLabel, { color: colors.textSecondary }]}>Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={[styles.iconButton, { marginRight: 15 }]}>
+                                <Settings size={22} color={colors.text} />
+                                <Text style={[styles.headerIconLabel, { color: colors.textSecondary }]}>Prefs</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
+                                <LogOut size={22} color="#ef4444" />
+                                <Text style={[styles.headerIconLabel, { color: '#ef4444' }]}>Exit</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </View>
             </View>
 
             <ScrollView
@@ -164,23 +319,68 @@ const ProfileScreen = ({ navigation, route }: any) => {
                     </Text>
                 </View>
 
-                {isOwnProfile ? (
-                    <View style={styles.buttonRow}>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('EditProfile')}
-                            style={[styles.actionButtonMain, { backgroundColor: colors.primary }]}
-                        >
-                            <Text style={[styles.editButtonText, { color: '#ffffff' }]}>Edit Profile</Text>
-                        </TouchableOpacity>
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>My Posts</Text>
+                    {isOwnProfile && (
+                        <View style={styles.viewModeToggle}>
+                            <TouchableOpacity onPress={() => setViewMode('list')} style={[styles.viewModeBtn, viewMode === 'list' && { backgroundColor: colors.primary }]}>
+                                <Text style={{ color: viewMode === 'list' ? '#fff' : colors.textSecondary, fontSize: 10 }}>LIST</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setViewMode('grid')} style={[styles.viewModeBtn, viewMode === 'grid' && { backgroundColor: colors.primary }]}>
+                                <Text style={{ color: viewMode === 'grid' ? '#fff' : colors.textSecondary, fontSize: 10 }}>GRID</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
 
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('MyPosts')}
-                            style={[styles.actionButtonMain, styles.postsButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        >
-                            <Text style={[styles.editButtonText, { color: colors.text }]}>My Posts</Text>
-                        </TouchableOpacity>
+                {isOwnProfile && myPosts.length > 0 ? (
+                    <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
+                        {myPosts.map((post) => (
+                            <TouchableOpacity
+                                key={post._id}
+                                style={viewMode === 'grid' ? styles.gridItem : styles.listItem}
+                                onPress={() => navigation.navigate('PostDetails', { id: post._id })}
+                            >
+                                {viewMode === 'grid' ? (
+                                    <View style={[styles.gridCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderWidth: 1.5 }]}>
+                                        <Image source={{ uri: getPostImage(post) }} style={styles.gridImage} />
+                                        <View style={styles.gridOverlay}>
+                                            <View style={[styles.typeTag, { backgroundColor: getTypeColor(post.type) }]}>
+                                                <Text style={styles.typeTagText}>{post.type.toUpperCase()}</Text>
+                                            </View>
+                                            <Text style={[styles.gridTitle, { color: '#fff' }]} numberOfLines={1}>{post.title}</Text>
+                                            <View style={styles.gridFooter}>
+                                                <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.gridEditBtn}>
+                                                    <Edit3 size={14} color="#fff" />
+                                                </TouchableOpacity>
+                                                <Text style={[styles.gridPrice, { color: '#fff' }]}>₹{post.price}</Text>
+                                            </View>
+                                            {renderExpirationBar(post)}
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <View style={[styles.listCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderLeftWidth: 4 }]}>
+                                        <Image source={{ uri: getPostImage(post) }} style={styles.listImage} />
+                                        <View style={{ flex: 1, marginLeft: 12 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                                <Text style={[styles.typeLabel, { color: getTypeColor(post.type) }]}>{post.type.toUpperCase()}</Text>
+                                                <Text style={[styles.listTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>{post.title}</Text>
+                                            </View>
+                                            {renderExpirationBar(post)}
+                                        </View>
+                                        <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.listEditBtn}>
+                                            <Edit3 size={16} color={colors.primary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                ) : (
+                ) : isOwnProfile && (
+                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>You haven't posted anything yet.</Text>
+                )}
+
+                {!isOwnProfile && (
                     <View style={styles.buttonRow}>
                         <TouchableOpacity
                             onPress={() => navigation.navigate('ChatWindow', { recipient: user })}
@@ -199,14 +399,17 @@ const ProfileScreen = ({ navigation, route }: any) => {
                     </View>
                 )}
 
-                {isOwnProfile && (
-                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                        <LogOut size={20} color="#ef4444" style={{ marginRight: 8 }} />
-                        <Text style={styles.logoutText}>Logout</Text>
-                    </TouchableOpacity>
-                )}
-
             </ScrollView>
+
+            <ThemedAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText}
+                isDestructive={alertConfig.isDestructive}
+                onCancel={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+                onConfirm={alertConfig.onConfirm}
+            />
         </SafeAreaView>
     );
 };
@@ -230,9 +433,20 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
+        marginLeft: 12,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerIconLabel: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        marginTop: 2,
     },
     iconButton: {
-        padding: 5,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     scrollContent: {
         paddingBottom: 30,
@@ -338,6 +552,159 @@ const styles = StyleSheet.create({
         color: '#ef4444',
         fontSize: 16,
         fontWeight: '600',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 12,
+    },
+    viewModeToggle: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 8,
+        padding: 2,
+    },
+    viewModeBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        paddingHorizontal: 15,
+        gap: 10,
+    },
+    gridItem: {
+        width: '48%',
+    },
+    gridCard: {
+        borderRadius: 16,
+        borderWidth: 1,
+        height: 140,
+        overflow: 'hidden',
+    },
+    gridImage: {
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        resizeMode: 'cover',
+    },
+    gridImagePlaceholder: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    gridOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        padding: 10,
+        justifyContent: 'flex-end',
+    },
+    gridTitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    gridFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    gridEditBtn: {
+        padding: 4,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: 6,
+    },
+    gridPrice: {
+        fontSize: 11,
+        fontWeight: 'bold',
+    },
+    listContainer: {
+        paddingHorizontal: 20,
+        gap: 12,
+    },
+    listItem: {
+        width: '100%',
+    },
+    listCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        borderRadius: 16,
+        borderWidth: 1,
+    },
+    listImage: {
+        width: 60,
+        height: 60,
+        borderRadius: 10,
+        resizeMode: 'cover',
+    },
+    listImagePlaceholder: {
+        width: 60,
+        height: 60,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    listTitle: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        marginBottom: 2,
+    },
+    listSubtitle: {
+        fontSize: 12,
+    },
+    listEditBtn: {
+        padding: 10,
+    },
+    emptyText: {
+        textAlign: 'center',
+        marginTop: 20,
+        fontStyle: 'italic',
+    },
+    expirationContainer: {
+        marginTop: 6,
+    },
+    expirationHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginBottom: 4,
+    },
+    expirationText: {
+        fontSize: 10,
+        fontWeight: '600',
+    },
+    progressBarBg: {
+        height: 4,
+        borderRadius: 2,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 2,
+    },
+    typeTag: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    typeTagText: {
+        color: '#fff',
+        fontSize: 8,
+        fontWeight: 'bold',
+    },
+    typeLabel: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
     }
 });
 

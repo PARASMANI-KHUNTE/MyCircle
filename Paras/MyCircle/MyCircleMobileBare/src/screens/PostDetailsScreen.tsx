@@ -174,6 +174,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         try {
             await api.post(`/contacts/${id}`);
             Alert.alert("Success", "Contact Request Sent!");
+            setPost({ ...post, hasRequested: true });
         } catch (err: any) {
             const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Failed to send request";
             Alert.alert("Error", errorMsg);
@@ -495,7 +496,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                             </Text>
                                             {!isOwnPost && (
                                                 <TouchableOpacity
-                                                    onPress={() => setReplyTo({ id: comment._id, username: comment.user?.displayName })}
+                                                    onPress={() => {
+                                                        setReplyTo({ id: comment._id, username: comment.user?.displayName });
+                                                        setCommentText(`@${comment.user?.displayName} `);
+                                                    }}
                                                     style={styles.replyButton}
                                                 >
                                                     <Text style={styles.replyButtonText}>Reply</Text>
@@ -523,7 +527,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                                         </Text>
                                                         {!isOwnPost && (
                                                             <TouchableOpacity
-                                                                onPress={() => setReplyTo({ id: comment._id, username: reply.user?.displayName })}
+                                                                onPress={() => {
+                                                                    setReplyTo({ id: comment._id, username: reply.user?.displayName });
+                                                                    setCommentText(`@${reply.user?.displayName} `);
+                                                                }}
                                                                 style={styles.replyButton}
                                                             >
                                                                 <Text style={styles.replyButtonText}>Reply</Text>
@@ -590,9 +597,18 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={handleRequestContact}
-                            style={[styles.requestButton, { backgroundColor: colors.primary }]}
+                            disabled={post.hasRequested}
+                            style={[
+                                styles.requestButton,
+                                { backgroundColor: post.hasRequested ? colors.border : colors.primary }
+                            ]}
                         >
-                            <Text style={[styles.requestButtonText, { color: '#ffffff' }]}>Request Contact</Text>
+                            <Text style={[
+                                styles.requestButtonText,
+                                { color: post.hasRequested ? colors.textSecondary : '#ffffff' }
+                            ]}>
+                                {post.hasRequested ? 'Request Sent' : 'Request Contact'}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </>

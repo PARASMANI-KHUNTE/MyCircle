@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal } from 'react-native';
+import ThemedAlert from '../components/ui/ThemedAlert';
 import { launchImageLibrary } from 'react-native-image-picker';
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,6 +44,21 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [showCityModal, setShowCityModal] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        onConfirm: () => void;
+        isDestructive: boolean;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        onConfirm: () => { },
+        isDestructive: false,
+    });
 
     const categories = [
         { id: 'job', label: 'Post a Job', sub: 'Hire help for tasks', icon: Briefcase },
@@ -113,11 +129,27 @@ const CreatePostScreen = ({ navigation }: any) => {
                 },
             });
 
-            Alert.alert('Success', 'Post created successfully!');
-            navigation.navigate('Feed');
+            setAlertConfig({
+                visible: true,
+                title: 'Success',
+                message: 'Post created successfully!',
+                confirmText: 'Great',
+                isDestructive: false,
+                onConfirm: () => {
+                    setAlertConfig(prev => ({ ...prev, visible: false }));
+                    navigation.navigate('Feed');
+                }
+            });
         } catch (error: any) {
             console.error(error);
-            Alert.alert('Error', 'Failed to create post. ' + (error.response?.data?.msg || error.message));
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to create post. ' + (error.response?.data?.msg || error.message),
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
         } finally {
             setLoading(false);
         }
@@ -465,18 +497,29 @@ const CreatePostScreen = ({ navigation }: any) => {
         </View>
     );
 
+    const showAlert = (title: string, message: string) => {
+        setAlertConfig({
+            visible: true,
+            title,
+            message,
+            confirmText: 'OK',
+            isDestructive: false,
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        });
+    };
+
     const goNext = () => {
-        if (step === 1 && !type) return Alert.alert('Error', 'Please select a category');
-        if (step === 2 && (!title || !description)) return Alert.alert('Error', 'Please fill in title and description');
+        if (step === 1 && !type) return showAlert('Error', 'Please select a category');
+        if (step === 2 && (!title || !description)) return showAlert('Error', 'Please fill in title and description');
 
         if (step === 3) {
             // Price is optional if Barter is accepted
             if (!acceptsBarter && !price) {
-                return Alert.alert('Error', 'Please enter a price or enable Barter');
+                return showAlert('Error', 'Please enter a price or enable Barter');
             }
             // Location is valid if text exists OR coordinates are pinned
             if (!location && !coordinates) {
-                return Alert.alert('Error', 'Please select a location');
+                return showAlert('Error', 'Please select a location');
             }
         }
 
@@ -510,9 +553,9 @@ const CreatePostScreen = ({ navigation }: any) => {
                 {step === 4 && renderStep4()}
             </ScrollView>
 
-            <View style={[styles.footer, themeStyles.border]}>
+            <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
                 <TouchableOpacity onPress={goBack} style={styles.backButton}>
-                    <Text style={{ color: colors.textSecondary }}>{step === 1 ? 'Cancel' : 'Back'}</Text>
+                    <Text style={{ color: colors.text }}>{step === 1 ? 'Cancel' : 'Back'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={goNext} style={[styles.nextButton, { backgroundColor: colors.primary }]}>
@@ -591,7 +634,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                             try {
                                 const data = JSON.parse(event.nativeEvent.data);
                                 setCoordinates({ lat: data.lat, lng: data.lng });
-                                Alert.alert("Location Pinned", "Coordinates updated!");
+                                showAlert("Location Pinned", "Coordinates updated!");
                                 setShowMapModal(false);
                             } catch (e) { console.error(e); }
                         }}
@@ -599,6 +642,15 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
             </Modal>
 
+            <ThemedAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText}
+                isDestructive={alertConfig.isDestructive}
+                onCancel={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+                onConfirm={alertConfig.onConfirm}
+            />
         </SafeAreaView>
     );
 };
@@ -616,7 +668,7 @@ const styles = StyleSheet.create({
     iconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
     cardTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
     cardSub: { fontSize: 12, textAlign: 'center' },
-    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#000' }, // dark bg for footer
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, // removed hardcoded bg
     backButton: { padding: 16 },
     nextButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
     inputGroup: { marginBottom: 20 },

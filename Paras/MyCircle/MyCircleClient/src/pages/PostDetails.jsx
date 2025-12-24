@@ -1,19 +1,47 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../components/ui/Button';
 import PostCard from '../components/ui/PostCard';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { getAvatarUrl } from '../utils/avatar';
-import { ArrowLeft, MapPin, DollarSign, Clock, MessageCircle, Share2, Heart, Repeat, Phone, UserPlus, UserCheck, Check, Copy, Edit2, Trash2 } from 'lucide-react';
+import { getPostInsights, getPostExplanation } from '../services/aiService';
+import {
+    ArrowLeft, MapPin, DollarSign, Clock, MessageCircle,
+    Share2, Heart, Repeat, Phone, UserPlus, UserCheck,
+    Check, Copy, Edit2, Trash2, Sparkles, Navigation
+} from 'lucide-react';
 import { useDialog } from '../hooks/useDialog';
+import { useTheme } from '../context/ThemeContext';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIconRetina,
+    shadowUrl: markerShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    tooltipAnchor: [16, -28],
+    shadowSize: [41, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 const PostDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { isDark } = useTheme();
     const { success, error: showError } = useToast();
     const dialog = useDialog();
     const [post, setPost] = useState(null);
@@ -28,6 +56,9 @@ const PostDetails = () => {
     const [replyText, setReplyText] = useState('');
     const [editingComment, setEditingComment] = useState(null); // Comment ID being edited
     const [editText, setEditText] = useState('');
+    const [aiSummary, setAiSummary] = useState('');
+    const [aiInsights, setAiInsights] = useState(null);
+    const [isFetchingAi, setIsFetchingAi] = useState(false);
 
     const currentUserId = user?._id || user?.id;
     const isLiked = currentUserId && likes.includes(currentUserId);
@@ -80,7 +111,7 @@ const PostDetails = () => {
     const handleMessage = async () => {
         try {
             await api.post(`/chat/init/${post.user._id}`);
-            navigate('/chat');
+            navigate(`/chat?recipientId=${post.user._id}`);
         } catch (err) {
             console.error(err);
             if (err.response?.status === 403) {
@@ -108,6 +139,9 @@ const PostDetails = () => {
                 }
 
                 setLoading(false);
+
+                // Fetch AI Content
+                // fetchAiContent(res.data); // Removed auto-fetch
             } catch (err) {
                 console.error(err);
                 setLoading(false);
@@ -115,6 +149,24 @@ const PostDetails = () => {
         };
         fetchPost();
     }, [id]);
+
+    const fetchAiContent = async (postData) => {
+        if (!postData && !post) return;
+        setIsFetchingAi(true);
+        try {
+            const dataToUse = postData || post;
+            const [summaryRes, insightsRes] = await Promise.all([
+                getPostExplanation(dataToUse),
+                getPostInsights(dataToUse)
+            ]);
+            setAiSummary(summaryRes.explanation);
+            setAiInsights(insightsRes);
+        } catch (err) {
+            console.error("Failed to fetch AI content", err);
+        } finally {
+            setIsFetchingAi(false);
+        }
+    };
 
     // Handle Deep Linking Scroll
     useEffect(() => {
@@ -245,14 +297,14 @@ const PostDetails = () => {
         }
     };
 
-    if (loading) return <div className="text-white text-center py-20">Loading details...</div>;
-    if (!post) return <div className="text-white text-center py-20">Post not found</div>;
+    if (loading) return <div className="text-foreground text-center py-20">Loading details...</div>;
+    if (!post) return <div className="text-foreground text-center py-20">Post not found</div>;
 
     const isOwnPost = currentUserId && post.user._id === currentUserId;
 
     return (
-        <div className="container mx-auto px-6 py-24 min-h-screen">
-            <Button variant="ghost" className="mb-6 pl-0 hover:bg-transparent text-gray-400 hover:text-white" onClick={() => navigate(-1)}>
+        <div className="container mx-auto px-6 py-24 min-h-screen text-foreground">
+            <Button variant="ghost" className="mb-6 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground" onClick={() => navigate(-1)}>
                 <ArrowLeft className="w-5 h-5 mr-2" /> Back to Feed
             </Button>
 
@@ -260,11 +312,11 @@ const PostDetails = () => {
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Hero Image */}
-                    <div className="rounded-2xl overflow-hidden aspect-video bg-gray-800 relative group">
+                    <div className="rounded-[2.5rem] overflow-hidden aspect-video relative group shadow-2xl ring-1 ring-white/10">
                         {post.images && post.images.length > 0 ? (
                             <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
                         ) : (
-                            <div className="flex items-center justify-center h-full text-gray-600 bg-white/5">
+                            <div className="flex items-center justify-center h-full text-muted-foreground bg-card/10">
                                 No Image Available
                             </div>
                         )}
@@ -281,34 +333,42 @@ const PostDetails = () => {
                                         {post.type}
                                     </span>
                                     {post.acceptsBarter && (
-                                        <span className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider bg-pink-500/20 text-pink-400 flex items-center gap-1">
+                                        <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-pink-500/10 text-pink-500 border border-pink-500/20 flex items-center gap-1">
                                             <Repeat className="w-3 h-3" /> Barter Accepted
                                         </span>
                                     )}
                                 </div>
-                                <h1 className="text-4xl font-bold text-white mb-4">{post.title}</h1>
-                                <div className="flex flex-wrap gap-4 text-gray-400 text-sm">
+                                <h1 className="text-4xl font-bold text-foreground mb-4">{post.title}</h1>
+                                <div className="flex flex-wrap gap-4 text-muted-foreground text-sm font-medium">
                                     <div className="flex items-center gap-1">
                                         <MapPin className="w-4 h-4 text-primary" /> {post.location}
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <Clock className="w-4 h-4 text-primary" /> Posted {new Date(post.createdAt).toLocaleDateString()}
                                     </div>
-                                    <div className="flex items-center gap-1 text-pink-400">
+                                    <div className="flex items-center gap-1 text-pink-500/80">
                                         <Heart className="w-4 h-4" /> {likes.length} Likes
                                     </div>
                                 </div>
                             </div>
                             <div className="flex gap-2">
                                 <button
+                                    onClick={() => fetchAiContent(post)}
+                                    className={`p-3 rounded-full glass hover:bg-white/10 transition-all ${isFetchingAi || aiSummary ? 'text-primary ring-1 ring-primary/30' : 'text-foreground'}`}
+                                    title="Generate AI Summary"
+                                    disabled={isFetchingAi}
+                                >
+                                    <Sparkles className={`w-5 h-5 ${isFetchingAi ? 'animate-pulse' : ''}`} />
+                                </button>
+                                <button
                                     onClick={handleShare}
-                                    className="p-3 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-white"
+                                    className="p-3 rounded-full glass hover:bg-white/10 transition-all text-foreground"
                                 >
                                     <Share2 className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={handleLike}
-                                    className={`p-3 rounded-full bg-white/5 hover:bg-white/10 transition-colors ${isLiked ? 'text-pink-500' : 'text-white'}`}
+                                    className={`p-3 rounded-full glass hover:bg-white/10 transition-all ${isLiked ? 'text-pink-500 ring-1 ring-pink-500/30' : 'text-foreground'}`}
                                 >
                                     <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
                                 </button>
@@ -316,12 +376,12 @@ const PostDetails = () => {
                         </div>
                     </div>
 
-                    <div className="h-px bg-white/10" />
+                    <div className="h-px bg-white/5" />
 
                     {/* Description */}
                     <div>
-                        <h2 className="text-xl font-bold text-white mb-4">Description</h2>
-                        <p className="text-gray-300 leading-relaxed text-lg whitespace-pre-wrap">
+                        <h2 className="text-xl font-bold text-foreground mb-4">Description</h2>
+                        <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap font-medium">
                             {post.description}
                         </p>
 
@@ -335,18 +395,91 @@ const PostDetails = () => {
                                 </p>
                             </div>
                         )}
+
+                        {/* AI Summary Section */}
+                        {(aiSummary || isFetchingAi) && (
+                            <div className="mt-8 p-6 rounded-2xl bg-primary/5 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Sparkles className="w-12 h-12 text-primary" />
+                                </div>
+                                <div className="flex items-center gap-2 mb-4 text-primary">
+                                    <Sparkles className="w-5 h-5" />
+                                    <span className="text-sm font-bold uppercase tracking-widest">AI Summary</span>
+                                </div>
+                                {isFetchingAi ? (
+                                    <div className="space-y-2">
+                                        <div className="h-4 bg-primary/10 rounded w-full animate-pulse" />
+                                        <div className="h-4 bg-primary/10 rounded w-3/4 animate-pulse" />
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-300 leading-relaxed italic text-lg">
+                                        "{aiSummary}"
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* AI Insights Section */}
+                        {aiInsights && (
+                            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-xl glass-panel">
+                                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Market Demand</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${aiInsights.demandScore * 10 || 50}%` }}
+                                                className="h-full bg-primary"
+                                            />
+                                        </div>
+                                        <span className="text-sm text-white font-medium">{aiInsights.demandLevel}</span>
+                                    </div>
+                                </div>
+                                <div className="p-4 rounded-xl glass-panel">
+                                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Price Analysis</p>
+                                    <p className="text-sm text-white font-medium">{aiInsights.priceAnalysis}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Location Map Section */}
+                        {post.locationCoords?.coordinates && (
+                            <div className="mt-8">
+                                <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                                    <Navigation className="w-5 h-5 text-primary" /> Location
+                                </h2>
+                                <div className="w-full h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+                                    <MapContainer
+                                        center={[post.locationCoords.coordinates[1], post.locationCoords.coordinates[0]]}
+                                        zoom={14}
+                                        scrollWheelZoom={false}
+                                        className="w-full h-full"
+                                    >
+                                        <TileLayer url={isDark
+                                            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                                            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
+                                        />
+                                        <Marker position={[post.locationCoords.coordinates[1], post.locationCoords.coordinates[0]]}>
+                                            <Popup className="custom-popup">
+                                                <div className="p-1 font-bold text-foreground">{post.location}</div>
+                                            </Popup>
+                                        </Marker>
+                                    </MapContainer>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Comments Section */}
                     <div id="comments">
-                        <div className="h-px bg-white/10 mb-8" />
-                        <h2 className="text-xl font-bold text-white mb-6">Comments ({post.comments?.length || 0})</h2>
+                        <div className="h-px bg-card-border mb-8" />
+                        <h2 className="text-xl font-bold text-foreground mb-6">Comments ({post.comments?.length || 0})</h2>
 
                         {/* New Comment Input */}
                         {user ? (
                             <form onSubmit={handleCommentSubmit} className="mb-8 flex gap-4">
-                                <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0">
-                                    <img src={user.avatar || "https://ui-avatars.com/api/?name=" + user.displayName} alt={user.displayName} className="w-full h-full object-cover" />
+                                <div className="w-10 h-10 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
+                                    <img src={getAvatarUrl(user)} alt={user.displayName} className="w-full h-full object-cover" />
                                 </div>
                                 <div className="flex-1 relative">
                                     <input
@@ -354,7 +487,7 @@ const PostDetails = () => {
                                         value={commentText}
                                         onChange={(e) => setCommentText(e.target.value)}
                                         placeholder="Add a comment..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+                                        className="w-full bg-card/10 border border-card-border rounded-xl pl-4 pr-12 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
                                     />
                                     <button
                                         type="submit"
@@ -366,8 +499,8 @@ const PostDetails = () => {
                                 </div>
                             </form>
                         ) : (
-                            <div className="mb-8 p-4 bg-white/5 rounded-xl text-center text-gray-400 text-sm">
-                                Please <button onClick={() => navigate('/login')} className="text-primary hover:underline">sign in</button> to comment.
+                            <div className="mb-8 p-4 bg-card/10 border border-card-border rounded-xl text-center text-muted-foreground text-sm font-medium">
+                                Please <button onClick={() => navigate('/login')} className="text-primary font-bold hover:underline">sign in</button> to comment.
                             </div>
                         )}
 
@@ -376,14 +509,14 @@ const PostDetails = () => {
                             {post.comments?.length > 0 ? (
                                 post.comments.map((comment, index) => (
                                     <div key={index} className="flex gap-4 group">
-                                        <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0">
-                                            <img src={comment.user?.avatar || "https://ui-avatars.com/api/?name=User"} alt={comment.user?.displayName || "User"} className="w-full h-full object-cover" />
+                                        <div className="w-10 h-10 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
+                                            <img src={getAvatarUrl(comment.user)} alt={comment.user?.displayName || "User"} className="w-full h-full object-cover" />
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between gap-2 mb-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-white">{comment.user?.displayName || "Unknown User"}</span>
-                                                    <span className="text-xs text-gray-500">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                                                    <span className="font-bold text-foreground">{comment.user?.displayName || "Unknown User"}</span>
+                                                    <span className="text-xs text-muted-foreground font-medium">{new Date(comment.createdAt).toLocaleDateString()}</span>
                                                 </div>
                                                 {/* Edit/Delete buttons for comment owner */}
                                                 {currentUserId && comment.user?._id === currentUserId && (
@@ -416,7 +549,7 @@ const PostDetails = () => {
                                                         type="text"
                                                         value={editText}
                                                         onChange={(e) => setEditText(e.target.value)}
-                                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                                                        className="flex-1 bg-card/10 border border-card-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 shadow-inner"
                                                         autoFocus
                                                     />
                                                     <button
@@ -437,7 +570,7 @@ const PostDetails = () => {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <p className="text-gray-300">{comment.text}</p>
+                                                <p className="text-muted-foreground font-medium">{comment.text}</p>
                                             )}
 
                                             {/* Reply Button */}
@@ -458,7 +591,7 @@ const PostDetails = () => {
                                                         value={replyText}
                                                         onChange={(e) => setReplyText(e.target.value)}
                                                         placeholder={`Reply to ${comment.user?.displayName}...`}
-                                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                                                        className="flex-1 bg-card/10 border border-card-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 shadow-inner"
                                                         autoFocus
                                                     />
                                                     <button
@@ -473,18 +606,18 @@ const PostDetails = () => {
 
                                             {/* Nested Replies */}
                                             {comment.replies && comment.replies.length > 0 && (
-                                                <div className="mt-4 space-y-4 border-l-2 border-white/10 pl-4">
+                                                <div className="mt-4 space-y-4 border-l-2 border-card-border pl-4">
                                                     {comment.replies.map((reply, rIndex) => (
                                                         <div key={rIndex} className="flex gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden shrink-0">
+                                                            <div className="w-8 h-8 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
                                                                 <img src={reply.user?.avatar || "https://ui-avatars.com/api/?name=User"} alt={reply.user?.displayName || "User"} className="w-full h-full object-cover" />
                                                             </div>
                                                             <div>
                                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                                    <span className="font-medium text-sm text-white">{reply.user?.displayName}</span>
-                                                                    <span className="text-[10px] text-gray-500">{new Date(reply.createdAt).toLocaleDateString()}</span>
+                                                                    <span className="font-bold text-sm text-foreground">{reply.user?.displayName}</span>
+                                                                    <span className="text-[10px] text-muted-foreground font-medium">{new Date(reply.createdAt).toLocaleDateString()}</span>
                                                                 </div>
-                                                                <p className="text-sm text-gray-300">{reply.text}</p>
+                                                                <p className="text-sm text-muted-foreground font-medium">{reply.text}</p>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -494,7 +627,7 @@ const PostDetails = () => {
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-gray-500 italic">No comments yet. Be the first to start a conversation!</p>
+                                <p className="text-muted-foreground italic font-medium">No comments yet. Be the first to start a conversation!</p>
                             )}
                         </div>
                     </div>
@@ -502,8 +635,8 @@ const PostDetails = () => {
                     {/* Related Posts */}
                     {relatedPosts.length > 0 && (
                         <div>
-                            <div className="h-px bg-white/10 mb-8" />
-                            <h2 className="text-xl font-bold text-white mb-4">Related Posts</h2>
+                            <div className="h-px bg-card-border mb-8" />
+                            <h2 className="text-xl font-bold text-foreground mb-4">Related Posts</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {relatedPosts.map(post => (
                                     <PostCard key={post._id} post={post} />
@@ -515,32 +648,32 @@ const PostDetails = () => {
 
                 {/* Sidebar */}
                 <div className="lg:col-span-1">
-                    <div className="glass rounded-2xl p-6 sticky top-24">
-                        <div className="text-3xl font-bold text-white mb-6 flex items-baseline gap-1">
+                    <div className="glass rounded-[3rem] p-8 sticky top-24 border-card-border shadow-2xl">
+                        <div className="text-3xl font-black text-foreground mb-6 flex items-baseline gap-1">
                             {post.acceptsBarter ? (
-                                <span className="text-pink-400 text-2xl">Barter / Exchange</span>
+                                <span className="text-pink-500 text-2xl">Barter / Exchange</span>
                             ) : (
-                                <>₹{post.price} <span className="text-sm text-gray-400 font-normal">/ estimated</span></>
+                                <>₹{post.price} <span className="text-sm text-muted-foreground font-normal">/ estimated</span></>
                             )}
                         </div>
 
                         <div className="flex items-center gap-4 mb-8">
-                            <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden">
-                                <img src={post.user?.avatar} alt={post.user?.displayName} className="w-full h-full object-cover" />
+                            <div className="w-14 h-14 rounded-full bg-card/10 overflow-hidden border-2 border-primary/20 p-0.5 shadow-lg">
+                                <img src={post.user?.avatar} alt={post.user?.displayName} className="w-full h-full object-cover rounded-full" />
                             </div>
                             <div>
-                                <div className="font-bold text-white">{post.user?.displayName}</div>
-                                <div className="text-yellow-500 text-sm flex items-center gap-1">
+                                <div className="font-black text-foreground text-lg">{post.user?.displayName}</div>
+                                <div className="text-yellow-500 text-sm flex items-center gap-1 font-bold">
                                     ★ {post.user?.rating || 'New'}
                                 </div>
                             </div>
                         </div>
 
                         {!isOwnPost && (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <Button
                                     variant="primary"
-                                    className="w-full h-12 text-lg"
+                                    className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20"
                                     onClick={handleContactRequest}
                                     disabled={requestLoading || requestSent}
                                 >
@@ -549,7 +682,7 @@ const PostDetails = () => {
                                 </Button>
                                 <Button
                                     variant="outline"
-                                    className="w-full h-12 text-lg hover:bg-white/10 border-white/20 text-white"
+                                    className="w-full h-14 text-lg font-bold hover:bg-card/20 border-card-border text-foreground transition-all"
                                     onClick={handleMessage}
                                 >
                                     <MessageCircle className="w-5 h-5 mr-2" />
@@ -558,7 +691,7 @@ const PostDetails = () => {
                             </div>
                         )}
 
-                        <p className="text-xs text-center text-gray-500 mt-6">
+                        <p className="text-xs text-center text-muted-foreground mt-8 font-medium italic">
                             Safety Tip: Always meet in public places for exchanges.
                         </p>
                     </div>

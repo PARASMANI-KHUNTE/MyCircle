@@ -6,6 +6,7 @@ import api from '../utils/api';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
 import { useNotifications } from '../context/NotificationContext';
+import { getAvatarUrl } from '../utils/avatar';
 
 const Notifications = () => {
     const { notifications, markAsRead, markAllRead, refresh, loading, handleNotificationClick } = useNotifications();
@@ -69,8 +70,15 @@ const Notifications = () => {
                                 className={`glass p-6 rounded-2xl relative border-l-4 transition-all cursor-pointer hover:scale-[1.02] ${n.read ? 'border-transparent opacity-70 bg-white/5' : 'border-primary shadow-lg shadow-primary/5 bg-white/10'}`}
                             >
                                 <div className="flex gap-4">
-                                    <div className="flex-shrink-0 mt-1">
-                                        {getIcon(n.type)}
+                                    <div className="flex-shrink-0 relative">
+                                        <img
+                                            src={getAvatarUrl(n.sender)}
+                                            alt=""
+                                            className="w-12 h-12 rounded-full border border-white/10 object-cover"
+                                        />
+                                        <div className="absolute -bottom-1 -right-1 p-1 bg-dark rounded-full">
+                                            {getIcon(n.type)}
+                                        </div>
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">

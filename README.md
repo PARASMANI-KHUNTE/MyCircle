@@ -12,8 +12,8 @@ MyCircle/
         ├── MyCircleClient/       # Web Frontend (React 19 + Vite)
         │   ├── src/             # Frontend components, assets, and logic
         │   └── tailwind.config  # Glassmorphism design tokens
-        ├── MyCircleMobile/       # Mobile App (Expo + NativeWind)
-        │   ├── app/             # Expo Router (Navigation)
+        ├── MyCircleMobilebare/       # Mobile App (React Native + NativeWind)
+        │   ├── app/             
         │   └── src/             # Native components and shared logic
         ├── MyCircleServer/       # Backend API (Node.js + Express)
         │   ├── src/             # Mongoose models, controllers, and routes

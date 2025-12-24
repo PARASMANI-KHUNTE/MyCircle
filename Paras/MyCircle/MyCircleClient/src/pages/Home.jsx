@@ -18,14 +18,14 @@ const Home = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                 >
-                    <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-sm text-primary mb-6 inline-block backdrop-blur-sm">
+                    <span className="px-3 py-1 rounded-full bg-secondary border border-card-border text-sm text-primary mb-6 inline-block backdrop-blur-sm">
                         Hyperlocal Exchange Reimagined
                     </span>
-                    <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                    <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60">
                         Connect, Exchange, <br />
                         <span className="text-primary">Thrive Locally.</span>
                     </h1>
-                    <p className="text-xl text-gray-400 mb-8 max-w-xl leading-relaxed">
+                    <p className="text-xl text-muted-foreground mb-8 max-w-xl leading-relaxed font-medium">
                         The modern way to find tasks, offer services, and trade items in your neighborhood. Secure, fast, and beautiful.
                     </p>
 

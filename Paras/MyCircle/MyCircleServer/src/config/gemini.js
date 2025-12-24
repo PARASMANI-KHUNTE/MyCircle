@@ -12,13 +12,13 @@ const isKeyValid = () => {
     return true;
 };
 
-const getModel = (modelName = "gemini-1.5-flash") => {
+const getModel = (modelName = "gemini-2.5-flash") => {
     if (!isKeyValid()) return null;
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         return genAI.getGenerativeModel({ model: modelName });
     } catch (e) {
-        console.error("Gemini Initialization Error:", e.message);
+        console.error(`Gemini Initialization Error [${modelName}]:`, e.message);
         return null;
     }
 };
@@ -113,17 +113,21 @@ const generateSuggestions = async (contextMessages) => {
 const analyzePost = async (postData) => {
     try {
         const model = getModel();
-        if (!model) return { summary: "Post analysis unavailable.", tips: ["Add more details."], score: 80 };
+        if (!model) return { demandScore: 5, demandLevel: "Moderate", priceAnalysis: "Data unavailable" };
 
-        const prompt = `Analyze this post: Title: ${postData.title}, Desc: ${postData.description}.
-        Provide JSON: {"summary": "string", "tips": ["t1", "t2"], "score": 0-100}`;
+        const prompt = `Analyze this marketplace post: Title: ${postData.title}, Desc: ${postData.description}, Price: ${postData.price || 'N/A'}.
+        Provide JSON: {
+            "demandScore": 1-10 (number),
+            "demandLevel": "Low/Moderate/High (string)",
+            "priceAnalysis": "1 short sentence on value/fairness"
+        }`;
 
         const result = await model.generateContent(prompt);
         const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);
         return data;
     } catch (error) {
         console.error("Gemini Analysis Error:", error.message);
-        return { summary: "Analysis failed.", tips: ["Try again later."], score: 0 };
+        return { demandScore: 0, demandLevel: "Error", priceAnalysis: "Analysis failed." };
     }
 };
 
@@ -132,8 +136,13 @@ const explainPost = async (postData) => {
         const model = getModel();
         if (!model) return { summary: "Post explanation unavailable.", context: "Details in description.", interestingFacts: [] };
 
-        const prompt = `Explain this post: Title: ${postData.title}, Desc: ${postData.description}.
-        Provide JSON: {"summary": "string", "context": "string", "interestingFacts": ["f1", "f2"]}`;
+        const prompt = `Explain this post to a potential buyer/applicant. Title: ${postData.title}, Desc: ${postData.description}.
+        Keep it very concise and on-point. Do not write big paragraphs.
+        Provide JSON: {
+            "summary": "1 short sentence hook", 
+            "context": "2-3 bullet points on key value/details", 
+            "interestingFacts": ["1 fun fact or unique selling point"]
+        }`;
 
         const result = await model.generateContent(prompt);
         const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);

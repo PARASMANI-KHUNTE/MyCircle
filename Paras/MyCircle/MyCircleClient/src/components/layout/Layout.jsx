@@ -5,6 +5,12 @@ import { useLocation } from 'react-router-dom';
 
 const Layout = ({ children }) => {
     const location = useLocation();
+    const isHome = location.pathname === '/';
+    const isFeed = location.pathname === '/feed';
+
+    if (isHome || isFeed) {
+        return children;
+    }
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import api from '../utils/api'; // Use API
+import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import PostCard from '../components/ui/PostCard';
 import PostSkeleton from '../components/ui/PostSkeleton';
@@ -8,12 +8,11 @@ import {
     Filter, Search, Map as MapIcon,
     List as ListIcon, MapPin, Package,
     Briefcase, Wrench, Tag, Key,
-    ChevronDown, Sparkles
+    ChevronDown, SlidersHorizontal, ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { useTheme } from '../context/ThemeContext';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -37,15 +36,13 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 const categories = [
-    { id: 'all', label: 'All Circles', icon: Package },
+    { id: 'all', label: 'All', icon: Package },
     { id: 'job', label: 'Jobs', icon: Briefcase },
     { id: 'service', label: 'Services', icon: Wrench },
-    { id: 'sell', label: 'Sell', icon: Tag },
-    { id: 'rent', label: 'Rent', icon: Key }
+    { id: 'sell', label: 'Buy/Sell', icon: Tag },
+    { id: 'rent', label: 'Rentals', icon: Key }
 ];
 
-
-// Helper to update map center programmatically
 const MapUpdater = ({ center, zoom }) => {
     const map = useMap();
     useEffect(() => {
@@ -59,7 +56,6 @@ const MapUpdater = ({ center, zoom }) => {
 const Feed = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { isDark } = useTheme(); // Theme awareness
     const { success, error: showError } = useToast();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -67,12 +63,12 @@ const Feed = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortOrder, setSortOrder] = useState('latest');
     const [locationFilter, setLocationFilter] = useState('all');
-    const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+    const [viewMode, setViewMode] = useState('list');
     const [userLocation, setUserLocation] = useState(null);
-    const [loadingLocation, setLoadingLocation] = useState(false); // New state for geolocation loading
+    const [loadingLocation, setLoadingLocation] = useState(false);
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
-    const { socket } = useSocket(); // Get socket from context
+    const { socket } = useSocket();
 
     useEffect(() => {
         if (socket) {
@@ -99,7 +95,6 @@ const Feed = () => {
         }
     };
 
-    // Get unique locations for filter dropdown
     const availableLocations = React.useMemo(() => {
         const locations = [...new Set(posts.map(p => p.location).filter(Boolean))];
         return locations.sort();
@@ -114,7 +109,6 @@ const Feed = () => {
             return matchesFilter && matchesSearch && matchesLocation;
         });
 
-        // Sort posts
         result.sort((a, b) => {
             const dateA = new Date(a.createdAt);
             const dateB = new Date(b.createdAt);
@@ -124,12 +118,10 @@ const Feed = () => {
         return result;
     }, [posts, filter, searchTerm, locationFilter, sortOrder]);
 
-    // Map Specific logic
     const mapPosts = React.useMemo(() => {
         return filteredPosts
             .filter(p => p.locationCoords?.coordinates)
             .map(p => {
-                // Fuzz coordinates slightly for privacy (+/- ~250m) as in mobile
                 const fuzzLat = (Math.random() - 0.5) * 0.005;
                 const fuzzLng = (Math.random() - 0.5) * 0.005;
                 return {
@@ -143,7 +135,6 @@ const Feed = () => {
     const toggleViewMode = () => {
         if (viewMode === 'list' && !userLocation) {
             setLoadingLocation(true);
-            // Try to get user location
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     setUserLocation({
@@ -167,97 +158,125 @@ const Feed = () => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            {/* Premium Header Section */}
-            <div className="flex flex-col gap-10 mb-12">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                    <div className="space-y-3">
-                        <motion.h1
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="text-5xl font-black text-foreground tracking-tight leading-none"
+        <div className="min-h-screen bg-white text-slate-900">
+            {/* --- Minimal Navbar --- */}
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-8">
+                        <div
+                            onClick={() => navigate('/')}
+                            className="flex items-center gap-2 font-bold text-xl tracking-tighter cursor-pointer"
                         >
-                            Discover <span className="text-primary italic">Circles</span>
-                        </motion.h1>
-                        <motion.p
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="text-lg text-muted-foreground font-medium max-w-md leading-relaxed"
-                        >
-                            Explore hyper-local opportunities, services, and connections in your immediate circle.
-                        </motion.p>
+                            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white">
+                                <span className="text-lg">M</span>
+                            </div>
+                            MyCircle.
+                        </div>
                     </div>
 
-                    {/* View Mode Switcher */}
-                    <div className="glass rounded-2xl p-1 w-full md:w-auto">
+                    <div className="flex items-center gap-4">
+                        {user && (
+                            <button
+                                onClick={() => navigate('/create')}
+                                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-bold rounded-full hover:bg-slate-800 transition-all"
+                            >
+                                + Create Post
+                            </button>
+                        )}
+                        {user ? (
+                            <img
+                                src={`https://ui-avatars.com/api/?name=${user.displayName}&background=000&color=fff`}
+                                alt="Profile"
+                                className="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-slate-100 transition-all"
+                                onClick={() => navigate('/profile')}
+                            />
+                        ) : (
+                            <button onClick={() => navigate('/auth')} className="text-sm font-bold hover:underline">Sign In</button>
+                        )}
+                    </div>
+                </div>
+            </nav>
+
+            <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto">
+                {/* --- Control Bar --- */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
+                    <div className="relative w-full md:max-w-md group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-black transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-slate-50 border border-transparent focus:border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-medium transition-all focus:outline-none focus:bg-white focus:ring-4 focus:ring-slate-50"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                onClick={() => setFilter(cat.id)}
+                                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all border ${filter === cat.id
+                                    ? 'bg-black text-white border-black'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-black'
+                                    }`}
+                            >
+                                {cat.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-black' : 'text-slate-500 hover:text-black'}`}
+                            >
+                                <ListIcon size={16} />
+                            </button>
+                            <button
+                                onClick={toggleViewMode}
+                                className={`p-2 rounded-md transition-all ${viewMode === 'map' ? 'bg-white shadow-sm text-black' : 'text-slate-500 hover:text-black'}`}
+                            >
+                                <MapIcon size={16} />
+                            </button>
+                        </div>
                         <button
-                            onClick={() => setViewMode('list')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
+                            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                            className={`p-2.5 rounded-xl border transition-all ${isFilterExpanded ? 'bg-slate-50 border-slate-300 text-black' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
                         >
-                            <ListIcon className="w-4 h-4" /> List
-                        </button>
-                        <button
-                            onClick={toggleViewMode}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${viewMode === 'map' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
-                        >
-                            <MapIcon className="w-4 h-4" /> Map
+                            <SlidersHorizontal size={16} />
                         </button>
                     </div>
                 </div>
 
-                {/* Search & Filter Container */}
-                <div className="flex flex-col gap-6">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="relative group flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Search by title, description or tags..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full glass rounded-2xl pl-12 pr-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-lg font-medium bg-transparent"
-                            />
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                                className={`flex items-center gap-2 px-8 py-4 rounded-2xl text-sm font-bold transition-all ${isFilterExpanded ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'glass text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
-                            >
-                                <Filter className="w-4 h-4" />
-                                Filters
-                                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isFilterExpanded ? 'rotate-180' : ''}`} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <AnimatePresence>
-                        {isFilterExpanded && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="glass-panel grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6"
-                            >
+                {/* --- Expanded Filters --- */}
+                <AnimatePresence>
+                    {isFilterExpanded && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            animate={{ opacity: 1, height: 'auto', marginBottom: 40 }}
+                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            className="bg-slate-50 rounded-2xl p-6 border border-slate-100 overflow-hidden"
+                        >
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase px-1">Sort By</label>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sort By</label>
                                     <select
                                         value={sortOrder}
                                         onChange={(e) => setSortOrder(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-black transition-colors"
                                     >
                                         <option value="latest">Newest First</option>
                                         <option value="oldest">Oldest First</option>
                                     </select>
                                 </div>
-
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase px-1">Location</label>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location</label>
                                     <select
                                         value={locationFilter}
                                         onChange={(e) => setLocationFilter(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-black transition-colors"
                                     >
                                         <option value="all">Everywhere</option>
                                         {availableLocations.map(loc => (
@@ -265,154 +284,108 @@ const Feed = () => {
                                         ))}
                                     </select>
                                 </div>
-
-                                <div className="lg:col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase px-1">Quick Action</label>
-                                    <div className="flex gap-2 h-[46px]">
-                                        <button
-                                            onClick={() => {
-                                                setSearchTerm('');
-                                                setFilter('all');
-                                                setLocationFilter('all');
-                                            }}
-                                            className="px-6 rounded-xl bg-white/5 text-xs font-bold text-muted-foreground hover:text-white hover:bg-white/10 transition-all border border-white/5"
-                                        >
-                                            Reset Filters
-                                        </button>
-                                    </div>
+                                <div className="space-y-2 flex flex-col justify-end">
+                                    <button
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            setFilter('all');
+                                            setLocationFilter('all');
+                                            setSortOrder('latest');
+                                        }}
+                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:text-red-500 hover:border-red-200 transition-all"
+                                    >
+                                        Clear All Filters
+                                    </button>
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* Category Tabs */}
-                    {!isFilterExpanded && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
-                            {categories.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setFilter(cat.id)}
-                                    className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filter === cat.id ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105' : 'glass hover:bg-white/5 text-muted-foreground hover:text-foreground hover:translate-y-[-2px]'}`}
-                                >
-                                    <cat.icon className="w-4 h-4" />
-                                    {cat.label}
-                                </button>
-                            ))}
-                        </div>
+                            </div>
+                        </motion.div>
                     )}
-                </div>
-            </div>
+                </AnimatePresence>
 
-            {/* Grid or Map */}
-            {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {[1, 2, 3, 4, 5, 6].map((idx) => (
-                        <PostSkeleton key={idx} />
-                    ))}
-                </div>
-            ) : viewMode === 'map' ? (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="map-container relative z-10 rounded-[2rem] overflow-hidden border border-card-border shadow-2xl h-[600px] bg-card/5"
-                >
-                    <MapContainer
-                        center={userLocation ? [userLocation.lat, userLocation.lng] : [20.5937, 78.9629]}
-                        zoom={userLocation ? 13 : 5}
-                        scrollWheelZoom={true}
-                        className="w-full h-full z-0"
-                    >
-                        <MapUpdater center={userLocation ? [userLocation.lat, userLocation.lng] : null} zoom={userLocation ? 13 : 5} />
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url={isDark
-                                ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                                : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
-                        />
-                        {userLocation && (
-                            <Marker position={[userLocation.lat, userLocation.lng]}>
-                                <Popup className="font-bold">You are here</Popup>
-                            </Marker>
-                        )}
-                        {mapPosts.map(post => (
-                            <Marker
-                                key={post._id}
-                                position={[post.displayLat, post.displayLng]}
-                            >
-                                <Popup className="custom-popup">
-                                    <div className="min-w-[240px] overflow-hidden">
-                                        {post.images && post.images[0] && (
-                                            <div className="h-32 -mx-3 -mt-3 mb-3">
-                                                <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between items-start mb-2 px-1">
-                                            <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest">{post.type}</span>
-                                            {post.price && <span className="font-bold text-sm text-foreground">₹{post.price}</span>}
-                                        </div>
-                                        <h3 className="font-bold text-sm mb-1 text-foreground px-1">{post.title}</h3>
-                                        <p className="text-xs text-muted-foreground line-clamp-2 mb-4 leading-relaxed px-1">{post.description}</p>
-                                        <button
-                                            onClick={() => handlePostClick(post._id)}
-                                            className="w-full py-2 bg-primary text-white text-[10px] font-bold rounded-lg shadow-lg shadow-primary/20 hover:tracking-widest transition-all"
-                                        >
-                                            VIEW CIRCLE
-                                        </button>
-                                    </div>
-                                </Popup>
-                            </Marker>
+                {/* --- Content Grid --- */}
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
+                            <PostSkeleton key={idx} />
                         ))}
-                    </MapContainer>
-
-                    {/* Loading Overlay for Geolocation */}
-                    {loadingLocation && (
-                        <div className="absolute inset-0 z-[1000] bg-background/50 backdrop-blur-sm flex flex-col items-center justify-center">
-                            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <p className="text-foreground font-medium animate-pulse">Locating you...</p>
-                        </div>
-                    )}
-                </motion.div>
-            ) : (
-                <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    variants={{
-                        hidden: { opacity: 0 },
-                        visible: {
-                            opacity: 1,
-                            transition: {
-                                staggerChildren: 0.1
-                            }
-                        }
-                    }}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                >
-                    {filteredPosts.length > 0 ? (
-                        filteredPosts.map((post) => (
-                            <motion.div
-                                key={post._id}
-                                variants={{
-                                    hidden: { opacity: 0, y: 20 },
-                                    visible: { opacity: 1, y: 0 }
-                                }}
-                                onClick={() => handlePostClick(post._id)}
-                                className="cursor-pointer h-full"
-                            >
-                                <PostCard
-                                    post={post}
-                                    currentUserId={user?._id}
-                                />
-                            </motion.div>
-                        ))
-                    ) : (
-                        <div className="col-span-full py-32 text-center bg-white/5 rounded-[2rem] border border-white/5 border-dashed">
-                            <Sparkles className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-white mb-2">No Circles Found</h3>
-                            <p className="text-gray-500 max-w-xs mx-auto">We couldn't find any circular activities matching your criteria. Try adjusting your filters!</p>
-                        </div>
-                    )}
-                </motion.div>
-            )}
+                    </div>
+                ) : viewMode === 'map' ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.99 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="h-[600px] w-full rounded-2xl overflow-hidden border border-slate-200 relative z-0"
+                    >
+                        <MapContainer
+                            center={userLocation ? [userLocation.lat, userLocation.lng] : [20.5937, 78.9629]}
+                            zoom={userLocation ? 13 : 5}
+                            scrollWheelZoom={true}
+                            className="w-full h-full z-0"
+                        >
+                            <MapUpdater center={userLocation ? [userLocation.lat, userLocation.lng] : null} zoom={userLocation ? 13 : 5} />
+                            <TileLayer
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                            />
+                            {userLocation && (
+                                <Marker position={[userLocation.lat, userLocation.lng]}>
+                                    <Popup className="font-bold">You are here</Popup>
+                                </Marker>
+                            )}
+                            {mapPosts.map(post => (
+                                <Marker
+                                    key={post._id}
+                                    position={[post.displayLat, post.displayLng]}
+                                >
+                                    <Popup className="custom-popup">
+                                        <div className="min-w-[200px]">
+                                            <h3 className="font-bold text-sm mb-1">{post.title}</h3>
+                                            <button
+                                                onClick={() => handlePostClick(post._id)}
+                                                className="text-xs font-bold text-blue-600 hover:underline"
+                                            >
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            ))}
+                        </MapContainer>
+                        {loadingLocation && (
+                            <div className="absolute inset-0 z-[1000] bg-white/60 backdrop-blur-sm flex items-center justify-center">
+                                <div className="text-sm font-bold text-black animate-pulse">Locating...</div>
+                            </div>
+                        )}
+                    </motion.div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <AnimatePresence mode="popLayout">
+                            {filteredPosts.length > 0 ? (
+                                filteredPosts.map((post) => (
+                                    <motion.div
+                                        key={post._id}
+                                        layout
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        onClick={() => handlePostClick(post._id)}
+                                        className="cursor-pointer h-full"
+                                    >
+                                        <PostCard
+                                            post={post}
+                                            currentUserId={user?._id}
+                                        />
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <div className="col-span-full py-40 text-center">
+                                    <h3 className="text-xl font-bold text-slate-900 mb-2">No circles found</h3>
+                                    <p className="text-slate-500 text-sm">Try adjusting your filters or search terms.</p>
+                                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

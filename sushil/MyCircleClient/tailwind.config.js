@@ -7,42 +7,38 @@ export default {
     theme: {
         extend: {
             colors: {
-                background: "#ffffff", // White background for fresh look
-                foreground: "#0f172a", // Slate 900 for text
+                background: "var(--background)",
+                foreground: "var(--foreground)",
                 primary: {
-                    DEFAULT: "#0ea5e9", // Sky Blue - Trust
-                    foreground: "#ffffff",
-                    hover: "#0284c7",
-                    light: "#e0f2fe", // Very light blue for backgrounds
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary) / ${opacityValue})` : "rgb(var(--primary))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-foreground) / ${opacityValue})` : "rgb(var(--primary-foreground))",
+                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-hover) / ${opacityValue})` : "rgb(var(--primary-hover))",
                 },
                 secondary: {
-                    DEFAULT: "#f8fafc", // Slate 50 - Light background
-                    foreground: "#1e293b",
-                    hover: "#f1f5f9",
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary) / ${opacityValue})` : "rgb(var(--secondary))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-foreground) / ${opacityValue})` : "rgb(var(--secondary-foreground))",
+                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-hover) / ${opacityValue})` : "rgb(var(--secondary-hover))",
                 },
                 accent: {
-                    DEFAULT: "#f97316", // Orange
-                    foreground: "#ffffff",
-                    light: "#ffedd5", // Light orange bg
-                },
-                success: {
-                    DEFAULT: "#22c55e", // Green - "Join Circle" button color
-                    foreground: "#ffffff",
-                    light: "#dcfce7",
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent) / ${opacityValue})` : "rgb(var(--accent))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent-foreground) / ${opacityValue})` : "rgb(var(--accent-foreground))",
                 },
                 muted: {
-                    DEFAULT: "#f1f5f9", // Light gray
-                    foreground: "#64748b", // Slate 500
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted) / ${opacityValue})` : "rgb(var(--muted))",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted-foreground) / ${opacityValue})` : "rgb(var(--muted-foreground))",
                 },
                 card: {
-                    DEFAULT: "#ffffff",
-                    foreground: "#0f172a",
-                    border: "#e2e8f0", // Slate 200
+                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card) / ${opacityValue})` : "rgb(var(--card) / 0.6)",
+                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card-foreground) / ${opacityValue})` : "rgb(var(--card-foreground))",
+                    border: ({ opacityValue }) => {
+                        // Light theme uses higher opacity for border
+                        return opacityValue !== undefined ? `rgb(var(--card-border) / ${opacityValue})` : "rgb(var(--card-border) / 0.15)";
+                    },
                 }
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],
-                display: ['Playfair Display', 'serif'], // New Serif font
+                display: ['Outfit', 'sans-serif'], // For Headings
             },
             animation: {
                 'fade-in': 'fadeIn 0.5s ease-out',

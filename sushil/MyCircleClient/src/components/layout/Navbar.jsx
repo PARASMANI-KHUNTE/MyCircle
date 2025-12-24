@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, PlusCircle, MessageCircle } from 'lucide-react';
+import { Menu, X, PlusCircle, MessageCircle, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +15,7 @@ import ChatDrawer from '../chat/ChatDrawer';
 const Navbar = () => {
 
     const { user, login, isAuthenticated } = useAuth();
+    const { theme, toggleTheme, isDark } = useTheme();
     const { unreadCount } = useNotifications();
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
     const { socket } = useSocket();
@@ -108,7 +110,7 @@ const Navbar = () => {
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 group">
                     <img src="/logo.png" alt="MyCircle" className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" />
-                    <span className="text-xl font-bold font-display tracking-tight text-slate-900 group-hover:text-primary transition-colors">
+                    <span className="text-xl font-bold font-display tracking-tight text-foreground group-hover:text-primary transition-colors">
                         MyCircle
                     </span>
                 </Link>
@@ -120,7 +122,7 @@ const Navbar = () => {
                             to={link.path}
                             className={cn(
                                 'text-sm font-medium transition-colors hover:text-primary flex items-center gap-1.5',
-                                location.pathname === link.path ? 'text-slate-900' : 'text-slate-500'
+                                location.pathname === link.path ? 'text-primary font-semibold' : 'text-muted-foreground'
                             )}
                         >
                             {link.name}
@@ -139,7 +141,7 @@ const Navbar = () => {
                         <>
                             <button
                                 onClick={() => setIsChatDrawerOpen(true)}
-                                className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors relative"
+                                className="p-2 text-muted-foreground hover:text-foreground hover:bg-foreground/10 rounded-full transition-colors relative"
                                 title="Messages"
                             >
                                 <MessageCircle className="w-5 h-5" />
@@ -148,6 +150,14 @@ const Navbar = () => {
                                         {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
                                     </span>
                                 )}
+                            </button>
+
+                            <button
+                                onClick={toggleTheme}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                            >
+                                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                             </button>
 
                             <Link to="/create-post">
@@ -175,7 +185,7 @@ const Navbar = () => {
 
                 {/* Mobile Toggle */}
                 <button
-                    className="md:hidden text-slate-700"
+                    className="md:hidden text-white"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 >
                     {isMobileMenuOpen ? <X /> : <Menu />}
@@ -208,7 +218,7 @@ const Navbar = () => {
                                         setIsMobileMenuOpen(false);
                                         setIsChatDrawerOpen(true);
                                     }}
-                                    className="text-gray-300 hover:text-white py-2 flex items-center gap-2"
+                                    className="text-muted-foreground hover:text-foreground py-2 flex items-center gap-2"
                                 >
                                     Messages
                                 </button>

@@ -7,6 +7,7 @@ import Input from '../components/ui/Input';
 import Loading from '../components/ui/Loading';
 import { ArrowLeft, Save } from 'lucide-react';
 import api from '../utils/api';
+import { getAvatarUrl } from '../utils/avatar';
 
 const EditProfile = () => {
     const { user, refreshUser } = useAuth();
@@ -99,7 +100,7 @@ const EditProfile = () => {
                     <div className="flex items-center gap-6 mb-4">
                         <div className="w-20 h-20 rounded-full bg-secondary overflow-hidden border border-white/10">
                             <img
-                                src={avatarPreview || '/default-avatar.svg'}
+                                src={avatarPreview || getAvatarUrl(user)}
                                 alt="User"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {

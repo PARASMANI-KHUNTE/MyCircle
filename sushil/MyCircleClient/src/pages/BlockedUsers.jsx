@@ -4,6 +4,7 @@ import api from '../utils/api';
 import Button from '../components/ui/Button';
 import { useDialog } from '../hooks/useDialog';
 import { UserX, ArrowLeft } from 'lucide-react';
+import { getAvatarUrl } from '../utils/avatar';
 
 const BlockedUsers = () => {
     const [blockedUsers, setBlockedUsers] = useState([]);
@@ -78,9 +79,9 @@ const BlockedUsers = () => {
                             <div key={user._id} className="glass rounded-2xl p-6 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <img
-                                        src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.displayName}`}
+                                        src={getAvatarUrl(user)}
                                         alt={user.displayName}
-                                        className="w-12 h-12 rounded-full"
+                                        className="w-12 h-12 rounded-full object-cover border border-white/10"
                                     />
                                     <div>
                                         <h3 className="text-white font-semibold">{user.displayName}</h3>

@@ -47,13 +47,16 @@ export function generateAvatar(name, size = 128) {
 }
 
 /**
- * Get avatar URL - returns user's avatar or generates one
+ * Get avatar URL - returns user's avatar or generates one using Dicebear
  */
 export function getAvatarUrl(user) {
     if (user?.avatar && user.avatar.length > 0) {
-        return user.avatar;
+        if (user.avatar.startsWith('http')) {
+            return user.avatar;
+        }
     }
 
-    const displayName = user?.displayName || user?.email || 'User';
-    return generateAvatar(displayName);
+    const seed = user?.displayName || user?.email || 'User';
+    // Use Dicebear as primary fallback for a better look
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
 }

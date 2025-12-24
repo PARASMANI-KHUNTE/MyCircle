@@ -3,6 +3,7 @@ import { MessageCircle, Trash2 } from 'lucide-react';
 import api from '../../utils/api';
 import { useDialog } from '../../hooks/useDialog';
 import { useToast } from '../ui/Toast';
+import { getAvatarUrl } from '../../utils/avatar';
 
 const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId, onConversationDeleted, typingUsers = {} }) => {
     const dialog = useDialog();
@@ -53,7 +54,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                             <div className="relative shrink-0">
                                 <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden">
                                     <img
-                                        src={otherParticipant?.avatar || "https://ui-avatars.com/api/?name=" + (otherParticipant?.displayName || "User")}
+                                        src={getAvatarUrl(otherParticipant)}
                                         alt={otherParticipant?.displayName}
                                         className="w-full h-full object-cover"
                                     />

@@ -5,6 +5,7 @@ import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles } from 'luci
 import { useToast } from '../ui/Toast';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
+import { getAvatarUrl } from '../../utils/avatar';
 
 const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead }) => {
     const { success, error: showError } = useToast();
@@ -229,7 +230,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                     </button>
                     <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
                         <img
-                            src={otherParticipant?.avatar || "https://ui-avatars.com/api/?name=" + (otherParticipant?.displayName || "User")}
+                            src={getAvatarUrl(otherParticipant)}
                             alt={otherParticipant?.displayName}
                             className="w-full h-full object-cover"
                         />

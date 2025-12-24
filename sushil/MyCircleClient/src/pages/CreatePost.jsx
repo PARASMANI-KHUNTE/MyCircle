@@ -150,7 +150,7 @@ const CreatePost = () => {
 
     return (
         <div className="max-w-2xl mx-auto pb-20">
-            <h1 className="text-3xl font-bold text-white mb-8">Create New Post</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-8">Create New Post</h1>
 
             {/* Profile Warning */}
             {user && !user.contactPhone && !user.contactWhatsapp && (
@@ -184,7 +184,7 @@ const CreatePost = () => {
                                 onClick={() => setFormData({ ...formData, type })}
                                 className={`py-3 rounded-xl font-medium transition-all ${formData.type === type
                                     ? 'bg-primary text-white ring-2 ring-primary/50'
-                                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                    : 'bg-card/10 text-muted-foreground hover:bg-card/20 border border-card-border'
                                     }`}
                             >
                                 {type.toUpperCase()}
@@ -202,11 +202,11 @@ const CreatePost = () => {
                     />
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-gray-400 ml-1">Description</label>
+                        <label className="text-sm font-medium text-muted-foreground ml-1">Description</label>
                         <textarea
                             name="description"
                             rows="4"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+                            className="w-full bg-card/10 border border-card-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
                             placeholder="Describe the task or item in detail..."
                             value={formData.description}
                             onChange={handleChange}
@@ -217,7 +217,7 @@ const CreatePost = () => {
                     {/* Barter Option */}
                     <div className="flex flex-col gap-3">
                         <label className="flex items-center gap-2 cursor-pointer group w-fit">
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.acceptsBarter ? 'bg-primary border-primary' : 'border-gray-500 group-hover:border-primary'}`}>
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.acceptsBarter ? 'bg-primary border-primary' : 'border-card-border group-hover:border-primary'}`}>
                                 {formData.acceptsBarter && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                             </div>
                             <input
@@ -227,7 +227,7 @@ const CreatePost = () => {
                                 onChange={handleChange}
                                 className="hidden"
                             />
-                            <span className="text-gray-300 group-hover:text-white transition-colors">Accept Barter / Exchange</span>
+                            <span className="text-muted-foreground group-hover:text-foreground transition-colors">Accept Barter / Exchange</span>
                         </label>
 
                         {/* Barter Preferences with simple conditional rendering */}
@@ -267,36 +267,36 @@ const CreatePost = () => {
                     </div>
 
                     {/* Contact Info Review */}
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                        <h3 className="text-white font-semibold mb-3">Contact Details to Show</h3>
+                    <div className="p-4 rounded-xl bg-card/10 border border-card-border">
+                        <h3 className="text-foreground font-semibold mb-3">Contact Details to Show</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/5 transition-colors">
+                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-card/10 transition-colors">
                                 <input
                                     type="checkbox"
                                     name="includePhone"
                                     checked={formData.includePhone}
                                     onChange={handleChange}
-                                    className="w-4 h-4 rounded border-gray-500 text-primary focus:ring-primary"
+                                    className="w-4 h-4 rounded border-card-border text-primary focus:ring-primary"
                                 />
                                 <div>
-                                    <div className="text-sm text-gray-300">Phone Number</div>
-                                    <div className="text-xs text-gray-500 font-mono">
+                                    <div className="text-sm text-foreground">Phone Number</div>
+                                    <div className="text-xs text-muted-foreground font-mono">
                                         {formData.contactPhone || 'Not set in profile'}
                                     </div>
                                 </div>
                             </label>
 
-                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/5 transition-colors">
+                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-card/10 transition-colors">
                                 <input
                                     type="checkbox"
                                     name="includeWhatsapp"
                                     checked={formData.includeWhatsapp}
                                     onChange={handleChange}
-                                    className="w-4 h-4 rounded border-gray-500 text-primary focus:ring-primary"
+                                    className="w-4 h-4 rounded border-card-border text-primary focus:ring-primary"
                                 />
                                 <div>
-                                    <div className="text-sm text-gray-300">WhatsApp</div>
-                                    <div className="text-xs text-gray-500 font-mono">
+                                    <div className="text-sm text-foreground">WhatsApp</div>
+                                    <div className="text-xs text-muted-foreground font-mono">
                                         {formData.contactWhatsapp || 'Not set in profile'}
                                     </div>
                                 </div>
@@ -311,10 +311,10 @@ const CreatePost = () => {
 
                     {/* Image Upload */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium text-gray-400 ml-1">Images (Optional, Max 5)</label>
+                        <label className="text-sm font-medium text-muted-foreground ml-1">Images (Optional, Max 5)</label>
                         <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                             {previews.map((preview, index) => (
-                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border border-white/10">
+                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border border-card-border">
                                     <img src={preview} alt="Preview" className="w-full h-full object-cover" />
                                     <button
                                         type="button"
@@ -326,9 +326,9 @@ const CreatePost = () => {
                                 </div>
                             ))}
                             {images.length < 5 && (
-                                <label className="aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-primary/50 hover:bg-white/5 transition-all flex flex-col items-center justify-center cursor-pointer group">
-                                    <Upload className="w-6 h-6 text-gray-500 group-hover:text-primary transition-colors" />
-                                    <span className="text-[10px] text-gray-500 mt-1 group-hover:text-primary transition-colors">Add Photo</span>
+                                <label className="aspect-square rounded-xl border-2 border-dashed border-card-border hover:border-primary/50 hover:bg-card/10 transition-all flex flex-col items-center justify-center cursor-pointer group">
+                                    <Upload className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                                    <span className="text-[10px] text-muted-foreground mt-1 group-hover:text-primary transition-colors">Add Photo</span>
                                     <input
                                         type="file"
                                         className="hidden"

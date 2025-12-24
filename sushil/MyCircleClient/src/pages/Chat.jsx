@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
 import { useAuth } from '../context/AuthContext';
@@ -14,10 +15,30 @@ const Chat = () => {
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
+    const location = useLocation();
 
     useEffect(() => {
-        fetchConversations();
-    }, []);
+        const initChat = async () => {
+            await fetchConversations();
+
+            const queryParams = new URLSearchParams(location.search);
+            const recipientId = queryParams.get('recipientId');
+
+            if (recipientId) {
+                try {
+                    const res = await api.post(`/chat/init/${recipientId}`);
+                    setSelectedConversation(res.data);
+                    // Refresh conversations to make sure the new/clicked one is in the list
+                    const updatedRes = await api.get('/chat/conversations');
+                    setConversations(updatedRes.data);
+                } catch (err) {
+                    console.error('Failed to auto-init chat:', err);
+                }
+            }
+        };
+
+        if (user) initChat();
+    }, [location.search, user]);
 
     // Listen for new messages to update conversation list order/preview
     useEffect(() => {
@@ -69,8 +90,8 @@ const Chat = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-24 h-screen max-h-screen flex flex-col">
-            <div className="flex-1 glass rounded-2xl overflow-hidden flex shadow-2xl">
+        <div className="flex flex-col h-[calc(100vh-12rem)] w-full max-w-6xl mx-auto">
+            <div className="flex-1 glass rounded-3xl overflow-hidden flex shadow-2xl border border-white/10">
                 {/* Chat List Sidebar */}
                 <div className={`w-full md:w-1/3 border-r border-white/10 bg-black/20 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
                     <div className="p-4 border-b border-white/10 flex items-center justify-between">

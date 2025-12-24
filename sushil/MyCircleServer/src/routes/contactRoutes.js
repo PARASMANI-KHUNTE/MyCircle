@@ -8,5 +8,6 @@ router.post('/:postId', auth, contactController.createRequest);
 router.get('/received', auth, contactController.getReceivedRequests);
 router.get('/sent', auth, contactController.getSentRequests);
 router.put('/:id/status', auth, contactController.updateRequestStatus);
+router.delete('/:id', auth, contactController.deleteRequest);
 
 module.exports = router;

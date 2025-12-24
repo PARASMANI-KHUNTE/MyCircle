@@ -71,7 +71,7 @@ exports.createPost = async (req, res) => {
 // @access  Public
 exports.getPosts = async (req, res) => {
     try {
-        const { latitude, longitude, radius = 50, type, filter } = req.query; // radius in km
+        const { latitude, longitude, radius = 50, type, filter, userId } = req.query; // radius in km
 
         let pipeline = [];
 

@@ -516,59 +516,85 @@ const CreatePostScreen = ({ navigation }: any) => {
 
     const renderStep4 = () => (
         <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, themeStyles.text]}>Review</Text>
+            <Text style={[styles.stepTitle, themeStyles.text]}>Preview Your Post</Text>
 
-            <View style={[styles.reviewCard, themeStyles.card]}>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Type</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text]}>{categories.find(c => c.id === type)?.label}</Text>
-                </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Title</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text]}>{title}</Text>
-                </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Price/Budget</Text>
-                    <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[styles.reviewValue, { color: colors.primary, fontWeight: 'bold' }]}>₹ {price}</Text>
-                        {acceptsBarter && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                                <Handshake size={12} color={colors.textSecondary} />
-                                <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 4 }}>Barter/Favour</Text>
+            {/* Styled Preview Card */}
+            <View style={[styles.previewCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                {/* Header with badges */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ backgroundColor: getCategoryColor(type), paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                            <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' }}>{type}</Text>
+                        </View>
+                        {isUrgent && (
+                            <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                                <Text style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>🔥 URGENT</Text>
                             </View>
                         )}
                     </View>
-                </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Duration</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Clock size={14} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                        <Text style={[styles.reviewValue, themeStyles.text]}>{durations.find(d => d.value === duration)?.label}</Text>
+                    <View style={{ backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                        <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold' }}>
+                            {exchangePreference === 'money' ? '💵 Money' : exchangePreference === 'barter' ? '🤝 Barter' : '🔄 Flexible'}
+                        </Text>
                     </View>
                 </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Location</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text]} numberOfLines={1}>{location}</Text>
-                </View>
 
-                <View style={{ marginTop: 16 }}>
-                    <Text style={styles.reviewLabel}>Description</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text, { marginTop: 4, lineHeight: 20 }]}>{description}</Text>
-                </View>
-
+                {/* Images Preview */}
                 {images.length > 0 && (
-                    <View style={{ marginTop: 16 }}>
-                        <Text style={styles.reviewLabel}>Images ({images.length})</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                            {images.map((img, i) => (
-                                <Image key={i} source={{ uri: img.uri }} style={{ width: 60, height: 60, borderRadius: 8, marginRight: 8, backgroundColor: colors.input }} />
-                            ))}
-                        </ScrollView>
-                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                        {images.map((img, i) => (
+                            <Image key={i} source={{ uri: img.uri }} style={{ width: 100, height: 100, borderRadius: 12, marginRight: 8, backgroundColor: colors.input }} />
+                        ))}
+                    </ScrollView>
                 )}
+
+                {/* Title */}
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>{title || 'No title'}</Text>
+
+                {/* Description */}
+                <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 12 }} numberOfLines={3}>
+                    {description || 'No description'}
+                </Text>
+
+                {/* Price & Barter */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <Text style={{ color: colors.primary, fontSize: 20, fontWeight: 'bold' }}>₹ {price || '0'}</Text>
+                    {acceptsBarter && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+                            <Handshake size={14} color={colors.textSecondary} />
+                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 4 }}>Open to Barter</Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* Meta info */}
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MapPin size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                        <Text style={{ color: colors.textSecondary, fontSize: 13 }} numberOfLines={1}>{location || 'No location set'}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Clock size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Expires in {durations.find(d => d.value === duration)?.label}</Text>
+                    </View>
+                </View>
             </View>
+
+            <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 12, fontStyle: 'italic' }}>
+                This is how your post will appear to others
+            </Text>
         </View>
     );
+
+    const getCategoryColor = (catId: string) => {
+        switch (catId) {
+            case 'job': return '#3b82f6';
+            case 'service': return '#06b6d4';
+            case 'sell': return '#f59e0b';
+            case 'rent': return '#8b5cf6';
+            default: return '#8b5cf6';
+        }
+    };
 
     const showAlert = (title: string, message: string) => {
         setAlertConfig({
@@ -758,6 +784,7 @@ const styles = StyleSheet.create({
     locationInputWrapper: { flexDirection: 'row', alignItems: 'center' },
     selectCityButton: { width: 50, height: 50, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderLeftWidth: 0, borderTopRightRadius: 12, borderBottomRightRadius: 12 },
     pinMapButton: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
+    previewCard: { padding: 16, borderRadius: 16, borderWidth: 1 },
     reviewCard: { padding: 20, borderRadius: 16, borderWidth: 1 },
     reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
     reviewLabel: { color: '#71717a', fontSize: 14 },

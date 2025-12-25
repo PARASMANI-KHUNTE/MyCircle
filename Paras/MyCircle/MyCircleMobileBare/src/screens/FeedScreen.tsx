@@ -666,9 +666,25 @@ const FeedScreen = ({ navigation }: any) => {
 
                     <AnimatedFilterChip
                         icon={ArrowUpDown}
-                        label={sortOrder === 'latest' ? 'Latest' : 'Oldest'}
-                        isActive={false}
-                        onPress={toggleSort}
+                        label={sortOrder === 'latest' ? 'Latest' : sortOrder === 'oldest' ? 'Oldest' : sortOrder === 'urgent' ? '🔥 Urgent' : '📍 Nearest'}
+                        isActive={sortOrder !== 'latest'}
+                        onPress={() => {
+                            const sortOptions: Array<'latest' | 'oldest' | 'urgent' | 'nearest'> = ['latest', 'oldest', 'urgent', 'nearest'];
+                            const currentIdx = sortOptions.indexOf(sortOrder);
+                            setSortOrder(sortOptions[(currentIdx + 1) % sortOptions.length]);
+                        }}
+                        colors={colors}
+                    />
+
+                    <AnimatedFilterChip
+                        icon={MapPin}
+                        label={distanceRadius === 50 ? 'Distance' : `${distanceRadius}km`}
+                        isActive={distanceRadius !== 50}
+                        onPress={() => {
+                            const distances = [50, 1, 5, 10, 25];
+                            const currentIdx = distances.indexOf(distanceRadius);
+                            setDistanceRadius(distances[(currentIdx + 1) % distances.length]);
+                        }}
                         colors={colors}
                     />
 

@@ -17,7 +17,7 @@ const typeConfig = {
     rent: { bg: 'bg-orange-50 text-orange-700 border-orange-100', label: 'Rental' }
 };
 
-const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnPost, onEdit }) => {
+const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnPost, onEdit, onClick }) => {
     const navigate = useNavigate();
     const { title, description, type, location, price, user, createdAt, images, acceptsBarter, likes: initialLikes, isActive, status } = post;
     const { success } = useToast();
@@ -76,7 +76,7 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
             className={`group h-full bg-white rounded-2xl border border-zinc-200 overflow-hidden flex flex-col relative ${!isActive ? 'opacity-60 grayscale' : 'shadow-sm hover:border-zinc-300'}`}
         >
             {/* --- Image Section --- */}
-            <div className="relative aspect-[4/3] overflow-hidden cursor-pointer bg-zinc-100" onClick={() => navigate(`/post/${post._id}`)}>
+            <div className="relative aspect-[4/3] overflow-hidden cursor-pointer bg-zinc-100" onClick={() => onClick ? onClick(post._id) : navigate(`/post/${post._id}`)}>
                 {images && images.length > 0 ? (
                     <img
                         src={images[0]}

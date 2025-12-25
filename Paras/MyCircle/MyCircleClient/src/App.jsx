@@ -39,7 +39,6 @@ function App() {
                       <Route path="/create-post" element={<CreatePost />} />
                       <Route path="/my-posts" element={<MyPosts />} />
                       <Route path="/requests" element={<Requests />} />
-                      <Route path="/profile" element={<Profile />} />
                       <Route path="/edit-profile" element={<EditProfile />} />
                       <Route path="/post/:id" element={<PostDetails />} />
                       <Route path="/notifications" element={<Notifications />} />

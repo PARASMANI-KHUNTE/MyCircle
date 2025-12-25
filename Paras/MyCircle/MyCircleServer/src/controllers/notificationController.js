@@ -89,8 +89,11 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
         });
         await notification.save();
 
+        // Populate sender before emitting so the avatar is included
         if (io) {
-            io.to(`user:${recipient.toString()}`).emit('new_notification', notification);
+            const populatedNotification = await Notification.findById(notification._id)
+                .populate('sender', 'displayName avatar');
+            io.to(`user:${recipient.toString()}`).emit('new_notification', populatedNotification);
         }
     } catch (err) {
         console.error("Notification creation failed:", err);

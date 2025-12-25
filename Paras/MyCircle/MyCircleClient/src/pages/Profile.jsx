@@ -2,14 +2,15 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { MapPin, Mail, Phone, Calendar, Edit2, Star, Shield, LayoutGrid } from 'lucide-react';
-import Button from '../components/ui/Button';
-import StatsCard from '../components/ui/StatsCard';
-import { getAvatarUrl } from '../utils/avatar';
-import PostCard from '../components/ui/PostCard';
-import EditPostModal from '../components/ui/EditPostModal';
+import {
+    MapPin, Calendar, Edit2, Settings, LogOut,
+    Plus, LayoutGrid, Package, Mail
+} from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import LoginRequired from '../components/LoginRequired';
+import PostCard from '../components/ui/PostCard';
+import PostSkeleton from '../components/ui/PostSkeleton';
+import { getAvatarUrl } from '../utils/avatar';
 
 const Profile = () => {
     const { user: authUser, logout } = useAuth();
@@ -17,15 +18,16 @@ const Profile = () => {
     const [loading, setLoading] = React.useState(true);
     const [posts, setPosts] = React.useState([]);
     const [postsLoading, setPostsLoading] = React.useState(true);
-    const [editingPost, setEditingPost] = React.useState(null);
     const { success, error: showError } = useToast();
     const location = useLocation();
     const navigate = useNavigate();
 
+    // Determine target user (Self vs Other)
     const queryParams = new URLSearchParams(location.search);
     const userId = queryParams.get('userId');
     const isOwnProfile = !userId || userId === authUser?._id;
 
+    // --- Data Fetching ---
     React.useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -33,29 +35,32 @@ const Profile = () => {
                 const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
                 const res = await api.get(endpoint);
 
+                // Fetch extra stats if own profile
                 let statsRes = { data: { stats: res.data.stats || {} } };
                 if (isOwnProfile) {
-                    // Refresh stats for own profile
-                    statsRes = await api.get('/user/stats');
+                    try {
+                        statsRes = await api.get('/user/stats');
+                    } catch (e) { console.warn("Stats fetch failed", e); }
                 }
 
                 const userData = res.data;
                 setProfile({
                     ...userData,
-                    location: userData.location || 'Location not set',
-                    joined: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : '',
-                    bio: userData.bio || '',
-                    skills: userData.skills || [],
+                    location: userData.location || 'Remote',
+                    joined: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : 'Unknown',
+                    bio: userData.bio || 'No bio provided.',
+                    role: userData.role || 'Member', // Assuming role field exists or defaulting
                     stats: isOwnProfile ? statsRes.data.stats : (userData.stats || {}),
                 });
             } catch (err) {
                 console.error(err);
+                showError('Failed to load profile');
             } finally {
                 setLoading(false);
             }
         };
 
-        if (authUser) fetchProfile();
+        if (authUser || userId) fetchProfile();
     }, [userId, authUser, isOwnProfile]);
 
     React.useEffect(() => {
@@ -63,6 +68,9 @@ const Profile = () => {
             try {
                 setPostsLoading(true);
                 const targetId = userId || authUser?._id;
+                // If dashboard/own profile, we might want 'my-posts' endpoint for comprehensive list, 
+                // but public posts endpoint is safer for general 'profile view' compatibility. 
+                // Let's stick to generic posts query for now unless strictly 'my-posts' needed.
                 const res = await api.get('/posts', { params: { userId: targetId } });
                 setPosts(res.data);
             } catch (err) {
@@ -75,187 +83,192 @@ const Profile = () => {
         if (authUser || userId) fetchUserPosts();
     }, [userId, authUser]);
 
-    const handleUpdatePost = (updatedPost) => {
-        setPosts(posts.map(p => p._id === updatedPost._id ? { ...p, ...updatedPost } : p));
-    };
-
-    const handleDeletePost = async (postId) => {
-        if (window.confirm('Are you sure you want to delete this post?')) {
-            try {
-                await api.delete(`/posts/${postId}`);
-                setPosts(posts.filter(p => p._id !== postId));
-                success('Post deleted successfully');
-            } catch (err) {
-                showError('Failed to delete post');
-            }
-        }
-    };
-
-    const handleStatusChange = async (postId, status) => {
-        try {
-            const res = await api.patch(`/posts/${postId}/status`, { status });
-            handleUpdatePost(res.data);
-            success(`Post status updated to ${status}`);
-        } catch (err) {
-            showError('Failed to update status');
-        }
-    };
-
+    // --- Handlers ---
     const handleLogout = () => {
-        logout();
-        navigate('/');
-    };
-
-    const handleBlock = async () => {
-        if (window.confirm('Are you sure you want to block this user?')) {
-            try {
-                await api.post(`/user/block/${userId}`);
-                alert('User blocked');
-                navigate('/feed');
-            } catch (err) {
-                console.error(err);
-                alert('Failed to block user');
-            }
+        if (window.confirm('Are you sure you want to sign out?')) {
+            logout();
+            navigate('/');
         }
     };
 
-    const handleMessage = () => {
-        // Find or create conversation logic is handled in Chat.jsx/ChatWindow.jsx
-        // For now, we move to chat with a recipient hint
-        navigate(`/chat?recipientId=${userId}`);
+    const handleCreateContactRequest = async (postId, e) => {
+        e.stopPropagation();
+        if (!authUser) return;
+        try {
+            await api.post(`/requests/${postId}`);
+            success('Contact request sent!');
+        } catch (err) {
+            showError(err.response?.data?.msg || 'Failed to send request');
+        }
     };
 
-    if (!authUser && !userId) {
-        return <LoginRequired message="Please sign in to view your profile." />;
+    // --- Loading State ---
+    if (loading) {
+        return (
+            <div className="flex flex-col gap-6 max-w-5xl mx-auto p-8 animate-pulse">
+                <div className="h-64 bg-zinc-100 rounded-2xl w-full"></div>
+                <div className="grid grid-cols-3 gap-6">
+                    <div className="h-40 bg-zinc-100 rounded-xl"></div>
+                    <div className="h-40 bg-zinc-100 rounded-xl"></div>
+                    <div className="h-40 bg-zinc-100 rounded-xl"></div>
+                </div>
+            </div>
+        );
     }
 
-    if (loading || !profile) {
-        return <div className="min-h-screen flex items-center justify-center text-white">Loading profile...</div>;
-    }
+    if (!profile) return <div className="p-8 text-center text-zinc-500">Profile not found.</div>;
 
-    const stats = profile.stats || { rating: 0, totalPosts: 0, activePosts: 0 };
-
+    // --- Render ---
     return (
-        <div className="container mx-auto px-6 py-24 text-foreground">
-            <div className="max-w-4xl mx-auto">
-                {/* Header Card */}
-                <div className="glass rounded-3xl p-8 mb-8 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
+        <div className="flex flex-col gap-10 max-w-6xl mx-auto px-6 py-10 w-full min-h-full">
 
-                    <div className="relative flex flex-col md:flex-row items-end gap-6 pt-12">
-                        <div className="w-32 h-32 rounded-full ring-4 ring-background bg-background overflow-hidden shadow-2xl">
+            {/* 1. Header Card: Identity & Controls */}
+            <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+
+                {/* Identity Section */}
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 w-full">
+                    {/* Avatar */}
+                    <div className="relative group shrink-0">
+                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-zinc-100">
                             <img
                                 src={getAvatarUrl(profile)}
                                 alt={profile.displayName}
                                 className="w-full h-full object-cover"
                             />
                         </div>
+                        {/* Status Dot */}
+                        <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-4 border-white rounded-full"></div>
+                    </div>
 
-                        <div className="flex-1 mb-2">
-                            <h1 className="text-3xl font-bold font-display text-foreground">{profile.displayName}</h1>
-                            <div className="flex items-center gap-4 text-muted-foreground mt-2 text-sm">
-                                <span className="flex items-center gap-1">
-                                    <MapPin className="w-4 h-4" /> {profile.location}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <Calendar className="w-4 h-4" /> Joined {profile.joined}
-                                </span>
+                    {/* Meta Info */}
+                    <div className="text-center md:text-left flex-1 min-w-0">
+                        <div className="flex flex-col md:flex-row items-center md:items-baseline gap-3 mb-2">
+                            <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 tracking-tight truncate">
+                                {profile.displayName}
+                            </h1>
+                            <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 text-xs font-semibold tracking-wide border border-zinc-200 uppercase">
+                                {profile.role || 'Member'}
+                            </span>
+                        </div>
+
+                        <p className="text-zinc-500 text-sm md:text-base max-w-lg mb-4 leading-relaxed">
+                            {profile.bio}
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-zinc-500">
+                            <div className="flex items-center gap-1.5">
+                                <MapPin size={14} className="text-zinc-400" />
+                                {profile.location}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Calendar size={14} className="text-zinc-400" />
+                                Joined {profile.joined}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Mail size={14} className="text-zinc-400" />
+                                {profile.email}
                             </div>
                         </div>
-
-                        <div className="flex gap-3 mb-2 flex-wrap">
-                            {isOwnProfile ? (
-                                <>
-                                    <Button variant="outline" onClick={() => navigate('/edit-profile')}>
-                                        <Edit2 className="w-4 h-4 mr-2" />
-                                        Edit Profile
-                                    </Button>
-                                    <Button variant="outline" onClick={() => navigate('/settings')}>
-                                        Settings
-                                    </Button>
-                                    <Button variant="danger" onClick={handleLogout}>
-                                        Logout
-                                    </Button>
-                                </>
-                            ) : (
-                                <>
-                                    <Button variant="primary" onClick={handleMessage}>
-                                        <Mail className="w-4 h-4 mr-2" />
-                                        Message
-                                    </Button>
-                                    <Button variant="danger" onClick={handleBlock}>
-                                        Block User
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    <p className="mt-8 text-muted-foreground leading-relaxed max-w-2xl">
-                        {profile.bio}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2 mt-6">
-                        {profile.skills.map((skill, index) => (
-                            <span key={index} className="px-3 py-1 rounded-full glass hover:bg-white/10 text-xs text-primary font-bold">
-                                {skill}
-                            </span>
-                        ))}
                     </div>
                 </div>
 
-                {/* Stats Grid */}
-            </div>
-
-            {/* My Posts Section */}
-            <div className="mt-12">
-                <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold font-display">
-                        {isOwnProfile ? 'My Posts' : `${profile.displayName}'s Posts`}
-                    </h2>
-                    {isOwnProfile && (
-                        <Button variant="primary" size="sm" onClick={() => navigate('/create-post')}>
-                            Create New
-                        </Button>
-                    )}
-                </div>
-
-                {postsLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {[1, 2].map(i => (
-                            <div key={i} className="glass h-64 rounded-2xl animate-pulse bg-white/5" />
-                        ))}
-                    </div>
-                ) : posts.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {posts.map(post => (
-                            <PostCard
-                                key={post._id}
-                                post={post}
-                                isOwnPost={isOwnProfile}
-                                onDelete={() => handleDeletePost(post._id)}
-                                onStatusChange={(status) => handleStatusChange(post._id, status)}
-                                onEdit={() => setEditingPost(post)}
-                                currentUserId={authUser?._id}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="glass rounded-2xl p-12 text-center">
-                        <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                        <p className="text-muted-foreground">No posts found yet.</p>
+                {/* Actions (Only for Own Profile) */}
+                {isOwnProfile && (
+                    <div className="flex flex-row md:flex-col gap-3 shrink-0 w-full md:w-auto">
+                        <button
+                            onClick={() => navigate('/edit-profile')}
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-zinc-900 text-white hover:bg-zinc-800 active:bg-black rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow"
+                        >
+                            <Edit2 size={16} />
+                            Edit Profile
+                        </button>
+                        <button
+                            onClick={() => navigate('/settings')}
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 rounded-xl text-sm font-medium transition-all"
+                        >
+                            <Settings size={16} />
+                            Settings
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-all group"
+                        >
+                            <LogOut size={16} className="group-hover:translate-x-1 transition-transform" />
+                            Sign Out
+                        </button>
                     </div>
                 )}
             </div>
 
-            {editingPost && (
-                <EditPostModal
-                    post={editingPost}
-                    isOpen={!!editingPost}
-                    onClose={() => setEditingPost(null)}
-                    onUpdate={handleUpdatePost}
-                />
-            )}
+            {/* 2. Listings Section */}
+            <div>
+                <div className="flex items-center justify-between mb-8 border-b border-zinc-200 pb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-zinc-100 rounded-lg text-zinc-600">
+                            <Package size={20} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-zinc-900">
+                                {isOwnProfile ? 'My Listings' : `${profile.displayName.split(' ')[0]}'s Listings`}
+                            </h2>
+                            <p className="text-zinc-500 text-sm">
+                                {posts.length} active {posts.length === 1 ? 'post' : 'posts'}
+                            </p>
+                        </div>
+                    </div>
+                    {isOwnProfile && (
+                        <button
+                            onClick={() => navigate('/create-post')}
+                            className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 font-medium text-sm transition-colors border border-dashed border-zinc-300 hover:border-zinc-400 px-4 py-2 rounded-full"
+                        >
+                            <Plus size={16} />
+                            Create New
+                        </button>
+                    )}
+                </div>
+
+                {/* Grid */}
+                {postsLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[1, 2, 3].map(i => <PostSkeleton key={i} />)}
+                    </div>
+                ) : posts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+                        {posts.map(post => (
+                            <div key={post._id} className="h-full">
+                                <PostCard
+                                    post={post}
+                                    currentUserId={authUser?._id}
+                                    onRequestContact={handleCreateContactRequest}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-zinc-50 rounded-2xl border-2 border-dashed border-zinc-200 p-12 flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+                            <LayoutGrid className="text-zinc-300" size={32} />
+                        </div>
+                        <h3 className="text-lg font-bold text-zinc-900 mb-1">
+                            No listings yet
+                        </h3>
+                        <p className="text-zinc-500 max-w-xs mb-6 text-sm">
+                            {isOwnProfile
+                                ? "You haven't posted anything yet. Share your services, items, or jobs with the community."
+                                : "This user hasn't posted any listings yet."}
+                        </p>
+                        {isOwnProfile && (
+                            <button
+                                onClick={() => navigate('/create-post')}
+                                className="px-6 py-2.5 bg-zinc-900 text-white font-medium rounded-xl hover:bg-black transition-colors shadow-lg shadow-zinc-900/10"
+                            >
+                                Create your first post
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+
         </div>
     );
 };

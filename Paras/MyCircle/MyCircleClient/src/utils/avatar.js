@@ -50,9 +50,17 @@ export function generateAvatar(name, size = 128) {
  * Get avatar URL - returns user's avatar or generates one using Dicebear
  */
 export function getAvatarUrl(user) {
-    if (user?.avatar && user.avatar.length > 0) {
-        if (user.avatar.startsWith('http')) {
-            return user.avatar;
+    // Check various avatar field names (Google auth may use different fields)
+    const avatarUrl = user?.avatar || user?.picture || user?.photoURL || user?.photo;
+
+    if (avatarUrl && avatarUrl.length > 0) {
+        // If it's already a full URL, return it
+        if (avatarUrl.startsWith('http')) {
+            return avatarUrl;
+        }
+        // If it's a relative path, prepend API URL
+        if (avatarUrl.startsWith('/')) {
+            return avatarUrl;
         }
     }
 

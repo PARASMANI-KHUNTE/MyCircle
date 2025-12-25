@@ -80,14 +80,13 @@ const Feed = ({ isDashboard = false }) => {
         return matchesCategory && matchesSearch;
     });
 
-    return isDashboard ? (
-        <div className="flex flex-col h-full">
-            {/* --- Sticky Header (Dashboard Mode) --- */}
-            {isDashboard ? (
+    // Dashboard mode - render inside dashboard layout
+    if (isDashboard) {
+        return (
+            <div className="flex flex-col h-full">
+                {/* --- Sticky Header (Dashboard Mode) --- */}
                 <div className="sticky top-0 z-30 bg-[#FAFAF9]/95 backdrop-blur-md pt-2 pb-6 border-b border-zinc-200/50 mb-6 transition-all">
                     <div className="flex flex-col gap-6">
-
-                        {/* Title & Stats */}
                         <div className="flex items-end justify-between px-1">
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Discover Your Circle</h1>
@@ -97,9 +96,7 @@ const Feed = ({ isDashboard = false }) => {
                             </div>
                         </div>
 
-                        {/* Search & Filter Bar */}
                         <div className="flex flex-col md:flex-row items-center gap-4">
-                            {/* Search Input */}
                             <div className="relative group w-full md:w-96">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
                                 <input
@@ -110,16 +107,12 @@ const Feed = ({ isDashboard = false }) => {
                                     className="w-full bg-white border border-zinc-200 text-zinc-900 text-sm font-medium rounded-full pl-10 pr-10 py-3 focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none shadow-sm placeholder:text-zinc-400 hover:border-zinc-300 transition-all"
                                 />
                                 {searchTerm && (
-                                    <button
-                                        onClick={() => setSearchTerm('')}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-900"
-                                    >
+                                    <button onClick={() => setSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-900">
                                         <X size={14} />
                                     </button>
                                 )}
                             </div>
 
-                            {/* Filter Chips */}
                             <div className="flex items-center gap-2 overflow-x-auto pb-1 w-full md:w-auto no-scrollbar">
                                 {categories.map((cat) => {
                                     const Icon = cat.icon;
@@ -142,89 +135,163 @@ const Feed = ({ isDashboard = false }) => {
                         </div>
                     </div>
                 </div>
-            ) : (
-                /* --- Standalone Header (Public / No-Dashboard Mode) --- */
-                <div className="w-full pb-8 pt-2">
-                    <div className="flex flex-col items-center justify-center gap-6 mb-8 text-center">
-                        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900">Explore Listings</h1>
-                        <p className="text-lg text-zinc-500 max-w-xl">
-                            Find trusted services, jobs, and items in your local community.
+
+                {/* Feed Grid */}
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
+                        {[...Array(6)].map((_, i) => <PostSkeleton key={i} />)}
+                    </div>
+                ) : filteredPosts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20 auto-rows-fr">
+                        {filteredPosts.map(post => (
+                            <div key={post._id} className="h-full">
+                                <PostCard
+                                    post={post}
+                                    onRequestContact={handleCreateContactRequest}
+                                    currentUserId={user?._id}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-32 text-center">
+                        <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+                            <Search className="w-8 h-8 text-zinc-300" />
+                        </div>
+                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No results found</h3>
+                        <p className="text-zinc-500 max-w-sm">
+                            We couldn't find any listings matches your search. Try different keywords or browse all categories.
                         </p>
+                        <button
+                            onClick={() => { setFilter('all'); setSearchTerm(''); }}
+                            className="mt-6 text-indigo-600 font-semibold hover:underline"
+                        >
+                            Clear all filters
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // Standalone mode - full page with navbar
+    return (
+        <div className="min-h-screen bg-white">
+            {/* Navbar - Home Style */}
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+                <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-2xl tracking-tighter cursor-pointer" onClick={() => navigate('/')}>
+                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white">
+                            <span className="text-xl">M</span>
+                        </div>
+                        MyCircle.
                     </div>
 
-                    {/* Integrated Search & Filters (Centered) */}
-                    <div className="flex flex-col items-center gap-4 max-w-4xl mx-auto">
-                        <div className="relative group w-full md:w-2/3">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search everything..."
-                                className="w-full bg-white border border-zinc-200 text-zinc-900 text-base font-medium rounded-full pl-12 pr-12 py-4 shadow-sm hover:shadow-md focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition-all"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-900"><X size={16} /></button>
-                            )}
-                        </div>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => window.location.href = 'http://localhost:5000/auth/google'}
+                            className="px-5 py-2.5 bg-black text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-black/20"
+                        >
+                            Sign In
+                        </button>
+                    </div>
+                </div>
+            </nav>
 
-                        <div className="flex flex-wrap justify-center gap-2">
-                            {categories.map((cat) => {
-                                const Icon = cat.icon;
-                                const isActive = filter === cat.id;
-                                return (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setFilter(cat.id)}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all border ${isActive
-                                            ? 'bg-black text-white border-black'
-                                            : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
-                                            }`}
-                                    >
-                                        <Icon size={14} />
-                                        {cat.label}
-                                    </button>
-                                );
-                            })}
+            {/* Main Content with top padding */}
+            <div className="pt-24 container mx-auto">
+                {/* Centered Title Section */}
+                <div className="flex flex-col items-center justify-center gap-4 mb-8 text-center pt-8">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Live Feed</span>
+                    </div>
+                    <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-zinc-900">Discover Your Circle.</h1>
+                </div>
+
+                {/* Search & Filter Bar */}
+                <div className="flex flex-col items-center gap-6 max-w-5xl mx-auto mb-12">
+                    <div className="relative w-full max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search circles..."
+                            className="w-full bg-white border border-zinc-200 text-zinc-900 text-sm font-medium rounded-xl pl-10 pr-10 py-3 shadow-sm hover:shadow focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition-all"
+                        />
+                        {searchTerm && (
+                            <button onClick={() => setSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-900">
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                        {categories.map((cat) => {
+                            const Icon = cat.icon;
+                            const isActive = filter === cat.id;
+                            return (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setFilter(cat.id)}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${isActive
+                                        ? 'bg-zinc-900 text-white shadow-sm'
+                                        : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-300'
+                                        }`}
+                                >
+                                    <Icon size={16} />
+                                    {cat.label}
+                                </button>
+                            );
+                        })}
+
+                        <div className="flex items-center gap-1 ml-2 border border-zinc-200 rounded-xl p-1 bg-white">
+                            <button className="p-2 rounded-lg bg-zinc-100 text-zinc-900">
+                                <LayoutGrid size={16} />
+                            </button>
+                            <button className="p-2 rounded-lg text-zinc-400 hover:text-zinc-600">
+                                <Grid3x3 size={16} />
+                            </button>
                         </div>
                     </div>
                 </div>
-            )}
 
-            {/* --- Feed Grid --- */}
-            {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-                    {[...Array(6)].map((_, i) => <PostSkeleton key={i} />)}
-                </div>
-            ) : filteredPosts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20 auto-rows-fr">
-                    {filteredPosts.map(post => (
-                        <div key={post._id} className="h-full">
-                            <PostCard
-                                post={post}
-                                onRequestContact={handleCreateContactRequest}
-                                currentUserId={user?._id}
-                            />
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="flex flex-col items-center justify-center py-32 text-center">
-                    <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                        <Search className="w-8 h-8 text-zinc-300" />
+                {/* Feed Grid */}
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
+                        {[...Array(6)].map((_, i) => <PostSkeleton key={i} />)}
                     </div>
-                    <h3 className="text-xl font-bold text-zinc-900 mb-2">No results found</h3>
-                    <p className="text-zinc-500 max-w-sm">
-                        We couldn't find any listings matches your search. Try different keywords or browse all categories.
-                    </p>
-                    <button
-                        onClick={() => { setFilter('all'); setSearchTerm(''); }}
-                        className="mt-6 text-indigo-600 font-semibold hover:underline"
-                    >
-                        Clear all filters
-                    </button>
-                </div>
-            )}
+                ) : filteredPosts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20 auto-rows-fr">
+                        {filteredPosts.map(post => (
+                            <div key={post._id} className="h-full">
+                                <PostCard
+                                    post={post}
+                                    onRequestContact={handleCreateContactRequest}
+                                    currentUserId={user?._id}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-32 text-center">
+                        <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+                            <Search className="w-8 h-8 text-zinc-300" />
+                        </div>
+                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No results found</h3>
+                        <p className="text-zinc-500 max-w-sm">
+                            We couldn't find any listings. Try different keywords or browse all categories.
+                        </p>
+                        <button
+                            onClick={() => { setFilter('all'); setSearchTerm(''); }}
+                            className="mt-6 text-indigo-600 font-semibold hover:underline"
+                        >
+                            Clear all filters
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

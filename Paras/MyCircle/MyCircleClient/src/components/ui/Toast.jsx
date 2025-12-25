@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, AlertCircle, Info, X, MessageCircle, Heart, UserPlus } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, X, MessageSquare, Heart, UserPlus } from 'lucide-react';
 
 const ToastContext = createContext();
 
@@ -39,8 +39,8 @@ export const ToastProvider = ({ children }) => {
     return (
         <ToastContext.Provider value={value}>
             {children}
-            <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
-                <AnimatePresence>
+            <div className="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none">
+                <AnimatePresence mode='popLayout'>
                     {toasts.map(({ id, message, type }) => (
                         <Toast key={id} message={message} type={type} onClose={() => removeToast(id)} />
                     ))}
@@ -51,43 +51,46 @@ export const ToastProvider = ({ children }) => {
 };
 
 const Toast = ({ message, type, onClose }) => {
+    // Icon mapping
     const icons = {
-        success: <CheckCircle className="w-5 h-5" />,
-        error: <XCircle className="w-5 h-5" />,
-        warning: <AlertCircle className="w-5 h-5" />,
-        info: <Info className="w-5 h-5" />,
-        message: <MessageCircle className="w-5 h-5" />,
-        like: <Heart className="w-5 h-5" />,
-        request: <UserPlus className="w-5 h-5" />
-    };
-
-    const colors = {
-        success: 'bg-green-500/10 border-green-500/50 text-green-400',
-        error: 'bg-red-500/10 border-red-500/50 text-red-400',
-        warning: 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400',
-        info: 'bg-blue-500/10 border-blue-500/50 text-blue-400',
-        message: 'bg-purple-500/10 border-purple-500/50 text-purple-400',
-        like: 'bg-pink-500/10 border-pink-500/50 text-pink-400',
-        request: 'bg-orange-500/10 border-orange-500/50 text-orange-400'
+        success: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
+        error: <XCircle className="w-4 h-4 text-red-500" />,
+        warning: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+        info: <Info className="w-4 h-4 text-blue-500" />,
+        message: <MessageSquare className="w-4 h-4 text-indigo-500" />,
+        like: <Heart className="w-4 h-4 text-rose-500" />,
+        request: <UserPlus className="w-4 h-4 text-orange-500" />
     };
 
     return (
         <motion.div
-            initial={{ opacity: 0, x: 100, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 100, scale: 0.8 }}
-            className={`glass border ${colors[type]} rounded-xl p-4 pr-12 min-w-[300px] max-w-md pointer-events-auto relative`}
+            layout
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="pointer-events-auto w-full max-w-sm"
         >
-            <div className="flex items-center gap-3">
-                {icons[type]}
-                <p className="text-sm font-medium text-white">{message}</p>
+            <div className="flex items-center gap-3 w-full bg-zinc-950 border border-zinc-800 shadow-xl shadow-black/20 rounded-lg p-3 pr-4">
+                
+                {/* Icon Container with subtle glow background based on type (Optional) */}
+                <div className="shrink-0">
+                    {icons[type] || icons.info}
+                </div>
+
+                {/* Message */}
+                <p className="text-sm font-medium text-zinc-100 flex-1 leading-snug">
+                    {message}
+                </p>
+
+                {/* Close Button */}
+                <button
+                    onClick={onClose}
+                    className="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors p-1 rounded-md hover:bg-zinc-800"
+                >
+                    <X className="w-4 h-4" />
+                </button>
             </div>
-            <button
-                onClick={onClose}
-                className="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors"
-            >
-                <X className="w-4 h-4" />
-            </button>
         </motion.div>
     );
 };

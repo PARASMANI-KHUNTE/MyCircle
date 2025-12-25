@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Linking, StyleSheet, Dimensions, TextInput } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Linking, StyleSheet, Dimensions, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles, X } from 'lucide-react-native';
 import { Clipboard } from 'react-native';
@@ -324,311 +324,317 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
-            <View style={[styles.header, themeStyles.border]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-                    <ArrowLeft size={24} color={colors.text} />
-                </TouchableOpacity>
-                <View style={styles.headerRight}>
-                    <TouchableOpacity onPress={handleLike} style={styles.headerButton}>
-                        <Heart size={24} color={isLiked ? "#ef4444" : colors.text} fill={isLiked ? "#ef4444" : "transparent"} />
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+            <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+                <View style={[styles.header, themeStyles.border]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+                        <ArrowLeft size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-                        <Share2 size={24} color={colors.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleGetInsights} style={styles.headerButton}>
-                        <Sparkles size={24} color="#8b5cf6" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={showMenu} style={styles.headerButton}>
-                        <MoreVertical size={24} color={colors.text} />
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            <ScrollView style={styles.scrollView}>
-                {post.images && post.images.length > 0 ? (
-                    <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.imageGallery}>
-                        {post.images.map((img: string, idx: number) => (
-                            <TouchableOpacity
-                                key={idx}
-                                activeOpacity={0.9}
-                                onPress={() => {
-                                    setSelectedImageIndex(idx);
-                                    setImagePreviewVisible(true);
-                                }}
-                            >
-                                <Image source={{ uri: img }} style={styles.postImage} resizeMode="cover" />
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                ) : (
-                    <View style={[styles.placeholderContainer, themeStyles.dimBackground]}>
-                        {/* Note: require('../assets/logo.png') might fail if logo doesn't exist, using fallback */}
-                        <View style={[styles.placeholderLogo, { backgroundColor: colors.border }]} />
-                        <Text style={[styles.placeholderText, themeStyles.textSecondary]}>No images provided</Text>
-                    </View>
-                )}
-
-                <View style={styles.contentPadding}>
-                    <View style={styles.typePriceRow}>
-                        <View style={styles.typeBadge}>
-                            <Text style={styles.typeText}>{post.type}</Text>
-                        </View>
-                        {post.price && (
-                            <Text style={styles.priceText}>₹{post.price}</Text>
-                        )}
-                    </View>
-
-                    <Text style={[styles.postTitle, themeStyles.text]}>{post.title}</Text>
-
-                    <View style={styles.metaRow}>
-                        <View style={styles.metaItem}>
-                            <MapPin size={16} color={colors.textSecondary} />
-                            <Text style={[styles.metaText, themeStyles.textSecondary]}>{post.location}</Text>
-                        </View>
-                        <View style={styles.metaItem}>
-                            <Clock size={16} color="#71717a" />
-                            <Text style={styles.metaText}>{new Date(post.createdAt).toLocaleDateString()}</Text>
-                        </View>
-                    </View>
-
-                    <View style={[styles.userCard, themeStyles.card]}>
-                        <Image
-                            source={{ uri: getAvatarUrl(post.user) }}
-                            style={styles.userAvatar}
-                        />
-                        <View style={styles.userInfo}>
-                            <Text style={[styles.userName, themeStyles.text]}>{post.user?.displayName}</Text>
-                            <View style={styles.verifiedRow}>
-                                <Shield size={12} color="#22c55e" />
-                                <Text style={styles.verifiedText}>Verified Local Provider</Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('UserProfile', { userId: post.user?._id })}
-                            style={styles.viewProfileButton}
-                        >
-                            <Text style={styles.viewProfileText}>View Profile</Text>
+                    <View style={styles.headerRight}>
+                        <TouchableOpacity onPress={handleLike} style={styles.headerButton}>
+                            <Heart size={24} color={isLiked ? "#ef4444" : colors.text} fill={isLiked ? "#ef4444" : "transparent"} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
+                            <Share2 size={24} color={colors.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleGetInsights} style={styles.headerButton}>
+                            <Sparkles size={24} color="#8b5cf6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={showMenu} style={styles.headerButton}>
+                            <MoreVertical size={24} color={colors.text} />
                         </TouchableOpacity>
                     </View>
+                </View>
 
-                    <View style={styles.descriptionContainer}>
-                        <Text style={[styles.sectionTitle, themeStyles.text]}>Description</Text>
-                        <Text style={[styles.descriptionText, themeStyles.textSecondary]}>{post.description}</Text>
-                    </View>
-
-                    {/* AI Insights Section (Inline) */}
-                    {(isGeneratingAI || aiResult) && (
-                        <View style={{
-                            marginTop: 16,
-                            padding: 16,
-                            borderRadius: 16,
-                            backgroundColor: aiResult?.type === 'owner' ? '#f0fdf4' : '#f5f3ff', // Green or Purple background
-                            borderWidth: 1,
-                            borderColor: aiResult?.type === 'owner' ? '#bbf7d0' : '#ddd6fe',
-                            overflow: 'hidden'
-                        }}>
-                            {isGeneratingAI ? (
-                                <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-                                    <ActivityIndicator size="small" color="#7c3aed" />
-                                    <Text style={{ marginTop: 12, color: '#7c3aed', fontWeight: '500', fontSize: 14 }}>
-                                        Generating Insights...
-                                    </Text>
-                                </View>
-                            ) : (
-                                <>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                                        <Sparkles size={20} color={aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'} fill={aiResult?.type === 'owner' ? '#16a34a' : 'transparent'} />
-                                        <Text style={{
-                                            fontSize: 18,
-                                            fontWeight: 'bold',
-                                            marginLeft: 8,
-                                            color: aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'
-                                        }}>
-                                            {aiResult?.type === 'owner' ? 'Performance Insights' : 'About this Post'}
-                                        </Text>
-                                        <TouchableOpacity
-                                            onPress={() => setAiResult(null)}
-                                            style={{ marginLeft: 'auto' }}
-                                        >
-                                            <X size={16} color={aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'} />
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#1f2937', marginBottom: 8, lineHeight: 22 }}>
-                                        {aiResult?.summary}
-                                    </Text>
-
-                                    <Text style={{ fontSize: 14, color: '#4b5563', marginBottom: 16, lineHeight: 20 }}>
-                                        {aiResult?.details}
-                                    </Text>
-
-                                    <View style={{ gap: 8 }}>
-                                        {aiResult?.listItems.map((item, idx) => (
-                                            <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                                                <Text style={{ color: aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed', fontSize: 14, marginTop: 2 }}>{aiResult?.type === 'owner' ? '✔' : '✨'}</Text>
-                                                <Text style={{ fontSize: 14, color: '#374151', flex: 1, lineHeight: 20 }}>{item}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-                                </>
-                            )}
+                <ScrollView style={styles.scrollView}>
+                    {post.images && post.images.length > 0 ? (
+                        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.imageGallery}>
+                            {post.images.map((img: string, idx: number) => (
+                                <TouchableOpacity
+                                    key={idx}
+                                    activeOpacity={0.9}
+                                    onPress={() => {
+                                        setSelectedImageIndex(idx);
+                                        setImagePreviewVisible(true);
+                                    }}
+                                >
+                                    <Image source={{ uri: img }} style={styles.postImage} resizeMode="cover" />
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <View style={[styles.placeholderContainer, themeStyles.dimBackground]}>
+                            {/* Note: require('../assets/logo.png') might fail if logo doesn't exist, using fallback */}
+                            <View style={[styles.placeholderLogo, { backgroundColor: colors.border }]} />
+                            <Text style={[styles.placeholderText, themeStyles.textSecondary]}>No images provided</Text>
                         </View>
                     )}
 
-                    {/* Comments Section */}
-                    <View style={styles.commentsContainer}>
-                        <Text style={[styles.sectionTitle, themeStyles.text]}>Comments ({comments.length})</Text>
-
-                        {comments.map((comment: any, index: number) => (
-                            <View key={index} style={[styles.commentCard, themeStyles.card]}>
-                                <View style={styles.commentMain}>
-                                    <Image
-                                        source={{ uri: getAvatarUrl(comment.user) }}
-                                        style={styles.commentAvatar}
-                                    />
-                                    <View style={styles.commentContent}>
-                                        <Text style={[styles.commentUser, themeStyles.text]}>{comment.user?.displayName}</Text>
-                                        <Text style={[styles.commentText, themeStyles.textSecondary]}>{comment.text}</Text>
-                                        <View style={styles.commentFooter}>
-                                            <Text style={[styles.commentTime, themeStyles.textSecondary]}>
-                                                {new Date(comment.createdAt).toLocaleDateString()}
-                                            </Text>
-                                            {!isOwnPost && (
-                                                <TouchableOpacity
-                                                    onPress={() => {
-                                                        setReplyTo({ id: comment._id, username: comment.user?.displayName });
-                                                        setCommentText(`@${comment.user?.displayName} `);
-                                                    }}
-                                                    style={styles.replyButton}
-                                                >
-                                                    <Text style={styles.replyButtonText}>Reply</Text>
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
-                                    </View>
-                                </View>
-
-                                {/* Render Replies */}
-                                {comment.replies && comment.replies.length > 0 && (
-                                    <View style={styles.repliesContainer}>
-                                        {comment.replies.map((reply: any, rIdx: number) => (
-                                            <View key={rIdx} style={styles.replyItem}>
-                                                <Image
-                                                    source={{ uri: getAvatarUrl(reply.user) }}
-                                                    style={styles.replyAvatar}
-                                                />
-                                                <View style={styles.commentContent}>
-                                                    <Text style={[styles.commentUser, themeStyles.text]}>{reply.user?.displayName}</Text>
-                                                    <Text style={[styles.commentText, themeStyles.textSecondary]}>{reply.text}</Text>
-                                                    <View style={styles.commentFooter}>
-                                                        <Text style={[styles.commentTime, themeStyles.textSecondary]}>
-                                                            {new Date(reply.createdAt).toLocaleDateString()}
-                                                        </Text>
-                                                        {!isOwnPost && (
-                                                            <TouchableOpacity
-                                                                onPress={() => {
-                                                                    setReplyTo({ id: comment._id, username: reply.user?.displayName });
-                                                                    setCommentText(`@${reply.user?.displayName} `);
-                                                                }}
-                                                                style={styles.replyButton}
-                                                            >
-                                                                <Text style={styles.replyButtonText}>Reply</Text>
-                                                            </TouchableOpacity>
-                                                        )}
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        ))}
-                                    </View>
-                                )}
+                    <View style={styles.contentPadding}>
+                        <View style={styles.typePriceRow}>
+                            <View style={styles.typeBadge}>
+                                <Text style={styles.typeText}>{post.type}</Text>
                             </View>
-                        ))}
+                            {post.price && (
+                                <Text style={styles.priceText}>₹{post.price}</Text>
+                            )}
+                        </View>
 
-                        {comments.length === 0 && (
-                            <Text style={[styles.noCommentsText, themeStyles.textSecondary]}>No comments yet. Be the first!</Text>
-                        )}
-                    </View>
-                </View>
-            </ScrollView>
+                        <Text style={[styles.postTitle, themeStyles.text]}>{post.title}</Text>
 
-            {!isOwnPost && (
-                <>
-                    <View style={[styles.commentInputContainer, themeStyles.container, themeStyles.border]}>
-                        {replyTo && (
-                            <View style={styles.replyingToBar}>
-                                <Text style={styles.replyingToText}>Replying to {replyTo.username}</Text>
-                                <TouchableOpacity onPress={() => setReplyTo(null)}>
-                                    <X size={16} color={colors.textSecondary} />
-                                </TouchableOpacity>
+                        <View style={styles.metaRow}>
+                            <View style={styles.metaItem}>
+                                <MapPin size={16} color={colors.textSecondary} />
+                                <Text style={[styles.metaText, themeStyles.textSecondary]}>{post.location}</Text>
                             </View>
-                        )}
-                        <View style={styles.inputWrapper}>
-                            <TextInput
-                                style={[styles.commentInput, themeStyles.input]}
-                                placeholder={replyTo ? `Reply to ${replyTo.username}...` : "Write a comment..."}
-                                placeholderTextColor={colors.textSecondary}
-                                value={commentText}
-                                onChangeText={setCommentText}
-                                multiline
+                            <View style={styles.metaItem}>
+                                <Clock size={16} color="#71717a" />
+                                <Text style={styles.metaText}>{new Date(post.createdAt).toLocaleDateString()}</Text>
+                            </View>
+                        </View>
+
+                        <View style={[styles.userCard, themeStyles.card]}>
+                            <Image
+                                source={{ uri: getAvatarUrl(post.user) }}
+                                style={styles.userAvatar}
                             />
+                            <View style={styles.userInfo}>
+                                <Text style={[styles.userName, themeStyles.text]}>{post.user?.displayName}</Text>
+                                <View style={styles.verifiedRow}>
+                                    <Shield size={12} color="#22c55e" />
+                                    <Text style={styles.verifiedText}>Verified Local Provider</Text>
+                                </View>
+                            </View>
                             <TouchableOpacity
-                                onPress={handlePostComment}
-                                disabled={postingComment || !commentText.trim()}
-                                style={[styles.sendButton, themeStyles.border, themeStyles.card, (!commentText.trim() || postingComment) && styles.sendButtonDisabled]}
+                                onPress={() => navigation.navigate('UserProfile', { userId: post.user?._id })}
+                                style={styles.viewProfileButton}
                             >
-                                {postingComment ? (
-                                    <ActivityIndicator size="small" color={colors.primary} />
-                                ) : (
-                                    <MessageCircle size={20} color={colors.primary} />
-                                )}
+                                <Text style={styles.viewProfileText}>View Profile</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
-                    <View style={[styles.bottomBar, themeStyles.container, themeStyles.border]}>
-                        <TouchableOpacity
-                            onPress={handleMessage}
-                            style={[styles.messageButton, themeStyles.card, themeStyles.border]}
-                        >
-                            <View style={styles.buttonInner}>
-                                <MessageCircle size={20} color={colors.primary} />
-                                <Text style={[styles.messageButtonText, { color: colors.text }]}>Message</Text>
+
+                        <View style={styles.descriptionContainer}>
+                            <Text style={[styles.sectionTitle, themeStyles.text]}>Description</Text>
+                            <Text style={[styles.descriptionText, themeStyles.textSecondary]}>{post.description}</Text>
+                        </View>
+
+                        {/* AI Insights Section (Inline) */}
+                        {(isGeneratingAI || aiResult) && (
+                            <View style={{
+                                marginTop: 16,
+                                padding: 16,
+                                borderRadius: 16,
+                                backgroundColor: aiResult?.type === 'owner' ? '#f0fdf4' : '#f5f3ff', // Green or Purple background
+                                borderWidth: 1,
+                                borderColor: aiResult?.type === 'owner' ? '#bbf7d0' : '#ddd6fe',
+                                overflow: 'hidden'
+                            }}>
+                                {isGeneratingAI ? (
+                                    <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                                        <ActivityIndicator size="small" color="#7c3aed" />
+                                        <Text style={{ marginTop: 12, color: '#7c3aed', fontWeight: '500', fontSize: 14 }}>
+                                            Generating Insights...
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                                            <Sparkles size={20} color={aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'} fill={aiResult?.type === 'owner' ? '#16a34a' : 'transparent'} />
+                                            <Text style={{
+                                                fontSize: 18,
+                                                fontWeight: 'bold',
+                                                marginLeft: 8,
+                                                color: aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'
+                                            }}>
+                                                {aiResult?.type === 'owner' ? 'Performance Insights' : 'About this Post'}
+                                            </Text>
+                                            <TouchableOpacity
+                                                onPress={() => setAiResult(null)}
+                                                style={{ marginLeft: 'auto' }}
+                                            >
+                                                <X size={16} color={aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed'} />
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#1f2937', marginBottom: 8, lineHeight: 22 }}>
+                                            {aiResult?.summary}
+                                        </Text>
+
+                                        <Text style={{ fontSize: 14, color: '#4b5563', marginBottom: 16, lineHeight: 20 }}>
+                                            {aiResult?.details}
+                                        </Text>
+
+                                        <View style={{ gap: 8 }}>
+                                            {aiResult?.listItems.map((item, idx) => (
+                                                <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                                    <Text style={{ color: aiResult?.type === 'owner' ? '#16a34a' : '#7c3aed', fontSize: 14, marginTop: 2 }}>{aiResult?.type === 'owner' ? '✔' : '✨'}</Text>
+                                                    <Text style={{ fontSize: 14, color: '#374151', flex: 1, lineHeight: 20 }}>{item}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </>
+                                )}
                             </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={handleRequestContact}
-                            disabled={post.hasRequested}
-                            style={[
-                                styles.requestButton,
-                                { backgroundColor: post.hasRequested ? colors.border : colors.primary }
-                            ]}
-                        >
-                            <Text style={[
-                                styles.requestButtonText,
-                                { color: post.hasRequested ? colors.textSecondary : '#ffffff' }
-                            ]}>
-                                {post.hasRequested ? 'Request Sent' : 'Request Contact'}
-                            </Text>
-                        </TouchableOpacity>
+                        )}
+
+                        {/* Comments Section */}
+                        <View style={styles.commentsContainer}>
+                            <Text style={[styles.sectionTitle, themeStyles.text]}>Comments ({comments.length})</Text>
+
+                            {comments.map((comment: any, index: number) => (
+                                <View key={index} style={[styles.commentCard, themeStyles.card]}>
+                                    <View style={styles.commentMain}>
+                                        <Image
+                                            source={{ uri: getAvatarUrl(comment.user) }}
+                                            style={styles.commentAvatar}
+                                        />
+                                        <View style={styles.commentContent}>
+                                            <Text style={[styles.commentUser, themeStyles.text]}>{comment.user?.displayName}</Text>
+                                            <Text style={[styles.commentText, themeStyles.textSecondary]}>{comment.text}</Text>
+                                            <View style={styles.commentFooter}>
+                                                <Text style={[styles.commentTime, themeStyles.textSecondary]}>
+                                                    {new Date(comment.createdAt).toLocaleDateString()}
+                                                </Text>
+                                                {!isOwnPost && (
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            setReplyTo({ id: comment._id, username: comment.user?.displayName });
+                                                            setCommentText(`@${comment.user?.displayName} `);
+                                                        }}
+                                                        style={styles.replyButton}
+                                                    >
+                                                        <Text style={styles.replyButtonText}>Reply</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    {/* Render Replies */}
+                                    {comment.replies && comment.replies.length > 0 && (
+                                        <View style={styles.repliesContainer}>
+                                            {comment.replies.map((reply: any, rIdx: number) => (
+                                                <View key={rIdx} style={styles.replyItem}>
+                                                    <Image
+                                                        source={{ uri: getAvatarUrl(reply.user) }}
+                                                        style={styles.replyAvatar}
+                                                    />
+                                                    <View style={styles.commentContent}>
+                                                        <Text style={[styles.commentUser, themeStyles.text]}>{reply.user?.displayName}</Text>
+                                                        <Text style={[styles.commentText, themeStyles.textSecondary]}>{reply.text}</Text>
+                                                        <View style={styles.commentFooter}>
+                                                            <Text style={[styles.commentTime, themeStyles.textSecondary]}>
+                                                                {new Date(reply.createdAt).toLocaleDateString()}
+                                                            </Text>
+                                                            {!isOwnPost && (
+                                                                <TouchableOpacity
+                                                                    onPress={() => {
+                                                                        setReplyTo({ id: comment._id, username: reply.user?.displayName });
+                                                                        setCommentText(`@${reply.user?.displayName} `);
+                                                                    }}
+                                                                    style={styles.replyButton}
+                                                                >
+                                                                    <Text style={styles.replyButtonText}>Reply</Text>
+                                                                </TouchableOpacity>
+                                                            )}
+                                                        </View>
+                                                    </View>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+                            ))}
+
+                            {comments.length === 0 && (
+                                <Text style={[styles.noCommentsText, themeStyles.textSecondary]}>No comments yet. Be the first!</Text>
+                            )}
+                        </View>
                     </View>
-                </>
-            )}
+                </ScrollView>
 
-            <ImagePreviewModal
-                visible={imagePreviewVisible}
-                images={post?.images || []}
-                initialIndex={selectedImageIndex}
-                onClose={() => setImagePreviewVisible(false)}
-            />
+                {!isOwnPost && (
+                    <>
+                        <View style={[styles.commentInputContainer, themeStyles.container, themeStyles.border]}>
+                            {replyTo && (
+                                <View style={styles.replyingToBar}>
+                                    <Text style={styles.replyingToText}>Replying to {replyTo.username}</Text>
+                                    <TouchableOpacity onPress={() => setReplyTo(null)}>
+                                        <X size={16} color={colors.textSecondary} />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                            <View style={styles.inputWrapper}>
+                                <TextInput
+                                    style={[styles.commentInput, themeStyles.input]}
+                                    placeholder={replyTo ? `Reply to ${replyTo.username}...` : "Write a comment..."}
+                                    placeholderTextColor={colors.textSecondary}
+                                    value={commentText}
+                                    onChangeText={setCommentText}
+                                    multiline
+                                />
+                                <TouchableOpacity
+                                    onPress={handlePostComment}
+                                    disabled={postingComment || !commentText.trim()}
+                                    style={[styles.sendButton, themeStyles.border, themeStyles.card, (!commentText.trim() || postingComment) && styles.sendButtonDisabled]}
+                                >
+                                    {postingComment ? (
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                    ) : (
+                                        <MessageCircle size={20} color={colors.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        <View style={[styles.bottomBar, themeStyles.container, themeStyles.border]}>
+                            <TouchableOpacity
+                                onPress={handleMessage}
+                                style={[styles.messageButton, themeStyles.card, themeStyles.border]}
+                            >
+                                <View style={styles.buttonInner}>
+                                    <MessageCircle size={20} color={colors.primary} />
+                                    <Text style={[styles.messageButtonText, { color: colors.text }]}>Message</Text>
+                                </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleRequestContact}
+                                disabled={post.hasRequested}
+                                style={[
+                                    styles.requestButton,
+                                    { backgroundColor: post.hasRequested ? colors.border : colors.primary }
+                                ]}
+                            >
+                                <Text style={[
+                                    styles.requestButtonText,
+                                    { color: post.hasRequested ? colors.textSecondary : '#ffffff' }
+                                ]}>
+                                    {post.hasRequested ? 'Request Sent' : 'Request Contact'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
 
-            <ActionSheet
-                visible={actionSheetVisible}
-                onClose={() => setActionSheetVisible(false)}
-                title={actionSheetConfig.title}
-                description={actionSheetConfig.description}
-                actions={actionSheetConfig.actions}
-            />
-        </SafeAreaView>
+                <ImagePreviewModal
+                    visible={imagePreviewVisible}
+                    images={post?.images || []}
+                    initialIndex={selectedImageIndex}
+                    onClose={() => setImagePreviewVisible(false)}
+                />
+
+                <ActionSheet
+                    visible={actionSheetVisible}
+                    onClose={() => setActionSheetVisible(false)}
+                    title={actionSheetConfig.title}
+                    description={actionSheetConfig.description}
+                    actions={actionSheetConfig.actions}
+                />
+            </SafeAreaView>
+        </KeyboardAvoidingView>
     );
 };
 

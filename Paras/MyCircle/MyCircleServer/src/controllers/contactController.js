@@ -74,13 +74,32 @@ exports.createRequest = async (req, res) => {
             return res.status(403).json({ msg: 'You cannot make a request to this user' });
         }
 
-        // Create new request
+        // Check for cooldown (24 hours between requests to same post)
+        const lastRequest = await ContactRequest.findOne({
+            requester: requesterId,
+            post: postId,
+            status: { $in: ['rejected', 'expired'] }
+        }).sort({ createdAt: -1 });
+
+        if (lastRequest) {
+            const hoursSinceLastRequest = (Date.now() - lastRequest.createdAt.getTime()) / (1000 * 60 * 60);
+            if (hoursSinceLastRequest < 24) {
+                const hoursRemaining = Math.ceil(24 - hoursSinceLastRequest);
+                return res.status(429).json({
+                    msg: `Please wait ${hoursRemaining} hours before sending another request for this post`
+                });
+            }
+        }
+
+        // Create new request with 7-day expiry
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
         const contactRequest = await ContactRequest.create({
             requester: requesterId,
             recipient: finalRecipientId,
             post: postId,
             message: message,
-            status: 'pending'
+            status: 'pending',
+            expiresAt
         });
 
         // Populate requester details for notification

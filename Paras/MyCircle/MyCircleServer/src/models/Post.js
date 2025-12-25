@@ -64,6 +64,15 @@ const PostSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    isUrgent: {
+        type: Boolean,
+        default: false,
+    },
+    exchangePreference: {
+        type: String,
+        enum: ['money', 'barter', 'flexible'],
+        default: 'money',
+    },
     expiresAt: {
         type: Date,
         index: true, // Index for efficient querying/expiration

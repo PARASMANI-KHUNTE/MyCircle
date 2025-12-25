@@ -54,7 +54,11 @@ exports.createPost = async (req, res) => {
             contactPhone,
             contactWhatsapp,
             expiresAt,
-            price: numericPrice || 0
+            duration: req.body.duration ? parseInt(req.body.duration, 10) : undefined,
+            price: numericPrice || 0,
+            isUrgent: req.body.isUrgent === 'true' || req.body.isUrgent === true,
+            exchangePreference: req.body.exchangePreference || 'money',
+            acceptsBarter: req.body.acceptsBarter === 'true' || req.body.acceptsBarter === true || req.body.exchangePreference === 'barter' || req.body.exchangePreference === 'flexible',
         });
 
         const post = await newPost.save();

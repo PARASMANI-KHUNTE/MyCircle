@@ -25,6 +25,10 @@ const ContactRequestSchema = new mongoose.Schema({
         type: String,
         maxLength: 200,
     },
+    expiresAt: {
+        type: Date,
+        index: true, // For efficient cron queries
+    },
     createdAt: {
         type: Date,
         default: Date.now,

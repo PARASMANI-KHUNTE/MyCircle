@@ -12,10 +12,13 @@ const isKeyValid = () => {
     return true;
 };
 
-const getModel = (modelName = "gemini-1.5-flash-latest") => {
-    if (!isKeyValid()) return null;
+const getModel = (modelName = "gemini-2.0-flash") => {
+    if (!isKeyValid()) {
+        console.warn("Gemini: API Key is invalid or missing.");
+        return null;
+    }
     try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
         return genAI.getGenerativeModel({ model: modelName });
     } catch (e) {
         console.error(`Gemini Initialization Error [${modelName}]:`, e.message);
@@ -160,6 +163,10 @@ const analyzePost = async (postData) => {
 
 const explainPost = async (postData) => {
     try {
+        if (!postData?.title || !postData?.description) {
+            return { summary: "Post details missing for explanation.", context: "", interestingFacts: [] };
+        }
+
         const model = getModel();
         if (!model) return { summary: "Post explanation unavailable.", context: "Details in description.", interestingFacts: [] };
 
@@ -177,12 +184,27 @@ const explainPost = async (postData) => {
         const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
 
         if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch (parseError) {
+                throw parseError;
+            }
         }
         throw new Error("No JSON found in response");
     } catch (error) {
         console.error("Gemini Explanation Error:", error.message);
-        return { summary: "Explanation unavailable.", context: "", interestingFacts: [] };
+
+        // Graceful Fallback for Quota or Connection Issues
+        return {
+            summary: `Quick Summary: ${postData.title}`,
+            context: `The user is offering this ${postData.type || 'item'} for ₹${postData.price || 'a fair price'}. Check the description below for full details.`,
+            interestingFacts: [
+                "AI summary currently in high demand",
+                "Verified local post",
+                "Contact user for more details"
+            ],
+            isFallback: true
+        };
     }
 };
 

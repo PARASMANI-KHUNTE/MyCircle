@@ -32,9 +32,7 @@ export const getPostInsights = async (post: any): Promise<{ summary: string; tip
 
 export const getPostExplanation = async (post: any): Promise<{ summary: string; context: string; interestingFacts: string[] }> => {
     try {
-        console.log("AI Service: Requesting explanation for post:", post?.title);
         const response = await api.post('/ai/explain-post', { post });
-        console.log("AI Service Response:", JSON.stringify(response.data));
 
         // Validate response structure
         if (response.data && typeof response.data === 'object') {
@@ -44,11 +42,9 @@ export const getPostExplanation = async (post: any): Promise<{ summary: string; 
                 interestingFacts: Array.isArray(response.data.interestingFacts) ? response.data.interestingFacts : []
             };
         }
-        console.warn("AI Service: Invalid response structure", response.data);
         return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
     } catch (error: any) {
         console.error('Explanation error:', error.message);
-        console.error('Error details:', error.response?.data || error.code || 'No additional details');
         return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
     }
 };

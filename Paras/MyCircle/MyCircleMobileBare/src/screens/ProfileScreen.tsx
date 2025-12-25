@@ -205,8 +205,11 @@ const ProfileScreen = ({ navigation, route }: any) => {
     };
 
     const getPostImage = (post: any) => {
-        if (!post) return '';
-        if (post.images && post.images.length > 0) return post.images[0];
+        if (!post) return null;
+        if (post.images && post.images.length > 0) {
+            const img = post.images[0];
+            return typeof img === 'string' ? img : img.uri;
+        }
         const keywords: Record<string, string> = {
             job: 'workspace,office',
             service: 'tools,work',
@@ -365,12 +368,16 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             >
                                 {viewMode === 'grid' ? (
                                     <View style={[styles.gridCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderWidth: 1.5 }]}>
-                                        <Image source={{ uri: getPostImage(post) }} style={styles.gridImage} />
+                                        <Image
+                                            source={{ uri: getPostImage(post) || undefined }}
+                                            style={styles.gridImage}
+                                            defaultSource={require('../assets/logo.png')}
+                                        />
                                         <View style={styles.gridOverlay}>
                                             <View style={[styles.typeTag, { backgroundColor: getTypeColor(post.type) }]}>
-                                                <Text style={styles.typeTagText}>{post.type.toUpperCase()}</Text>
+                                                <Text style={styles.typeTagText}>{post.type?.toUpperCase()}</Text>
                                             </View>
-                                            <Text style={[styles.gridTitle, { color: '#fff' }]} numberOfLines={1}>{post.title}</Text>
+                                            <Text style={[styles.gridTitle, { color: '#fff' }]} numberOfLines={2}>{post.title}</Text>
                                             <View style={styles.gridFooter}>
                                                 <View style={{ flexDirection: 'row', gap: 8 }}>
                                                     <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.gridActionBtn}>
@@ -631,8 +638,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     gridOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
         padding: 10,
         justifyContent: 'flex-end',
     },

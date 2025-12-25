@@ -17,7 +17,7 @@ const typeConfig = {
     rent: { bg: 'bg-orange-50 text-orange-700 border-orange-100', label: 'Rental' }
 };
 
-const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnPost, onEdit, onClick }) => {
+const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnPost, onEdit, onClick, viewMode = 'grid' }) => {
     const navigate = useNavigate();
     const { title, description, type, location, price, user, createdAt, images, acceptsBarter, likes: initialLikes, isActive, status } = post;
     const { success } = useToast();
@@ -68,7 +68,10 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
 
     const handleContactRequest = async (e) => {
         e.stopPropagation();
-        if (!currentUserId) return;
+        if (!currentUserId) {
+            success('Please login first to contact the seller');
+            return;
+        }
         try {
             await api.post('/contacts/request', { postId: post._id, recipientId: user._id });
             success('Contact request sent!');
@@ -82,9 +85,99 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
         }
     };
 
+    // --- List View Layout ---
+    if (viewMode === 'list') {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="group bg-white rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                onClick={() => { if (onClick) onClick(post._id); else navigate(`/post/${post._id}`); }}
+            >
+                <div className="flex gap-4 p-4">
+                    {/* Image */}
+                    <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-zinc-100">
+                        {images?.[0] ? (
+                            <img src={images[0]} alt={title} className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <Sparkles size={32} className="text-zinc-300" />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 flex flex-col min-w-0">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <img
+                                        src={getAvatarUrl(user)}
+                                        alt={user?.displayName || 'User'}
+                                        className="w-6 h-6 rounded-full object-cover border border-zinc-200"
+                                        onError={(e) => { e.target.onerror = null; e.target.src = '/default-avatar.svg'; }}
+                                    />
+                                    <span className="text-xs font-medium text-zinc-600 truncate">
+                                        {user?.displayName || 'Anonymous'}
+                                    </span>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${typeStyle.bg}`}>
+                                        {typeStyle.label}
+                                    </span>
+                                </div>
+                                <h3 className="text-base font-bold text-zinc-900 leading-snug line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                                    {title}
+                                </h3>
+                                <div className="flex items-center gap-1 text-xs text-zinc-500 font-medium mt-1">
+                                    <MapPin size={10} strokeWidth={2.5} />
+                                    <span className="truncate">{shortLocation}</span>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Price</div>
+                                <div className={`text-lg font-bold ${price && price > 0 ? 'text-zinc-900' : 'text-emerald-600'}`}>
+                                    {price && price > 0 ? `₹${price.toLocaleString()}` : (acceptsBarter ? 'Barter' : 'Free')}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-sm text-zinc-500 leading-relaxed line-clamp-2 mb-3">
+                            {description}
+                        </p>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 mt-auto">
+                            {!isOwnPost && (
+                                <button
+                                    onClick={handleLike}
+                                    className={`p-1.5 rounded-full transition-all ${isLiked ? 'text-pink-600 bg-pink-50' : 'text-zinc-400 hover:bg-zinc-50 hover:text-zinc-900'}`}
+                                >
+                                    <Heart size={16} className={isLiked ? 'fill-current' : ''} />
+                                </button>
+                            )}
+                            {isOwnPost ? (
+                                <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-700 text-xs font-semibold hover:bg-zinc-200 transition-colors flex items-center gap-1">
+                                    <Edit2 size={12} /> Edit
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleContactRequest(e); }}
+                                    className="ml-auto px-4 py-2 rounded-full bg-zinc-900 text-white text-xs font-bold shadow-sm hover:bg-black hover:shadow-md transition-all flex items-center gap-1.5"
+                                >
+                                    Contact <ArrowUpRight size={12} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // --- Grid View Layout (existing) ---
     return (
         <motion.div
-            layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -4, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
@@ -204,7 +297,7 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                             </button>
                         ) : (
                             <button
-                                onClick={handleContactRequest}
+                                onClick={(e) => { e.stopPropagation(); handleContactRequest(e); }}
                                 className="ml-2 px-4 py-2 rounded-full bg-zinc-900 text-white text-xs font-bold shadow-sm hover:bg-black hover:shadow-md transition-all flex items-center gap-1.5"
                             >
                                 Contact <ArrowUpRight size={12} />

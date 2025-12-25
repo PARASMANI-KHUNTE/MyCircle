@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
-import { Bell, Lock, Trash2, Save, Moon, Sun, Shield, ChevronRight } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { Bell, Lock, Trash2, Save, Shield, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const DashboardSettings = () => {
-    const { theme, toggleTheme, isDark } = useTheme();
+const DashboardSettings = ({ onViewBlockedUsers }) => {
     const { user } = useAuth();
     const { success, error: showError } = useToast();
     const [preferences, setPreferences] = useState({
@@ -88,39 +86,6 @@ const DashboardSettings = () => {
                     </div>
                 </div>
 
-                {/* Appearance */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-lg bg-yellow-50">
-                            {isDark ? <Moon className="w-5 h-5 text-yellow-600" /> : <Sun className="w-5 h-5 text-yellow-600" />}
-                        </div>
-                        <h2 className="text-lg font-semibold text-slate-900">Appearance</h2>
-                    </div>
-
-                    <div className="flex items-center justify-between py-3">
-                        <div>
-                            <p className="text-slate-900 font-medium">Theme</p>
-                            <p className="text-sm text-slate-500">Switch between dark and light mode</p>
-                        </div>
-                        <button
-                            onClick={toggleTheme}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-                        >
-                            {isDark ? (
-                                <>
-                                    <Moon className="w-4 h-4 text-slate-700" />
-                                    <span className="text-sm font-medium text-slate-700">Dark</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Sun className="w-4 h-4 text-slate-700" />
-                                    <span className="text-sm font-medium text-slate-700">Light</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
                 {/* Privacy */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
                     <div className="flex items-center gap-3 mb-4">
@@ -146,7 +111,7 @@ const DashboardSettings = () => {
 
                         <div className="pt-4 border-t border-slate-200">
                             <button
-                                onClick={() => { }}
+                                onClick={onViewBlockedUsers}
                                 className="w-full flex items-center justify-between p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors group"
                             >
                                 <div className="flex items-center gap-3">

@@ -221,14 +221,14 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     };
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-white">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white z-10 shadow-sm/50">
                 <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="text-gray-400 hover:text-white mr-2">
+                    <button onClick={onBack} className="text-slate-400 hover:text-slate-900 mr-2 md:hidden">
                         <ArrowLeft className="w-6 h-6" />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border border-slate-200">
                         <img
                             src={getAvatarUrl(otherParticipant)}
                             alt={otherParticipant?.displayName}
@@ -236,40 +236,40 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                         />
                     </div>
                     <div>
-                        <h3 className="font-bold text-white">{otherParticipant?.displayName}</h3>
-                        {otherParticipant?.isOnline && <span className="text-xs text-green-400">Online</span>}
+                        <h3 className="font-bold text-slate-900">{otherParticipant?.displayName}</h3>
+                        {otherParticipant?.isOnline && <span className="text-xs text-emerald-500 font-medium">Online</span>}
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={handleBlock} className="p-2 text-gray-400 hover:text-red-500" title="Block User">
+                    <button onClick={handleBlock} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Block User">
                         <Shield className="w-5 h-5" />
                     </button>
-                    <button onClick={handleReport} className="p-2 text-gray-400 hover:text-yellow-500" title="Report User">
+                    <button onClick={handleReport} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-colors" title="Report User">
                         <Flag className="w-5 h-5" />
                     </button>
                 </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
                 {loading ? (
-                    <div className="text-center text-gray-500 mt-10">Loading messages...</div>
+                    <div className="text-center text-slate-400 mt-10">Loading messages...</div>
                 ) : (
                     messages.map((msg, index) => {
                         const isOwn = msg.sender === (currentUser?._id || currentUser?.id);
                         return (
                             <div key={index} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${isOwn
-                                    ? 'bg-primary text-white rounded-br-none'
-                                    : 'bg-white/10 text-gray-200 rounded-bl-none'
+                                <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${isOwn
+                                    ? 'bg-zinc-900 text-white rounded-br-sm'
+                                    : 'bg-slate-100 text-slate-800 rounded-bl-sm border border-slate-200'
                                     }`}>
-                                    <p>{msg.text}</p>
-                                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
+                                    <p className="text-sm leading-relaxed">{msg.text}</p>
+                                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
                                         <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         {isOwn && (
-                                            msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-blue-300" /> :
-                                                msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-white/70" /> :
-                                                    <Check className="w-3 h-3 text-white/50" />
+                                            msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-sky-400" /> :
+                                                msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-white/60" /> :
+                                                    <Check className="w-3 h-3 text-white/40" />
                                         )}
                                     </div>
                                 </div>
@@ -282,15 +282,15 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
 
             {/* AI Suggestions */}
             {suggestions.length > 0 && (
-                <div className="px-4 py-2 flex gap-2 overflow-x-auto">
-                    <div className="flex items-center text-xs text-primary font-medium mr-1">
-                        <Sparkles className="w-3 h-3 mr-1" /> AI Suggestions:
+                <div className="px-4 py-2 flex gap-2 overflow-x-auto border-t border-slate-50 bg-slate-50/50">
+                    <div className="flex items-center text-xs text-violet-600 font-bold mr-1 shrink-0">
+                        <Sparkles className="w-3 h-3 mr-1" /> Suggestions:
                     </div>
                     {suggestions.map((s, i) => (
                         <button
                             key={i}
                             onClick={() => setNewMessage(s)}
-                            className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
+                            className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-600 hover:text-violet-600 hover:border-violet-200 hover:bg-violet-50 transition-all whitespace-nowrap shadow-sm"
                         >
                             {s}
                         </button>
@@ -300,24 +300,29 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
 
             {/* Typing Indicator */}
             {isTyping && (
-                <div className="px-4 py-2 text-xs text-gray-400 italic animate-pulse">
+                <div className="px-6 py-2 text-xs text-slate-400 italic animate-pulse flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                     {otherParticipant?.displayName} is typing...
                 </div>
             )}
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10 flex gap-2">
-                <input
-                    type="text"
-                    value={newMessage}
-                    onChange={handleInputChange}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all"
-                />
+            <form onSubmit={handleSend} className="p-4 bg-white border-t border-slate-100 flex gap-3 items-end">
+                <div className="flex-1 relative">
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={handleInputChange}
+                        placeholder="Type a message..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-zinc-300 focus:ring-2 focus:ring-zinc-100 transition-all shadow-inner"
+                    />
+                </div>
                 <button
                     type="submit"
                     disabled={!newMessage.trim()}
-                    className="p-3 bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors"
+                    className="p-3 bg-zinc-900 text-white rounded-xl hover:bg-black disabled:opacity-50 disabled:hover:bg-zinc-900 transition-all shadow-md hover:shadow-lg active:scale-95"
                 >
                     <Send className="w-5 h-5" />
                 </button>

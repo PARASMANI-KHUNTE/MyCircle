@@ -151,7 +151,7 @@ const DashboardHome = ({ onViewPost }) => {
                         {[1, 2, 3, 4, 5, 6].map(i => <PostSkeleton key={i} />)}
                     </div>
                 ) : filteredPosts.length > 0 ? (
-                    <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr' : 'space-y-4'}>
+                    <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr' : 'space-y-3'}>
                         {filteredPosts.map(post => (
                             <div key={post._id} className={viewMode === 'grid' ? 'h-full' : ''}>
                                 <PostCard
@@ -159,6 +159,7 @@ const DashboardHome = ({ onViewPost }) => {
                                     currentUserId={user?._id}
                                     onRequestContact={handleCreateContactRequest}
                                     onClick={onViewPost}
+                                    viewMode={viewMode}
                                 />
                             </div>
                         ))}

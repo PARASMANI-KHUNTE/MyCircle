@@ -12,13 +12,14 @@ import DashboardSettings from './DashboardSettings';
 import DashboardPostDetails from './DashboardPostDetails';
 import DashboardEditPost from './DashboardEditPost';
 import DashboardEditProfile from './DashboardEditProfile';
+import BlockedUsers from '../pages/BlockedUsers';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { Search, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 // --- Leaflet Icon Fix ---
 delete L.Icon.Default.prototype._getIconUrl;
@@ -89,7 +90,7 @@ const TopNavbar = ({ user, onTabChange, hasUnread }) => {
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
                 {/* Notification Bell */}
                 <button
                     onClick={() => onTabChange('requests')}
@@ -197,7 +198,8 @@ const Dashboard = () => {
             case 'profile': return <Profile onEditProfile={() => setActiveTab('edit-profile')} onViewPost={(postId) => { setSelectedPostId(postId); setActiveTab('post'); }} />;
             case 'edit-profile': return <DashboardEditProfile onBack={() => setActiveTab('profile')} />;
             case 'posts': return <DashboardMyPosts onViewPost={(postId) => { setSelectedPostId(postId); setActiveTab('post'); }} />;
-            case 'settings': return <DashboardSettings />;
+            case 'settings': return <DashboardSettings onViewBlockedUsers={() => setActiveTab('blocked-users')} />;
+            case 'blocked-users': return <BlockedUsers onBack={() => setActiveTab('settings')} />;
             default: return <DashboardHome onViewPost={(postId) => { setSelectedPostId(postId); setActiveTab('post'); }} />;
         }
     };

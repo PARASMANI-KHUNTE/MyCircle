@@ -34,6 +34,8 @@ const CreatePostScreen = ({ navigation }: any) => {
         { label: '28 Days', value: 40320 },
     ];
     const [duration, setDuration] = useState(40320); // Default to 28 days
+    const [isUrgent, setIsUrgent] = useState(false);
+    const [exchangePreference, setExchangePreference] = useState<'money' | 'barter' | 'flexible'>('money');
     // 'search' | 'detect' | 'pin'
     const [locationMethod, setLocationMethod] = useState<'search' | 'detect' | 'pin'>('search');
     const [images, setImages] = useState<any[]>([]);
@@ -118,6 +120,8 @@ const CreatePostScreen = ({ navigation }: any) => {
             // Default price to 0 if barter or empty
             formData.append('price', price || '0');
             formData.append('duration', duration.toString());
+            formData.append('isUrgent', isUrgent.toString());
+            formData.append('exchangePreference', exchangePreference);
 
             images.forEach((image) => {
                 formData.append('images', image as any);
@@ -147,6 +151,8 @@ const CreatePostScreen = ({ navigation }: any) => {
                     setPrice('');
                     setAcceptsBarter(false);
                     setDuration(40320);
+                    setIsUrgent(false);
+                    setExchangePreference('money');
                     setImages([]);
                     navigation.navigate('Feed');
                 }
@@ -210,18 +216,29 @@ const CreatePostScreen = ({ navigation }: any) => {
             <Text style={[styles.stepTitle, themeStyles.text]}>Post Details</Text>
 
             <View style={styles.inputGroup}>
-                <Text style={[styles.label, themeStyles.textSecondary]}>Title</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Title</Text>
+                    <Text style={{ fontSize: 12, color: title.length > 90 ? '#f59e0b' : colors.textSecondary }}>
+                        {title.length}/100
+                    </Text>
+                </View>
                 <TextInput
                     style={[styles.input, themeStyles.input]}
                     placeholder="E.g., Need a plumber, Selling iPhone 13"
                     placeholderTextColor={colors.textSecondary}
                     value={title}
                     onChangeText={setTitle}
+                    maxLength={100}
                 />
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={[styles.label, themeStyles.textSecondary]}>Description</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Description</Text>
+                    <Text style={{ fontSize: 12, color: description.length > 900 ? '#f59e0b' : colors.textSecondary }}>
+                        {description.length}/1000
+                    </Text>
+                </View>
                 <TextInput
                     style={[styles.input, styles.textArea, themeStyles.input]}
                     placeholder="Describe what you need or what you are offering..."
@@ -230,6 +247,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                     textAlignVertical="top"
                     value={description}
                     onChangeText={setDescription}
+                    maxLength={1000}
                 />
             </View>
 
@@ -287,6 +305,50 @@ const CreatePostScreen = ({ navigation }: any) => {
                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 32, marginTop: 4 }}>
                     Enable this if you are willing to exchange goods/services instead of money.
                 </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Mark as Urgent?</Text>
+                <TouchableOpacity
+                    onPress={() => setIsUrgent(!isUrgent)}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: isUrgent ? colors.primary + '20' : colors.card, borderRadius: 12, borderWidth: 1, borderColor: isUrgent ? colors.primary : colors.border }}
+                >
+                    <Clock size={20} color={isUrgent ? colors.primary : colors.textSecondary} style={{ marginRight: 8 }} />
+                    <Text style={{ color: colors.text, fontSize: 16, flex: 1 }}>Urgent Post</Text>
+                    {isUrgent && <Check size={20} color={colors.primary} />}
+                </TouchableOpacity>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 32, marginTop: 4 }}>
+                    Urgent posts are highlighted and appear first in search results.
+                </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Exchange Preference</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {(['money', 'barter', 'flexible'] as const).map((pref) => {
+                        const isSelected = exchangePreference === pref;
+                        const labels = { money: '💵 Money', barter: '🤝 Barter', flexible: '🔄 Flexible' };
+                        return (
+                            <TouchableOpacity
+                                key={pref}
+                                onPress={() => setExchangePreference(pref)}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 12,
+                                    borderRadius: 12,
+                                    borderWidth: 1,
+                                    backgroundColor: isSelected ? colors.primary : colors.card,
+                                    borderColor: isSelected ? colors.primary : colors.border,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Text style={{ color: isSelected ? 'white' : colors.text, fontWeight: isSelected ? 'bold' : 'normal' }}>
+                                    {labels[pref]}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
             </View>
 
             <View style={styles.inputGroup}>

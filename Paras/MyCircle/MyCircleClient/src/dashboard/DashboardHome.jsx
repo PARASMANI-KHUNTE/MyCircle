@@ -7,7 +7,7 @@ import PostSkeleton from '../components/ui/PostSkeleton';
 import { useAuth } from '../context/AuthContext';
 import {
     Package, Grid3x3, List,
-    Home as HomeIcon
+    Home as HomeIcon, Search
 } from 'lucide-react';
 
 const DashboardHome = ({ onViewPost }) => {
@@ -17,6 +17,7 @@ const DashboardHome = ({ onViewPost }) => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchPosts();
@@ -46,11 +47,15 @@ const DashboardHome = ({ onViewPost }) => {
         }
     };
 
-
-
-    const filteredPosts = filter === 'all'
-        ? posts
-        : posts.filter(post => post.type === filter);
+    // Filter posts by category and search query
+    const filteredPosts = posts.filter(post => {
+        const matchesFilter = filter === 'all' || post.type === filter;
+        const matchesSearch = searchQuery === '' ||
+            post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            post.location?.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesFilter && matchesSearch;
+    });
 
     const categories = [
         { id: 'all', label: 'All' },
@@ -61,13 +66,10 @@ const DashboardHome = ({ onViewPost }) => {
     ];
 
     return (
-        <div className="space-y-8">
-
-
-
+        <div className="space-y-6">
 
             {/* Filter Bar - Modern Segmented Control */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="inline-flex items-center bg-slate-100 rounded-lg p-1 gap-1">
                     {categories.map(cat => (
                         <button
@@ -84,6 +86,28 @@ const DashboardHome = ({ onViewPost }) => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* Search Bar */}
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search size={16} className="text-slate-400" />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search posts..."
+                            className="block w-56 pl-9 pr-8 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                            >
+                                ×
+                            </button>
+                        )}
+                    </div>
+
                     {/* Item Count */}
                     <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg border border-slate-200">
                         <span className="text-sm font-medium text-slate-600">{filteredPosts.length} items</span>

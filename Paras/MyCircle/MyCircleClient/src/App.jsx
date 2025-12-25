@@ -6,7 +6,6 @@ import Feed from './pages/Feed';
 import CreatePost from './pages/CreatePost';
 import Requests from './pages/Requests';
 import Profile from './pages/Profile';
-import EditProfile from './pages/EditProfile';
 import PostDetails from './pages/PostDetails';
 import Chat from './pages/Chat';
 import Notifications from './pages/Notifications';
@@ -20,7 +19,7 @@ import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider } from './context/ThemeContext';
 import DialogProvider from './components/ui/DialogProvider';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './dashboard/Dashboard';
 
 function App() {
   return (
@@ -39,7 +38,6 @@ function App() {
                       <Route path="/create-post" element={<CreatePost />} />
                       <Route path="/my-posts" element={<MyPosts />} />
                       <Route path="/requests" element={<Requests />} />
-                      <Route path="/edit-profile" element={<EditProfile />} />
                       <Route path="/post/:id" element={<PostDetails />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/chat" element={<Chat />} />

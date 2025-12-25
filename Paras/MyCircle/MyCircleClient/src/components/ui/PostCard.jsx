@@ -66,6 +66,22 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
         } catch (err) { console.error(err); }
     };
 
+    const handleContactRequest = async (e) => {
+        e.stopPropagation();
+        if (!currentUserId) return;
+        try {
+            await api.post('/contacts/request', { postId: post._id, recipientId: user._id });
+            success('Contact request sent!');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.response?.data?.msg || 'Failed to send request';
+            if (msg.includes('already')) {
+                success('Request already sent');
+            } else {
+                console.error(err);
+            }
+        }
+    };
+
     return (
         <motion.div
             layout
@@ -73,10 +89,11 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -4, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
             transition={{ duration: 0.2 }}
-            className={`group h-full bg-white rounded-2xl border border-zinc-200 overflow-hidden flex flex-col relative ${!isActive ? 'opacity-60 grayscale' : 'shadow-sm hover:border-zinc-300'}`}
+            onClick={() => onClick ? onClick(post._id) : navigate(`/post/${post._id}`)}
+            className={`group h-full bg-white rounded-2xl border border-zinc-200 overflow-hidden flex flex-col relative cursor-pointer ${!isActive ? 'opacity-60 grayscale' : 'shadow-sm hover:border-zinc-300'}`}
         >
             {/* --- Image Section --- */}
-            <div className="relative aspect-[4/3] overflow-hidden cursor-pointer bg-zinc-100" onClick={() => onClick ? onClick(post._id) : navigate(`/post/${post._id}`)}>
+            <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
                 {images && images.length > 0 ? (
                     <img
                         src={images[0]}
@@ -101,10 +118,23 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
             {/* --- Content Section --- */}
             <div className="p-5 flex flex-col flex-grow">
 
+                {/* User Info */}
+                <div className="flex items-center gap-2 mb-3" onClick={(e) => e.stopPropagation()}>
+                    <img
+                        src={getAvatarUrl(user)}
+                        alt={user?.displayName || 'User'}
+                        className="w-7 h-7 rounded-full object-cover border border-zinc-200"
+                        onError={(e) => { e.target.onerror = null; e.target.src = '/default-avatar.svg'; }}
+                    />
+                    <span className="text-sm font-medium text-zinc-700 truncate max-w-[150px]">
+                        {user?.displayName || 'Anonymous'}
+                    </span>
+                </div>
+
                 {/* Meta Header */}
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex flex-col">
-                        <h3 className="text-base font-bold text-zinc-900 leading-snug line-clamp-1 group-hover:text-indigo-600 transition-colors cursor-pointer" onClick={() => navigate(`/post/${post._id}`)}>
+                        <h3 className="text-base font-bold text-zinc-900 leading-snug line-clamp-1 group-hover:text-indigo-600 transition-colors">
                             {title}
                         </h3>
                         <div className="flex items-center gap-1 text-xs text-zinc-500 font-medium mt-0.5">
@@ -152,8 +182,8 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                     {/* Price */}
                     <div className="flex flex-col">
                         <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Price</span>
-                        <span className={`font-bold ${price ? 'text-zinc-900' : 'text-emerald-600'}`}>
-                            {price ? `₹${price.toLocaleString()}` : (acceptsBarter ? 'Barter' : 'Free')}
+                        <span className={`font-bold ${price && price > 0 ? 'text-zinc-900' : 'text-emerald-600'}`}>
+                            {price && price > 0 ? `₹${price.toLocaleString()}` : (acceptsBarter ? 'Barter' : 'Free')}
                         </span>
                     </div>
 
@@ -174,7 +204,7 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                             </button>
                         ) : (
                             <button
-                                onClick={(e) => { e.stopPropagation(); onRequestContact && onRequestContact(post._id, e); }}
+                                onClick={handleContactRequest}
                                 className="ml-2 px-4 py-2 rounded-full bg-zinc-900 text-white text-xs font-bold shadow-sm hover:bg-black hover:shadow-md transition-all flex items-center gap-1.5"
                             >
                                 Contact <ArrowUpRight size={12} />

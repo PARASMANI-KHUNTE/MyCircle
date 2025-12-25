@@ -4,8 +4,8 @@ import Sidebar from '../components/layout/Sidebar';
 import BottomNav from '../components/layout/BottomNav';
 import DashboardHome from './DashboardHome';
 import DashboardMyPosts from './DashboardMyPosts';
-import RequestsPage from './RequestsPage';
-import Profile from './Profile';
+import RequestsPage from '../pages/RequestsPage';
+import Profile from '../pages/Profile';
 import DashboardChat from './DashboardChat';
 import DashboardCreatePost from './DashboardCreatePost';
 import DashboardSettings from './DashboardSettings';
@@ -86,20 +86,6 @@ const TopNavbar = ({ user, onTabChange, hasUnread }) => {
                     Welcome back, {user?.displayName?.split(' ')[0] || 'User'}
                 </h2>
                 <p className="text-xs text-slate-500">Here's what's happening today.</p>
-            </div>
-
-            {/* Center: Search Bar */}
-            <div className="hidden md:flex flex-1 max-w-md mx-8">
-                <div className="relative w-full group">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search size={16} className="text-slate-400 group-hover:text-teal-500 transition-colors" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Search posts, chats, or requests..."
-                        className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 sm:text-sm transition-all duration-200"
-                    />
-                </div>
             </div>
 
             {/* Right: Actions */}
@@ -208,7 +194,7 @@ const Dashboard = () => {
             case 'chats': return <DashboardChat onUnreadUpdate={(count) => setUnreadChats(count)} />;
             case 'requests': return <RequestsPage />;
             case 'map': return <MapView />;
-            case 'profile': return <Profile onEditProfile={() => setActiveTab('edit-profile')} />;
+            case 'profile': return <Profile onEditProfile={() => setActiveTab('edit-profile')} onViewPost={(postId) => { setSelectedPostId(postId); setActiveTab('post'); }} />;
             case 'edit-profile': return <DashboardEditProfile onBack={() => setActiveTab('profile')} />;
             case 'posts': return <DashboardMyPosts onViewPost={(postId) => { setSelectedPostId(postId); setActiveTab('post'); }} />;
             case 'settings': return <DashboardSettings />;

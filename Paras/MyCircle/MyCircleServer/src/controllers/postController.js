@@ -276,6 +276,22 @@ exports.getMyPosts = async (req, res) => {
     }
 };
 
+// @desc    Get posts liked by current user
+// @route   GET /api/posts/liked
+// @access  Private
+exports.getLikedPosts = async (req, res) => {
+    try {
+        const posts = await Post.find({ likes: req.user.id })
+            .sort({ createdAt: -1 })
+            .populate('user', ['displayName', 'avatar']);
+
+        res.json(posts);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 // @desc    Toggle post active status
 // @route   PATCH /api/posts/:id/toggle-status
 // @access  Private

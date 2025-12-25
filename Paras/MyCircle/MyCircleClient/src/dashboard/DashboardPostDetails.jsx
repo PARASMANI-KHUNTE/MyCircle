@@ -346,8 +346,8 @@ const DashboardPostDetails = ({ postId, onBack }) => {
                             <div className="mb-6">
                                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Price</p>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-3xl font-bold text-slate-900">
-                                        ₹{post.price?.toLocaleString()}
+                                    <span className={`text-3xl font-bold ${post.price && post.price > 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
+                                        {post.price && post.price > 0 ? `₹${post.price.toLocaleString()}` : 'Free'}
                                     </span>
                                     {post.acceptsBarter && (
                                         <span className="text-xs font-semibold text-pink-500 bg-pink-50 px-2 py-1 rounded-md">
@@ -521,9 +521,12 @@ const DashboardPostDetails = ({ postId, onBack }) => {
                     <h2 className="font-bold text-xl text-slate-900 mb-6">Similar Posts</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {relatedPosts.map(p => (
-                            <div key={p._id} className="cursor-pointer" onClick={() => onBack && onBack('post', p._id)}>
-                                <PostCard post={p} currentUserId={currentUserId} />
-                            </div>
+                            <PostCard
+                                key={p._id}
+                                post={p}
+                                currentUserId={currentUserId}
+                                onClick={(postId) => onBack && onBack('post', postId)}
+                            />
                         ))}
                     </div>
                 </div>

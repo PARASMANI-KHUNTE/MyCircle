@@ -12,6 +12,9 @@ router.post('/', [auth, upload.array('images', 5), validatePostContent], postCon
 // Get user's own posts
 router.get('/my-posts', auth, postController.getMyPosts);
 
+// Get posts liked by user
+router.get('/liked', auth, postController.getLikedPosts);
+
 router.get('/', postController.getPosts);
 router.get('/:id', postController.getPostById);
 router.put('/:id', auth, postController.updatePost);

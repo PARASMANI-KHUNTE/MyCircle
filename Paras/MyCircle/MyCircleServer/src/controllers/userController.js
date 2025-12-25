@@ -24,7 +24,7 @@ exports.getUserProfile = async (req, res) => {
 exports.updateUserProfile = async (req, res) => {
     try {
         console.log('Update Profile Req Body:', req.body); // DEBUG LOG
-        const { bio, contactPhone, contactWhatsapp, location, skills } = req.body;
+        const { displayName, bio, contactPhone, contactWhatsapp, location, skills } = req.body;
 
         const user = await User.findById(req.user.id);
 
@@ -33,9 +33,10 @@ exports.updateUserProfile = async (req, res) => {
         }
 
         // Update fields
-        if (bio) user.bio = bio;
-        if (contactPhone) user.contactPhone = contactPhone;
-        if (contactWhatsapp) user.contactWhatsapp = contactWhatsapp;
+        if (displayName) user.displayName = displayName;
+        if (bio !== undefined) user.bio = bio;
+        if (contactPhone !== undefined) user.contactPhone = contactPhone;
+        if (contactWhatsapp !== undefined) user.contactWhatsapp = contactWhatsapp;
         if (location) user.location = location;
         if (skills) user.skills = skills; // Expecting array of strings
         if (req.file) user.avatar = req.file.path;

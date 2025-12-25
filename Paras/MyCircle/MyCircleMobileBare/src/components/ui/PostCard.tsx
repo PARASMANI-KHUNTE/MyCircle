@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Clipboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { MapPin, Clock, ArrowUpRight, MessageCircle, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { getAvatarUrl } from '../../utils/avatar';
@@ -45,8 +45,26 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
     const [likes, setLikes] = useState(post.likes || []);
     const [shares, setShares] = useState(post.shares || 0);
     const [expanded, setExpanded] = useState(false);
+    const lastTapRef = useRef<number>(0);
 
     const isLiked = currentUser && likes.includes(currentUser._id);
+
+    const handleDoubleTap = () => {
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+        if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+            // Double tap detected
+            handleLike();
+        } else {
+            // Single tap - delayed action
+            setTimeout(() => {
+                if (Date.now() - lastTapRef.current >= DOUBLE_TAP_DELAY) {
+                    onPress?.();
+                }
+            }, DOUBLE_TAP_DELAY);
+        }
+        lastTapRef.current = now;
+    };
 
     const toggleExpand = () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -126,7 +144,7 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
 
     return (
         <TouchableOpacity
-            onPress={onPress}
+            onPress={handleDoubleTap}
             activeOpacity={0.9}
             style={[styles.card, themeStyles.card, { borderLeftColor: getTypeColor(post.type), borderLeftWidth: 4 }]}
         >
@@ -388,7 +406,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginBottom: 16,
         borderWidth: 1,
-        resizeMode: 'cover',
+        resizeMode: 'contain',
     },
 });
 

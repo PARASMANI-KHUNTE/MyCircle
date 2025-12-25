@@ -2,17 +2,19 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Linking, StyleSheet } from 'react-native';
 import api from '../services/api';
-import { X, Check, Phone, MessageCircle, ArrowLeft, Trash2 } from 'lucide-react-native';
+import { X, Check, Phone, MessageCircle, MessageSquare, ArrowLeft, Trash2 } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const RequestsScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
     const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
     const [sentRequests, setSentRequests] = useState<any[]>([]);
+    const { notifications, markAsRead } = useNotifications();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
     const [alertConfig, setAlertConfig] = useState<{
@@ -71,7 +73,13 @@ const RequestsScreen = ({ navigation }: any) => {
     useFocusEffect(
         useCallback(() => {
             fetchRequests();
-        }, [])
+
+            // Mark related notifications as read
+            const relatedNotifications = notifications.filter(n =>
+                !n.read && (n.type === 'request' || n.type === 'approval' || n.type === 'request_received' || n.type === 'request_approved')
+            );
+            relatedNotifications.forEach(n => markAsRead(n._id));
+        }, [notifications])
     );
 
     const handleAction = async (id: string, status: string) => {
@@ -217,15 +225,26 @@ const RequestsScreen = ({ navigation }: any) => {
                         </TouchableOpacity>
                     </View>
                 ) : (
-                    <View style={[
-                        styles.statusBadge,
-                        item.status === 'approved' ? styles.approvedBadge : styles.rejectedBadge,
-                        { marginTop: 12 }
-                    ]}>
-                        <Text style={[
-                            styles.statusText,
-                            item.status === 'approved' ? styles.approvedText : styles.rejectedText
-                        ]}>Request {item.status}</Text>
+                    <View>
+                        <View style={[
+                            styles.statusBadge,
+                            item.status === 'approved' ? styles.approvedBadge : styles.rejectedBadge,
+                            { marginTop: 12 }
+                        ]}>
+                            <Text style={[
+                                styles.statusText,
+                                item.status === 'approved' ? styles.approvedText : styles.rejectedText
+                            ]}>Request {item.status}</Text>
+                        </View>
+                        {item.status === 'approved' && (
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('ChatWindow', { recipient: item.requester })}
+                                style={[styles.chatButton, { backgroundColor: colors.primary }]}
+                            >
+                                <MessageCircle size={18} color="white" />
+                                <Text style={styles.chatButtonText}>Chat</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
             </View>
@@ -281,12 +300,18 @@ const RequestsScreen = ({ navigation }: any) => {
 
                     {item.status === 'approved' && (
                         <View style={styles.contactActions}>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('ChatWindow', { recipient: item.recipient })}
+                                style={[styles.iconButton, { backgroundColor: colors.primary }]}
+                            >
+                                <MessageCircle size={18} color="white" />
+                            </TouchableOpacity>
                             {item.post?.contactWhatsapp && (
                                 <TouchableOpacity
                                     onPress={() => handleWhatsApp(item.post.contactWhatsapp)}
                                     style={[styles.iconButton, { backgroundColor: '#16a34a' }]}
                                 >
-                                    <MessageCircle size={18} color="white" />
+                                    <MessageSquare size={18} color="white" />
                                 </TouchableOpacity>
                             )}
                             {item.post?.contactPhone && (
@@ -624,6 +649,19 @@ const styles = StyleSheet.create({
     emptyText: {
         color: '#71717a',
         fontSize: 16,
+    },
+    chatButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: 10,
+        marginTop: 12,
+        gap: 8,
+    },
+    chatButtonText: {
+        color: '#ffffff',
+        fontWeight: 'bold',
     },
 });
 

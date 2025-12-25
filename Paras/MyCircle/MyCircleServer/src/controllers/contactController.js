@@ -1,6 +1,7 @@
 const ContactRequest = require('../models/ContactRequest');
 const Post = require('../models/Post');
 const User = require('../models/User');
+const Conversation = require('../models/Conversation');
 const { createNotification } = require('./notificationController');
 
 // @desc    Create a contact request
@@ -191,6 +192,22 @@ exports.updateRequestStatus = async (req, res) => {
         // Populate recipient details for notification
         await request.populate('recipient', 'displayName');
 
+        // If approved, ensure a conversation exists
+        let conversationId = null;
+        if (status === 'approved') {
+            let conversation = await Conversation.findOne({
+                participants: { $all: [request.requester, req.user.id] }
+            });
+
+            if (!conversation) {
+                conversation = new Conversation({
+                    participants: [request.requester, req.user.id]
+                });
+                await conversation.save();
+            }
+            conversationId = conversation._id;
+        }
+
         // Send real-time notification to requester
         const io = req.app.get('io');
         try {
@@ -201,7 +218,8 @@ exports.updateRequestStatus = async (req, res) => {
                 title: status === 'approved' ? 'Request Approved' : 'Request Rejected',
                 message: `${request.recipient?.displayName || 'User'} has ${status} your contact request.`,
                 link: '/requests',
-                relatedId: request.post
+                relatedId: request.post,
+                conversationId: conversationId
             });
         } catch (notifErr) {
             console.error('Failed to send notification for request status update:', notifErr);

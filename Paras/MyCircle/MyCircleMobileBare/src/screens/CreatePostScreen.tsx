@@ -137,6 +137,17 @@ const CreatePostScreen = ({ navigation }: any) => {
                 isDestructive: false,
                 onConfirm: () => {
                     setAlertConfig(prev => ({ ...prev, visible: false }));
+                    // Reset all form state
+                    setStep(1);
+                    setTitle('');
+                    setDescription('');
+                    setType('job');
+                    setLocation('');
+                    setCoordinates(null);
+                    setPrice('');
+                    setAcceptsBarter(false);
+                    setDuration(40320);
+                    setImages([]);
                     navigation.navigate('Feed');
                 }
             });

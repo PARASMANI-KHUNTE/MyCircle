@@ -118,22 +118,10 @@ const SettingsScreen = ({ navigation }: any) => {
                     value={notifications.push}
                     onValueChange={(val: boolean) => setNotifications(prev => ({ ...prev, push: val }))}
                 />
-                <SettingItem
-                    icon={Bell}
-                    label="Email Alerts"
-                    value={notifications.email}
-                    onValueChange={(val: boolean) => setNotifications(prev => ({ ...prev, email: val }))}
-                />
 
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Privacy</Text>
                 </View>
-                <SettingItem
-                    icon={Eye}
-                    label="Public Profile"
-                    value={privacy.publicProfile}
-                    onValueChange={(val: boolean) => setPrivacy(prev => ({ ...prev, publicProfile: val }))}
-                />
                 <TouchableOpacity
                     style={styles.settingItem}
                     onPress={() => navigation.navigate('BlockedUsers')}
@@ -144,11 +132,6 @@ const SettingsScreen = ({ navigation }: any) => {
                     </View>
                     <ChevronRight size={20} color="#52525b" />
                 </TouchableOpacity>
-                <SettingItem
-                    icon={Lock}
-                    label="Password & Security"
-                    type="link"
-                />
 
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Danger Zone</Text>

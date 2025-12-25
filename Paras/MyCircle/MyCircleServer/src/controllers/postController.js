@@ -359,22 +359,28 @@ exports.updatePost = async (req, res) => {
         const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
 
         // Validation for price
-        const numericPrice = parseFloat(price);
-        if (price !== undefined && price !== '' && isNaN(numericPrice)) {
-            return res.status(400).json({ msg: 'Price must be a valid number' });
+        let numericPrice = post.price;
+        if (price !== undefined && price !== null && price !== '') {
+            const parsed = parseFloat(price);
+            if (isNaN(parsed)) {
+                return res.status(400).json({ msg: 'Price must be a valid number' });
+            }
+            numericPrice = parsed;
+        } else if (price === '' || price === 0) {
+            numericPrice = 0;
         }
 
         // Update fields
         if (type) post.type = type;
         if (title) post.title = title;
         if (description) post.description = description;
-        if (price !== undefined) post.price = numericPrice || 0;
+        post.price = numericPrice;
         if (location) post.location = location;
         if (contactPhone !== undefined) post.contactPhone = contactPhone;
         if (contactWhatsapp !== undefined) post.contactWhatsapp = contactWhatsapp;
 
         // Recalculate expiresAt if duration is changed
-        if (duration) {
+        if (duration !== undefined && duration !== null && duration !== '') {
             const durationInMinutes = parseInt(duration, 10);
             if (!isNaN(durationInMinutes)) {
                 post.duration = durationInMinutes;

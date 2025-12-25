@@ -137,15 +137,21 @@ const analyzePost = async (postData) => {
         if (!model) return { demandScore: 5, demandLevel: "Moderate", priceAnalysis: "Data unavailable" };
 
         const prompt = `Analyze this marketplace post: Title: ${postData.title}, Desc: ${postData.description}, Price: ${postData.price || 'N/A'}.
-        Provide JSON: {
+        Provide JSON ONLY: {
             "demandScore": 1-10 (number),
             "demandLevel": "Low/Moderate/High (string)",
             "priceAnalysis": "1 short sentence on value/fairness"
         }`;
 
         const result = await model.generateContent(prompt);
-        const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);
-        return data;
+        const response = await result.response;
+        const textResponse = response.text();
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        throw new Error("No JSON found in response");
     } catch (error) {
         console.error("Gemini Analysis Error:", error.message);
         return { demandScore: 0, demandLevel: "Error", priceAnalysis: "Analysis failed." };
@@ -159,15 +165,21 @@ const explainPost = async (postData) => {
 
         const prompt = `Explain this post to a potential buyer/applicant. Title: ${postData.title}, Desc: ${postData.description}.
         Keep it very concise and on-point. Do not write big paragraphs.
-        Provide JSON: {
+        Provide JSON ONLY: {
             "summary": "1 short sentence hook", 
             "context": "2-3 bullet points on key value/details", 
             "interestingFacts": ["1 fun fact or unique selling point"]
         }`;
 
         const result = await model.generateContent(prompt);
-        const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);
-        return data;
+        const response = await result.response;
+        const textResponse = response.text();
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        throw new Error("No JSON found in response");
     } catch (error) {
         console.error("Gemini Explanation Error:", error.message);
         return { summary: "Explanation unavailable.", context: "", interestingFacts: [] };

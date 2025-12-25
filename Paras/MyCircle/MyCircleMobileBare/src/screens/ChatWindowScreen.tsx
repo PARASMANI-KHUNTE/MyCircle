@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import { ArrowLeft, Send, MoreVertical, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, Send, MoreVertical, Sparkles, X } from 'lucide-react-native';
 import { moderateContent, getChatSuggestions } from '../services/aiService';
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 
@@ -23,6 +23,8 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const flatListRef = useRef<FlatList>(null);
 
     const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [replyTo, setReplyTo] = useState<any>(null);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(true);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -195,15 +197,17 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         }
     };
 
-
     const handleSend = async (textToSend?: string) => {
         const text = textToSend || inputText;
-        if (!text.trim()) return;
+        if (!text.trim() || sending) return;
+
+        setSending(true);
 
         // AI Moderation
         const moderation = await moderateContent(text);
         if (!moderation.safe) {
             Alert.alert('Message Blocked', `Your message was flagged: ${moderation.reason}. Please be respectful.`);
+            setSending(false);
             return;
         }
 
@@ -217,7 +221,8 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         try {
             const messageData = {
                 recipientId: recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id,
-                text: text.trim()
+                text: text.trim(),
+                replyTo: replyTo?._id
             };
 
             const res = await api.post('/chat/message', messageData);
@@ -225,6 +230,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             // Add message to local state
             setMessages(prev => [...prev, res.data]);
             setInputText('');
+            setReplyTo(null);
 
             // If this was a new conversation, update the conversation ID
             if (!id && res.data.conversationId) {
@@ -244,6 +250,8 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             } else {
                 Alert.alert('Error', 'Failed to send message. Please try again.');
             }
+        } finally {
+            setSending(false);
         }
     };
 
@@ -361,12 +369,12 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                 <TouchableOpacity onPress={showMenu} style={{ padding: 8 }}>
                     <MoreVertical color={colors.text} size={24} />
                 </TouchableOpacity>
-            </View >
+            </View>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={styles.keyboardView}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
                 <FlatList
                     ref={flatListRef}
@@ -377,11 +385,33 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                         const senderId = typeof item.sender === 'string' ? item.sender : item.sender?._id;
                         const isMe = senderId === (auth?.user?._id || auth?.user?.id);
                         return (
-                            <View style={[styles.messageRow, isMe ? styles.myMessageRow : styles.otherMessageRow]}>
+                            <TouchableOpacity
+                                onLongPress={() => {
+                                    setActionSheetConfig({
+                                        title: "Message Options",
+                                        actions: [
+                                            {
+                                                label: "Reply",
+                                                onPress: () => setReplyTo(item)
+                                            }
+                                        ]
+                                    });
+                                    setActionSheetVisible(true);
+                                }}
+                                activeOpacity={0.7}
+                                style={[styles.messageRow, isMe ? styles.myMessageRow : styles.otherMessageRow]}
+                            >
                                 <View style={[
                                     styles.messageBubble,
                                     isMe ? { backgroundColor: colors.primary } : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }
                                 ]}>
+                                    {item.replyTo && (
+                                        <View style={[styles.replyPreview, { borderLeftColor: isMe ? '#ffffff50' : colors.primary }]}>
+                                            <Text style={[styles.replyName, { color: isMe ? '#ffffffa0' : colors.primary }]} numberOfLines={1}>
+                                                {messages.find(m => m._id === item.replyTo)?.text || "Replying to..."}
+                                            </Text>
+                                        </View>
+                                    )}
                                     <Text style={[styles.messageText, { color: isMe ? '#ffffff' : colors.text }]}>{item.text}</Text>
                                     <View style={styles.messageFooter}>
                                         <Text style={styles.timeText}>
@@ -394,7 +424,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                                         )}
                                     </View>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         );
                     }}
                     onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
@@ -403,6 +433,17 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                 />
 
                 <View style={[styles.inputArea, { backgroundColor: colors.card, borderTopColor: colors.border, flexDirection: 'column', alignItems: 'stretch' }]}>
+                    {replyTo && (
+                        <View style={[styles.replyInputPreview, { backgroundColor: colors.input, borderColor: colors.border }]}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.replyToLabel, { color: colors.primary }]}>Replying to...</Text>
+                                <Text style={[styles.replyToText, { color: colors.textSecondary }]} numberOfLines={1}>{replyTo.text}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setReplyTo(null)}>
+                                <X color={colors.textSecondary} size={20} />
+                            </TouchableOpacity>
+                        </View>
+                    )}
                     {suggestions.length > 0 && (
                         <View style={{ flexDirection: 'row', marginBottom: 8, paddingHorizontal: 4 }}>
                             {suggestions.map((s, i) => (
@@ -436,8 +477,19 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                             onChangeText={handleTextChange}
                             multiline
                         />
-                        <TouchableOpacity onPress={() => handleSend()} style={[styles.sendButton, { backgroundColor: colors.primary }]}>
-                            <Send size={20} color="white" />
+                        <TouchableOpacity
+                            onPress={() => handleSend()}
+                            disabled={sending || !inputText.trim()}
+                            style={[
+                                styles.sendButton,
+                                { backgroundColor: (sending || !inputText.trim()) ? colors.input : colors.primary }
+                            ]}
+                        >
+                            {sending ? (
+                                <ActivityIndicator size="small" color="white" />
+                            ) : (
+                                <Send size={20} color="white" />
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -577,8 +629,35 @@ const styles = StyleSheet.create({
     sendButtonActive: {
         backgroundColor: '#7c3aed', // violet-600
     },
-    sendButtonDisabled: {
-        backgroundColor: '#27272a', // zinc-800
+    chatButtonText: {
+        color: '#ffffff',
+        fontWeight: 'bold',
+    },
+    replyPreview: {
+        borderLeftWidth: 3,
+        paddingLeft: 8,
+        marginBottom: 4,
+        opacity: 0.8,
+    },
+    replyName: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    replyInputPreview: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        borderRadius: 8,
+        marginBottom: 8,
+        borderWidth: 1,
+    },
+    replyToLabel: {
+        fontSize: 11,
+        fontWeight: 'bold',
+        marginBottom: 2,
+    },
+    replyToText: {
+        fontSize: 13,
     },
 });
 

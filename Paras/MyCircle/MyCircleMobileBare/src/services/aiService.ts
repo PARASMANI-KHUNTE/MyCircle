@@ -33,10 +33,18 @@ export const getPostInsights = async (post: any): Promise<{ summary: string; tip
 export const getPostExplanation = async (post: any): Promise<{ summary: string; context: string; interestingFacts: string[] }> => {
     try {
         const response = await api.post('/ai/explain-post', { post });
-        console.log("AI Service Response:", response.data);
-        return response.data;
-    } catch (error) {
-        console.error('Explanation error:', error);
+
+        // Validate response structure
+        if (response.data && typeof response.data === 'object') {
+            return {
+                summary: response.data.summary || 'No summary available',
+                context: response.data.context || '',
+                interestingFacts: Array.isArray(response.data.interestingFacts) ? response.data.interestingFacts : []
+            };
+        }
+        return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
+    } catch (error: any) {
+        console.error('Explanation error:', error.message);
         return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
     }
 };

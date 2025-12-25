@@ -201,12 +201,22 @@ const FeedScreen = ({ navigation }: any) => {
     }, [socket]);
 
     // Filters
-    const [sortOrder, setSortOrder] = useState<'latest' | 'oldest'>('latest');
+    const [sortOrder, setSortOrder] = useState<'latest' | 'oldest' | 'urgent' | 'nearest'>('latest');
     const [locationFilter, setLocationFilter] = useState('All');
     const [availableLocations, setAvailableLocations] = useState<string[]>(['All']);
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [isNearby, setIsNearby] = useState(false);
     const [nearbyLoading, setNearbyLoading] = useState(false);
+
+    // Distance filter (radius in km)
+    const [distanceRadius, setDistanceRadius] = useState<number>(50); // Default 50km (All)
+    const distanceOptions = [
+        { label: 'All', value: 50 },
+        { label: '1 km', value: 1 },
+        { label: '5 km', value: 5 },
+        { label: '10 km', value: 10 },
+        { label: '25 km', value: 25 },
+    ];
 
     // For date, simple string match or picker? User said "select date". 
     // Implementing a simple text match for now or a list of available dates would be better but let's stick to simple "Date" sort/filter.
@@ -358,9 +368,22 @@ const FeedScreen = ({ navigation }: any) => {
 
         // 5. Sort
         result.sort((a: any, b: any) => {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+            if (sortOrder === 'urgent') {
+                // Sort by expiration (soonest first)
+                const expiresA = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
+                const expiresB = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
+                return expiresA - expiresB;
+            } else if (sortOrder === 'nearest') {
+                // Sort by distance (assume dist.calculated exists from geoNear)
+                const distA = a.dist?.calculated || Infinity;
+                const distB = b.dist?.calculated || Infinity;
+                return distA - distB;
+            } else {
+                // Sort by date (latest or oldest)
+                const dateA = new Date(a.createdAt).getTime();
+                const dateB = new Date(b.createdAt).getTime();
+                return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+            }
         });
 
         setFilteredPosts(result);
@@ -643,9 +666,25 @@ const FeedScreen = ({ navigation }: any) => {
 
                     <AnimatedFilterChip
                         icon={ArrowUpDown}
-                        label={sortOrder === 'latest' ? 'Latest' : 'Oldest'}
-                        isActive={false}
-                        onPress={toggleSort}
+                        label={sortOrder === 'latest' ? 'Latest' : sortOrder === 'oldest' ? 'Oldest' : sortOrder === 'urgent' ? '🔥 Urgent' : '📍 Nearest'}
+                        isActive={sortOrder !== 'latest'}
+                        onPress={() => {
+                            const sortOptions: Array<'latest' | 'oldest' | 'urgent' | 'nearest'> = ['latest', 'oldest', 'urgent', 'nearest'];
+                            const currentIdx = sortOptions.indexOf(sortOrder);
+                            setSortOrder(sortOptions[(currentIdx + 1) % sortOptions.length]);
+                        }}
+                        colors={colors}
+                    />
+
+                    <AnimatedFilterChip
+                        icon={MapPin}
+                        label={distanceRadius === 50 ? 'Distance' : `${distanceRadius}km`}
+                        isActive={distanceRadius !== 50}
+                        onPress={() => {
+                            const distances = [50, 1, 5, 10, 25];
+                            const currentIdx = distances.indexOf(distanceRadius);
+                            setDistanceRadius(distances[(currentIdx + 1) % distances.length]);
+                        }}
                         colors={colors}
                     />
 

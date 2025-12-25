@@ -12,6 +12,7 @@ interface Notification {
     type: string;
     read: boolean;
     relatedId?: string;
+    conversationId?: string;
     createdAt: string;
 }
 
@@ -114,10 +115,13 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         if (notification.relatedId) {
             if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'reply') {
                 navigation.navigate('PostDetails', { id: notification.relatedId });
-            } else if (notification.type === 'message') {
-                // Navigate to the specific chat window with the conversation ID
-                navigation.navigate('ChatWindow', { id: notification.relatedId });
-            } else if (notification.type === 'request' || notification.type === 'approval' || notification.type === 'info') {
+            } else if (notification.type === 'approval' || notification.type === 'request_approved') {
+                if (notification.conversationId) {
+                    navigation.navigate('ChatWindow', { id: notification.conversationId });
+                } else {
+                    navigation.navigate('Requests');
+                }
+            } else if (notification.type === 'request' || notification.type === 'info') {
                 navigation.navigate('Requests');
             }
         }

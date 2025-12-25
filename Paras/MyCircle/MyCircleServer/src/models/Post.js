@@ -64,6 +64,15 @@ const PostSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    isUrgent: {
+        type: Boolean,
+        default: false,
+    },
+    exchangePreference: {
+        type: String,
+        enum: ['money', 'barter', 'flexible'],
+        default: 'money',
+    },
     expiresAt: {
         type: Date,
         index: true, // Index for efficient querying/expiration
@@ -114,7 +123,22 @@ const PostSchema = new mongoose.Schema({
             createdAt: {
                 type: Date,
                 default: Date.now
-            }
+            },
+            replies: [{
+                user: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'User',
+                    required: true
+                },
+                text: {
+                    type: String,
+                    required: true
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }]
         }]
     }],
     notified1d: {

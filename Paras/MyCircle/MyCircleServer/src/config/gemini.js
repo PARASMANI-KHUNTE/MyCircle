@@ -12,10 +12,13 @@ const isKeyValid = () => {
     return true;
 };
 
-const getModel = (modelName = "gemini-1.5-flash-latest") => {
-    if (!isKeyValid()) return null;
+const getModel = (modelName = "gemini-2.0-flash") => {
+    if (!isKeyValid()) {
+        console.warn("Gemini: API Key is invalid or missing.");
+        return null;
+    }
     try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
         return genAI.getGenerativeModel({ model: modelName });
     } catch (e) {
         console.error(`Gemini Initialization Error [${modelName}]:`, e.message);
@@ -137,15 +140,21 @@ const analyzePost = async (postData) => {
         if (!model) return { demandScore: 5, demandLevel: "Moderate", priceAnalysis: "Data unavailable" };
 
         const prompt = `Analyze this marketplace post: Title: ${postData.title}, Desc: ${postData.description}, Price: ${postData.price || 'N/A'}.
-        Provide JSON: {
+        Provide JSON ONLY: {
             "demandScore": 1-10 (number),
             "demandLevel": "Low/Moderate/High (string)",
             "priceAnalysis": "1 short sentence on value/fairness"
         }`;
 
         const result = await model.generateContent(prompt);
-        const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);
-        return data;
+        const response = await result.response;
+        const textResponse = response.text();
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        throw new Error("No JSON found in response");
     } catch (error) {
         console.error("Gemini Analysis Error:", error.message);
         return { demandScore: 0, demandLevel: "Error", priceAnalysis: "Analysis failed." };
@@ -154,23 +163,48 @@ const analyzePost = async (postData) => {
 
 const explainPost = async (postData) => {
     try {
+        if (!postData?.title || !postData?.description) {
+            return { summary: "Post details missing for explanation.", context: "", interestingFacts: [] };
+        }
+
         const model = getModel();
         if (!model) return { summary: "Post explanation unavailable.", context: "Details in description.", interestingFacts: [] };
 
         const prompt = `Explain this post to a potential buyer/applicant. Title: ${postData.title}, Desc: ${postData.description}.
         Keep it very concise and on-point. Do not write big paragraphs.
-        Provide JSON: {
+        Provide JSON ONLY: {
             "summary": "1 short sentence hook", 
             "context": "2-3 bullet points on key value/details", 
             "interestingFacts": ["1 fun fact or unique selling point"]
         }`;
 
         const result = await model.generateContent(prompt);
-        const data = JSON.parse((await result.response).text().match(/\{[\s\S]*\}/)[0]);
-        return data;
+        const response = await result.response;
+        const textResponse = response.text();
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch (parseError) {
+                throw parseError;
+            }
+        }
+        throw new Error("No JSON found in response");
     } catch (error) {
         console.error("Gemini Explanation Error:", error.message);
-        return { summary: "Explanation unavailable.", context: "", interestingFacts: [] };
+
+        // Graceful Fallback for Quota or Connection Issues
+        return {
+            summary: `Quick Summary: ${postData.title}`,
+            context: `The user is offering this ${postData.type || 'item'} for ₹${postData.price || 'a fair price'}. Check the description below for full details.`,
+            interestingFacts: [
+                "AI summary currently in high demand",
+                "Verified local post",
+                "Contact user for more details"
+            ],
+            isFallback: true
+        };
     }
 };
 

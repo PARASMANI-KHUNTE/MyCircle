@@ -74,7 +74,7 @@ exports.deleteNotification = async (req, res) => {
 };
 
 // Helper to create and emit notification (internal use)
-exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId }) => {
+exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId, conversationId }) => {
     try {
         if (!recipient) {
             console.error("[Notification] No recipient provided.");
@@ -94,7 +94,8 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
             title,
             message,
             link,
-            relatedId
+            relatedId,
+            conversationId
         });
         await notification.save();
 

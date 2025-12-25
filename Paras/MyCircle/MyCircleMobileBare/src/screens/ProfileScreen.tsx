@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Sty
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Settings, LogOut, MessageCircle, Star, User, Edit3, Clock, Edit } from 'lucide-react-native';
+import { ArrowLeft, Settings, LogOut, MessageCircle, Star, User, Edit3, Clock, Edit, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
@@ -150,6 +150,26 @@ const ProfileScreen = ({ navigation, route }: any) => {
         });
     };
 
+    const handleDeletePost = (postId: string) => {
+        setAlertConfig({
+            visible: true,
+            title: "Delete Post",
+            message: "Are you sure you want to delete this post? This action cannot be undone.",
+            confirmText: "Delete",
+            isDestructive: true,
+            onConfirm: async () => {
+                setAlertConfig(prev => ({ ...prev, visible: false }));
+                try {
+                    await api.delete(`/posts/${postId}`);
+                    fetchMyPosts();
+                    fetchProfile();
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        });
+    };
+
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -173,7 +193,8 @@ const ProfileScreen = ({ navigation, route }: any) => {
     };
 
     const getTypeColor = (type: string) => {
-        switch (type) {
+        if (!type) return colors.primary;
+        switch (type.toLowerCase()) {
             case 'job': return '#3b82f6'; // Blue
             case 'service': return '#06b6d4'; // Cyan
             case 'sell': return '#f59e0b'; // Amber
@@ -184,7 +205,11 @@ const ProfileScreen = ({ navigation, route }: any) => {
     };
 
     const getPostImage = (post: any) => {
-        if (post.images && post.images.length > 0) return post.images[0];
+        if (!post) return null;
+        if (post.images && post.images.length > 0) {
+            const img = post.images[0];
+            return typeof img === 'string' ? img : img.uri;
+        }
         const keywords: Record<string, string> = {
             job: 'workspace,office',
             service: 'tools,work',
@@ -192,8 +217,8 @@ const ProfileScreen = ({ navigation, route }: any) => {
             rent: 'key,house',
             barter: 'deal,handshake'
         };
-        const keyword = keywords[post.type] || 'abstract';
-        return `https://loremflickr.com/400/400/${keyword}?lock=${post._id.substring(post._id.length - 4)}`;
+        const keyword = keywords[post.type?.toLowerCase()] || 'abstract';
+        return `https://loremflickr.com/400/400/${keyword}?lock=${post._id ? post._id.substring(post._id.length - 4) : '0000'}`;
     };
 
     const getProgress = (createdAt: string, expiresAt: string, durationMinutes: number) => {
@@ -343,16 +368,25 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             >
                                 {viewMode === 'grid' ? (
                                     <View style={[styles.gridCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderWidth: 1.5 }]}>
-                                        <Image source={{ uri: getPostImage(post) }} style={styles.gridImage} />
+                                        <Image
+                                            source={{ uri: getPostImage(post) || undefined }}
+                                            style={styles.gridImage}
+                                            defaultSource={require('../assets/logo.png')}
+                                        />
                                         <View style={styles.gridOverlay}>
                                             <View style={[styles.typeTag, { backgroundColor: getTypeColor(post.type) }]}>
-                                                <Text style={styles.typeTagText}>{post.type.toUpperCase()}</Text>
+                                                <Text style={styles.typeTagText}>{post.type?.toUpperCase()}</Text>
                                             </View>
-                                            <Text style={[styles.gridTitle, { color: '#fff' }]} numberOfLines={1}>{post.title}</Text>
+                                            <Text style={[styles.gridTitle, { color: '#fff' }]} numberOfLines={2}>{post.title}</Text>
                                             <View style={styles.gridFooter}>
-                                                <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.gridEditBtn}>
-                                                    <Edit3 size={14} color="#fff" />
-                                                </TouchableOpacity>
+                                                <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                    <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.gridActionBtn}>
+                                                        <Edit3 size={12} color="#fff" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity onPress={() => handleDeletePost(post._id)} style={[styles.gridActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.6)' }]}>
+                                                        <Trash2 size={12} color="#fff" />
+                                                    </TouchableOpacity>
+                                                </View>
                                                 <Text style={[styles.gridPrice, { color: '#fff' }]}>₹{post.price}</Text>
                                             </View>
                                             {renderExpirationBar(post)}
@@ -368,9 +402,14 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                             </View>
                                             {renderExpirationBar(post)}
                                         </View>
-                                        <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.listEditBtn}>
-                                            <Edit3 size={16} color={colors.primary} />
-                                        </TouchableOpacity>
+                                        <View style={styles.listActionArea}>
+                                            <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.listActionBtn}>
+                                                <Edit3 size={16} color={colors.primary} />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={() => handleDeletePost(post._id)} style={styles.listActionBtn}>
+                                                <Trash2 size={16} color="#ef4444" />
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 )}
                             </TouchableOpacity>
@@ -599,8 +638,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     gridOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
         padding: 10,
         justifyContent: 'flex-end',
     },
@@ -614,10 +657,17 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    gridEditBtn: {
+    gridActionBtn: {
         padding: 4,
         backgroundColor: 'rgba(0,0,0,0.5)',
         borderRadius: 6,
+    },
+    listActionArea: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    listActionBtn: {
+        padding: 10,
     },
     gridPrice: {
         fontSize: 11,
@@ -643,23 +693,10 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         resizeMode: 'cover',
     },
-    listImagePlaceholder: {
-        width: 60,
-        height: 60,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     listTitle: {
         fontSize: 15,
         fontWeight: 'bold',
         marginBottom: 2,
-    },
-    listSubtitle: {
-        fontSize: 12,
-    },
-    listEditBtn: {
-        padding: 10,
     },
     emptyText: {
         textAlign: 'center',

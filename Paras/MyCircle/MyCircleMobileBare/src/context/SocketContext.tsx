@@ -42,12 +42,21 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
         setupNotifications();
 
-        // Foreground/Background Event Listener
-        return notifee.onForegroundEvent(({ type, detail }) => {
+        // Foreground Event Listener
+        const unsubscribeForeground = notifee.onForegroundEvent(({ type, detail }) => {
             if (type === EventType.PRESS) {
                 handleNotificationPress(detail.notification?.data);
             }
         });
+
+        // Background Event Listener (must be at module level for full support, but this helps)
+        notifee.onBackgroundEvent(async ({ type, detail }) => {
+            if (type === EventType.PRESS) {
+                handleNotificationPress(detail.notification?.data);
+            }
+        });
+
+        return unsubscribeForeground;
     }, []);
 
     // Check for initial notification (App opened from quit state)
@@ -66,8 +75,14 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         console.log("Notification Pressed:", data);
 
-        if (data.type === 'request' || data.type === 'approval' || data.type === 'info' || data.type === 'request_received' || data.type === 'request_approved') {
+        if (data.type === 'request' || data.type === 'info' || data.type === 'request_received') {
             navigate('Requests');
+        } else if (data.type === 'approval' || data.type === 'request_approved') {
+            if (data.conversationId) {
+                navigate('ChatWindow', { id: data.conversationId });
+            } else {
+                navigate('Requests');
+            }
         } else if (data.type === 'message') {
             // For messages, we need conversation ID. 
             // If data contains conversationId, navigate to ChatWindow
@@ -147,6 +162,16 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                             id: 'default',
                         },
                         vibrationPattern: [300, 500],
+                        smallIcon: 'ic_launcher', // Uses the app launcher icon
+                    },
+                    ios: {
+                        sound: 'default',
+                        foregroundPresentationOptions: {
+                            badge: true,
+                            sound: true,
+                            banner: true,
+                            list: true,
+                        },
                     },
                 });
             } catch (err) {

@@ -1,6 +1,48 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
+const ContactRequest = require('../models/ContactRequest');
 const { createNotification } = require('../controllers/notificationController');
+
+/**
+ * Auto-expires pending contact requests older than 7 days.
+ */
+const checkExpiredRequests = async (io) => {
+    try {
+        const now = new Date();
+
+        // Find and update expired pending requests
+        const expiredRequests = await ContactRequest.find({
+            status: 'pending',
+            expiresAt: { $lt: now }
+        }).populate('requester', 'displayName').populate('post', 'title');
+
+        for (const request of expiredRequests) {
+            request.status = 'expired';
+            await request.save();
+
+            // Notify requester that their request expired
+            if (io && request.requester) {
+                try {
+                    await createNotification(io, {
+                        recipient: request.requester._id,
+                        type: 'info',
+                        title: 'Request Expired',
+                        message: `Your contact request for "${request.post?.title || 'a post'}" has expired.`,
+                        link: '/requests'
+                    });
+                } catch (nErr) {
+                    console.error(`[Cron] Notification failed for request ${request._id}:`, nErr.message);
+                }
+            }
+        }
+
+        if (expiredRequests.length > 0) {
+            console.log(`[Cron] Expired ${expiredRequests.length} pending contact requests.`);
+        }
+    } catch (error) {
+        console.error('[Cron] Error checking expired requests:', error);
+    }
+};
 
 /**
  * Checks for expired posts and those nearing expiration.
@@ -113,10 +155,14 @@ const startCronJobs = (io) => {
     console.log('[Cron] Background jobs initialized.');
 
     // Check every minute for precision
-    setInterval(() => checkExpiredPosts(io), 60 * 1000);
+    setInterval(() => {
+        checkExpiredPosts(io);
+        checkExpiredRequests(io);
+    }, 60 * 1000);
 
     // Also run once on startup
     checkExpiredPosts(io);
+    checkExpiredRequests(io);
 };
 
 module.exports = { startCronJobs };

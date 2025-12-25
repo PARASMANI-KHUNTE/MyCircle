@@ -12,7 +12,6 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 | Google OAuth Login | ✅ | ✅ | Sign in with Google account |
 | Landing/Welcome Screen | ✅ | ✅ | Introduction to the app |
 | User Registration | ✅ | ✅ | Create new account |
-| User Login | ✅ | ✅ | Email/password login |
 | Persistent Sessions | ✅ | ✅ | JWT token-based auth |
 
 ---
@@ -25,10 +24,11 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 | Category Filters | ✅ | ✅ | Filter by: Job, Service, Sell, Rent, Barter |
 | Search | ✅ | ✅ | Text search across titles and descriptions |
 | Location Filter | ✅ | ✅ | Filter by city/area |
+| Distance Filter | ✅ | ⚠️ | Filter by radius: 1km, 5km, 10km, 25km |
 | Date Filter | ✅ | ✅ | Filter by post date |
-| Sort (Latest/Oldest) | ✅ | ✅ | Sort posts by creation date |
+| Sort Options | ✅ | ✅ | Sort by: Latest, Oldest, Urgent, Nearest |
 | Nearby Posts (GPS) | ✅ | ✅ | Filter posts by proximity |
-| Map View | ✅ | ✅ | View posts on interactive map (Leaflet) |
+| Map View | ✅ | ✅ | View posts on interactive map with fuzzy pins |
 | Pull to Refresh | ✅ | ❌ | Mobile-specific refresh gesture |
 | Real-time New Posts | ✅ | ✅ | Socket.io live updates |
 
@@ -38,20 +38,21 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 
 | Feature | Mobile | Web | Description |
 |---------|:------:|:---:|-------------|
-| Create Post | ✅ | ✅ | Multi-step wizard (Category → Details → Exchange → Review) |
+| Create Post Wizard | ✅ | ✅ | Multi-step: Category → Details → Exchange → Review |
 | Post Types | ✅ | ✅ | Job, Service, Sell, Rent (with Barter option) |
 | Image Upload | ✅ | ✅ | Up to 5 images per post |
 | Location Picker | ✅ | ✅ | Search, GPS detect, or pin on map |
 | Post Duration | ✅ | ✅ | 15 min, 3 hours, 7 days, 28 days |
+| Character Limits | ✅ | ⚠️ | Title: 100 chars, Description: 1000 chars |
+| Urgent Toggle | ✅ | ⚠️ | Mark post as urgent (highlighted in search) |
+| Exchange Preference | ✅ | ⚠️ | Money, Barter, or Flexible |
 | View Post Details | ✅ | ✅ | Full post with images, description, user info |
 | Like Post | ✅ | ✅ | Heart/like functionality |
 | Share Post | ✅ | ✅ | Copy link to clipboard |
 | Comment on Post | ✅ | ✅ | Add comments to posts |
 | Reply to Comments | ✅ | ✅ | Nested replies (3 levels deep) |
-| Edit Comment | ✅ | ✅ | Modify your comments |
-| Delete Comment | ✅ | ✅ | Remove your comments |
-| Edit Post | ✅ | ✅ | Modify your own posts |
-| Delete Post | ✅ | ✅ | Remove your own posts |
+| Edit/Delete Comment | ✅ | ✅ | Modify or remove your comments |
+| Edit/Delete Post | ✅ | ✅ | Modify or remove your own posts |
 | Toggle Post Status | ✅ | ✅ | Archive/Activate posts |
 | Related Posts | ✅ | ✅ | Show similar posts |
 | Post Analytics | ✅ | ✅ | Views, likes, shares count |
@@ -64,10 +65,12 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 | Feature | Mobile | Web | Description |
 |---------|:------:|:---:|-------------|
 | Request Contact | ✅ | ✅ | Request to connect with post owner |
-| View Received Requests | ✅ | ✅ | See requests from others |
-| View Sent Requests | ✅ | ✅ | Track your outgoing requests |
-| Approve/Reject Request | ✅ | ✅ | Accept or decline contact requests |
+| Optional Message | ✅ | ✅ | Add message with request (max 200 chars) |
+| View Requests | ✅ | ✅ | Received and Sent tabs |
+| Approve/Reject | ✅ | ✅ | Accept or decline contact requests |
 | Withdraw Request | ✅ | ✅ | Cancel pending requests |
+| Auto-Expire Requests | ✅ | ✅ | Pending requests expire after 7 days |
+| Request Cooldown | ✅ | ✅ | 24-hour wait after rejection before re-requesting |
 | WhatsApp Integration | ✅ | ✅ | Quick link to WhatsApp chat |
 | Phone Call Link | ✅ | ✅ | Direct call to approved contacts |
 | Chat from Request | ✅ | ✅ | Navigate directly to in-app chat |
@@ -96,10 +99,9 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 |---------|:------:|:---:|-------------|
 | In-App Notifications | ✅ | ✅ | Notification center/list |
 | Push Notifications | ✅ | ❌ | Native push via Notifee |
-| New Request Alert | ✅ | ✅ | Notify when you receive a request |
-| Approval Alert | ✅ | ✅ | Notify when request is approved |
-| Like/Comment Alert | ✅ | ✅ | Notify on post engagement |
-| Message Alert | ✅ | ✅ | Notify on new messages |
+| Request Alerts | ✅ | ✅ | New request, approval, rejection |
+| Engagement Alerts | ✅ | ✅ | Likes, comments on your posts |
+| Message Alerts | ✅ | ✅ | New chat messages |
 | Mark as Read | ✅ | ✅ | Dismiss individual notifications |
 | Delete Notification | ✅ | ✅ | Remove notifications |
 | Sound on New Message | ✅ | ❌ | Audio notification |
@@ -126,9 +128,7 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 |---------|:------:|:---:|-------------|
 | Dark Mode Toggle | ✅ | ✅ | Theme switching |
 | Push Notification Toggle | ✅ | ❌ | Enable/disable push |
-| Block User | ✅ | ✅ | Block unwanted users |
-| Unblock User | ✅ | ✅ | Remove from blocked list |
-| View Blocked Users | ✅ | ✅ | List of blocked accounts |
+| Block/Unblock User | ✅ | ✅ | Manage blocked users |
 | Report User | ✅ | ✅ | Flag abusive users |
 | Delete Account | ✅ | ✅ | Permanently remove account |
 | Logout | ✅ | ✅ | Sign out of session |
@@ -154,7 +154,7 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 | Real-time Updates | ✅ | ✅ | Socket.io for live data |
 | JWT Authentication | ✅ | ✅ | Secure token-based auth |
 | Image Compression | ✅ | ✅ | Optimize uploads |
-| Offline Graceful Handling | ✅ | ⚠️ | Limited offline support |
+| Cron Jobs | ✅ | ✅ | Auto-expire posts and requests |
 | Responsive Design | N/A | ✅ | Web responsive layout |
 | Deep Linking | ✅ | ✅ | Direct navigation via URLs |
 
@@ -162,6 +162,6 @@ MyCircle is a hyperlocal marketplace platform connecting people for jobs, servic
 
 ## Legend
 - ✅ = Fully implemented
-- ⚠️ = Partially implemented
+- ⚠️ = Partially implemented / Mobile only
 - ❌ = Not available on this platform
 - N/A = Not applicable

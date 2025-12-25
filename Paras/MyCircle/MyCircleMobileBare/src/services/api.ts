@@ -1,15 +1,17 @@
 import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
-import { API_URL } from '@env';
+import { API_URL, DEV_API_URL } from '@env';
 
-export const BASE_URL = API_URL || 'https://mycircle-server.onrender.com/api';
+import { Platform } from 'react-native';
+
+export const BASE_URL = __DEV__ ? DEV_API_URL : API_URL;
 
 const api = axios.create({
     baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 10000, // 10 second timeout
+    timeout: 30000, // 30 second timeout for AI operations
 });
 
 // Request interceptor - Add auth token
@@ -46,11 +48,18 @@ api.interceptors.response.use(
         // Log errors
         if (error.response) {
             // Server responded with error status
-            console.error('API Error Response:', {
-                status: error.response.status,
-                url: error.config?.url,
-                data: error.response.data
-            });
+            if (error.response.status === 400) {
+                console.warn('API 400 Error (Bad Request):', {
+                    url: error.config?.url,
+                    data: error.response.data
+                });
+            } else {
+                console.error('API Error Response:', {
+                    status: error.response.status,
+                    url: error.config?.url,
+                    data: error.response.data
+                });
+            }
         } else if (error.request) {
             // Request made but no response
             console.error('API No Response:', error.message);

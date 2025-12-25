@@ -119,9 +119,17 @@ app.use((req, res, next) => {
   next();
 });
 
-/* =======================
-   ROUTES
-======================= */
+// Database Connection
+connectDB();
+
+// Start Background Jobs
+const { startCronJobs } = require('./src/utils/cronJobs');
+startCronJobs(io);
+
+// Passport middleware
+app.use(passport.initialize());
+
+// Routes
 app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api/posts', require('./src/routes/postRoutes'));
 app.use('/api/contacts', require('./src/routes/contactRoutes'));

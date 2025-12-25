@@ -64,9 +64,22 @@ const PostSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    isUrgent: {
+        type: Boolean,
+        default: false,
+    },
+    exchangePreference: {
+        type: String,
+        enum: ['money', 'barter', 'flexible'],
+        default: 'money',
+    },
     expiresAt: {
         type: Date,
         index: true, // Index for efficient querying/expiration
+    },
+    duration: {
+        type: Number, // duration in minutes
+        default: 40320 // 28 days
     },
     barterPreferences: {
         type: String, // e.g., "Looking for: Laptop, Books, or similar services"
@@ -110,9 +123,36 @@ const PostSchema = new mongoose.Schema({
             createdAt: {
                 type: Date,
                 default: Date.now
-            }
+            },
+            replies: [{
+                user: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'User',
+                    required: true
+                },
+                text: {
+                    type: String,
+                    required: true
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }]
         }]
     }],
+    notified1d: {
+        type: Boolean,
+        default: false
+    },
+    notified5m: {
+        type: Boolean,
+        default: false
+    },
+    notifiedExpired: {
+        type: Boolean,
+        default: false
+    }
 });
 
 module.exports = mongoose.model('Post', PostSchema);

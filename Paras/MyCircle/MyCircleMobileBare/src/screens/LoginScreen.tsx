@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -43,7 +43,12 @@ const LoginScreen = ({ navigation }: any) => {
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
                 <View style={styles.header}>
-                    <Text style={styles.logo}>MyCircle</Text>
+                    <Image
+                        source={require('../assets/logo.png')}
+                        style={styles.logoImage}
+                        resizeMode="contain"
+                    />
+                    <Text style={styles.brandTitle}>MyCircle</Text>
                     <Text style={styles.subtitle}>Welcome back!</Text>
                 </View>
 
@@ -105,7 +110,7 @@ const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#09090b', // zinc-950
+        backgroundColor: '#000',
     },
     scrollView: {
         flex: 1,
@@ -119,14 +124,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 40,
     },
-    logo: {
-        fontSize: 40,
-        fontWeight: 'bold',
-        color: '#ffffff',
+    logoImage: {
+        width: 100,
+        height: 100,
         marginBottom: 8,
+    },
+    brandTitle: {
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#ffffff',
+        marginBottom: 4,
     },
     subtitle: {
         color: '#a1a1aa', // zinc-400
+        fontSize: 16,
     },
     form: {
         gap: 16,

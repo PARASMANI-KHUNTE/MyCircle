@@ -32,6 +32,10 @@ const NotificationSchema = new mongoose.Schema({
     },
     relatedId: { // Optional: ID of related entity (post ID, user ID etc)
         type: mongoose.Schema.Types.ObjectId
+    },
+    conversationId: { // Specifically for chat navigation
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Conversation'
     }
 }, { timestamps: true });
 

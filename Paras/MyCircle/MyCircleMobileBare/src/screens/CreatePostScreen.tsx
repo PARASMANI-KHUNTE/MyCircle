@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal } from 'react-native';
+import ThemedAlert from '../components/ui/ThemedAlert';
 import { launchImageLibrary } from 'react-native-image-picker';
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +34,8 @@ const CreatePostScreen = ({ navigation }: any) => {
         { label: '28 Days', value: 40320 },
     ];
     const [duration, setDuration] = useState(40320); // Default to 28 days
+    const [isUrgent, setIsUrgent] = useState(false);
+    const [exchangePreference, setExchangePreference] = useState<'money' | 'barter' | 'flexible'>('money');
     // 'search' | 'detect' | 'pin'
     const [locationMethod, setLocationMethod] = useState<'search' | 'detect' | 'pin'>('search');
     const [images, setImages] = useState<any[]>([]);
@@ -43,6 +46,21 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [showCityModal, setShowCityModal] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        onConfirm: () => void;
+        isDestructive: boolean;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        confirmText: 'Confirm',
+        onConfirm: () => { },
+        isDestructive: false,
+    });
 
     const categories = [
         { id: 'job', label: 'Post a Job', sub: 'Hire help for tasks', icon: Briefcase },
@@ -102,6 +120,8 @@ const CreatePostScreen = ({ navigation }: any) => {
             // Default price to 0 if barter or empty
             formData.append('price', price || '0');
             formData.append('duration', duration.toString());
+            formData.append('isUrgent', isUrgent.toString());
+            formData.append('exchangePreference', exchangePreference);
 
             images.forEach((image) => {
                 formData.append('images', image as any);
@@ -113,11 +133,40 @@ const CreatePostScreen = ({ navigation }: any) => {
                 },
             });
 
-            Alert.alert('Success', 'Post created successfully!');
-            navigation.navigate('Feed');
+            setAlertConfig({
+                visible: true,
+                title: 'Success',
+                message: 'Post created successfully!',
+                confirmText: 'Great',
+                isDestructive: false,
+                onConfirm: () => {
+                    setAlertConfig(prev => ({ ...prev, visible: false }));
+                    // Reset all form state
+                    setStep(1);
+                    setTitle('');
+                    setDescription('');
+                    setType('job');
+                    setLocation('');
+                    setCoordinates(null);
+                    setPrice('');
+                    setAcceptsBarter(false);
+                    setDuration(40320);
+                    setIsUrgent(false);
+                    setExchangePreference('money');
+                    setImages([]);
+                    navigation.navigate('Feed');
+                }
+            });
         } catch (error: any) {
             console.error(error);
-            Alert.alert('Error', 'Failed to create post. ' + (error.response?.data?.msg || error.message));
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to create post. ' + (error.response?.data?.msg || error.message),
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
         } finally {
             setLoading(false);
         }
@@ -167,18 +216,29 @@ const CreatePostScreen = ({ navigation }: any) => {
             <Text style={[styles.stepTitle, themeStyles.text]}>Post Details</Text>
 
             <View style={styles.inputGroup}>
-                <Text style={[styles.label, themeStyles.textSecondary]}>Title</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Title</Text>
+                    <Text style={{ fontSize: 12, color: title.length > 90 ? '#f59e0b' : colors.textSecondary }}>
+                        {title.length}/100
+                    </Text>
+                </View>
                 <TextInput
                     style={[styles.input, themeStyles.input]}
                     placeholder="E.g., Need a plumber, Selling iPhone 13"
                     placeholderTextColor={colors.textSecondary}
                     value={title}
                     onChangeText={setTitle}
+                    maxLength={100}
                 />
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={[styles.label, themeStyles.textSecondary]}>Description</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.label, themeStyles.textSecondary]}>Description</Text>
+                    <Text style={{ fontSize: 12, color: description.length > 900 ? '#f59e0b' : colors.textSecondary }}>
+                        {description.length}/1000
+                    </Text>
+                </View>
                 <TextInput
                     style={[styles.input, styles.textArea, themeStyles.input]}
                     placeholder="Describe what you need or what you are offering..."
@@ -187,6 +247,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                     textAlignVertical="top"
                     value={description}
                     onChangeText={setDescription}
+                    maxLength={1000}
                 />
             </View>
 
@@ -244,6 +305,50 @@ const CreatePostScreen = ({ navigation }: any) => {
                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 32, marginTop: 4 }}>
                     Enable this if you are willing to exchange goods/services instead of money.
                 </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Mark as Urgent?</Text>
+                <TouchableOpacity
+                    onPress={() => setIsUrgent(!isUrgent)}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: isUrgent ? colors.primary + '20' : colors.card, borderRadius: 12, borderWidth: 1, borderColor: isUrgent ? colors.primary : colors.border }}
+                >
+                    <Clock size={20} color={isUrgent ? colors.primary : colors.textSecondary} style={{ marginRight: 8 }} />
+                    <Text style={{ color: colors.text, fontSize: 16, flex: 1 }}>Urgent Post</Text>
+                    {isUrgent && <Check size={20} color={colors.primary} />}
+                </TouchableOpacity>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 32, marginTop: 4 }}>
+                    Urgent posts are highlighted and appear first in search results.
+                </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={[styles.label, themeStyles.textSecondary]}>Exchange Preference</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {(['money', 'barter', 'flexible'] as const).map((pref) => {
+                        const isSelected = exchangePreference === pref;
+                        const labels = { money: '💵 Money', barter: '🤝 Barter', flexible: '🔄 Flexible' };
+                        return (
+                            <TouchableOpacity
+                                key={pref}
+                                onPress={() => setExchangePreference(pref)}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 12,
+                                    borderRadius: 12,
+                                    borderWidth: 1,
+                                    backgroundColor: isSelected ? colors.primary : colors.card,
+                                    borderColor: isSelected ? colors.primary : colors.border,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Text style={{ color: isSelected ? 'white' : colors.text, fontWeight: isSelected ? 'bold' : 'normal' }}>
+                                    {labels[pref]}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -411,72 +516,109 @@ const CreatePostScreen = ({ navigation }: any) => {
 
     const renderStep4 = () => (
         <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, themeStyles.text]}>Review</Text>
+            <Text style={[styles.stepTitle, themeStyles.text]}>Preview Your Post</Text>
 
-            <View style={[styles.reviewCard, themeStyles.card]}>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Type</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text]}>{categories.find(c => c.id === type)?.label}</Text>
-                </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Title</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text]}>{title}</Text>
-                </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Price/Budget</Text>
-                    <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[styles.reviewValue, { color: colors.primary, fontWeight: 'bold' }]}>₹ {price}</Text>
-                        {acceptsBarter && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                                <Handshake size={12} color={colors.textSecondary} />
-                                <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 4 }}>Barter/Favour</Text>
+            {/* Styled Preview Card */}
+            <View style={[styles.previewCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                {/* Header with badges */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ backgroundColor: getCategoryColor(type), paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                            <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' }}>{type}</Text>
+                        </View>
+                        {isUrgent && (
+                            <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                                <Text style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>🔥 URGENT</Text>
                             </View>
                         )}
                     </View>
-                </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Duration</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Clock size={14} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                        <Text style={[styles.reviewValue, themeStyles.text]}>{durations.find(d => d.value === duration)?.label}</Text>
+                    <View style={{ backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                        <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold' }}>
+                            {exchangePreference === 'money' ? '💵 Money' : exchangePreference === 'barter' ? '🤝 Barter' : '🔄 Flexible'}
+                        </Text>
                     </View>
                 </View>
-                <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Location</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text]} numberOfLines={1}>{location}</Text>
-                </View>
 
-                <View style={{ marginTop: 16 }}>
-                    <Text style={styles.reviewLabel}>Description</Text>
-                    <Text style={[styles.reviewValue, themeStyles.text, { marginTop: 4, lineHeight: 20 }]}>{description}</Text>
-                </View>
-
+                {/* Images Preview */}
                 {images.length > 0 && (
-                    <View style={{ marginTop: 16 }}>
-                        <Text style={styles.reviewLabel}>Images ({images.length})</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                            {images.map((img, i) => (
-                                <Image key={i} source={{ uri: img.uri }} style={{ width: 60, height: 60, borderRadius: 8, marginRight: 8, backgroundColor: colors.input }} />
-                            ))}
-                        </ScrollView>
-                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                        {images.map((img, i) => (
+                            <Image key={i} source={{ uri: img.uri }} style={{ width: 100, height: 100, borderRadius: 12, marginRight: 8, backgroundColor: colors.input }} />
+                        ))}
+                    </ScrollView>
                 )}
+
+                {/* Title */}
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>{title || 'No title'}</Text>
+
+                {/* Description */}
+                <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 12 }} numberOfLines={3}>
+                    {description || 'No description'}
+                </Text>
+
+                {/* Price & Barter */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <Text style={{ color: colors.primary, fontSize: 20, fontWeight: 'bold' }}>₹ {price || '0'}</Text>
+                    {acceptsBarter && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+                            <Handshake size={14} color={colors.textSecondary} />
+                            <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 4 }}>Open to Barter</Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* Meta info */}
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MapPin size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                        <Text style={{ color: colors.textSecondary, fontSize: 13 }} numberOfLines={1}>{location || 'No location set'}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Clock size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Expires in {durations.find(d => d.value === duration)?.label}</Text>
+                    </View>
+                </View>
             </View>
+
+            <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 12, fontStyle: 'italic' }}>
+                This is how your post will appear to others
+            </Text>
         </View>
     );
 
+    const getCategoryColor = (catId: string) => {
+        switch (catId) {
+            case 'job': return '#3b82f6';
+            case 'service': return '#06b6d4';
+            case 'sell': return '#f59e0b';
+            case 'rent': return '#8b5cf6';
+            default: return '#8b5cf6';
+        }
+    };
+
+    const showAlert = (title: string, message: string) => {
+        setAlertConfig({
+            visible: true,
+            title,
+            message,
+            confirmText: 'OK',
+            isDestructive: false,
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        });
+    };
+
     const goNext = () => {
-        if (step === 1 && !type) return Alert.alert('Error', 'Please select a category');
-        if (step === 2 && (!title || !description)) return Alert.alert('Error', 'Please fill in title and description');
+        if (step === 1 && !type) return showAlert('Error', 'Please select a category');
+        if (step === 2 && (!title || !description)) return showAlert('Error', 'Please fill in title and description');
 
         if (step === 3) {
             // Price is optional if Barter is accepted
             if (!acceptsBarter && !price) {
-                return Alert.alert('Error', 'Please enter a price or enable Barter');
+                return showAlert('Error', 'Please enter a price or enable Barter');
             }
             // Location is valid if text exists OR coordinates are pinned
             if (!location && !coordinates) {
-                return Alert.alert('Error', 'Please select a location');
+                return showAlert('Error', 'Please select a location');
             }
         }
 
@@ -510,9 +652,9 @@ const CreatePostScreen = ({ navigation }: any) => {
                 {step === 4 && renderStep4()}
             </ScrollView>
 
-            <View style={[styles.footer, themeStyles.border]}>
+            <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
                 <TouchableOpacity onPress={goBack} style={styles.backButton}>
-                    <Text style={{ color: colors.textSecondary }}>{step === 1 ? 'Cancel' : 'Back'}</Text>
+                    <Text style={{ color: colors.text }}>{step === 1 ? 'Cancel' : 'Back'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={goNext} style={[styles.nextButton, { backgroundColor: colors.primary }]}>
@@ -591,7 +733,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                             try {
                                 const data = JSON.parse(event.nativeEvent.data);
                                 setCoordinates({ lat: data.lat, lng: data.lng });
-                                Alert.alert("Location Pinned", "Coordinates updated!");
+                                showAlert("Location Pinned", "Coordinates updated!");
                                 setShowMapModal(false);
                             } catch (e) { console.error(e); }
                         }}
@@ -599,6 +741,15 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
             </Modal>
 
+            <ThemedAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText}
+                isDestructive={alertConfig.isDestructive}
+                onCancel={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+                onConfirm={alertConfig.onConfirm}
+            />
         </SafeAreaView>
     );
 };
@@ -616,7 +767,7 @@ const styles = StyleSheet.create({
     iconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
     cardTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
     cardSub: { fontSize: 12, textAlign: 'center' },
-    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#000' }, // dark bg for footer
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, // removed hardcoded bg
     backButton: { padding: 16 },
     nextButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
     inputGroup: { marginBottom: 20 },
@@ -633,6 +784,7 @@ const styles = StyleSheet.create({
     locationInputWrapper: { flexDirection: 'row', alignItems: 'center' },
     selectCityButton: { width: 50, height: 50, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderLeftWidth: 0, borderTopRightRadius: 12, borderBottomRightRadius: 12 },
     pinMapButton: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
+    previewCard: { padding: 16, borderRadius: 16, borderWidth: 1 },
     reviewCard: { padding: 20, borderRadius: 16, borderWidth: 1 },
     reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
     reviewLabel: { color: '#71717a', fontSize: 14 },

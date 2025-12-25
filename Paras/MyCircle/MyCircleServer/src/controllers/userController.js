@@ -63,14 +63,20 @@ exports.getUserStats = async (req, res) => {
         // Calculate dynamic stats
         const postCount = await Post.countDocuments({ user: req.user.id });
         const activePostCount = await Post.countDocuments({ user: req.user.id, isActive: true });
+        const receivedRequestsCount = await ContactRequest.countDocuments({ recipient: req.user.id });
 
         // Update user stats in DB (sync)
         user.stats.totalPosts = postCount;
         user.stats.activePosts = activePostCount;
+        // Optionally add to schema if we want to persist it, but for now we just return it
+
         await user.save();
 
         res.json({
-            stats: user.stats,
+            stats: {
+                ...user.stats.toObject(),
+                receivedRequests: receivedRequestsCount
+            },
             rating: user.rating,
             reviews: user.reviews,
             joined: user.createdAt

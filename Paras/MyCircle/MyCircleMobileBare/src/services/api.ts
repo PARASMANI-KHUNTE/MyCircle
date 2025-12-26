@@ -4,6 +4,14 @@ import { API_URL, DEV_API_URL } from '@env';
 
 import { Platform } from 'react-native';
 
+type UnauthorizedHandler = () => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+let lastUnauthorizedAt = 0;
+
+export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null) => {
+    unauthorizedHandler = handler;
+};
+
 if (__DEV__ && !DEV_API_URL) {
     throw new Error('DEV_API_URL is not set. Please configure it in your mobile .env file.');
 }
@@ -53,6 +61,19 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
+        const status = error?.response?.status;
+        if (status === 401 && unauthorizedHandler) {
+            const now = Date.now();
+            if (now - lastUnauthorizedAt > 3000) {
+                lastUnauthorizedAt = now;
+                try {
+                    unauthorizedHandler();
+                } catch (e) {
+                    console.error('Unauthorized handler failed:', e);
+                }
+            }
+        }
+
         // Log errors
         if (error.response) {
             // Server responded with error status

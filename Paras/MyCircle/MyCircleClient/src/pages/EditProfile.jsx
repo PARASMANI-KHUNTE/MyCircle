@@ -81,7 +81,7 @@ const EditProfile = () => {
             navigate('/profile');
         } catch (err) {
             console.error(err);
-            error("Failed to update profile. Please try again.");
+            error(err.response?.data?.msg || err.response?.data?.error || "Failed to update profile. Please try again.");
         } finally {
             setLoading(false);
         }

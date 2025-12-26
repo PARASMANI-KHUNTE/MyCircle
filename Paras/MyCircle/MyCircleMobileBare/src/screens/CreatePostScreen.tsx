@@ -159,10 +159,12 @@ const CreatePostScreen = ({ navigation }: any) => {
             });
         } catch (error: any) {
             console.error(error);
+            const serverMsg = error?.response?.data?.msg || error?.response?.data?.error;
+            const reason = error?.response?.data?.reason;
             setAlertConfig({
                 visible: true,
                 title: 'Error',
-                message: 'Failed to create post. ' + (error.response?.data?.msg || error.message),
+                message: 'Failed to create post. ' + (reason || serverMsg || error.message),
                 confirmText: 'OK',
                 isDestructive: false,
                 onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))

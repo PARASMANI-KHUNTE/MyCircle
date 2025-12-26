@@ -57,11 +57,36 @@ export const SocketProvider = ({ children }) => {
             setConnected(false);
         });
 
+        newSocket.on('connect_error', (err) => {
+            console.error('Socket connect_error:', err?.message || err);
+            setConnected(false);
+        });
+
+        // Reconnection lifecycle events (socket.io v4)
+        newSocket.io.on('reconnect_attempt', (attempt) => {
+            console.log('Socket reconnect_attempt:', attempt);
+        });
+        newSocket.io.on('reconnect', (attempt) => {
+            console.log('Socket reconnect:', attempt);
+        });
+        newSocket.io.on('reconnect_error', (err) => {
+            console.error('Socket reconnect_error:', err?.message || err);
+        });
+        newSocket.io.on('reconnect_failed', () => {
+            console.error('Socket reconnect_failed');
+            setConnected(false);
+        });
+
 
         setSocket(newSocket);
 
         return () => {
+            newSocket.off('connect_error');
             newSocket.disconnect();
+            newSocket.io.off('reconnect_attempt');
+            newSocket.io.off('reconnect');
+            newSocket.io.off('reconnect_error');
+            newSocket.io.off('reconnect_failed');
         };
     }, [user]);
 

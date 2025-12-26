@@ -103,7 +103,7 @@ const CreatePost = () => {
                 // Check for duplicate key error or other specific mongo errors
                 setError({
                     type: 'server',
-                    message: err.response?.data?.msg || 'Something went wrong. Please try again.'
+                    message: err.response?.data?.msg || err.response?.data?.error || 'Something went wrong. Please try again.'
                 });
             }
         } finally {

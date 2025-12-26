@@ -160,7 +160,7 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                             alt="Post"
                             className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-700"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-100 transition-opacity duration-300" />
                     </div>
                 )}
 

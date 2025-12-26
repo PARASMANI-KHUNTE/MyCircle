@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { MapPin, Clock } from 'lucide-react-native';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import clsx from 'clsx'; // Assuming clsx is installed, otherwise use simple styles
 
 const typeColors = {
@@ -22,7 +23,18 @@ const PostCard = ({ post, onPress, onRequestContact, isOwnPost }) => {
         >
             {images && images.length > 0 && (
                 <View className="h-40 w-full bg-black rounded-xl mb-3 overflow-hidden border border-white/5 relative">
-                    <Image source={{ uri: images[0] }} className="w-full h-full object-cover" resizeMode="cover" />
+                    <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
+                    <Svg pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
+                        <Defs>
+                            <LinearGradient id="expoPostCardHeroShade" x1="0" y1="0" x2="0" y2="1">
+                                <Stop offset="0" stopColor="#000" stopOpacity="0.30" />
+                                <Stop offset="0.35" stopColor="#000" stopOpacity="0.05" />
+                                <Stop offset="0.70" stopColor="#000" stopOpacity="0.10" />
+                                <Stop offset="1" stopColor="#000" stopOpacity="0.55" />
+                            </LinearGradient>
+                        </Defs>
+                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#expoPostCardHeroShade)" />
+                    </Svg>
                     <View className={`absolute top-3 left-3 px-3 py-1 rounded-full border ${typeStyle.split(' ')[1]} ${typeStyle.split(' ')[2]}`}>
                         <Text className={`text-xs font-bold uppercase ${typeStyle.split(' ')[0]}`}>{type}</Text>
                     </View>

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Clipboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { MapPin, Clock, ArrowUpRight, MessageCircle, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -155,6 +156,17 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
                         style={styles.heroImage}
                         resizeMode="cover"
                     />
+                    <Svg pointerEvents="none" style={StyleSheet.absoluteFill}>
+                        <Defs>
+                            <LinearGradient id="postCardHeroShade" x1="0" y1="0" x2="0" y2="1">
+                                <Stop offset="0" stopColor="#000" stopOpacity="0.30" />
+                                <Stop offset="0.35" stopColor="#000" stopOpacity="0.05" />
+                                <Stop offset="0.70" stopColor="#000" stopOpacity="0.10" />
+                                <Stop offset="1" stopColor="#000" stopOpacity="0.55" />
+                            </LinearGradient>
+                        </Defs>
+                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#postCardHeroShade)" />
+                    </Svg>
                     <View style={[styles.typePill, { borderColor: getTypeColor(post.type), backgroundColor: colors.card }]}>
                         <Text style={[styles.typePillText, { color: getTypeColor(post.type) }]}>{post.type}</Text>
                     </View>
@@ -294,7 +306,8 @@ const styles = StyleSheet.create({
     },
     heroImage: {
         width: '100%',
-        height: '100%'
+        height: '100%',
+        backgroundColor: 'rgba(0,0,0,0.2)'
     },
     typePill: {
         position: 'absolute',

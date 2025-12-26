@@ -19,6 +19,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const { colors } = useTheme(); // Import Theme
     const [post, setPost] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [contactRequestStatus, setContactRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected' | 'expired'>('none');
     const [likes, setLikes] = useState<string[]>([]);
     const [shares, setShares] = useState(0);
     const [comments, setComments] = useState<any[]>([]);
@@ -58,6 +59,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             setLikes(res.data.likes || []);
             setShares(res.data.shares || 0);
             setComments(res.data.comments || []);
+            setContactRequestStatus(res.data.contactRequestStatus || (res.data.hasRequested ? 'pending' : 'none'));
         } catch (err: any) {
             console.error(err);
             const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Could not fetch post details.";
@@ -175,6 +177,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             await api.post(`/contacts/${id}`);
             Alert.alert("Success", "Contact Request Sent!");
             setPost({ ...post, hasRequested: true });
+            setContactRequestStatus('pending');
         } catch (err: any) {
             const errorMsg = err.response?.data?.msg || err.response?.data?.message || "Failed to send request";
             Alert.alert("Error", errorMsg);
@@ -182,6 +185,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleMessage = async () => {
+        if (contactRequestStatus !== 'approved') {
+            Alert.alert('Approval Required', 'Chat unlocks only after your request is approved.');
+            return;
+        }
         try {
             const res = await api.get(`/chat/conversation/${post.user._id}`);
             navigation.navigate('ChatWindow', { id: res.data._id, recipient: post.user });
@@ -593,26 +600,34 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         <View style={[styles.bottomBar, themeStyles.container, themeStyles.border]}>
                             <TouchableOpacity
                                 onPress={handleMessage}
-                                style={[styles.messageButton, themeStyles.card, themeStyles.border]}
+                                disabled={contactRequestStatus !== 'approved'}
+                                style={[
+                                    styles.messageButton,
+                                    themeStyles.card,
+                                    themeStyles.border,
+                                    contactRequestStatus !== 'approved' && styles.messageButtonDisabled
+                                ]}
                             >
                                 <View style={styles.buttonInner}>
                                     <MessageCircle size={20} color={colors.primary} />
-                                    <Text style={[styles.messageButtonText, { color: colors.text }]}>Message</Text>
+                                    <Text style={[styles.messageButtonText, { color: colors.text }]}>
+                                        {contactRequestStatus === 'approved' ? 'Message' : (contactRequestStatus === 'pending' ? 'Awaiting Approval' : 'Message (After Approval)')}
+                                    </Text>
                                 </View>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={handleRequestContact}
-                                disabled={post.hasRequested}
+                                disabled={contactRequestStatus !== 'none'}
                                 style={[
                                     styles.requestButton,
-                                    { backgroundColor: post.hasRequested ? colors.border : colors.primary }
+                                    { backgroundColor: contactRequestStatus !== 'none' ? colors.border : colors.primary }
                                 ]}
                             >
                                 <Text style={[
                                     styles.requestButtonText,
-                                    { color: post.hasRequested ? colors.textSecondary : '#ffffff' }
+                                    { color: contactRequestStatus !== 'none' ? colors.textSecondary : '#ffffff' }
                                 ]}>
-                                    {post.hasRequested ? 'Request Sent' : 'Request Contact'}
+                                    {contactRequestStatus === 'approved' ? 'Approved' : (contactRequestStatus === 'pending' ? 'Request Sent' : 'Request Contact')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -947,6 +962,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.05)',
         marginRight: 12,
+    },
+    messageButtonDisabled: {
+        opacity: 0.6,
     },
     buttonInner: {
         flexDirection: 'row',

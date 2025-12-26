@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Added useEffect import explicitly
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react'; // Added useEffect import explicitly
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
@@ -19,31 +18,13 @@ const CreatePost = () => {
         description: '',
         price: '',
         location: '',
-        contactPhone: '',
-        contactWhatsapp: '',
         acceptsBarter: false,
-        barterPreferences: '',
-        includePhone: true,
-        includeWhatsapp: true
+        barterPreferences: ''
     });
     const [images, setImages] = useState([]);
     const [previews, setPreviews] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
-    // Initial check for profile contact info
-    useEffect(() => {
-        if (user) {
-            // Removed redundant toast to prevent infinite render loop
-            // The UI alert below is sufficient
-            // Auto-fill form
-            setFormData(prev => ({
-                ...prev,
-                contactPhone: user.contactPhone || '',
-                contactWhatsapp: user.contactWhatsapp || ''
-            }));
-        }
-    }, [user, showError]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -85,16 +66,6 @@ const CreatePost = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Strict Profile Check
-        if (!user.contactPhone && !user.contactWhatsapp) {
-            setError({
-                type: 'validation',
-                message: 'Contact Info Missing',
-                reason: 'You must add a Phone or WhatsApp number in your Profile settings before posting.'
-            });
-            return;
-        }
-
         setLoading(true);
         setError(null);
 
@@ -111,14 +82,6 @@ const CreatePost = () => {
                 data.append('barterPreferences', formData.barterPreferences);
             } else {
                 data.append('price', formData.price);
-            }
-
-            // Only append contact info if checkboxes are checked
-            if (formData.includePhone && formData.contactPhone) {
-                data.append('contactPhone', formData.contactPhone);
-            }
-            if (formData.includeWhatsapp && formData.contactWhatsapp) {
-                data.append('contactWhatsapp', formData.contactWhatsapp);
             }
 
             images.forEach(image => data.append('images', image));
@@ -152,27 +115,7 @@ const CreatePost = () => {
         <div className="max-w-2xl mx-auto pb-20">
             <h1 className="text-3xl font-bold text-foreground mb-8">Create New Post</h1>
 
-            {/* Profile Warning */}
-            {user && !user.contactPhone && !user.contactWhatsapp && (
-                <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                    <div>
-                        <h4 className="text-yellow-400 font-semibold">Profile Update Required</h4>
-                        <p className="text-yellow-400/80 text-sm mt-1 mb-2">
-                            To ensure safety and trust, you need to add your contact details to your profile before creating a post.
-                        </p>
-                        <Button
-                            variant="outline"
-                            className="text-xs h-8 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
-                            onClick={() => navigate('/edit-profile')}
-                        >
-                            Update Profile
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            <div className={`glass p-8 rounded-2xl ${(!user?.contactPhone && !user?.contactWhatsapp) ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className="glass p-8 rounded-2xl">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
                     {/* Category Selection */}
@@ -264,49 +207,6 @@ const CreatePost = () => {
                             onChange={handleChange}
                             required
                         />
-                    </div>
-
-                    {/* Contact Info Review */}
-                    <div className="p-4 rounded-xl bg-card/10 border border-card-border">
-                        <h3 className="text-foreground font-semibold mb-3">Contact Details to Show</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-card/10 transition-colors">
-                                <input
-                                    type="checkbox"
-                                    name="includePhone"
-                                    checked={formData.includePhone}
-                                    onChange={handleChange}
-                                    className="w-4 h-4 rounded border-card-border text-primary focus:ring-primary"
-                                />
-                                <div>
-                                    <div className="text-sm text-foreground">Phone Number</div>
-                                    <div className="text-xs text-muted-foreground font-mono">
-                                        {formData.contactPhone || 'Not set in profile'}
-                                    </div>
-                                </div>
-                            </label>
-
-                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-card/10 transition-colors">
-                                <input
-                                    type="checkbox"
-                                    name="includeWhatsapp"
-                                    checked={formData.includeWhatsapp}
-                                    onChange={handleChange}
-                                    className="w-4 h-4 rounded border-card-border text-primary focus:ring-primary"
-                                />
-                                <div>
-                                    <div className="text-sm text-foreground">WhatsApp</div>
-                                    <div className="text-xs text-muted-foreground font-mono">
-                                        {formData.contactWhatsapp || 'Not set in profile'}
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                        {(!formData.contactPhone && !formData.contactWhatsapp) && (
-                            <div className="mt-2 text-xs text-red-400">
-                                * No contact details available. Please update your profile.
-                            </div>
-                        )}
                     </div>
 
                     {/* Image Upload */}

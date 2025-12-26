@@ -211,6 +211,7 @@ exports.getPostById = async (req, res) => {
 
         // Check if current user has already requested contact
         let hasRequested = false;
+        let contactRequestStatus = 'none';
         const token = req.header('x-auth-token');
         if (token) {
             try {
@@ -223,6 +224,7 @@ exports.getPostById = async (req, res) => {
                     post: post._id
                 });
                 hasRequested = !!existingRequest;
+                contactRequestStatus = existingRequest?.status || 'none';
             } catch (err) {
                 // Token invalid or expired, just ignore and keep hasRequested as false
             }
@@ -231,7 +233,8 @@ exports.getPostById = async (req, res) => {
         res.json({
             ...post.toObject(),
             applicationCount,
-            hasRequested
+            hasRequested,
+            contactRequestStatus
         });
     } catch (err) {
         console.error(err.message);

@@ -36,7 +36,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "EXPO_PUBLIC_API_URL": "http://192.168.1.4:5000/api",
+      "EXPO_PUBLIC_API_URL": "",
       "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "409923546170-grbbbamkm473v8pumnahcboqk7bc3qn9.apps.googleusercontent.com",
       "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "409923546170-8jteu7u3cgqjbahsnc9s482e34qvj00k.apps.googleusercontent.com",
       "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "409923546170-6e8hlc2p7eu09cndqhrd3ejg79lsk3ei.apps.googleusercontent.com"

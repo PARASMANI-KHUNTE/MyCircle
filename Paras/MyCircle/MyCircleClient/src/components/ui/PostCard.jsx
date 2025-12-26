@@ -152,33 +152,19 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                 </div>
             )}
 
-            {/* ... header ... */}
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                    <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-all active:scale-95 shrink-0">
+            <div className="relative mb-4">
+                {images && images.length > 0 && (
+                    <div className="rounded-[2.5rem] overflow-hidden aspect-video bg-card/10 shrink-0 relative group/img cursor-pointer shadow-inner" onClick={() => navigate(`/post/${post._id}`)}>
                         <img
-                            src={getAvatarUrl(user)}
-                            alt={user?.displayName}
-                            className="w-11 h-11 rounded-full bg-card/20 object-cover hover:border-primary transition-colors shadow-lg"
+                            src={images[0]}
+                            alt="Post"
+                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-700"
                         />
-                    </Link>
-                    <div className="min-w-0">
-                        <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors block">
-                            <h3 className="font-bold text-foreground leading-tight truncate text-base hover:tracking-tight transition-all">{title}</h3>
-                        </Link>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                            <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors">
-                                {user?.displayName || 'Anonymous'}
-                            </Link>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {new Date(createdAt).toLocaleDateString()}
-                            </span>
-                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300" />
                     </div>
-                </div>
-                <div className="flex flex-col gap-1.5 items-end shrink-0">
+                )}
+
+                <div className="absolute top-3 left-3 flex gap-2 z-20">
                     <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${typeColors[type] || typeColors.job}`}>
                         {type}
                     </span>
@@ -188,14 +174,39 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                         </span>
                     )}
                 </div>
+
+                {status && status !== 'active' && (
+                    <div className="absolute top-3 right-3 bg-card text-foreground text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg shadow-xl z-20">
+                        {status}
+                    </div>
+                )}
             </div>
 
-            {/* Status Badge */}
-            {status && status !== 'active' && (
-                <div className="absolute top-4 right-4 bg-card text-foreground text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg shadow-xl z-20">
-                    {status}
+            <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors block">
+                <h3 className="font-bold text-foreground leading-tight line-clamp-2 text-base hover:tracking-tight transition-all">{title}</h3>
+            </Link>
+
+            <div className="flex items-center gap-3 mt-3 mb-4">
+                <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-all active:scale-95 shrink-0">
+                    <img
+                        src={getAvatarUrl(user)}
+                        alt={user?.displayName}
+                        className="w-9 h-9 rounded-full bg-card/20 object-cover hover:border-primary transition-colors shadow-lg"
+                    />
+                </Link>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors truncate">
+                            {user?.displayName || 'Anonymous'}
+                        </Link>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(createdAt).toLocaleDateString()}
+                        </span>
+                    </div>
                 </div>
-            )}
+            </div>
 
             <div className="relative">
                 <p className={`text-muted-foreground text-sm mb-2 transition-all duration-300 ${expanded ? '' : 'line-clamp-2'}`}>
@@ -258,18 +269,6 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
                         </>
                     )}
                 </motion.div>
-            )}
-
-            {/* Image Preview - Elevated with Overlay */}
-            {images && images.length > 0 && (
-                <div className="mb-5 rounded-[2.5rem] overflow-hidden aspect-video bg-card/10 shrink-0 relative group/img cursor-pointer shadow-inner" onClick={() => navigate(`/post/${post._id}`)}>
-                    <img
-                        src={images[0]}
-                        alt="Post"
-                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300" />
-                </div>
             )}
 
             <div className="flex items-center justify-between mt-auto pt-4">

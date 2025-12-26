@@ -148,24 +148,39 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
             activeOpacity={0.9}
             style={[styles.card, themeStyles.card, { borderLeftColor: getTypeColor(post.type), borderLeftWidth: 4 }]}
         >
-            <View style={styles.header}>
-                <Image
-                    source={{ uri: getAvatarUrl(post.user as any) }}
-                    style={styles.avatar}
-                />
-                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })} style={{ flex: 1 }}>
-                    <View style={styles.userInfo}>
-                        <Text style={[styles.displayName, themeStyles.text]}>{post.user.displayName}</Text>
-                        <Text style={[styles.type, { color: getTypeColor(post.type) }]}>
-                            {post.type}
-                        </Text>
+            {post.images && post.images.length > 0 && (
+                <View style={styles.heroImageWrap}>
+                    <Image
+                        source={{ uri: post.images[0] }}
+                        style={styles.heroImage}
+                        resizeMode="cover"
+                    />
+                    <View style={[styles.typePill, { borderColor: getTypeColor(post.type), backgroundColor: colors.card }]}>
+                        <Text style={[styles.typePillText, { color: getTypeColor(post.type) }]}>{post.type}</Text>
+                    </View>
+                    {post.price != null && (
+                        <View style={styles.pricePill}>
+                            <Text style={styles.priceText}>₹{post.price}</Text>
+                        </View>
+                    )}
+                </View>
+            )}
+
+            <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>
+                {post.title}
+            </Text>
+
+            <View style={styles.userRow}>
+                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })} style={styles.userRowLeft}>
+                    <Image source={{ uri: getAvatarUrl(post.user as any) }} style={styles.avatarSmall} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.displayName, themeStyles.text]} numberOfLines={1}>{post.user.displayName}</Text>
+                        <View style={styles.userMetaRow}>
+                            <Clock size={12} color={colors.textSecondary} />
+                            <Text style={[styles.userMetaText, themeStyles.textSecondary]}>{formatDate(post.createdAt)}</Text>
+                        </View>
                     </View>
                 </TouchableOpacity>
-                {post.price != null && (
-                    <View style={styles.priceTag}>
-                        <Text style={styles.priceText}>₹{post.price}</Text>
-                    </View>
-                )}
                 {isOwnPost && (post as any).applicationCount > 0 && (
                     <View style={styles.requestBadge}>
                         <MessageCircle size={12} color="#ffffff" fill="#ffffff" />
@@ -173,10 +188,6 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
                     </View>
                 )}
             </View>
-
-            <Text style={[styles.title, themeStyles.text]} numberOfLines={1}>
-                {post.title}
-            </Text>
 
             <Text style={[styles.description, themeStyles.textSecondary]} numberOfLines={expanded ? undefined : 2}>
                 {post.description}
@@ -269,7 +280,77 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12, // Reduced from 16
+        marginBottom: 8,
+    },
+    heroImageWrap: {
+        height: 180,
+        width: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 12,
+        position: 'relative',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)'
+    },
+    heroImage: {
+        width: '100%',
+        height: '100%'
+    },
+    typePill: {
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+    },
+    typePillText: {
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase'
+    },
+    pricePill: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: 'rgba(0,0,0,0.55)'
+    },
+    priceText: {
+        color: '#ffffff',
+        fontSize: 13,
+        fontWeight: 'bold'
+    },
+    userRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+        gap: 12,
+    },
+    userRowLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 10,
+    },
+    avatarSmall: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        backgroundColor: '#00000022'
+    },
+    userMetaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 2,
+    },
+    userMetaText: {
+        fontSize: 12,
     },
     avatar: {
         width: 36, // Reduced from 40
@@ -299,7 +380,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(59, 130, 246, 0.2)',
     },
-    priceText: {
+    priceTagText: {
         color: '#3b82f6',
         fontWeight: 'bold',
         fontSize: 13,

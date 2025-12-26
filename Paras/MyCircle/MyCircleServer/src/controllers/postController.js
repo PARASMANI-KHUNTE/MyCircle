@@ -481,7 +481,14 @@ exports.sharePost = async (req, res, next) => {
         post.shares += 1;
         await post.save();
 
-        res.json({ shares: post.shares, link: `${process.env.CLIENT_URL || 'http://localhost:5173'}/post/${post._id}` });
+        const isProduction = process.env.NODE_ENV === 'production';
+        const clientUrl = isProduction ? process.env.CLIENT_URL : process.env.CLIENT_URL_DEV;
+
+        if (!clientUrl) {
+            return res.status(500).json({ msg: 'Client URL is not configured' });
+        }
+
+        res.json({ shares: post.shares, link: `${clientUrl}/post/${post._id}` });
     } catch (err) {
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });

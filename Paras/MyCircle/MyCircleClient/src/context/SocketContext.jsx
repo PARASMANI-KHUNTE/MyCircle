@@ -29,7 +29,15 @@ export const SocketProvider = ({ children }) => {
         const isProduction = import.meta.env.PROD;
         const serverURL = isProduction
             ? (import.meta.env.VITE_API_URL || '')
-            : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
+            : (import.meta.env.VITE_API_URL_DEV || '');
+
+        if (isProduction && !serverURL) {
+            throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
+        }
+
+        if (!isProduction && !serverURL) {
+            throw new Error('VITE_API_URL_DEV is not set. Please configure it in your web .env file.');
+        }
 
         // Connect to Socket.io server
         const newSocket = io(serverURL, {

@@ -23,11 +23,16 @@ const server = http.createServer(app);
 
 // Initialize Socket.io
 const isProduction = process.env.NODE_ENV === 'production';
+const rawCorsOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_URL || '').toString();
+const corsOrigins = rawCorsOrigins
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 const io = new Server(server, {
     cors: {
         origin: isProduction
-            ? process.env.CLIENT_URL
-            : (process.env.CLIENT_URL || 'http://localhost:5173'),
+            ? corsOrigins
+            : true,
         methods: ['GET', 'POST'],
         credentials: true
     }
@@ -105,21 +110,13 @@ const corsOptions = {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
 
-        const allowedOrigins = [
-            process.env.CLIENT_URL,
-            'http://localhost:5173',
-            'http://localhost:3000',
-            'http://localhost:19006',
-            'https://mycircle-9gm5.onrender.com'
-        ].filter(Boolean);
-
         // In development, allow all origins
         if (!isProduction) {
             return callback(null, true);
         }
 
         // In production, check whitelist
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (corsOrigins.includes(origin)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -184,6 +181,18 @@ app.use('/api/user', require('./src/routes/userRoutes'));
 app.use('/api/chat', require('./src/routes/chatRoutes'));
 app.use('/api/notifications', require('./src/routes/notificationRoutes'));
 app.use('/api/ai', require('./src/routes/aiRoutes'));
+
+app.get('/post/:id', (req, res) => {
+    const clientUrl = isProduction
+        ? process.env.CLIENT_URL
+        : process.env.CLIENT_URL_DEV;
+
+    if (!clientUrl) {
+        return res.status(500).json({ msg: 'Client URL not configured' });
+    }
+
+    res.redirect(`${clientUrl}/post/${req.params.id}`);
+});
 
 app.get('/', (req, res) => {
     res.send('MyCircle API is running...');

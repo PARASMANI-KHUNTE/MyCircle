@@ -4,6 +4,14 @@ import { API_URL, DEV_API_URL } from '@env';
 
 import { Platform } from 'react-native';
 
+if (__DEV__ && !DEV_API_URL) {
+    throw new Error('DEV_API_URL is not set. Please configure it in your mobile .env file.');
+}
+
+if (!__DEV__ && !API_URL) {
+    throw new Error('API_URL is not set. Please configure it in your mobile .env file.');
+}
+
 export const BASE_URL = __DEV__ ? DEV_API_URL : API_URL;
 
 const api = axios.create({

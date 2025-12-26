@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Linking, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import api from '../services/api';
-import { X, Check, Phone, MessageCircle, MessageSquare, ArrowLeft, Trash2 } from 'lucide-react-native';
+import { X, Check, MessageCircle, Trash2 } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import ThemedAlert from '../components/ui/ThemedAlert';
-import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
 const RequestsScreen = ({ navigation }: any) => {
@@ -134,29 +133,6 @@ const RequestsScreen = ({ navigation }: any) => {
                 }
             }
         });
-    };
-
-    const handleWhatsApp = (number: string) => {
-        // Remove non-numeric characters for WhatsApp link (except + if needed, usually WhatsApp prefers just digits with country code)
-        // If number doesn't have country code (assuming India +91 default if missing for now, or handle broadly)
-        let formattedCheck = number.replace(/[^\d+]/g, '');
-
-        // Remove leading 0 if present
-        if (formattedCheck.startsWith('0')) formattedCheck = formattedCheck.substring(1);
-
-        // If no country code (length 10 for India), add 91
-        if (formattedCheck.length === 10) {
-            formattedCheck = '91' + formattedCheck;
-        } else if (formattedCheck.startsWith('+')) {
-            formattedCheck = formattedCheck.substring(1); // WhatsApp API usually takes '9198...' not '+91...'
-        }
-
-        Linking.openURL(`whatsapp://send?phone=${formattedCheck}`);
-    };
-
-    const handleCall = (number: string) => {
-        // Ensure the number is treated as a phone URI
-        Linking.openURL(`tel:${number}`);
     };
 
     const formatDate = (dateString: string) => {
@@ -306,22 +282,6 @@ const RequestsScreen = ({ navigation }: any) => {
                             >
                                 <MessageCircle size={18} color="white" />
                             </TouchableOpacity>
-                            {item.post?.contactWhatsapp && (
-                                <TouchableOpacity
-                                    onPress={() => handleWhatsApp(item.post.contactWhatsapp)}
-                                    style={[styles.iconButton, { backgroundColor: '#16a34a' }]}
-                                >
-                                    <MessageSquare size={18} color="white" />
-                                </TouchableOpacity>
-                            )}
-                            {item.post?.contactPhone && (
-                                <TouchableOpacity
-                                    onPress={() => handleCall(item.post.contactPhone)}
-                                    style={[styles.iconButton, { backgroundColor: '#2563eb' }]}
-                                >
-                                    <Phone size={18} color="white" />
-                                </TouchableOpacity>
-                            )}
                         </View>
                     )}
                 </View>

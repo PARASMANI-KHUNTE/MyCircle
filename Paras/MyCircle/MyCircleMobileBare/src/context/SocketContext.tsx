@@ -3,11 +3,14 @@ import { io, Socket } from 'socket.io-client';
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { useAuth } from './AuthContext';
 import { BASE_URL } from '../services/api';
-import { Platform } from 'react-native';
 import { navigate } from '../services/navigationService';
 
-// Derive socket URL from BASE_URL (strip /api)
-const SOCKET_URL = BASE_URL.replace('/api', '');
+const getSocketUrl = () => {
+    if (!BASE_URL) {
+        throw new Error('BASE_URL is not configured. Check DEV_API_URL/API_URL in mobile env.');
+    }
+    return BASE_URL.replace(/\/api\/?$/, '');
+};
 
 interface SocketContextType {
     socket: Socket | null;
@@ -108,8 +111,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             return;
         }
 
-        console.log('Connecting to socket at:', SOCKET_URL);
-        const newSocket = io(SOCKET_URL, {
+        const socketUrl = getSocketUrl();
+        console.log('Connecting to socket at:', socketUrl);
+        const newSocket = io(socketUrl, {
             transports: ['websocket'],
             forceNew: true,
         });

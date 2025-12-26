@@ -6,7 +6,15 @@ import axios from 'axios';
 const isProduction = import.meta.env.PROD;
 const apiURL = isProduction
     ? (import.meta.env.VITE_API_URL || '')
-    : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
+    : (import.meta.env.VITE_API_URL_DEV || '');
+
+if (isProduction && !apiURL) {
+    throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
+}
+
+if (!isProduction && !apiURL) {
+    throw new Error('VITE_API_URL_DEV is not set. Please configure it in your web .env file.');
+}
 
 const AuthContext = createContext();
 
@@ -23,9 +31,12 @@ export const AuthProvider = ({ children }) => {
             return res.data; // Return user data for conditional redirects
         } catch (err) {
             console.error("Error fetching profile:", err.message);
-            // If fetching profile fails, token might be invalid
-            localStorage.removeItem('token');
-            setUser(null);
+            const status = err?.response?.status;
+            // Only clear auth on actual auth failures
+            if (status === 401 || status === 403) {
+                localStorage.removeItem('token');
+                setUser(null);
+            }
         } finally {
             setLoading(false);
         }

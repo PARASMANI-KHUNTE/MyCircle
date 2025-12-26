@@ -28,7 +28,15 @@ const Navbar = () => {
     const isProduction = import.meta.env.PROD;
     const apiURL = isProduction
         ? (import.meta.env.VITE_API_URL || '')
-        : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
+        : (import.meta.env.VITE_API_URL_DEV || '');
+
+    if (isProduction && !apiURL) {
+        throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
+    }
+
+    if (!isProduction && !apiURL) {
+        throw new Error('VITE_API_URL_DEV is not set. Please configure it in your web .env file.');
+    }
 
     // Google OAuth Login Handler
     const handleGoogleLogin = () => {

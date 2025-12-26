@@ -152,7 +152,7 @@ exports.getReceivedRequests = async (req, res) => {
 exports.getSentRequests = async (req, res) => {
     try {
         const requests = await ContactRequest.find({ requester: req.user.id })
-            .populate('post', ['title', 'type', 'contactPhone', 'contactWhatsapp', 'images', 'price'])
+            .populate('post', ['title', 'type', 'images', 'price'])
             .populate('recipient', ['displayName', 'avatar'])
             .sort({ createdAt: -1 });
 

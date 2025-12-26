@@ -5,7 +5,7 @@ import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useTheme } from '../../context/ThemeContext';
-import api from '../../services/api';
+import api, { BASE_URL } from '../../services/api';
 
 if (Platform.OS === 'android') {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -121,8 +121,8 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
         try {
             await api.post(`/posts/${post._id}/share`);
             setShares(shares + 1);
-            // In a real environment, we'd use a deep link or the web URL
-            const shareUrl = `https://mycircle.social/post/${post._id}`;
+            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+            const shareUrl = `${serverBase}/post/${post._id}`;
             Clipboard.setString(shareUrl);
             success("Link copied to clipboard!");
         } catch (err) {

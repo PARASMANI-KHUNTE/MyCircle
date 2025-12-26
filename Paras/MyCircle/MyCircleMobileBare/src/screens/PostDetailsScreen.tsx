@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles, X } from 'lucide-react-native';
 import { Clipboard } from 'react-native';
 import { getAvatarUrl } from '../utils/avatar';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getPostInsights, getPostExplanation } from '../services/aiService';
@@ -129,7 +129,8 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         try {
             await api.post(`/posts/${id}/share`);
             setShares(shares + 1);
-            const shareUrl = `https://mycircle.social/post/${id}`;
+            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+            const shareUrl = `${serverBase}/post/${id}`;
             Clipboard.setString(shareUrl);
             Alert.alert("Link Copied", "Post link copied to clipboard!");
         } catch (err) {

@@ -6,7 +6,7 @@ const { containsProfanity } = require('../utils/profanityFilter');
 // @desc    Create a post
 // @route   POST /api/posts
 // @access  Private
-exports.createPost = async (req, res) => {
+exports.createPost = async (req, res, next) => {
     try {
         const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
 
@@ -72,15 +72,14 @@ exports.createPost = async (req, res) => {
 
         res.json(post);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get all posts
 // @route   GET /api/posts
 // @access  Public
-exports.getPosts = async (req, res) => {
+exports.getPosts = async (req, res, next) => {
     try {
         const { latitude, longitude, radius = 50, type, filter, userId } = req.query; // radius in km
 
@@ -181,15 +180,14 @@ exports.getPosts = async (req, res) => {
 
         res.json(postsWithCount);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get post by ID
 // @route   GET /api/posts/:id
 // @access  Public
-exports.getPostById = async (req, res) => {
+exports.getPostById = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id)
             .populate('user', ['displayName', 'avatar'])
@@ -237,18 +235,17 @@ exports.getPostById = async (req, res) => {
             contactRequestStatus
         });
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Delete post
 // @route   DELETE /api/posts/:id
 // @access  Private
-exports.deletePost = async (req, res) => {
+exports.deletePost = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -276,18 +273,17 @@ exports.deletePost = async (req, res) => {
 
         res.json({ msg: 'Post and related data removed' });
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get current user's posts
 // @route   GET /api/posts/my-posts
 // @access  Private
-exports.getMyPosts = async (req, res) => {
+exports.getMyPosts = async (req, res, next) => {
     try {
         const posts = await Post.find({ user: req.user.id })
             .sort({ createdAt: -1 })
@@ -305,15 +301,14 @@ exports.getMyPosts = async (req, res) => {
 
         res.json(postsWithCount);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Toggle post active status
 // @route   PATCH /api/posts/:id/toggle-status
 // @access  Private
-exports.togglePostStatus = async (req, res) => {
+exports.togglePostStatus = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -339,18 +334,17 @@ exports.togglePostStatus = async (req, res) => {
         await post.save();
         res.json(post);
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Update post
 // @route   PUT /api/posts/:id
 // @access  Private
-exports.updatePost = async (req, res) => {
+exports.updatePost = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -398,18 +392,17 @@ exports.updatePost = async (req, res) => {
         await post.save();
         res.json(post);
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Like/Unlike a post
 // @route   POST /api/posts/:id/like
 // @access  Private
-exports.likePost = async (req, res) => {
+exports.likePost = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -467,18 +460,17 @@ exports.likePost = async (req, res) => {
 
         res.json({ likes: post.likes.length, isLiked: likeIndex === -1 });
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Share a post (increment share count)
 // @route   POST /api/posts/:id/share
 // @access  Public
-exports.sharePost = async (req, res) => {
+exports.sharePost = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -491,18 +483,17 @@ exports.sharePost = async (req, res) => {
 
         res.json({ shares: post.shares, link: `${process.env.CLIENT_URL || 'http://localhost:5173'}/post/${post._id}` });
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get related posts
 // @route   GET /api/posts/related/:id
 // @access  Public
-exports.getRelatedPosts = async (req, res) => {
+exports.getRelatedPosts = async (req, res, next) => {
     try {
         const currentPost = await Post.findById(req.params.id);
         if (!currentPost) {
@@ -525,15 +516,14 @@ exports.getRelatedPosts = async (req, res) => {
 
         res.json(relatedPosts);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Update post status (active, inactive, sold, completed, archived)
 // @route   PATCH /api/posts/:id/status
 // @access  Private
-exports.updatePostStatus = async (req, res) => {
+exports.updatePostStatus = async (req, res, next) => {
     try {
         const { status } = req.body;
         // Validate status
@@ -565,18 +555,17 @@ exports.updatePostStatus = async (req, res) => {
         await post.save();
         res.json(post);
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get post analytics
 // @route   GET /api/posts/:id/analytics
 // @access  Private
-exports.getPostAnalytics = async (req, res) => {
+exports.getPostAnalytics = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -596,17 +585,16 @@ exports.getPostAnalytics = async (req, res) => {
             daysActive: Math.floor((Date.now() - new Date(post.createdAt)) / (1000 * 60 * 60 * 24))
         });
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 // @desc    Create a comment
 // @route   POST /api/posts/:id/comment
 // @access  Private
-exports.commentOnPost = async (req, res) => {
+exports.commentOnPost = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -667,15 +655,14 @@ exports.commentOnPost = async (req, res) => {
 
         res.json(addedComment);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Delete comment
 // @route   DELETE /api/posts/:id/comment/:commentId
 // @access  Private
-exports.deleteComment = async (req, res) => {
+exports.deleteComment = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -703,15 +690,14 @@ exports.deleteComment = async (req, res) => {
         await post.save();
         res.json(post.comments);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Edit comment
 // @route   PUT /api/posts/:id/comment/:commentId
 // @access  Private
-exports.editComment = async (req, res) => {
+exports.editComment = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -741,15 +727,14 @@ exports.editComment = async (req, res) => {
 
         res.json(updatedComment);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Reply to a comment
 // @route   POST /api/posts/:id/comment/:commentId/reply
 // @access  Private
-exports.replyToComment = async (req, res) => {
+exports.replyToComment = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id);
 
@@ -824,7 +809,6 @@ exports.replyToComment = async (req, res) => {
 
         res.json(addedReply);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };

@@ -8,7 +8,7 @@ const { createNotification } = require('./notificationController');
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
 // @access  Private
-exports.getConversations = async (req, res) => {
+exports.getConversations = async (req, res, next) => {
     try {
         const conversations = await Conversation.find({
             participants: req.user.id
@@ -35,15 +35,14 @@ exports.getConversations = async (req, res) => {
 
         res.json(conversationsWithUnread);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get messages for a conversation
 // @route   GET /api/chat/messages/:conversationId
 // @access  Private
-exports.getMessages = async (req, res) => {
+exports.getMessages = async (req, res, next) => {
     try {
         const messages = await Message.find({
             conversationId: req.params.conversationId
@@ -52,15 +51,14 @@ exports.getMessages = async (req, res) => {
 
         res.json(messages);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get or Create Conversation with specific user
 // @route   GET /api/chat/conversation/:userId
 // @access  Private
-exports.getOrCreateConversation = async (req, res) => {
+exports.getOrCreateConversation = async (req, res, next) => {
     try {
         const recipientId = req.params.userId;
 
@@ -87,15 +85,14 @@ exports.getOrCreateConversation = async (req, res) => {
 
         res.json(conversation);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Send a message
 // @route   POST /api/chat/message
 // @access  Private
-exports.sendMessage = async (req, res) => {
+exports.sendMessage = async (req, res, next) => {
     try {
         const { recipientId, text } = req.body;
 
@@ -178,15 +175,14 @@ exports.sendMessage = async (req, res) => {
 
         res.json(populatedMessage);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Initialize Chat (Get or Create Conversation with specific user)
 // @route   POST /api/chat/init/:userId
 // @access  Private
-exports.initChat = async (req, res) => {
+exports.initChat = async (req, res, next) => {
     try {
         const recipientId = req.params.userId;
 
@@ -220,15 +216,14 @@ exports.initChat = async (req, res) => {
 
         res.json(conversation);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Delete a conversation
 // @route   DELETE /api/chat/conversation/:conversationId
 // @access  Private
-exports.deleteConversation = async (req, res) => {
+exports.deleteConversation = async (req, res, next) => {
     try {
         const conversation = await Conversation.findById(req.params.conversationId);
         if (!conversation) return res.status(404).json({ msg: 'Conversation not found' });
@@ -244,15 +239,14 @@ exports.deleteConversation = async (req, res) => {
 
         res.json({ msg: 'Conversation deleted' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Mark messages as read
 // @route   PUT /api/chat/read/:conversationId
 // @access  Private
-exports.markRead = async (req, res) => {
+exports.markRead = async (req, res, next) => {
     try {
         await Message.updateMany(
             { conversationId: req.params.conversationId, sender: { $ne: req.user.id }, status: { $ne: 'read' } },
@@ -279,15 +273,14 @@ exports.markRead = async (req, res) => {
 
         res.json({ msg: 'Messages marked as read' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get total unread message count
 // @route   GET /api/chat/unread/count
 // @access  Private
-exports.getTotalUnreadCount = async (req, res) => {
+exports.getTotalUnreadCount = async (req, res, next) => {
     try {
         const count = await Message.countDocuments({
             sender: { $ne: req.user.id },
@@ -296,7 +289,6 @@ exports.getTotalUnreadCount = async (req, res) => {
         });
         res.json({ count });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };

@@ -1,75 +1,87 @@
-# ⭕ MyCircle: Hyperlocal Task & Exchange Platform
+# ⭕ MyCircle
 
-**MyCircle** is a hyperlocal exchange platform designed to connect neighbors for short-term jobs, services, and item exchanges. It is **exchange-centric**, focusing on community coordination via WhatsApp and phone.
+MyCircle is a **hyperlocal exchange** platform for neighbors to post and discover:
+
+- **Jobs** (short tasks)
+- **Services** (help nearby)
+- **Sell / Rent** (items & spaces)
+
+It’s built around a simple idea: **make local collaboration as easy as a scroll**.
 
 ---
 
-## 🏗️ Project Structure
+## 🧭 Monorepo Layout
 ```text
 MyCircle/
 └── Paras/
     └── MyCircle/
-        ├── MyCircleClient/       # Web Frontend (React 19 + Vite)
-        │   ├── src/             # Frontend components, assets, and logic
-        │   └── tailwind.config  # Glassmorphism design tokens
-        ├── MyCircleMobilebare/       # Mobile App (React Native + NativeWind)
-        │   ├── app/             
-        │   └── src/             # Native components and shared logic
         ├── MyCircleServer/       # Backend API (Node.js + Express)
-        │   ├── src/             # Mongoose models, controllers, and routes
-        │   └── server.js        # Server entry point
-        ├── docs/                # Technical documentation
-        └── project_features.md  # Detailed alpha v0.5 feature overview
+        ├── MyCircleClient/       # Web Frontend (React + Vite)
+        └── MyCircleMobileBare/   # Mobile App (React Native CLI)
 ```
 
 ---
 
-## 🛠️ Technology Stack
-- **Web**: React 19, Vite, Tailwind CSS, Framer Motion, Three.js
-- **Mobile**: Expo (ReactNative), Expo Router, NativeWind, Reanimated
-- **Backend**: Node.js, Express, MongoDB/Mongoose, Socket.io
-- **Integrations**: Google Gemini (AI Moderation), Cloudinary (Images), Google OAuth
+## 🧩 Tech Stack
+- **Web**
+  - React 19, Vite, Tailwind CSS, Framer Motion
+- **Mobile**
+  - React Native (CLI), NativeWind, Reanimated
+- **Backend**
+  - Node.js, Express, MongoDB/Mongoose, Socket.io
+- **Integrations**
+  - Cloudinary (images), Google OAuth, Gemini (AI moderation)
 
 ---
 
-## ✨ Core Features
-- **Dynamic Marketplace**: Browse and search for Jobs, Services, Sales, or Rentals.
-- **Request Coordination**: Formal contact request flow to prevent spam.
-- **Post Analytics**: Real-time tracking of views, likes, and shares.
-- **Identity & Reputation**: User profiles with skills and activity metrics.
-- **AI Moderation**: Automatic content safety checks via Google Gemini.
+## ✨ Highlights
+- **Marketplace feed** for jobs/services/sell/rent
+- **Contact request flow** to reduce spam
+- **Real-time updates** (Socket.io)
+- **Post analytics** (views/likes/shares)
+- **AI moderation** for safer content
 
 ---
 
-## 🚦 Quick Start
+## � Quick Start (Local Dev)
 
 ### Prerequisites
 - Node.js (v18+)
-- MongoDB Atlas & Cloudinary Credentials
+- MongoDB (local or Atlas)
+- Cloudinary credentials (for uploads)
 
-### Installation
+For **Android (React Native CLI)**:
+- Android Studio + Android SDK
+- A device/emulator configured
 
-1.  **Clone & Install**:
-    ```bash
-    git clone https://github.com/PARASMANI-KHUNTE/MyCircle.git
-    cd MyCircle
-    # Install dependencies in each folder
-    (cd Paras/MyCircle/MyCircleServer && npm install)
-    (cd Paras/MyCircle/MyCircleClient && npm install)
-    (cd Paras/MyCircle/MyCircleMobile && npm install)
-    ```
+### Install dependencies
+```bash
+git clone https://github.com/PARASMANI-KHUNTE/MyCircle.git
+cd MyCircle
 
-2.  **Run Development Servers**:
-    - **Server**: `cd Paras/MyCircle/MyCircleServer && npm run dev`
-    - **Web**: `cd Paras/MyCircle/MyCircleClient && npm run dev`
-    - **Mobile**: `cd Paras/MyCircle/MyCircleMobile && npx expo start`
+(cd Paras/MyCircle/MyCircleServer && npm install)
+(cd Paras/MyCircle/MyCircleClient && npm install)
+(cd Paras/MyCircle/MyCircleMobileBare && npm install)
+```
+
+### Run backend + web
+- **Server**
+  - `cd Paras/MyCircle/MyCircleServer && npm run dev`
+- **Web**
+  - `cd Paras/MyCircle/MyCircleClient && npm run dev`
+
+### Run mobile (MyCircleMobileBare)
+- **Start Metro**
+  - `cd Paras/MyCircle/MyCircleMobileBare && npm start`
+- **Android**
+  - `cd Paras/MyCircle/MyCircleMobileBare && npm run android`
 
 ---
 
-## 🎨 Design Philosophy
-A **Dark-First Glassmorphic** aesthetic using soft blurs and vibrant gradients for a premium, modern feel.
+## 🎨 Design
+Dark-first, glassy UI with vibrant accents—built for a **fast, modern feed**.
 
 ---
 
 ## 📄 License
-Licensed under the ISC License.
+ISC

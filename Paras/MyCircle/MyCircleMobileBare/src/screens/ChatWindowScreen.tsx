@@ -9,6 +9,7 @@ import api from '../services/api';
 import { ArrowLeft, Send, MoreVertical, Sparkles, X } from 'lucide-react-native';
 import { moderateContent, getChatSuggestions } from '../services/aiService';
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
+import firestore from '@react-native-firebase/firestore';
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
     const { id, recipient } = route.params;
@@ -86,6 +87,33 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     );
 
     useEffect(() => {
+        if (!id) return;
+
+        // Firestore real-time listener
+        const unsubscribe = firestore()
+            .collection('conversations')
+            .doc(id)
+            .collection('messages')
+            .orderBy('createdAt', 'asc')
+            .onSnapshot(querySnapshot => {
+                const newMessages = querySnapshot.docs.map(doc => ({
+                    _id: doc.id,
+                    ...doc.data()
+                }));
+                setMessages(newMessages);
+                setLoading(false);
+
+                // Auto-read
+                api.put(`/chat/read/${id}`).catch(err => console.error("Auto-read failed", err));
+            }, err => {
+                console.error("Firestore onSnapshot error:", err);
+                setLoading(false);
+            });
+
+        return () => unsubscribe();
+    }, [id]);
+
+    useEffect(() => {
         if (recipient) {
             setLoading(false); // New conversation
         }
@@ -93,14 +121,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         if (socket && id) {
             socket.emit('join_conversation', id);
 
-            socket.on('receive_message', (data: any) => {
-                if (data.conversationId === id) {
-                    setMessages(prev => [...prev, data.message]);
-                    socket.emit('read_messages', id);
-                    setIsOtherUserTyping(false); // Clear typing when message received
-                }
-            });
-
+            // We still keep socket for read receipts (UI sync) and typing
             socket.on('messages_read', (data: any) => {
                 if (data.conversationId === id) {
                     setMessages(prev => prev.map(m => ({ ...m, status: 'read' })));
@@ -123,12 +144,10 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         return () => {
             if (socket && id) {
                 socket.emit('leave_conversation', id);
-                socket.off('receive_message');
                 socket.off('messages_read');
                 socket.off('user_typing');
                 socket.off('user_stop_typing');
             }
-            // Clear typing timeout to prevent memory leaks
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
             }
@@ -178,23 +197,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     };
 
     const fetchMessages = async () => {
-        try {
-            const res = await api.get(`/chat/messages/${id}`);
-            setMessages(res.data); // Backend returns messages array directly
-            setLoading(false);
-
-            // Mark messages as read
-            await api.put(`/chat/read/${id}`);
-            if (socket) socket.emit('read_messages', id);
-
-            // Fetch conversation details to get participants
-            if (!conversation) {
-                fetchConversationDetails();
-            }
-        } catch (err) {
-            console.error(err);
-            setLoading(false);
-        }
+        // Handled by Firestore onSnapshot
     };
 
     const handleSend = async (textToSend?: string) => {
@@ -222,19 +225,19 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             const messageData = {
                 recipientId: recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id,
                 text: text.trim(),
-                replyTo: replyTo?._id
+                replyTo: replyTo?._id,
+                postId: conversation?.postId || route.params.postId
             };
 
             const res = await api.post('/chat/message', messageData);
 
-            // Add message to local state
-            setMessages(prev => [...prev, res.data]);
+            // We no longer add to local state here as Firestore handles it
             setInputText('');
             setReplyTo(null);
 
-            // If this was a new conversation, update the conversation ID
             if (!id && res.data.conversationId) {
-                setConversation({ _id: res.data.conversationId });
+                // If this was new, we should ideally re-trigger the listener or navigate
+                navigation.setParams({ id: res.data.conversationId });
             }
         } catch (err: any) {
             console.error('Failed to send message:', err);

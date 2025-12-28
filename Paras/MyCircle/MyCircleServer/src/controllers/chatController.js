@@ -1,9 +1,10 @@
 const Conversation = require('../models/Conversation');
-const Message = require('../models/Message');
+const Message = require('../models/Message'); // Kept for legacy/fallback? Actually we start fresh.
 const User = require('../models/User');
 const ContactRequest = require('../models/ContactRequest');
 const { containsProfanity } = require('../utils/profanityFilter');
 const { createNotification } = require('./notificationController');
+const { db, admin } = require('../config/firebase');
 
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
@@ -42,12 +43,20 @@ exports.getConversations = async (req, res, next) => {
 // @desc    Get messages for a conversation
 // @route   GET /api/chat/messages/:conversationId
 // @access  Private
+// @desc    Get messages for a conversation
+// @route   GET /api/chat/messages/:conversationId
+// @access  Private
 exports.getMessages = async (req, res, next) => {
     try {
-        const messages = await Message.find({
-            conversationId: req.params.conversationId
-        })
-            .sort({ createdAt: 1 }); // Oldest first
+        if (!db) return res.status(500).json({ msg: 'Firebase not initialized' });
+
+        const messagesRef = db.collection('conversations').doc(req.params.conversationId).collection('messages');
+        const snapshot = await messagesRef.orderBy('createdAt', 'asc').get();
+
+        const messages = [];
+        snapshot.forEach(doc => {
+            messages.push({ _id: doc.id, ...doc.data() });
+        });
 
         res.json(messages);
     } catch (err) {
@@ -92,16 +101,19 @@ exports.getOrCreateConversation = async (req, res, next) => {
 // @desc    Send a message
 // @route   POST /api/chat/message
 // @access  Private
+// @desc    Send a message
+// @route   POST /api/chat/message
+// @access  Private
 exports.sendMessage = async (req, res, next) => {
     try {
-        const { recipientId, text } = req.body;
+        const { recipientId, text, postId } = req.body;
 
         // Check if conversation exists
         let conversation = await Conversation.findOne({
             participants: { $all: [req.user.id, recipientId] }
         });
 
-        // Connectivity Check: Ensure an approved contact request exists OR they already have a conversation
+        // Connectivity Check
         if (!conversation) {
             const connection = await ContactRequest.findOne({
                 $or: [
@@ -111,69 +123,73 @@ exports.sendMessage = async (req, res, next) => {
             });
 
             if (!connection) {
-                return res.status(403).json({ msg: 'You can only message connected users (accepted requests)' });
+                return res.status(403).json({ msg: 'You can only message connected users' });
             }
         }
 
         // Create new conversation if not exists
         if (!conversation) {
             conversation = new Conversation({
-                participants: [req.user.id, recipientId]
+                participants: [req.user.id, recipientId],
+                postId: postId || null
             });
             await conversation.save();
         }
 
-
         // Check for profanity
         if (containsProfanity(text)) {
-            return res.status(400).json({ msg: 'Message contains inappropriate content. Please be respectful.' });
+            return res.status(400).json({ msg: 'Message contains inappropriate content.' });
         }
 
         // Check if users have blocked each other
-        const User = require('../models/User');
         const currentUser = await User.findById(req.user.id);
         const recipientUser = await User.findById(recipientId);
 
         if (currentUser.blockedUsers.includes(recipientId)) {
             return res.status(403).json({ msg: 'You have blocked this user.' });
         }
-
         if (recipientUser.blockedUsers.includes(req.user.id)) {
             return res.status(403).json({ msg: 'You cannot message this user.' });
         }
 
-        const sender = await User.findById(req.user.id).select('displayName avatar');
+        const sender = {
+            _id: currentUser._id,
+            displayName: currentUser.displayName,
+            avatar: currentUser.avatar
+        };
 
-        const newMessage = new Message({
-            conversationId: conversation._id,
+        // Save to Firestore
+        const messageData = {
+            conversationId: conversation._id.toString(),
             sender: req.user.id,
             text: text,
-            readBy: [req.user.id] // Mark message as read by sender immediately
-        });
+            createdAt: new Date().toISOString(),
+            status: 'sent',
+            readBy: [req.user.id],
+            expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)) // 7-day TTL
+        };
 
-        const savedMessage = await newMessage.save();
+        const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
+        const docRef = await messagesRef.add(messageData);
 
-        // Populate the message with sender details for real-time emission
-        const populatedMessage = await Message.findById(savedMessage._id)
-            .populate('sender', ['displayName', 'avatar']);
+        const savedMessage = { _id: docRef.id, ...messageData, sender };
 
-
-        // Update conversation last message
-        conversation.lastMessage = savedMessage._id;
+        // Update MongoDB conversation last message metadata
         conversation.updatedAt = Date.now();
+        // We can still store a 'Message' ref if we want, but it's not strictly needed for Firestore.
+        // For simplicity, let's keep it minimal.
         await conversation.save();
 
-        // Socket.io Real-time emission
+        // Socket.io for typing indicators/legacy still works if needed
         const io = req.app.get('io');
         if (io) {
-            // Emit to recipient
             io.to(`user:${recipientId}`).emit('receive_message', {
                 conversationId: conversation._id,
-                message: populatedMessage
+                message: savedMessage
             });
         }
 
-        res.json(populatedMessage);
+        res.json(savedMessage);
     } catch (err) {
         return next(err);
     }
@@ -223,21 +239,40 @@ exports.initChat = async (req, res, next) => {
 // @desc    Delete a conversation
 // @route   DELETE /api/chat/conversation/:conversationId
 // @access  Private
+// @desc    Delete a conversation
+// @route   DELETE /api/chat/conversation/:conversationId
+// @access  Private
 exports.deleteConversation = async (req, res, next) => {
     try {
         const conversation = await Conversation.findById(req.params.conversationId);
         if (!conversation) return res.status(404).json({ msg: 'Conversation not found' });
 
-        // Ensure user is participant
         if (!conversation.participants.includes(req.user.id)) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        // Hard delete for now
-        await Conversation.findByIdAndDelete(req.params.conversationId);
-        await Message.deleteMany({ conversationId: req.params.conversationId });
+        // Add user to deletedBy
+        if (!conversation.deletedBy.includes(req.user.id)) {
+            conversation.deletedBy.push(req.user.id);
+        }
 
-        res.json({ msg: 'Conversation deleted' });
+        // If both users deleted it, or it was linked to a post that's gone (not handled here, but in postController)
+        // Hard delete if all participants deleted
+        if (conversation.deletedBy.length === conversation.participants.length) {
+            // Hard delete from Firestore too
+            const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
+            const snapshot = await messagesRef.get();
+            const batch = db.batch();
+            snapshot.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            await db.collection('conversations').doc(conversation._id.toString()).delete();
+
+            await Conversation.findByIdAndDelete(req.params.conversationId);
+            return res.json({ msg: 'Conversation permanently deleted' });
+        }
+
+        await conversation.save();
+        res.json({ msg: 'Conversation hidden for you' });
     } catch (err) {
         return next(err);
     }

@@ -3,13 +3,21 @@ const mongoose = require('mongoose');
 const ConversationSchema = new mongoose.Schema({
     participants: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        ref: 'User'
     }],
+    postId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Post',
+        default: null
+    },
     lastMessage: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Message'
+        ref: 'Message' // We still keep a reference for metadata, though content moves to Firestore
     },
+    deletedBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     updatedAt: {
         type: Date,
         default: Date.now

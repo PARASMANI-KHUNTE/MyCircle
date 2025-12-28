@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../utils/api';
 import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles } from 'lucide-react';
@@ -6,6 +5,8 @@ import { useToast } from '../ui/Toast';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
 import { getAvatarUrl } from '../../utils/avatar';
+import { db } from '../../config/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead }) => {
     const { success, error: showError } = useToast();
@@ -31,20 +32,42 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     }, [conversation._id]);
 
     useEffect(() => {
-        if (!socket) return;
+        if (!db || !conversation._id) return;
 
-        const handleReceiveMessage = (data) => {
-            if (data.conversationId === conversation._id) {
-                setMessages(prev => [...prev, data.message]);
-                scrollToBottom();
-                markAsRead(); // Mark incoming as read if window is open
-                // Update suggestions based on received message
-                generateSuggestions(data.message.text);
+        // Firestore real-time listener for messages
+        const messagesRef = collection(db, 'conversations', conversation._id.toString(), 'messages');
+        const q = query(messagesRef, orderBy('createdAt', 'asc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const newMessages = snapshot.docs.map(doc => ({
+                _id: doc.id,
+                ...doc.data()
+            }));
+
+            setMessages(newMessages);
+            setLoading(false);
+            scrollToBottom();
+
+            // Generate suggestions if there are new messages
+            if (newMessages.length > 0) {
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg.sender !== (currentUser?._id || currentUser?.id)) {
+                    generateSuggestions(lastMsg.text);
+                    markAsRead();
+                }
             }
-        };
+        });
+
+        return () => unsubscribe();
+    }, [conversation._id]);
+
+    useEffect(() => {
+        if (!socket) return;
 
         const handleReadReceipt = (data) => {
             if (data.conversationId === conversation._id && data.readerId !== currentUser._id) {
+                // If using Firestore, we might handle status differently, 
+                // but for now let's keep the UI sync for read receipts via socket
                 setMessages(prev => prev.map(msg =>
                     msg.sender === currentUser._id ? { ...msg, status: 'read' } : msg
                 ));
@@ -63,13 +86,11 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             }
         };
 
-        socket.on('receive_message', handleReceiveMessage);
         socket.on('messages_read', handleReadReceipt);
         socket.on('user_typing', handleUserTyping);
         socket.on('user_stop_typing', handleUserStopTyping);
 
         return () => {
-            socket.off('receive_message', handleReceiveMessage);
             socket.off('messages_read', handleReadReceipt);
             socket.off('user_typing', handleUserTyping);
             socket.off('user_stop_typing', handleUserStopTyping);
@@ -77,16 +98,9 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     }, [socket, conversation._id]);
 
     const fetchMessages = async () => {
-        try {
-            setLoading(true);
-            const res = await api.get(`/chat/messages/${conversation._id}`);
-            setMessages(res.data);
-            setLoading(false);
-            scrollToBottom();
-        } catch (err) {
-            console.error(err);
-            setLoading(false);
-        }
+        // We use Firestore onSnapshot now, so fetchMessages is mostly redundant 
+        // but could be kept for initial load if onSnapshot is slow?
+        // Actually, onSnapshot is fast and handles initial data.
     };
 
     const markAsRead = async () => {
@@ -161,10 +175,13 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
 
             await api.post('/chat/message', {
                 recipientId: otherParticipant._id,
-                text: tempMessage.text
+                text: tempMessage.text,
+                postId: conversation.postId
             });
-            // Ideally update tempMessage to 'delivered' or replace with server response
-            setMessages(prev => prev.map(m => m._id === tempMessage._id ? { ...m, status: 'delivered' } : m));
+            // We don't need to manually update status to 'delivered' here 
+            // because Firestore onSnapshot will update the message list automatically 
+            // once it's written by the backend. 
+            // However, to keep it smooth, we remove the optimistic one once the snapshot comes or just let it replace.
 
         } catch (err) {
             console.error("Failed to send", err);

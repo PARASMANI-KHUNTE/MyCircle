@@ -1,6 +1,9 @@
 const Post = require('../models/Post');
+const User = require('../models/User');
 const { checkContentSafety } = require('../config/gemini');
 const { createNotification } = require('./notificationController');
+const Conversation = require('../models/Conversation');
+const { db } = require('../config/firebase');
 const { containsProfanity } = require('../utils/profanityFilter');
 
 // @desc    Create a post
@@ -31,7 +34,7 @@ exports.createPost = async (req, res, next) => {
         }
 
         // AI Safety Check
-        const safetyCheck = await checkContentSafety(`${title} ${description}`);
+        const safetyCheck = await checkContentSafety(`${title} ${description} `);
         if (!safetyCheck.safe) {
             return res.status(400).json({
                 msg: 'Post rejected by AI moderation',
@@ -452,7 +455,7 @@ exports.likePost = async (req, res, next) => {
                 type: 'like',
                 title: 'New Like',
                 message: `${senderName} liked your post: "${postTitle}"`,
-                link: `/post/${post._id}`,
+                link: `/ post / ${post._id} `,
                 relatedId: post._id,
                 postId: post._id
             });
@@ -488,7 +491,7 @@ exports.sharePost = async (req, res, next) => {
             return res.status(500).json({ msg: 'Client URL is not configured' });
         }
 
-        res.json({ shares: post.shares, link: `${clientUrl}/post/${post._id}` });
+        res.json({ shares: post.shares, link: `${clientUrl} /post/${post._id} ` });
     } catch (err) {
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
@@ -560,6 +563,27 @@ exports.updatePostStatus = async (req, res, next) => {
         }
 
         await post.save();
+
+        // CHAT CLEANUP: If status is sold or completed, delete all conversations linked to this post
+        if (status === 'sold' || status === 'completed') {
+            const conversations = await Conversation.find({ postId: post._id });
+
+            for (const conv of conversations) {
+                // Delete from Firestore
+                if (db) {
+                    const messagesRef = db.collection('conversations').doc(conv._id.toString()).collection('messages');
+                    const snapshot = await messagesRef.get();
+                    const batch = db.batch();
+                    snapshot.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    await db.collection('conversations').doc(conv._id.toString()).delete();
+                }
+
+                // Delete from MongoDB
+                await Conversation.findByIdAndDelete(conv._id);
+            }
+        }
+
         res.json(post);
     } catch (err) {
         if (err.kind === 'ObjectId') {
@@ -653,8 +677,8 @@ exports.commentOnPost = async (req, res, next) => {
                 sender: req.user.id,
                 type: 'comment',
                 title: 'New Comment',
-                message: `${senderName} commented on "${postTitle}": ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''}`,
-                link: `/post/${post._id}`,
+                message: `${senderName} commented on "${postTitle}": ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''} `,
+                link: `/ post / ${post._id} `,
                 relatedId: post._id,
                 postId: post._id // Explicitly add postId for mobile navigation
             });
@@ -807,8 +831,8 @@ exports.replyToComment = async (req, res, next) => {
                     sender: req.user.id,
                     type: 'request', // Using 'request' as generic 'reply' or add 'reply' to enum
                     title: 'New Reply',
-                    message: `${senderName} replied: ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''}`,
-                    link: `/post/${post._id}`,
+                    message: `${senderName} replied: ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''} `,
+                    link: `/ post / ${post._id} `,
                     relatedId: post._id
                 });
             }

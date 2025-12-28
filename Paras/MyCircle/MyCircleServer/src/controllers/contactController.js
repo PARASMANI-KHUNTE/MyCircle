@@ -218,7 +218,8 @@ exports.updateRequestStatus = async (req, res) => {
 
             if (!conversation) {
                 conversation = new Conversation({
-                    participants: [request.requester, req.user.id]
+                    participants: [request.requester, req.user.id],
+                    postId: request.post // Link the conversation to the post
                 });
                 await conversation.save();
             }

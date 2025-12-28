@@ -63,6 +63,30 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Join specific conversation
+    socket.on('join_conversation', (conversationId) => {
+        try {
+            if (conversationId) {
+                socket.join(`conversation:${conversationId}`);
+                console.log(`User joined conversation room: conversation:${conversationId}`);
+            }
+        } catch (error) {
+            console.error('Error in join_conversation event:', error);
+        }
+    });
+
+    // Leave conversation
+    socket.on('leave_conversation', (conversationId) => {
+        try {
+            if (conversationId) {
+                socket.leave(`conversation:${conversationId}`);
+                console.log(`User left conversation room: conversation:${conversationId}`);
+            }
+        } catch (error) {
+            console.error('Error in leave_conversation event:', error);
+        }
+    });
+
     // Typing indicators
     socket.on('typing_start', (data) => {
         try {

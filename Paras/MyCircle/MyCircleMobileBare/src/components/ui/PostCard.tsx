@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Clipboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { MapPin, Clock, ArrowUpRight, MessageCircle, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useTheme } from '../../context/ThemeContext';
-import api from '../../services/api';
+import api, { BASE_URL } from '../../services/api';
 
 if (Platform.OS === 'android') {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -121,8 +122,8 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
         try {
             await api.post(`/posts/${post._id}/share`);
             setShares(shares + 1);
-            // In a real environment, we'd use a deep link or the web URL
-            const shareUrl = `https://mycircle.social/post/${post._id}`;
+            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+            const shareUrl = `${serverBase}/post/${post._id}`;
             Clipboard.setString(shareUrl);
             success("Link copied to clipboard!");
         } catch (err) {
@@ -148,24 +149,50 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
             activeOpacity={0.9}
             style={[styles.card, themeStyles.card, { borderLeftColor: getTypeColor(post.type), borderLeftWidth: 4 }]}
         >
-            <View style={styles.header}>
-                <Image
-                    source={{ uri: getAvatarUrl(post.user as any) }}
-                    style={styles.avatar}
-                />
-                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })} style={{ flex: 1 }}>
-                    <View style={styles.userInfo}>
-                        <Text style={[styles.displayName, themeStyles.text]}>{post.user.displayName}</Text>
-                        <Text style={[styles.type, { color: getTypeColor(post.type) }]}>
-                            {post.type}
-                        </Text>
+            {post.images && post.images.length > 0 && (
+                <View style={styles.heroImageWrap}>
+                    <Image
+                        source={{ uri: post.images[0] }}
+                        style={styles.heroImage}
+                        resizeMode="cover"
+                    />
+                    <Svg pointerEvents="none" style={StyleSheet.absoluteFill}>
+                        <Defs>
+                            <LinearGradient id="postCardHeroShade" x1="0" y1="0" x2="0" y2="1">
+                                <Stop offset="0" stopColor="#000" stopOpacity="0.30" />
+                                <Stop offset="0.35" stopColor="#000" stopOpacity="0.05" />
+                                <Stop offset="0.70" stopColor="#000" stopOpacity="0.10" />
+                                <Stop offset="1" stopColor="#000" stopOpacity="0.55" />
+                            </LinearGradient>
+                        </Defs>
+                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#postCardHeroShade)" />
+                    </Svg>
+                    <View style={[styles.typePill, { borderColor: getTypeColor(post.type), backgroundColor: colors.card }]}>
+                        <Text style={[styles.typePillText, { color: getTypeColor(post.type) }]}>{post.type}</Text>
+                    </View>
+                    {post.price != null && (
+                        <View style={styles.pricePill}>
+                            <Text style={styles.priceText}>₹{post.price}</Text>
+                        </View>
+                    )}
+                </View>
+            )}
+
+            <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>
+                {post.title}
+            </Text>
+
+            <View style={styles.userRow}>
+                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })} style={styles.userRowLeft}>
+                    <Image source={{ uri: getAvatarUrl(post.user as any) }} style={styles.avatarSmall} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.displayName, themeStyles.text]} numberOfLines={1}>{post.user.displayName}</Text>
+                        <View style={styles.userMetaRow}>
+                            <Clock size={12} color={colors.textSecondary} />
+                            <Text style={[styles.userMetaText, themeStyles.textSecondary]}>{formatDate(post.createdAt)}</Text>
+                        </View>
                     </View>
                 </TouchableOpacity>
-                {post.price != null && (
-                    <View style={styles.priceTag}>
-                        <Text style={styles.priceText}>₹{post.price}</Text>
-                    </View>
-                )}
                 {isOwnPost && (post as any).applicationCount > 0 && (
                     <View style={styles.requestBadge}>
                         <MessageCircle size={12} color="#ffffff" fill="#ffffff" />
@@ -173,10 +200,6 @@ const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: Po
                     </View>
                 )}
             </View>
-
-            <Text style={[styles.title, themeStyles.text]} numberOfLines={1}>
-                {post.title}
-            </Text>
 
             <Text style={[styles.description, themeStyles.textSecondary]} numberOfLines={expanded ? undefined : 2}>
                 {post.description}
@@ -269,7 +292,78 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12, // Reduced from 16
+        marginBottom: 8,
+    },
+    heroImageWrap: {
+        height: 180,
+        width: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 12,
+        position: 'relative',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)'
+    },
+    heroImage: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0,0,0,0.2)'
+    },
+    typePill: {
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+    },
+    typePillText: {
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase'
+    },
+    pricePill: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: 'rgba(0,0,0,0.55)'
+    },
+    priceText: {
+        color: '#ffffff',
+        fontSize: 13,
+        fontWeight: 'bold'
+    },
+    userRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+        gap: 12,
+    },
+    userRowLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 10,
+    },
+    avatarSmall: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        backgroundColor: '#00000022'
+    },
+    userMetaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 2,
+    },
+    userMetaText: {
+        fontSize: 12,
     },
     avatar: {
         width: 36, // Reduced from 40
@@ -299,7 +393,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(59, 130, 246, 0.2)',
     },
-    priceText: {
+    priceTagText: {
         color: '#3b82f6',
         fontWeight: 'bold',
         fontSize: 13,

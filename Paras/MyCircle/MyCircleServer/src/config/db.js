@@ -5,10 +5,15 @@ const connectDB = async () => {
         const isProduction = process.env.NODE_ENV === 'production';
         const dbURI = isProduction
             ? process.env.MONGO_URI
-            : (process.env.MONGO_URI_DEV || 'mongodb://localhost:27017/mycircle');
+            : process.env.MONGO_URI_DEV;
 
         if (isProduction && !process.env.MONGO_URI) {
             console.error('MONGO_URI is not defined in production environment!');
+            process.exit(1);
+        }
+
+        if (!isProduction && !process.env.MONGO_URI_DEV) {
+            console.error('MONGO_URI_DEV is not defined in development environment!');
             process.exit(1);
         }
 

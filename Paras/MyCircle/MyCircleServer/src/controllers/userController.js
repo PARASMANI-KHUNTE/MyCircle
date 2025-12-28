@@ -5,7 +5,7 @@ const ContactRequest = require('../models/ContactRequest');
 // @desc    Get current user profile
 // @route   GET /api/user/profile
 // @access  Private
-exports.getUserProfile = async (req, res) => {
+exports.getUserProfile = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
         if (!user) {
@@ -13,15 +13,14 @@ exports.getUserProfile = async (req, res) => {
         }
         res.json(user);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Update user profile
 // @route   PUT /api/user/profile
 // @access  Private
-exports.updateUserProfile = async (req, res) => {
+exports.updateUserProfile = async (req, res, next) => {
     try {
         console.log('Update Profile Req Body:', req.body); // DEBUG LOG
         const { bio, contactPhone, contactWhatsapp, location, skills } = req.body;
@@ -44,15 +43,14 @@ exports.updateUserProfile = async (req, res) => {
         res.json(user);
 
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get user statistics
 // @route   GET /api/user/stats
 // @access  Private
-exports.getUserStats = async (req, res) => {
+exports.getUserStats = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) {
@@ -81,14 +79,14 @@ exports.getUserStats = async (req, res) => {
             joined: user.createdAt
         });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
+
 // @desc    Update user settings
 // @route   PUT /api/user/settings
 // @access  Private
-exports.updateUserSettings = async (req, res) => {
+exports.updateUserSettings = async (req, res, next) => {
     try {
         const { emailNotifications, profileVisibility } = req.body;
         const user = await User.findById(req.user.id);
@@ -110,15 +108,14 @@ exports.updateUserSettings = async (req, res) => {
         await user.save();
         res.json(user.preferences);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Block a user
 // @route   POST /api/user/block/:userId
 // @access  Private
-exports.blockUser = async (req, res) => {
+exports.blockUser = async (req, res, next) => {
     try {
         const userToBlockId = req.params.userId;
         const user = await User.findById(req.user.id);
@@ -130,15 +127,14 @@ exports.blockUser = async (req, res) => {
 
         res.json({ msg: 'User blocked' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Unblock a user
 // @route   POST /api/user/unblock/:userId
 // @access  Private
-exports.unblockUser = async (req, res) => {
+exports.unblockUser = async (req, res, next) => {
     try {
         const userToUnblockId = req.params.userId;
         const user = await User.findById(req.user.id);
@@ -148,28 +144,26 @@ exports.unblockUser = async (req, res) => {
 
         res.json({ msg: 'User unblocked' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get blocked users list
 // @route   GET /api/user/blocked
 // @access  Private
-exports.getBlockedUsers = async (req, res) => {
+exports.getBlockedUsers = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id).populate('blockedUsers', 'displayName avatar');
         res.json(user.blockedUsers || []);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Report a user
 // @route   POST /api/user/report
 // @access  Private
-exports.reportUser = async (req, res) => {
+exports.reportUser = async (req, res, next) => {
     try {
         const { reason, contentType, contentId, reportedUserId } = req.body;
 
@@ -186,15 +180,14 @@ exports.reportUser = async (req, res) => {
 
         res.json({ msg: 'Report submitted' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get user connections (approved contact requests)
 // @route   GET /api/user/connections
 // @access  Private
-exports.getConnections = async (req, res) => {
+exports.getConnections = async (req, res, next) => {
     try {
         const userId = req.user.id;
 
@@ -225,14 +218,14 @@ exports.getConnections = async (req, res) => {
 
         res.json(uniqueUsers);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
+
 // @desc    Get user by ID (Public Profile)
 // @route   GET /api/user/:userId
 // @access  Private
-exports.getUserById = async (req, res) => {
+exports.getUserById = async (req, res, next) => {
     try {
         const user = await User.findById(req.params.userId).select('-password -preferences -blockedUsers');
         if (!user) {
@@ -240,17 +233,17 @@ exports.getUserById = async (req, res) => {
         }
         res.json(user);
     } catch (err) {
-        console.error(err.message);
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'User not found' });
         }
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
+
 // @desc    Follow a user
 // @route   POST /api/user/follow/:userId
 // @access  Private
-exports.followUser = async (req, res) => {
+exports.followUser = async (req, res, next) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.user.id;
@@ -284,15 +277,14 @@ exports.followUser = async (req, res) => {
 
         res.json({ msg: 'User followed successfully', followingCount: currentUser.stats.followingCount });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Unfollow a user
 // @route   DELETE /api/user/unfollow/:userId
 // @access  Private
-exports.unfollowUser = async (req, res) => {
+exports.unfollowUser = async (req, res, next) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.user.id;
@@ -317,15 +309,14 @@ exports.unfollowUser = async (req, res) => {
 
         res.json({ msg: 'User unfollowed successfully', followingCount: currentUser.stats.followingCount });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get followers list
 // @route   GET /api/user/:userId/followers
 // @access  Private
-exports.getFollowers = async (req, res) => {
+exports.getFollowers = async (req, res, next) => {
     try {
         const { userId } = req.params;
         const user = await User.findById(userId).populate('followers', 'displayName avatar bio location');
@@ -336,15 +327,14 @@ exports.getFollowers = async (req, res) => {
 
         res.json(user.followers);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
 // @desc    Get following list
 // @route   GET /api/user/:userId/following
 // @access  Private
-exports.getFollowing = async (req, res) => {
+exports.getFollowing = async (req, res, next) => {
     try {
         const { userId } = req.params;
         const user = await User.findById(userId).populate('following', 'displayName avatar bio location');
@@ -355,7 +345,6 @@ exports.getFollowing = async (req, res) => {
 
         res.json(user.following);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };

@@ -4,9 +4,10 @@
  */
 
 const validateEnv = () => {
+    const isProduction = process.env.NODE_ENV === 'production';
+
     const requiredVars = [
         'JWT_SECRET',
-        'MONGO_URI',
         'GOOGLE_CLIENT_ID',
         'GOOGLE_CLIENT_SECRET',
         'CLOUDINARY_CLOUD_NAME',
@@ -14,9 +15,19 @@ const validateEnv = () => {
         'CLOUDINARY_API_SECRET'
     ];
 
+    if (isProduction) {
+        requiredVars.push('MONGO_URI');
+        requiredVars.push('CLIENT_URL');
+    } else {
+        requiredVars.push('MONGO_URI_DEV');
+        requiredVars.push('CLIENT_URL_DEV');
+    }
+
     const optionalVars = [
         'GEMINI_API_KEY',
         'CLIENT_URL',
+        'CLIENT_URL_DEV',
+        'CORS_ORIGINS',
         'MONGO_URI_DEV',
         'GOOGLE_ANDROID_CLIENT_ID',
         'GOOGLE_IOS_CLIENT_ID',
@@ -46,6 +57,11 @@ const validateEnv = () => {
         console.error('❌ CRITICAL: Missing required environment variables:');
         missing.forEach(varName => console.error(`   - ${varName}`));
         console.error('\nPlease set these variables in your .env file');
+        process.exit(1);
+    }
+
+    if (isProduction && !process.env.CORS_ORIGINS && !process.env.CLIENT_URL) {
+        console.error('❌ CRITICAL: In production you must set CORS_ORIGINS or CLIENT_URL');
         process.exit(1);
     }
 

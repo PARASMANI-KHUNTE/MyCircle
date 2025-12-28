@@ -64,7 +64,10 @@ const Landing = () => {
 
     const handleGoogleLogin = async (idToken: string) => {
         try {
-            const apiUrl = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 'http://192.168.1.4:5000/api';
+            const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+            if (!apiUrl) {
+                throw new Error('EXPO_PUBLIC_API_URL is not set. Please configure it in your Expo environment.');
+            }
             const authUrl = apiUrl.replace('/api', '') + '/auth/google-mobile';
 
             const res = await fetch(authUrl, {

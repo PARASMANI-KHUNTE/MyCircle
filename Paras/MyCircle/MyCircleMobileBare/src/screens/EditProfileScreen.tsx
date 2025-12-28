@@ -114,7 +114,8 @@ const EditProfileScreen = ({ navigation }: any) => {
             navigation.goBack();
         } catch (err) {
             console.error(err);
-            Alert.alert("Error", "Failed to update profile");
+            const serverMsg = (err as any)?.response?.data?.msg || (err as any)?.response?.data?.error;
+            Alert.alert("Error", serverMsg || "Failed to update profile");
         } finally {
             setSaving(false);
         }

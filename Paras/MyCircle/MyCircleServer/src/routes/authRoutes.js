@@ -43,7 +43,7 @@ router.get(
                 const isProduction = process.env.NODE_ENV === 'production';
                 const clientUrl = isProduction
                     ? process.env.CLIENT_URL
-                    : (process.env.CLIENT_URL || 'http://localhost:5173');
+                    : process.env.CLIENT_URL_DEV;
 
                 res.redirect(`${clientUrl}/login/success?token=${token}`);
             }

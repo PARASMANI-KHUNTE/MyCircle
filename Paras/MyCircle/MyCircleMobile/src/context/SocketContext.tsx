@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import Constants from 'expo-constants';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/ui/Toast';
+import { API_URL } from '../services/api';
 
 interface SocketContextType {
     socket: Socket | null;
@@ -35,8 +35,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Get Socket URL from environment (remove /api suffix)
-        const apiUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
-        const socketUrl = apiUrl.replace('/api', '');
+        const socketUrl = API_URL.replace(/\/api\/?$/, '');
 
         const newSocket = io(socketUrl, {
             transports: ['websocket', 'polling'],

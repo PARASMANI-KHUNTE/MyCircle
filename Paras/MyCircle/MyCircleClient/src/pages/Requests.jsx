@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { getAvatarUrl } from '../utils/avatar';
-import { Check, X, Clock, Phone, MessageCircle, ArrowRight, Layers, User, Package, Trash2 } from 'lucide-react';
+import { Check, X, Clock, MessageCircle, ArrowRight, Layers, User, Package, Trash2 } from 'lucide-react';
 
 const Requests = () => {
-    const { error: showError } = useToast();
+    const { success, error: showError } = useToast();
     const [activeTab, setActiveTab] = useState('received'); // 'received' or 'sent'
     const [receivedRequests, setReceivedRequests] = useState([]);
     const [sentRequests, setSentRequests] = useState([]);
@@ -332,7 +332,7 @@ const Requests = () => {
                                 {req.status === 'approved' && req.post && (
                                     <div className="bg-card/5 p-4 rounded-xl border border-card-border flex flex-col gap-4 mt-2">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-green-500 text-sm font-medium">Request Approved! You can now contact the user.</p>
+                                            <p className="text-green-500 text-sm font-medium">Request Approved! You can now chat with the user.</p>
                                             <Button
                                                 variant="primary"
                                                 className="py-1.5 px-3 text-sm"
@@ -341,32 +341,6 @@ const Requests = () => {
                                                 <MessageCircle className="w-4 h-4 mr-2" />
                                                 Message
                                             </Button>
-                                        </div>
-                                        <div className="flex flex-col md:flex-row gap-6">
-                                            {req.post.contactPhone && (
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                                                        <Phone className="w-5 h-5 text-primary" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-muted-foreground">Phone</p>
-                                                        <p className="font-mono text-foreground select-all">{req.post.contactPhone}</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {req.post.contactWhatsapp && (
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                        <MessageCircle className="w-5 h-5 text-green-500" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-muted-foreground">WhatsApp</p>
-                                                        <a href={`https://wa.me/${req.post.contactWhatsapp}`} target="_blank" rel="noreferrer" className="font-mono text-green-500 hover:underline">
-                                                            {req.post.contactWhatsapp}
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 )}

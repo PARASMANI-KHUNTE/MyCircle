@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import axios from 'axios';
-import Constants from 'expo-constants';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,7 +22,10 @@ export default function Login() {
         setLoading(true);
         try {
             // Get base URL and remove /api if calling /auth
-            const apiUrl = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 'http://192.168.1.4:5000/api';
+            const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+            if (!apiUrl) {
+                throw new Error('EXPO_PUBLIC_API_URL is not set. Please configure it in your Expo environment.');
+            }
             const authUrl = apiUrl.replace('/api', '') + '/auth/login';
 
             const res = await axios.post(authUrl, {

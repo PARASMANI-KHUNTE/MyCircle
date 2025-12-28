@@ -1,9 +1,12 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
 
 // Get API URL from environment variables
-const API_URL = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 'http://192.168.1.4:5000/api';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+    throw new Error('EXPO_PUBLIC_API_URL is not set. Please configure it in your Expo app environment.');
+}
 
 const api = axios.create({
     baseURL: API_URL,

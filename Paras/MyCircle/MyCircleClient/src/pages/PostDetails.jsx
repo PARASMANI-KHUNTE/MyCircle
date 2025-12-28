@@ -49,6 +49,7 @@ const PostDetails = () => {
     const [requestLoading, setRequestLoading] = useState(false);
     const [commentText, setCommentText] = useState('');
     const [requestSent, setRequestSent] = useState(false);
+    const [contactRequestStatus, setContactRequestStatus] = useState('none');
     const [likes, setLikes] = useState([]);
     const [shares, setShares] = useState(0);
     const [relatedPosts, setRelatedPosts] = useState([]);
@@ -92,23 +93,11 @@ const PostDetails = () => {
         }
     };
 
-    const handleRequest = async () => {
-        try {
-            await api.post(`/contacts/request/${post.user._id}`);
-            setRequestStatus('sent');
-            success('Contact request sent!');
-        } catch (err) {
-            console.error(err);
-            if (err.response?.status === 400 && err.response?.data?.msg === 'Request already sent') {
-                showError('Request already pending');
-                setRequestStatus('sent');
-            } else {
-                showError('Failed to send request');
-            }
-        }
-    };
-
     const handleMessage = async () => {
+        if (contactRequestStatus !== 'approved') {
+            showError('Chat unlocks only after your request is approved.');
+            return;
+        }
         try {
             await api.post(`/chat/init/${post.user._id}`);
             navigate(`/chat?recipientId=${post.user._id}`);
@@ -129,6 +118,8 @@ const PostDetails = () => {
                 setPost(res.data);
                 setLikes(res.data.likes || []);
                 setShares(res.data.shares || 0);
+                setRequestSent(!!res.data.hasRequested);
+                setContactRequestStatus(res.data.contactRequestStatus || (res.data.hasRequested ? 'pending' : 'none'));
 
                 // Fetch Related Posts
                 try {
@@ -195,14 +186,18 @@ const PostDetails = () => {
 
     const handleShare = async () => {
         try {
-            await api.post(`/posts/${id}/share`);
+            const res = await api.post(`/posts/${id}/share`);
             setShares(shares + 1);
-            navigator.clipboard.writeText(res.data.link || window.location.href);
+            await navigator.clipboard.writeText(res?.data?.link || window.location.href);
             success('Link copied to clipboard!');
         } catch (err) {
             console.error(err);
             // Fallback to purely client-side clipboard if api response doesn't give link (though it should now)
-            navigator.clipboard.writeText(window.location.href);
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+            } catch (clipboardErr) {
+                console.error('Clipboard write failed:', clipboardErr);
+            }
             success('Link copied to clipboard!');
         }
     };
@@ -222,11 +217,13 @@ const PostDetails = () => {
             });
             success('Contact request sent successfully!');
             setRequestSent(true);
+            setContactRequestStatus('pending');
         } catch (err) {
             console.error('Contact request error:', err);
             const errorMessage = err.response?.data?.message || err.response?.data?.msg || 'Failed to send contact request. Please try again.';
             if (errorMessage.toLowerCase().includes('already sent') || errorMessage.toLowerCase().includes('existing request')) {
                 setRequestSent(true);
+                setContactRequestStatus('pending');
                 showError('Request already sent.');
             } else {
                 showError(errorMessage);
@@ -684,9 +681,10 @@ const PostDetails = () => {
                                     variant="outline"
                                     className="w-full h-14 text-lg font-bold hover:bg-card/20 border-card-border text-foreground transition-all"
                                     onClick={handleMessage}
+                                    disabled={contactRequestStatus !== 'approved'}
                                 >
                                     <MessageCircle className="w-5 h-5 mr-2" />
-                                    Message
+                                    {contactRequestStatus === 'approved' ? 'Message' : (contactRequestStatus === 'pending' ? 'Awaiting Approval' : 'Message (After Approval)')}
                                 </Button>
                             </div>
                         )}

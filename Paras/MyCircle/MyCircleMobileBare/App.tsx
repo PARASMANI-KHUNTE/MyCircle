@@ -12,8 +12,6 @@ import { navigationRef } from './src/services/navigationService';
 
 // Screen Placeholders
 import LandingScreen from './src/screens/LandingScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
 import MainTabs from './src/navigation/MainTabs';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import PostDetailsScreen from './src/screens/PostDetailsScreen';
@@ -46,8 +44,6 @@ const RootNavigator = () => {
       {!isAuthenticated ? (
         <>
           <Stack.Screen name="Landing" component={LandingScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
         </>
       ) : (
         <>

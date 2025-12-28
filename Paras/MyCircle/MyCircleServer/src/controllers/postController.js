@@ -570,13 +570,17 @@ exports.updatePostStatus = async (req, res, next) => {
 
             for (const conv of conversations) {
                 // Delete from Firestore
-                if (db) {
-                    const messagesRef = db.collection('conversations').doc(conv._id.toString()).collection('messages');
-                    const snapshot = await messagesRef.get();
-                    const batch = db.batch();
-                    snapshot.forEach(doc => batch.delete(doc.ref));
-                    await batch.commit();
-                    await db.collection('conversations').doc(conv._id.toString()).delete();
+                try {
+                    if (db) {
+                        const messagesRef = db.collection('conversations').doc(conv._id.toString()).collection('messages');
+                        const snapshot = await messagesRef.get();
+                        const batch = db.batch();
+                        snapshot.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                        await db.collection('conversations').doc(conv._id.toString()).delete();
+                    }
+                } catch (fsError) {
+                    console.error('Error during post-sale Firestore cleanup:', fsError.message);
                 }
 
                 // Delete from MongoDB

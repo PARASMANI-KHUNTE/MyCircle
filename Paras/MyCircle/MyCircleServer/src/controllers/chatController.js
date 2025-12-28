@@ -256,16 +256,23 @@ exports.deleteConversation = async (req, res, next) => {
             conversation.deletedBy.push(req.user.id);
         }
 
-        // If both users deleted it, or it was linked to a post that's gone (not handled here, but in postController)
+        // If both users deleted it, or it was linked to a post that's gone
         // Hard delete if all participants deleted
         if (conversation.deletedBy.length === conversation.participants.length) {
             // Hard delete from Firestore too
-            const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
-            const snapshot = await messagesRef.get();
-            const batch = db.batch();
-            snapshot.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-            await db.collection('conversations').doc(conversation._id.toString()).delete();
+            try {
+                if (db) {
+                    const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
+                    const snapshot = await messagesRef.get();
+                    const batch = db.batch();
+                    snapshot.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    await db.collection('conversations').doc(conversation._id.toString()).delete();
+                }
+            } catch (fsError) {
+                console.error('Error deleting from Firestore:', fsError.message);
+                // We still proceed with MongoDB deletion as that is the source of truth for metadata
+            }
 
             await Conversation.findByIdAndDelete(req.params.conversationId);
             return res.json({ msg: 'Conversation permanently deleted' });

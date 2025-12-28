@@ -96,7 +96,7 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
         await notification.save();
 
         if (io) {
-            io.to(`user:${recipient.toString()}`).emit('new_notification', notification);
+            io.to(`user:${recipientIdStr}`).emit('new_notification', notification);
         }
     } catch (err) {
         console.error("Notification creation failed:", err);

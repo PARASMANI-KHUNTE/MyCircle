@@ -106,6 +106,7 @@ exports.getOrCreateConversation = async (req, res, next) => {
 // @access  Private
 exports.sendMessage = async (req, res, next) => {
     try {
+        if (!db) return res.status(500).json({ msg: 'Firebase not initialized' });
         const { recipientId, text, postId } = req.body;
 
         // Check if conversation exists
@@ -144,6 +145,10 @@ exports.sendMessage = async (req, res, next) => {
         // Check if users have blocked each other
         const currentUser = await User.findById(req.user.id);
         const recipientUser = await User.findById(recipientId);
+
+        if (!recipientUser) {
+            return res.status(404).json({ msg: 'Recipient not found' });
+        }
 
         if (currentUser.blockedUsers.includes(recipientId)) {
             return res.status(403).json({ msg: 'You have blocked this user.' });
@@ -186,6 +191,17 @@ exports.sendMessage = async (req, res, next) => {
             io.to(`user:${recipientId}`).emit('receive_message', {
                 conversationId: conversation._id,
                 message: savedMessage
+            });
+
+            // Create notification for recipient
+            await exports.createNotification(io, {
+                recipient: recipientId,
+                sender: req.user.id,
+                type: 'message',
+                title: 'New Message',
+                message: `${currentUser.displayName || 'Someone'}: ${text}`,
+                link: '/chat',
+                conversationId: conversation._id
             });
         }
 

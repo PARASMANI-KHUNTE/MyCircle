@@ -85,15 +85,20 @@ const Requests = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 glass p-1 rounded-2xl mb-8 w-fit">
+            <div className="flex gap-1 glass p-1 rounded-2xl mb-8 w-fit relative">
                 <button
                     onClick={() => setActiveTab('received')}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${activeTab === 'received'
+                    className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${activeTab === 'received'
                         ? 'bg-primary text-white shadow-lg'
                         : 'text-muted-foreground hover:text-foreground hover:bg-white/10'
                         }`}
                 >
                     Received
+                    {receivedRequests.filter(r => r.status === 'pending').length > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20">
+                            {receivedRequests.filter(r => r.status === 'pending').length}
+                        </span>
+                    )}
                 </button>
                 <button
                     onClick={() => setActiveTab('sent')}
@@ -289,24 +294,6 @@ const Requests = () => {
                                             }`}>
                                             {req.status.toUpperCase()}
                                         </span>
-                                        {req.status === 'pending' ? (
-                                            <Button
-                                                variant="outline"
-                                                className="h-auto py-1.5 px-3 text-xs border-red-500/20 text-red-400 hover:bg-red-500/10"
-                                                onClick={() => handleDelete(req._id)}
-                                            >
-                                                Withdraw
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                variant="ghost"
-                                                className="text-muted-foreground hover:bg-red-500/10 hover:text-red-400 p-2 h-auto rounded-xl"
-                                                onClick={() => handleDelete(req._id)}
-                                                title="Clear Request"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
                                         {req.status === 'pending' ? (
                                             <Button
                                                 variant="outline"

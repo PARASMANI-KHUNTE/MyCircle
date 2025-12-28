@@ -3,9 +3,14 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
     try {
         const isProduction = process.env.NODE_ENV === 'production';
-        const dbURI = isProduction
+        let dbURI = isProduction
             ? process.env.MONGO_URI
             : process.env.MONGO_URI_DEV;
+
+        // Force IPv4 if localhost is used in development
+        if (!isProduction && dbURI && dbURI.includes('localhost')) {
+            dbURI = dbURI.replace('localhost', '127.0.0.1');
+        }
 
         if (isProduction && !process.env.MONGO_URI) {
             console.error('MONGO_URI is not defined in production environment!');

@@ -37,10 +37,11 @@ graph TD
         Socket["Socket.io Engine"]
     end
 
-    subgraph "External Services"
+    subgraph "External Services / Cloud"
         Cld["Cloudinary (Images)"]
         GM["Gemini AI (Moderation/Analysis)"]
         GAuth["Google OAuth 2.0"]
+        FS["Firebase Firestore (Real-time Messaging)"]
     end
 
     subgraph "Persistence"
@@ -54,14 +55,17 @@ graph TD
     Server <--> Cld
     Server <--> GM
     Server <--> GAuth
+    Server <--> FS
+    Web <--> FS
+    Mobile <--> FS
 ```
 
 ### 2.1 Technology Stack
 | Layer | Technology | Key Usage |
 | :--- | :--- | :--- |
 | **Backend** | Node.js / Express | RESTful API, Routing, Business Logic |
-| **Database** | MongoDB | Document-based storage, 2dsphere indexing |
-| **Real-time** | Socket.io | Live chat, Instant Notifications |
+| **Database** | MongoDB & Firestore | Hybrid: MongoDB (Metadata), Firestore (Messages) |
+| **Real-time** | Firestore & Socket.io | Firestore (Messaging), Socket (UI Sync/Typing) |
 | **AI Integration** | Google Gemini | Content moderation, Post Insights |
 | **Mobile** | React Native | iOS/Android native parity |
 | **Web** | React (Vite) | High-performance dashboard, Public Feed |
@@ -96,6 +100,10 @@ erDiagram
 - `type`: `job`, `service`, `sell`, `rent`, `barter`.
 - `status`: Lifecycle tracking (`active`, `sold`, `archived`).
 - `engagement`: Counters for views, likes, and shares.
+
+#### **Message Model (Firebase Firestore)**
+- **Collection**: `conversations/{id}/messages`
+- **Fields**: `sender`, `text`, `createdAt`, `readBy`, `expiresAt` (7-day TTL).
 
 ---
 
@@ -156,8 +164,9 @@ The codebase is structured for scalability and separation of concerns.
 - **Barter Toggle**: Unique feature to enable item-for-service or item-for-item trading.
 
 ### 💬 Real-Time Interaction
-- **Smart Chat**: Live messaging with AI-suggested quick replies.
-- **Push-Style Notifications**: Powered by `Socket.io` and `Notifee` for instant mobile alerts.
+- **Firestore Messaging**: Real-time message delivery with native `onSnapshot` listeners.
+- **Typing Indicators**: Ephemeral UI sync powered by `Socket.io`.
+- **Auto-Cleanup**: Automated deletion of chats when a post is marked as `sold` or `completed`.
 - **Contact Request Flow**: Users "Request Contact", and only when "Approved" are Phone/WhatsApp links visible.
 
 ### 🤖 AI Utilities
@@ -173,5 +182,10 @@ The codebase is structured for scalability and separation of concerns.
 - **Performance**: Lazy loading for images and list virtualization for long feeds.
 
 ---
-**Document Status**: *Final v1.0*
+## 8. Data Lifecycle & Retention
+- **7-Day Message TTL**: Chat history in Firestore is automatically purged after 7 days using `expiresAt` timestamps.
+- **Manual Cleanup**: Triggered server-side upon deal completion (Post status change) to ensure user privacy and storage efficiency.
+
+---
+**Document Status**: *Final v1.1 (Firebase Migrated)*
 **Author**: Antigravity Technical Assistant

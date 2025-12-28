@@ -31,12 +31,22 @@ exports.updateUserProfile = async (req, res, next) => {
             return res.status(404).json({ msg: 'User not found' });
         }
 
+        // Simple validation
+        if (bio && bio.length > 500) {
+            return res.status(400).json({ msg: 'Bio is too long (max 500 characters)' });
+        }
+
         // Update fields
-        if (bio) user.bio = bio;
-        if (contactPhone) user.contactPhone = contactPhone;
-        if (contactWhatsapp) user.contactWhatsapp = contactWhatsapp;
-        if (location) user.location = location;
-        if (skills) user.skills = skills; // Expecting array of strings
+        if (bio !== undefined) user.bio = bio;
+        if (contactPhone !== undefined) user.contactPhone = contactPhone;
+        if (contactWhatsapp !== undefined) user.contactWhatsapp = contactWhatsapp;
+        if (location !== undefined) user.location = location;
+
+        // Ensure skills is an array
+        if (skills !== undefined) {
+            user.skills = Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()) : user.skills);
+        }
+
         if (req.file) user.avatar = req.file.path;
 
         await user.save();

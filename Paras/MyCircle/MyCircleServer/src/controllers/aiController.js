@@ -16,8 +16,7 @@ exports.moderateContent = async (req, res) => {
         const result = await checkContentSafety(text);
         res.json(result);
     } catch (err) {
-        console.error('Moderate Content Error:', err.message);
-        res.status(500).json({ msg: 'Server Error' });
+        return next(err);
     }
 };
 
@@ -34,8 +33,7 @@ exports.getSuggestions = async (req, res) => {
         const suggestions = await generateSuggestions(messages);
         res.json({ suggestions });
     } catch (err) {
-        console.error('Get Suggestions Error:', err.message);
-        res.status(500).json({ msg: 'Server Error' });
+        return next(err);
     }
 };
 
@@ -52,8 +50,7 @@ exports.analyzePost = async (req, res) => {
         const analysis = await analyzePost(post);
         res.json(analysis);
     } catch (err) {
-        console.error('Analyze Post Error:', err.message);
-        res.status(500).json({ msg: 'Server Error' });
+        return next(err);
     }
 };
 
@@ -70,7 +67,6 @@ exports.explainPost = async (req, res) => {
         const explanation = await explainPost(post);
         res.json(explanation);
     } catch (err) {
-        console.error('Explain Post Error:', err.message);
-        res.status(500).json({ msg: 'Server Error' });
+        return next(err);
     }
 };

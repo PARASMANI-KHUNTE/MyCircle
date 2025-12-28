@@ -11,8 +11,7 @@ exports.getNotifications = async (req, res) => {
             .limit(50); // Limit to last 50
         res.json(notifications);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
@@ -32,8 +31,7 @@ exports.markRead = async (req, res) => {
         await notification.save();
         res.json(notification);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
@@ -48,8 +46,7 @@ exports.markAllRead = async (req, res) => {
         );
         res.json({ msg: 'All marked as read' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
@@ -68,8 +65,7 @@ exports.deleteNotification = async (req, res) => {
         await notification.deleteOne();
         res.json({ msg: 'Notification removed' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 

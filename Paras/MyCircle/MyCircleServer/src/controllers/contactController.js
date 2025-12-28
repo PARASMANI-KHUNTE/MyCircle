@@ -141,8 +141,7 @@ exports.getReceivedRequests = async (req, res) => {
 
         res.json(requests);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
@@ -179,8 +178,7 @@ exports.getSentRequests = async (req, res) => {
 
         res.json(enrichedRequests);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };
 
@@ -246,8 +244,7 @@ exports.updateRequestStatus = async (req, res) => {
 
         res.json(request);
     } catch (err) {
-        console.error('Update Request Status Error:', err);
-        res.status(500).json({ msg: 'Server Error', details: err.message });
+        return next(err);
     }
 };
 // @desc    Delete a contact request (Withdraw/Clear)
@@ -270,7 +267,6 @@ exports.deleteRequest = async (req, res) => {
 
         res.json({ msg: 'Request removed' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        return next(err);
     }
 };

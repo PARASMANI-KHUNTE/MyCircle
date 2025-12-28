@@ -10,7 +10,11 @@ mycircle-firebase-adminsdk.json
 
 # Environment
 .env
-.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+!.env.example
 
 # Logs
 *.log

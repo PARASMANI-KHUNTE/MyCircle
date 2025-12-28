@@ -47,6 +47,10 @@ const validateEnv = () => {
 
     // Check optional variables and warn
     optionalVars.forEach(varName => {
+        // Skip warning if a dev-specific alternative is present
+        if (varName === 'CLIENT_URL' && !isProduction && process.env.CLIENT_URL_DEV) return;
+        if (varName === 'MONGO_URI' && !isProduction && process.env.MONGO_URI_DEV) return;
+
         if (!process.env[varName]) {
             warnings.push(varName);
         }
@@ -68,7 +72,7 @@ const validateEnv = () => {
     if (warnings.length > 0) {
         console.warn('⚠️  Optional environment variables not set:');
         warnings.forEach(varName => console.warn(`   - ${varName}`));
-        console.warn('Some features may be disabled.\n');
+        console.warn('Check .env.example for details. Some features may be disabled.\n');
     }
 
     console.log('✅ Environment variables validated successfully\n');

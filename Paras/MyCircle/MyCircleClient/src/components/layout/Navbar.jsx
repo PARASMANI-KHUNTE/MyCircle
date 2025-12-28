@@ -118,9 +118,6 @@ const Navbar = () => {
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 group">
                     <img src="/logo.png" alt="MyCircle" className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" />
-                    <span className="text-xl font-bold font-display tracking-tight text-foreground group-hover:text-primary transition-colors">
-                        MyCircle
-                    </span>
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8">

@@ -79,6 +79,16 @@ export const NotificationProvider = ({ children }) => {
         }
     };
 
+    const clearAll = async () => {
+        try {
+            await api.delete('/notifications/delete-all');
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const playNotificationSound = () => {
         try {
             // Create a simple notification beep using Web Audio API
@@ -129,6 +139,7 @@ export const NotificationProvider = ({ children }) => {
             loading,
             markAsRead,
             markAllRead,
+            clearAll,
             refresh: fetchNotifications,
             handleNotificationClick
         }}>

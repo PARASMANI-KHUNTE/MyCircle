@@ -9,7 +9,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { getAvatarUrl } from '../utils/avatar';
 
 const Notifications = () => {
-    const { notifications, markAsRead, markAllRead, refresh, loading, handleNotificationClick } = useNotifications();
+    const { notifications, markAsRead, markAllRead, clearAll, refresh, loading, handleNotificationClick } = useNotifications();
     const { success, error: showError } = useToast();
 
     const handleDelete = async (id) => {
@@ -33,18 +33,19 @@ const Notifications = () => {
 
     return (
         <div className="container mx-auto px-6 py-24 max-w-3xl min-h-screen">
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                        <Bell className="w-6 h-6" />
-                    </div>
-                    <h1 className="text-3xl font-bold text-white font-display">Notifications</h1>
+            <div className="flex items-center justify-end mb-8">
+                <div className="flex gap-2">
+                    {notifications.some(n => !n.read) && (
+                        <Button variant="ghost" className="text-gray-400 text-sm hover:text-white" onClick={markAllRead}>
+                            Mark all as read
+                        </Button>
+                    )}
+                    {notifications.length > 0 && (
+                        <Button variant="ghost" className="text-red-400 text-sm hover:text-red-500 hover:bg-red-500/10" onClick={clearAll}>
+                            Clear all
+                        </Button>
+                    )}
                 </div>
-                {notifications.some(n => !n.read) && (
-                    <Button variant="ghost" className="text-gray-400 text-sm hover:text-white" onClick={markAllRead}>
-                        Mark all as read
-                    </Button>
-                )}
             </div>
 
             <div className="space-y-4">

@@ -69,6 +69,18 @@ exports.deleteNotification = async (req, res) => {
     }
 };
 
+// @desc    Clear ALL notifications
+// @route   DELETE /api/notifications
+// @access  Private
+exports.deleteAll = async (req, res, next) => {
+    try {
+        await Notification.deleteMany({ recipient: req.user.id });
+        res.json({ msg: 'All notifications cleared' });
+    } catch (err) {
+        return next(err);
+    }
+};
+
 // Helper to create and emit notification (internal use)
 exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId, conversationId }) => {
     try {

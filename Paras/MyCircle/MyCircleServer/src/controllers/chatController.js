@@ -12,7 +12,8 @@ const { db, admin } = require('../config/firebase');
 exports.getConversations = async (req, res, next) => {
     try {
         const conversations = await Conversation.find({
-            participants: req.user.id
+            participants: req.user.id,
+            deletedBy: { $ne: req.user.id }
         })
             .populate('participants', 'displayName avatar')
             .populate('lastMessage')
@@ -146,14 +147,16 @@ exports.sendMessage = async (req, res, next) => {
         const currentUser = await User.findById(req.user.id);
         const recipientUser = await User.findById(recipientId);
 
-        if (!recipientUser) {
-            return res.status(404).json({ msg: 'Recipient not found' });
-        }
+        if (!currentUser) return res.status(404).json({ msg: 'Logged in user not found' });
+        if (!recipientUser) return res.status(404).json({ msg: 'Recipient not found' });
 
-        if (currentUser.blockedUsers.includes(recipientId)) {
+        // Ensure blockedUsers exists as an array
+        const blockedUsers = currentUser.blockedUsers || [];
+        if (blockedUsers.map(id => id.toString()).includes(recipientId)) {
             return res.status(403).json({ msg: 'You have blocked this user.' });
         }
-        if (recipientUser.blockedUsers.includes(req.user.id)) {
+        const recipientBlocked = recipientUser.blockedUsers || [];
+        if (recipientBlocked.map(id => id.toString()).includes(req.user.id)) {
             return res.status(403).json({ msg: 'You cannot message this user.' });
         }
 
@@ -174,15 +177,25 @@ exports.sendMessage = async (req, res, next) => {
             expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)) // 7-day TTL
         };
 
-        const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
-        const docRef = await messagesRef.add(messageData);
+        let docRef;
+        try {
+            const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
+            docRef = await messagesRef.add(messageData);
+        } catch (fsError) {
+            console.error('[Firestore Error] Failed to save message:', fsError.message);
+            // If Firestore fails, we can't really proceed with the real-time part
+            return res.status(500).json({
+                msg: 'Failed to save message to real-time database',
+                error: fsError.message,
+                code: fsError.code
+            });
+        }
 
         const savedMessage = { _id: docRef.id, ...messageData, sender };
 
-        // Update MongoDB conversation last message metadata
+        // Update MongoDB conversation last message metadata and unhide for everyone
         conversation.updatedAt = Date.now();
-        // We can still store a 'Message' ref if we want, but it's not strictly needed for Firestore.
-        // For simplicity, let's keep it minimal.
+        conversation.deletedBy = []; // Unhide conversation for both users
         await conversation.save();
 
         // Socket.io for typing indicators/legacy still works if needed
@@ -194,7 +207,7 @@ exports.sendMessage = async (req, res, next) => {
             });
 
             // Create notification for recipient
-            await exports.createNotification(io, {
+            await createNotification(io, {
                 recipient: recipientId,
                 sender: req.user.id,
                 type: 'message',
@@ -207,6 +220,7 @@ exports.sendMessage = async (req, res, next) => {
 
         res.json(savedMessage);
     } catch (err) {
+        console.error('[sendMessage Error]:', err);
         return next(err);
     }
 };

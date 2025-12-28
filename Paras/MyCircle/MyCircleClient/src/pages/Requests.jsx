@@ -77,12 +77,7 @@ const Requests = () => {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground mb-2">Requests Center</h1>
-                    <p className="text-muted-foreground">Manage your circle connections and applications.</p>
-                </div>
-            </div>
+            <div className="mb-4" />
 
             {/* Tabs */}
             <div className="flex gap-1 glass p-1 rounded-2xl mb-8 w-fit relative">

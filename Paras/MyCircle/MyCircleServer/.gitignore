@@ -5,7 +5,7 @@ coverage
 .DS_Store
 
 # Firebase
-*-adminsdk.json
+*adminsdk*.json
 mycircle-firebase-adminsdk.json
 
 # Environment

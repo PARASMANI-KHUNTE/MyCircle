@@ -1,211 +1,221 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const axios = require('axios');
+const FormData = require('form-data');
+
+// Configuration
+const GEMINI_MODEL = "gemini-1.5-flash"; // Stable model
+const LOCAL_AI_URL = "http://localhost:8000";
 
 /**
- * Validates the existence and basic format of the Gemini API Key.
- * @returns {boolean}
+ * Validates the Gemini API Key.
  */
 const isKeyValid = () => {
     const key = process.env.GEMINI_API_KEY;
-    if (!key || key.trim() === '' || key === 'your_gemini_api_key_here') {
-        return false;
-    }
-    return true;
+    return (key && key.trim() !== '' && key !== 'your_gemini_api_key_here');
 };
 
-const getModel = (modelName = "gemini-2.0-flash") => {
-    if (!isKeyValid()) {
-        console.warn("Gemini: API Key is invalid or missing.");
-        return null;
-    }
+/**
+ * Get Gemini Model Instance
+ */
+const getModel = () => {
+    if (!isKeyValid()) return null;
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-        return genAI.getGenerativeModel({ model: modelName });
+        return genAI.getGenerativeModel({ model: GEMINI_MODEL });
     } catch (e) {
-        console.error(`Gemini Initialization Error [${modelName}]:`, e.message);
+        console.error(`Gemini Init Error:`, e.message);
         return null;
     }
 };
 
 /**
- * Unified text safety check
+ * Helper: Call Local AI Server (Fallback/Hybrid)
  */
-const checkContentSafety = async (text) => {
+const callLocalAI = async (endpoint, payload, isMultipart = false) => {
     try {
-        if (!text || text.trim().length === 0) return { safe: true };
+        const url = `${LOCAL_AI_URL}${endpoint}`;
+        const headers = {
+            'X-Internal-Secret': process.env.API_SECRET_KEY || 'dev_secret',
+            ...(isMultipart ? payload.getHeaders() : {})
+        };
 
-        const model = getModel();
-        if (!model) {
-            console.warn("GEMINI_API_KEY missing or invalid. Skipping safety check.");
-            return { safe: true, warning: 'AI moderation disabled' };
-        }
-
-        const prompt = `Analyze the following text for inappropriate content (sexual content, hate speech, violence, illegal acts, scams).
-        Respond in JSON format: {"safe": boolean, "reason": "why if unsafe, else null"}
-        Text: "${text}"`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const textResponse = response.text();
-
-        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
-        }
-        return { safe: true };
+        const response = await axios.post(url, payload, { headers, timeout: 30000 });
+        return response.data;
     } catch (error) {
-        console.error("Gemini Safety Check Error:", error.message);
-        return { safe: true, error: "AI service error" };
+        console.error(`Local AI Error [${endpoint}]:`, error.message);
+        return null; // Both failed
     }
 };
 
 /**
- * Image safety check
+ * 1. Text Safety Check (Hybrid: Gemini -> Local Fallback)
+ */
+const checkContentSafety = async (text) => {
+    if (!text || text.trim().length === 0) return { safe: true };
+
+    // Try Gemini First
+    const model = getModel();
+    if (model) {
+        try {
+            const prompt = `Analyze logic text for safety. JSON: {"safe": boolean, "reason": "why"}. Text: "${text}"`;
+            const result = await model.generateContent(prompt);
+            const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
+            if (jsonText) return JSON.parse(jsonText);
+        } catch (err) {
+            console.warn("Gemini Safety Check Failed, trying Local AI...", err.message);
+        }
+    }
+
+    // Fallback to Local AI
+    const localRes = await callLocalAI('/text/moderate', { text });
+    if (localRes) {
+        return {
+            safe: localRes.allowed,
+            reason: localRes.reason
+        };
+    }
+
+    return { safe: true, warning: 'Moderation unavailable' };
+};
+
+/**
+ * 2. Image Safety Check (Hybrid Strategy)
+ * Strategy: Image -> Local AI (Vision) -> Description -> Gemini (Text Analysis)
+ * This saves bandwidth and quota.
  */
 const checkImageSafety = async (imageBuffer, mimeType) => {
+    if (!imageBuffer) return { safe: true };
+
     try {
-        if (!imageBuffer) return { safe: true };
+        // Step 1: Send Image to Local AI for Description & initial NSFW check
+        const form = new FormData();
+        form.append('file', imageBuffer, { filename: 'upload.jpg', contentType: mimeType });
 
-        const model = getModel();
-        if (!model) return { safe: true, warning: 'AI image moderation disabled' };
+        console.log(" Sending Image to Local AI for Analysis...");
+        const localAnalysis = await callLocalAI('/image/analyze', form, true);
 
-        const imagePart = {
-            inlineData: {
-                data: imageBuffer.toString('base64'),
-                mimeType: mimeType
-            }
-        };
-
-        const prompt = `Analyze this image for inappropriate content (explicit, violence, hate symbols, illegal).
-        Respond in JSON format: {"safe": boolean, "reason": "why if unsafe, else null"}`;
-
-        const result = await model.generateContent([prompt, imagePart]);
-        const response = await result.response;
-        const textResponse = response.text();
-
-        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+        if (!localAnalysis) {
+            // Totally failed
+            return { safe: true, warning: "Image analysis failed" };
         }
+
+        // Verify Local AI findings
+        console.log(" Local AI Result:", localAnalysis);
+
+        // If Local AI says it's HIGH RISK, trust it immediately
+        if (localAnalysis.nsfw_score > 0.7) {
+            return { safe: false, reason: "NSFW content detected by AI Vision" };
+        }
+
+        // Step 2: Use Gemini to double-check the description (Cheap Text Request)
+        const model = getModel();
+        if (model && localAnalysis.summary) {
+            const prompt = `Review this image description for safety. 
+            Description: "${localAnalysis.summary}"
+            Objects: "${localAnalysis.labels.join(', ')}"
+            JSON: {"safe": boolean, "reason": "why"}`;
+
+            const result = await model.generateContent(prompt);
+            const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
+            if (jsonText) return JSON.parse(jsonText);
+        }
+
         return { safe: true };
+
     } catch (error) {
-        console.error("Gemini Image Safety Error:", error.message);
+        console.error("Hybrid Image Safety Check Error:", error.message);
         return { safe: true };
     }
 };
 
+/**
+ * 3. Generate Suggestions (Hybrid: Gemini -> Local Fallback)
+ */
 const generateSuggestions = async (contextMessages) => {
-    try {
-        const model = getModel();
-        if (!model) {
-            console.warn("Gemini model not initialized. Returning fallback suggestions.");
-            return ["Interested", "Available?", "Thanks"];
+    const contextStr = contextMessages.map(m => `${m.sender}: ${m.text}`).join('\n');
+    const systemPrompt = `Suggest 3 short, polite replies. JSON: {"suggestions": []}. History:\n${contextStr}`;
+
+    // Try Gemini
+    const model = getModel();
+    if (model) {
+        try {
+            const result = await model.generateContent(systemPrompt);
+            const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
+            if (jsonText) return JSON.parse(jsonText).suggestions || [];
+        } catch (err) {
+            console.warn("Gemini Suggestions Failed, switching to Local AI...", err.message);
         }
-
-        const contextStr = contextMessages.map(m => `${m.sender}: ${m.text}`).join('\n');
-        const prompt = `Based on this chat history, suggest 3 short, polite quick replies for the user to send next.
-        Respond ONLY with a JSON object in this format: {"suggestions": ["suggestion1", "suggestion2", "suggestion3"]}
-        
-        Chat History:
-        ${contextStr}`;
-
-        console.log("Generating suggestions for context:", contextStr);
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const textResponse = response.text();
-
-        console.log("Gemini Raw Response:", textResponse);
-
-        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            try {
-                const data = JSON.parse(jsonMatch[0]);
-                return data.suggestions || ["Interested", "Available?", "Thanks"];
-            } catch (pErr) {
-                console.error("JSON Parse Error in suggestions:", pErr.message);
-            }
-        }
-
-        console.warn("No valid JSON found in Gemini response. Using fallbacks.");
-        return ["Interested", "Available?", "Thanks"];
-    } catch (error) {
-        console.error("Gemini Suggestion Error:", error.message);
-        return ["Interested", "Available?", "Thanks"];
     }
+
+    // Fallback Local AI (Text Analysis can simulate simple suggestions or we use summarize endpoint as hack)
+    // For now, simple fallback
+    return ["Interested", "Available?", "Thanks"];
 };
 
+/**
+ * 4. Analyze & Explain Post (Hybrid: Gemini -> Local Fallback)
+ */
 const analyzePost = async (postData) => {
-    try {
-        const model = getModel();
-        if (!model) return { demandScore: 5, demandLevel: "Moderate", priceAnalysis: "Data unavailable" };
+    const prompt = `Analyze post: ${postData.title}, ${postData.description}, Price: ${postData.price}. 
+    JSON: {"demandScore": 1-10, "demandLevel": "Low/High", "priceAnalysis": "sentence"}`;
 
-        const prompt = `Analyze this marketplace post: Title: ${postData.title}, Desc: ${postData.description}, Price: ${postData.price || 'N/A'}.
-        Provide JSON ONLY: {
-            "demandScore": 1-10 (number),
-            "demandLevel": "Low/Moderate/High (string)",
-            "priceAnalysis": "1 short sentence on value/fairness"
-        }`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const textResponse = response.text();
-        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+    const model = getModel();
+    if (model) {
+        try {
+            const result = await model.generateContent(prompt);
+            const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
+            if (jsonText) return JSON.parse(jsonText);
+        } catch (err) {
+            console.warn("Gemini Analyze Failed, trying Local AI...", err.message);
         }
-        throw new Error("No JSON found in response");
-    } catch (error) {
-        console.error("Gemini Analysis Error:", error.message);
-        return { demandScore: 0, demandLevel: "Error", priceAnalysis: "Analysis failed." };
     }
+
+    // Fallback: Use Local AI Text Analysis to extract sentiment/toxicity as proxy for "demand"
+    const localRes = await callLocalAI('/text/analyze', { text: postData.description, context: 'post' });
+    if (localRes) {
+        const score = Math.floor((1 - localRes.toxicity_score) * 10);
+        return {
+            demandScore: score,
+            demandLevel: score > 7 ? "High" : "Moderate",
+            priceAnalysis: "AI Estimate (Local Backup)"
+        };
+    }
+
+    return { demandScore: 5, demandLevel: "Moderate", priceAnalysis: "Data unavailable" };
 };
 
 const explainPost = async (postData) => {
-    try {
-        if (!postData?.title || !postData?.description) {
-            return { summary: "Post details missing for explanation.", context: "", interestingFacts: [] };
+    // Similar fallback logic...
+    const prompt = `Explain post: ${postData.title}, ${postData.description}. JSON: {"summary": "", "context": "", "interestingFacts": []}`;
+
+    const model = getModel();
+    if (model) {
+        try {
+            const result = await model.generateContent(prompt);
+            const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
+            if (jsonText) return JSON.parse(jsonText);
+        } catch (err) {
+            console.warn("Gemini Explain Failed...", err.message);
         }
+    }
 
-        const model = getModel();
-        if (!model) return { summary: "Post explanation unavailable.", context: "Details in description.", interestingFacts: [] };
-
-        const prompt = `Explain this post to a potential buyer/applicant. Title: ${postData.title}, Desc: ${postData.description}.
-        Keep it very concise and on-point. Do not write big paragraphs.
-        Provide JSON ONLY: {
-            "summary": "1 short sentence hook", 
-            "context": "2-3 bullet points on key value/details", 
-            "interestingFacts": ["1 fun fact or unique selling point"]
-        }`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const textResponse = response.text();
-        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-
-        if (jsonMatch) {
-            try {
-                return JSON.parse(jsonMatch[0]);
-            } catch (parseError) {
-                throw parseError;
-            }
-        }
-        throw new Error("No JSON found in response");
-    } catch (error) {
-        console.error("Gemini Explanation Error:", error.message);
-
-        // Graceful Fallback for Quota or Connection Issues
+    // Local Fallback (Summarize)
+    const localRes = await callLocalAI('/text/summarize', { text: postData.description, max_length: 50 });
+    if (localRes) {
         return {
-            summary: `Quick Summary: ${postData.title}`,
-            context: `The user is offering this ${postData.type || 'item'} for ₹${postData.price || 'a fair price'}. Check the description below for full details.`,
-            interestingFacts: [
-                "AI summary currently in high demand",
-                "Verified local post",
-                "Contact user for more details"
-            ],
+            summary: localRes.summary,
+            context: "Generated by Local AI",
+            interestingFacts: ["Local AI Powered"],
             isFallback: true
         };
     }
+
+    return {
+        summary: postData.title,
+        context: postData.description,
+        interestingFacts: [],
+        isFallback: true
+    };
 };
 
 module.exports = {
@@ -215,4 +225,3 @@ module.exports = {
     analyzePost,
     explainPost
 };
-

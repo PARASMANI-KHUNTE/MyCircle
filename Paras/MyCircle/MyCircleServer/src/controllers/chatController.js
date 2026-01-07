@@ -166,34 +166,46 @@ exports.sendMessage = async (req, res, next) => {
             avatar: currentUser.avatar
         };
 
-        // Save to Firestore
+        // 1. Save to MongoDB (Source of Truth for Counts/History)
+        const mongoMessage = new Message({
+            conversationId: conversation._id,
+            sender: req.user.id,
+            text: text,
+            status: 'sent',
+            readBy: [req.user.id]
+        });
+        await mongoMessage.save();
+
+        // 2. Save to Firestore (Real-time Layer)
         const messageData = {
             conversationId: conversation._id.toString(),
             sender: req.user.id,
             text: text,
-            createdAt: new Date().toISOString(),
+            createdAt: mongoMessage.createdAt.toISOString(), // Sync timestamps
             status: 'sent',
             readBy: [req.user.id],
-            expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)) // 7-day TTL
+            expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7-day TTL
+            mongoId: mongoMessage._id.toString() // Link back to Mongo
         };
 
         let docRef;
         try {
+            // Use MongoDB ID as Firestore Doc ID for perfect sync
             const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
-            docRef = await messagesRef.add(messageData);
+            await messagesRef.doc(mongoMessage._id.toString()).set(messageData);
+            docRef = { id: mongoMessage._id.toString() };
         } catch (fsError) {
             console.error('[Firestore Error] Failed to save message:', fsError.message);
-            // If Firestore fails, we can't really proceed with the real-time part
-            return res.status(500).json({
-                msg: 'Failed to save message to real-time database',
-                error: fsError.message,
-                code: fsError.code
-            });
+            // If Firestore fails, we SHOULD NOT rollback MongoDB, as Mongo is the persistent record.
+            // But we should warn.
+
+            // Optional: You could retry or queue this.
         }
 
-        const savedMessage = { _id: docRef.id, ...messageData, sender };
+        const savedMessage = { _id: mongoMessage._id, ...messageData, sender };
 
         // Update MongoDB conversation last message metadata and unhide for everyone
+        conversation.lastMessage = mongoMessage._id;
         conversation.updatedAt = Date.now();
         conversation.deletedBy = []; // Unhide conversation for both users
         await conversation.save();

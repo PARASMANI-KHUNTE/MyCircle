@@ -4,7 +4,7 @@ const fs = require('fs');
 
 // Path to service account key file
 // The user provided the filename in the root directory
-const serviceAccountPath = path.join(__dirname, '../../mycircle-8c36a-firebase-adminsdk-fbsvc-826bc9410a.json');
+const serviceAccountPath = path.join(__dirname, '/etc/secrets/mycircle-8c36a-firebase-adminsdk-fbsvc-826bc9410a.json');
 
 if (!fs.existsSync(serviceAccountPath)) {
     console.error('Firebase service account key file not found at:', serviceAccountPath);

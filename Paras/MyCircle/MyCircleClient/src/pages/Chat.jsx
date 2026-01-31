@@ -90,11 +90,11 @@ const Chat = () => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-12rem)] w-full max-w-6xl mx-auto">
-            <div className="flex-1 glass rounded-3xl overflow-hidden flex shadow-2xl border border-white/10">
+        <div className="flex flex-col h-[calc(100vh-7rem)] min-h-[600px] w-full max-w-6xl mx-auto pb-4">
+            <div className="flex-1 glass rounded-3xl overflow-hidden flex shadow-2xl border border-white/10 bg-[#0f172a]/50">
                 {/* Chat List Sidebar */}
                 <div className={`w-full md:w-1/3 border-r border-white/10 bg-black/20 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
-                    <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
                         <h2 className="text-xl font-bold text-white">Messages</h2>
                         <button
                             onClick={() => setIsNewMessageModalOpen(true)}
@@ -137,11 +137,11 @@ const Chat = () => {
                             }}
                         />
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
                             <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                                <span className="text-4xl">💬</span>
+                                <span className="text-4xl text-white/80">💬</span>
                             </div>
-                            <p className="text-lg">Select a conversation to start messaging</p>
+                            <p className="text-lg font-medium text-white/60">Select a conversation to start messaging</p>
                         </div>
                     )}
                 </div>

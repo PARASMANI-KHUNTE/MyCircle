@@ -1,24 +1,22 @@
 const Notification = require('../models/Notification');
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/ApiError');
 
 // @desc    Get user notifications
 // @route   GET /api/notifications
 // @access  Private
-exports.getNotifications = async (req, res) => {
-    try {
-        const notifications = await Notification.find({ recipient: req.user.id })
-            .populate('sender', 'displayName avatar')
-            .sort({ createdAt: -1 })
-            .limit(50); // Limit to last 50
-        res.json(notifications);
-    } catch (err) {
-        return next(err);
-    }
-};
+exports.getNotifications = asyncHandler(async (req, res, next) => {
+    const notifications = await Notification.find({ recipient: req.user.id })
+        .populate('sender', 'displayName avatar')
+        .sort({ createdAt: -1 })
+        .limit(50); // Limit to last 50
+    res.json(notifications);
+});
 
 // @desc    Mark notification as read
 // @route   PUT /api/notifications/:id/read
 // @access  Private
-exports.markRead = async (req, res) => {
+exports.markRead = async (req, res, next) => {
     try {
         const notification = await Notification.findById(req.params.id);
         if (!notification) return res.status(404).json({ msg: 'Notification not found' });
@@ -38,7 +36,7 @@ exports.markRead = async (req, res) => {
 // @desc    Mark ALL as read
 // @route   PUT /api/notifications/read-all
 // @access  Private
-exports.markAllRead = async (req, res) => {
+exports.markAllRead = async (req, res, next) => {
     try {
         await Notification.updateMany(
             { recipient: req.user.id, read: false },
@@ -53,7 +51,7 @@ exports.markAllRead = async (req, res) => {
 // @desc    Delete notification
 // @route   DELETE /api/notifications/:id
 // @access  Private
-exports.deleteNotification = async (req, res) => {
+exports.deleteNotification = async (req, res, next) => {
     try {
         const notification = await Notification.findById(req.params.id);
         if (!notification) return res.status(404).json({ msg: 'Notification not found' });
@@ -82,7 +80,7 @@ exports.deleteAll = async (req, res, next) => {
 };
 
 // Helper to create and emit notification (internal use)
-exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId, conversationId }) => {
+exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId, conversationId = null }) => {
     try {
         if (!recipient) {
             console.error("[Notification] No recipient provided.");

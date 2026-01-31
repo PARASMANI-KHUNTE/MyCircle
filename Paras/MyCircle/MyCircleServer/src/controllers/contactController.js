@@ -3,136 +3,114 @@ const Post = require('../models/Post');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const { createNotification } = require('./notificationController');
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/ApiError');
 
 // @desc    Create a contact request
 // @route   POST /api/contacts/request or POST /api/contacts/:postId
 // @access  Private
-exports.createRequest = async (req, res) => {
-    try {
-        const requesterId = req.user.id;
-        const { postId: bodyPostId, recipientId, message } = req.body || {};
-        const postId = bodyPostId || req.params.postId;
+exports.createRequest = asyncHandler(async (req, res) => {
+    const requesterId = req.user.id;
+    const { postId: bodyPostId, recipientId, message } = req.body || {};
+    const postId = bodyPostId || req.params.postId;
 
-        if (!postId) {
-            console.log('400: Post ID is missing');
-            return res.status(400).json({ msg: 'Post ID is required' });
-        }
-
-        // Fetch the post to get recipient
-        const post = await Post.findById(postId);
-        if (!post) {
-            console.error(`Post not found with ID: ${postId}`);
-            return res.status(404).json({ msg: 'Post not found' });
-        }
-
-        const finalRecipientId = recipientId || post.user;
-        if (!finalRecipientId) {
-            console.log(`400: Post ${postId} has no owner`);
-            return res.status(400).json({ msg: 'Post has no valid owner' });
-        }
-
-        // Check if user is the owner
-        if (post.user.toString() === requesterId) {
-            console.log(`400: User ${requesterId} tried to contact their own post ${postId}`);
-            return res.status(400).json({ msg: 'Cannot request contact for your own post' });
-        }
-
-        // Check for existing request
-        const existingRequest = await ContactRequest.findOne({
-            requester: requesterId,
-            recipient: finalRecipientId,
-            post: postId
-        });
-
-        if (existingRequest) {
-            console.log(`400: Duplicate request from ${requesterId} for post ${postId}`);
-            return res.status(400).json({ msg: 'Contact request already sent for this post' });
-        }
-
-        // Check if users have blocked each other
-        const currentUser = await User.findById(requesterId);
-        const recipientUser = await User.findById(finalRecipientId);
-
-        if (!currentUser) {
-            console.error(`Requester not found in DB: ${requesterId}`);
-            return res.status(404).json({ msg: 'User account not found' });
-        }
-
-        if (!recipientUser) {
-            console.error(`Recipient not found in DB: ${finalRecipientId}`);
-            return res.status(404).json({ msg: 'Recipient no longer exists' });
-        }
-
-        // Use .some() for safer ID comparison in arrays
-        const isBlockedByCurrent = currentUser.blockedUsers?.some(id => id.toString() === finalRecipientId.toString());
-        if (isBlockedByCurrent) {
-            return res.status(403).json({ msg: 'You have blocked this user' });
-        }
-
-        const isCurrentBlockedByRecipient = recipientUser.blockedUsers?.some(id => id.toString() === requesterId);
-        if (isCurrentBlockedByRecipient) {
-            return res.status(403).json({ msg: 'You cannot make a request to this user' });
-        }
-
-        // Check for cooldown (24 hours between requests to same post)
-        const lastRequest = await ContactRequest.findOne({
-            requester: requesterId,
-            post: postId,
-            status: { $in: ['rejected', 'expired'] }
-        }).sort({ createdAt: -1 });
-
-        if (lastRequest) {
-            const hoursSinceLastRequest = (Date.now() - lastRequest.createdAt.getTime()) / (1000 * 60 * 60);
-            if (hoursSinceLastRequest < 24) {
-                const hoursRemaining = Math.ceil(24 - hoursSinceLastRequest);
-                return res.status(429).json({
-                    msg: `Please wait ${hoursRemaining} hours before sending another request for this post`
-                });
-            }
-        }
-
-        // Create new request with 7-day expiry
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-        const contactRequest = await ContactRequest.create({
-            requester: requesterId,
-            recipient: finalRecipientId,
-            post: postId,
-            message: message,
-            status: 'pending',
-            expiresAt
-        });
-
-        // Populate requester details for notification
-        await contactRequest.populate('requester', 'displayName avatar');
-
-        // Send real-time notification to recipient
-        const io = req.app.get('io');
-        try {
-            await createNotification(io, {
-                recipient: finalRecipientId,
-                sender: requesterId,
-                type: 'request',
-                title: 'New Contact Request',
-                message: `${contactRequest.requester?.displayName || 'Someone'} sent you a request for your post: ${post.title}`,
-                link: '/requests',
-                relatedId: postId
-            });
-        } catch (notifErr) {
-            console.error('Failed to send notification for contact request:', notifErr);
-            // Don't fail the entire request if notification fails
-        }
-
-        res.json(contactRequest);
-    } catch (err) {
-        console.error('Create Request Error:', err);
-        res.status(500).json({ msg: 'Server Error', details: err.message });
+    if (!postId) {
+        throw new ApiError(400, 'Post ID is required');
     }
-};
+
+    // Fetch the post to get recipient
+    const post = await Post.findById(postId);
+    if (!post) {
+        throw new ApiError(404, 'Post not found');
+    }
+
+    const finalRecipientId = recipientId || post.user;
+    if (!finalRecipientId) {
+        throw new ApiError(400, 'Post has no valid owner');
+    }
+
+    // Check if user is the owner
+    if (post.user.toString() === requesterId) {
+        throw new ApiError(400, 'Cannot request contact for your own post');
+    }
+
+    // Check for existing request
+    const existingRequest = await ContactRequest.findOne({
+        requester: requesterId,
+        recipient: finalRecipientId,
+        post: postId
+    });
+
+    if (existingRequest) {
+        throw new ApiError(400, 'Contact request already sent for this post');
+    }
+
+    // Check if users have blocked each other
+    const currentUser = await User.findById(requesterId);
+    const recipientUser = await User.findById(finalRecipientId);
+
+    if (!currentUser) throw new ApiError(404, 'User account not found');
+    if (!recipientUser) throw new ApiError(404, 'Recipient no longer exists');
+
+    // Use .some() for safer ID comparison in arrays
+    const isBlockedByCurrent = currentUser.blockedUsers?.some(id => id.toString() === finalRecipientId.toString());
+    if (isBlockedByCurrent) {
+        throw new ApiError(403, 'You have blocked this user');
+    }
+
+    const isCurrentBlockedByRecipient = recipientUser.blockedUsers?.some(id => id.toString() === requesterId);
+    if (isCurrentBlockedByRecipient) {
+        throw new ApiError(403, 'You cannot make a request to this user');
+    }
+
+    // Check for cooldown (24 hours between requests to same post)
+    const lastRequest = await ContactRequest.findOne({
+        requester: requesterId,
+        post: postId,
+        status: { $in: ['rejected', 'expired'] }
+    }).sort({ createdAt: -1 });
+
+    if (lastRequest) {
+        const hoursSinceLastRequest = (Date.now() - lastRequest.createdAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceLastRequest < 24) {
+            const hoursRemaining = Math.ceil(24 - hoursSinceLastRequest);
+            throw new ApiError(429, `Please wait ${hoursRemaining} hours before sending another request for this post`);
+        }
+    }
+
+    // Create new request with 7-day expiry
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+    const contactRequest = await ContactRequest.create({
+        requester: requesterId,
+        recipient: finalRecipientId,
+        post: postId,
+        message: message,
+        status: 'pending',
+        expiresAt
+    });
+
+    // Populate requester details for notification
+    await contactRequest.populate('requester', 'displayName avatar');
+
+    // Send real-time notification to recipient
+    const io = req.app.get('io');
+    await createNotification(io, {
+        recipient: finalRecipientId,
+        sender: requesterId,
+        type: 'request',
+        title: 'New Contact Request',
+        message: `${contactRequest.requester?.displayName || 'Someone'} sent you a request for your post: ${post.title}`,
+        link: '/requests',
+        relatedId: postId
+    });
+
+    res.json(contactRequest);
+});
 
 // @desc    Get received requests (for my posts)
 // @route   GET /api/contact/received
 // @access  Private
-exports.getReceivedRequests = async (req, res) => {
+exports.getReceivedRequests = async (req, res, next) => {
     try {
         const requests = await ContactRequest.find({ recipient: req.user.id })
             .populate('post', ['title', 'type', 'images', 'price'])
@@ -148,7 +126,7 @@ exports.getReceivedRequests = async (req, res) => {
 // @desc    Get sent requests (my applications)
 // @route   GET /api/contact/sent
 // @access  Private
-exports.getSentRequests = async (req, res) => {
+exports.getSentRequests = async (req, res, next) => {
     try {
         const requests = await ContactRequest.find({ requester: req.user.id })
             .populate('post', ['title', 'type', 'images', 'price'])
@@ -185,7 +163,7 @@ exports.getSentRequests = async (req, res) => {
 // @desc    Update request status (Approve/Reject)
 // @route   PUT /api/contact/:id/status
 // @access  Private
-exports.updateRequestStatus = async (req, res) => {
+exports.updateRequestStatus = async (req, res, next) => {
     try {
         const { status } = req.body; // 'approved' or 'rejected'
         if (!['approved', 'rejected'].includes(status)) {
@@ -251,7 +229,7 @@ exports.updateRequestStatus = async (req, res) => {
 // @desc    Delete a contact request (Withdraw/Clear)
 // @route   DELETE /api/contact/:id
 // @access  Private
-exports.deleteRequest = async (req, res) => {
+exports.deleteRequest = async (req, res, next) => {
     try {
         const request = await ContactRequest.findById(req.params.id);
 

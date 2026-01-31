@@ -115,7 +115,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]"
                     />
 
                     {/* Drawer Panel */}
@@ -124,7 +124,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-background border-l border-white/10 z-50 flex flex-col shadow-2xl"
+                        className="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-background border-l border-white/10 z-[100] flex flex-col shadow-2xl"
                     >
                         {/* Drawer Header */}
                         <div className="p-4 border-b border-white/10 flex items-center justify-between glass">

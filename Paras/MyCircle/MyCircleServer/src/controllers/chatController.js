@@ -1,63 +1,51 @@
 const Conversation = require('../models/Conversation');
-const Message = require('../models/Message'); // Kept for legacy/fallback? Actually we start fresh.
+const Message = require('../models/Message');
 const User = require('../models/User');
 const ContactRequest = require('../models/ContactRequest');
 const { containsProfanity } = require('../utils/profanityFilter');
 const { createNotification } = require('./notificationController');
 const { db, admin } = require('../config/firebase');
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/ApiError');
 
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
 // @access  Private
-exports.getConversations = async (req, res, next) => {
-    try {
-        const conversations = await Conversation.find({
-            participants: req.user.id,
-            deletedBy: { $ne: req.user.id }
+exports.getConversations = asyncHandler(async (req, res, next) => {
+    const conversations = await Conversation.find({
+        participants: req.user.id,
+        deletedBy: { $ne: req.user.id }
+    })
+        .populate('participants', 'displayName avatar')
+        .populate('lastMessage')
+        .sort({ updatedAt: -1 });
+
+    // Add unread count for each conversation
+    const conversationsWithUnread = await Promise.all(
+        conversations.map(async (conv) => {
+            const unreadCount = await Message.countDocuments({
+                conversationId: conv._id,
+                sender: { $ne: req.user.id },
+                readBy: { $ne: req.user.id }
+            });
+
+            return {
+                ...conv.toObject(),
+                unreadCount
+            };
         })
-            .populate('participants', 'displayName avatar')
-            .populate('lastMessage')
-            .sort({ updatedAt: -1 });
+    );
 
-        // Add unread count for each conversation
-        const conversationsWithUnread = await Promise.all(
-            conversations.map(async (conv) => {
-                const unreadCount = await Message.countDocuments({
-                    conversationId: conv._id,
-                    sender: { $ne: req.user.id },
-                    readBy: { $ne: req.user.id }
-                });
+    res.json(conversationsWithUnread);
+});
 
-                return {
-                    ...conv.toObject(),
-                    unreadCount
-                };
-            })
-        );
-
-        res.json(conversationsWithUnread);
-    } catch (err) {
-        return next(err);
-    }
-};
-
-// @desc    Get messages for a conversation
-// @route   GET /api/chat/messages/:conversationId
-// @access  Private
 // @desc    Get messages for a conversation
 // @route   GET /api/chat/messages/:conversationId
 // @access  Private
 exports.getMessages = async (req, res, next) => {
     try {
-        if (!db) return res.status(500).json({ msg: 'Firebase not initialized' });
-
-        const messagesRef = db.collection('conversations').doc(req.params.conversationId).collection('messages');
-        const snapshot = await messagesRef.orderBy('createdAt', 'asc').get();
-
-        const messages = [];
-        snapshot.forEach(doc => {
-            messages.push({ _id: doc.id, ...doc.data() });
-        });
+        const messages = await Message.find({ conversationId: req.params.conversationId })
+            .sort({ createdAt: 1 });
 
         res.json(messages);
     } catch (err) {
@@ -102,140 +90,132 @@ exports.getOrCreateConversation = async (req, res, next) => {
 // @desc    Send a message
 // @route   POST /api/chat/message
 // @access  Private
-// @desc    Send a message
-// @route   POST /api/chat/message
-// @access  Private
-exports.sendMessage = async (req, res, next) => {
-    try {
-        if (!db) return res.status(500).json({ msg: 'Firebase not initialized' });
-        const { recipientId, text, postId } = req.body;
+exports.sendMessage = asyncHandler(async (req, res, next) => {
+    if (!db) throw new ApiError(500, 'Firebase not initialized');
+    const { recipientId, text, postId } = req.body;
 
-        // Check if conversation exists
-        let conversation = await Conversation.findOne({
-            participants: { $all: [req.user.id, recipientId] }
+    // Check if conversation exists
+    let conversation = await Conversation.findOne({
+        participants: { $all: [req.user.id, recipientId] }
+    });
+
+    // Connectivity Check
+    if (!conversation) {
+        const connection = await ContactRequest.findOne({
+            $or: [
+                { requester: req.user.id, recipient: recipientId, status: 'approved' },
+                { requester: recipientId, recipient: req.user.id, status: 'approved' }
+            ]
         });
 
-        // Connectivity Check
-        if (!conversation) {
-            const connection = await ContactRequest.findOne({
-                $or: [
-                    { requester: req.user.id, recipient: recipientId, status: 'approved' },
-                    { requester: recipientId, recipient: req.user.id, status: 'approved' }
-                ]
-            });
-
-            if (!connection) {
-                return res.status(403).json({ msg: 'You can only message connected users' });
-            }
+        if (!connection) {
+            throw new ApiError(403, 'You can only message connected users');
         }
-
-        // Create new conversation if not exists
-        if (!conversation) {
-            conversation = new Conversation({
-                participants: [req.user.id, recipientId],
-                postId: postId || null
-            });
-            await conversation.save();
-        }
-
-        // Check for profanity
-        if (containsProfanity(text)) {
-            return res.status(400).json({ msg: 'Message contains inappropriate content.' });
-        }
-
-        // Check if users have blocked each other
-        const currentUser = await User.findById(req.user.id);
-        const recipientUser = await User.findById(recipientId);
-
-        if (!currentUser) return res.status(404).json({ msg: 'Logged in user not found' });
-        if (!recipientUser) return res.status(404).json({ msg: 'Recipient not found' });
-
-        // Ensure blockedUsers exists as an array
-        const blockedUsers = currentUser.blockedUsers || [];
-        if (blockedUsers.map(id => id.toString()).includes(recipientId)) {
-            return res.status(403).json({ msg: 'You have blocked this user.' });
-        }
-        const recipientBlocked = recipientUser.blockedUsers || [];
-        if (recipientBlocked.map(id => id.toString()).includes(req.user.id)) {
-            return res.status(403).json({ msg: 'You cannot message this user.' });
-        }
-
-        const sender = {
-            _id: currentUser._id,
-            displayName: currentUser.displayName,
-            avatar: currentUser.avatar
-        };
-
-        // 1. Save to MongoDB (Source of Truth for Counts/History)
-        const mongoMessage = new Message({
-            conversationId: conversation._id,
-            sender: req.user.id,
-            text: text,
-            status: 'sent',
-            readBy: [req.user.id]
-        });
-        await mongoMessage.save();
-
-        // 2. Save to Firestore (Real-time Layer)
-        const messageData = {
-            conversationId: conversation._id.toString(),
-            sender: req.user.id,
-            text: text,
-            createdAt: mongoMessage.createdAt.toISOString(), // Sync timestamps
-            status: 'sent',
-            readBy: [req.user.id],
-            expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7-day TTL
-            mongoId: mongoMessage._id.toString() // Link back to Mongo
-        };
-
-        let docRef;
-        try {
-            // Use MongoDB ID as Firestore Doc ID for perfect sync
-            const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
-            await messagesRef.doc(mongoMessage._id.toString()).set(messageData);
-            docRef = { id: mongoMessage._id.toString() };
-        } catch (fsError) {
-            console.error('[Firestore Error] Failed to save message:', fsError.message);
-            // If Firestore fails, we SHOULD NOT rollback MongoDB, as Mongo is the persistent record.
-            // But we should warn.
-
-            // Optional: You could retry or queue this.
-        }
-
-        const savedMessage = { _id: mongoMessage._id, ...messageData, sender };
-
-        // Update MongoDB conversation last message metadata and unhide for everyone
-        conversation.lastMessage = mongoMessage._id;
-        conversation.updatedAt = Date.now();
-        conversation.deletedBy = []; // Unhide conversation for both users
-        await conversation.save();
-
-        // Socket.io for typing indicators/legacy still works if needed
-        const io = req.app.get('io');
-        if (io) {
-            io.to(`user:${recipientId}`).emit('receive_message', {
-                conversationId: conversation._id,
-                message: savedMessage
-            });
-
-            // Create notification for recipient
-            await createNotification(io, {
-                recipient: recipientId,
-                sender: req.user.id,
-                type: 'message',
-                title: 'New Message',
-                message: `${currentUser.displayName || 'Someone'}: ${text}`,
-                link: '/chat',
-                conversationId: conversation._id
-            });
-        }
-
-        res.json(savedMessage);
-    } catch (err) {
-        console.error('[sendMessage Error]:', err);
-        return next(err);
     }
-};
+
+    // Create new conversation if not exists
+    if (!conversation) {
+        conversation = new Conversation({
+            participants: [req.user.id, recipientId],
+            postId: postId || null
+        });
+        await conversation.save();
+    }
+
+    // Check for profanity
+    if (containsProfanity(text)) {
+        throw new ApiError(400, 'Message contains inappropriate content');
+    }
+
+    // Check if users have blocked each other
+    const currentUser = await User.findById(req.user.id);
+    const recipientUser = await User.findById(recipientId);
+
+    if (!currentUser) throw new ApiError(404, 'Logged in user not found');
+    if (!recipientUser) throw new ApiError(404, 'Recipient not found');
+
+    // Ensure blockedUsers exists as an array
+    const blockedUsers = currentUser.blockedUsers || [];
+    if (blockedUsers.map(id => id.toString()).includes(recipientId)) {
+        throw new ApiError(403, 'You have blocked this user');
+    }
+    const recipientBlocked = recipientUser.blockedUsers || [];
+    if (recipientBlocked.map(id => id.toString()).includes(req.user.id)) {
+        throw new ApiError(403, 'You cannot message this user');
+    }
+
+    const sender = {
+        _id: currentUser._id,
+        displayName: currentUser.displayName,
+        avatar: currentUser.avatar
+    };
+
+    // 1. Save to MongoDB (Source of Truth for Counts/History)
+    const mongoMessage = new Message({
+        conversationId: conversation._id,
+        sender: req.user.id,
+        text: text,
+        status: 'sent',
+        readBy: [req.user.id]
+    });
+    await mongoMessage.save();
+
+    // 2. Save to Firestore (Real-time Layer)
+    const messageData = {
+        conversationId: conversation._id.toString(),
+        sender: req.user.id,
+        text: text,
+        createdAt: mongoMessage.createdAt.toISOString(), // Sync timestamps
+        status: 'sent',
+        readBy: [req.user.id],
+        expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7-day TTL
+        mongoId: mongoMessage._id.toString() // Link back to Mongo
+    };
+
+    let docRef;
+    try {
+        // Use MongoDB ID as Firestore Doc ID for perfect sync
+        const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
+        await messagesRef.doc(mongoMessage._id.toString()).set(messageData);
+        docRef = { id: mongoMessage._id.toString() };
+    } catch (fsError) {
+        console.error('[Firestore Error] Failed to save message:', fsError.message);
+        // If Firestore fails, we SHOULD NOT rollback MongoDB, as Mongo is the persistent record.
+        // But we should warn.
+
+        // Optional: You could retry or queue this.
+    }
+
+    const savedMessage = { _id: mongoMessage._id, ...messageData, sender };
+
+    // Update MongoDB conversation last message metadata and unhide for everyone
+    conversation.lastMessage = mongoMessage._id;
+    conversation.updatedAt = Date.now();
+    conversation.deletedBy = []; // Unhide conversation for both users
+    await conversation.save();
+
+    // Socket.io for typing indicators/legacy still works if needed
+    const io = req.app.get('io');
+    if (io) {
+        io.to(`user:${recipientId}`).emit('receive_message', {
+            conversationId: conversation._id,
+            message: savedMessage
+        });
+
+        // Create notification for recipient
+        await createNotification(io, {
+            recipient: recipientId,
+            sender: req.user.id,
+            type: 'message',
+            title: 'New Message',
+            message: `${currentUser.displayName || 'Someone'}: ${text}`,
+            link: '/chat',
+            conversationId: conversation._id
+        });
+    }
+
+    res.json(savedMessage);
+});
 
 // @desc    Initialize Chat (Get or Create Conversation with specific user)
 // @route   POST /api/chat/init/:userId

@@ -3,64 +3,62 @@
  * Provides consistent error responses across the application
  */
 
+const ApiError = require('../utils/ApiError');
+
 const errorHandler = (err, req, res, next) => {
-    // Log error for debugging
-    console.error('Error:', {
-        message: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-        url: req.originalUrl,
-        method: req.method,
-        timestamp: new Date().toISOString()
-    });
+    let error = err;
+
+    // Log error for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+        console.error('Error Details:', {
+            message: error.message,
+            stack: error.stack,
+            url: req.originalUrl,
+            method: req.method,
+            timestamp: new Date().toISOString()
+        });
+    }
 
     // Default error status and message
-    let statusCode = err.statusCode || 500;
-    let message = err.message || 'Internal Server Error';
+    let statusCode = error.statusCode || 500;
+    let message = error.message || 'Internal Server Error';
 
-    // Handle specific error types
-    if (err.name === 'ValidationError') {
-        statusCode = 400;
-        message = Object.values(err.errors).map(e => e.message).join(', ');
-    }
-
-    if (err.name === 'CastError') {
-        statusCode = 400;
-        message = 'Invalid ID format';
-    }
-
-    if (err.code === 11000) {
-        statusCode = 400;
-        message = 'Duplicate field value entered';
-    }
-
-    if (err.name === 'JsonWebTokenError') {
-        statusCode = 401;
-        message = 'Invalid token';
-    }
-
-    if (err.name === 'TokenExpiredError') {
-        statusCode = 401;
-        message = 'Token expired';
-    }
-
-    // Multer file upload errors
-    if (err.name === 'MulterError') {
-        statusCode = 400;
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            message = 'File size too large. Maximum size is 5MB';
-        } else if (err.code === 'LIMIT_FILE_COUNT') {
-            message = 'Too many files. Maximum is 5 files';
-        } else {
-            message = `File upload error: ${err.message}`;
+    // Handle specific Mongoose/Database error types if not already an ApiError
+    if (!(error instanceof ApiError)) {
+        if (error.name === 'ValidationError') {
+            statusCode = 400;
+            message = Object.values(error.errors).map(e => e.message).join(', ');
+        } else if (error.name === 'CastError') {
+            statusCode = 400;
+            message = `Invalid format for ${error.path}: ${error.value}`;
+        } else if (error.code === 11000) {
+            statusCode = 400;
+            message = 'Duplicate field value entered';
+        } else if (error.name === 'JsonWebTokenError') {
+            statusCode = 401;
+            message = 'Invalid authentication token';
+        } else if (error.name === 'TokenExpiredError') {
+            statusCode = 401;
+            message = 'Authentication token expired';
+        } else if (error.name === 'MulterError') {
+            statusCode = 400;
+            if (error.code === 'LIMIT_FILE_SIZE') message = 'File size too large. Max 5MB';
+            else message = `File upload error: ${error.message}`;
         }
+
+        // Wrap in ApiError for consistency
+        error = new ApiError(statusCode, message, false, err.stack);
     }
 
-    // Send error response
-    res.status(statusCode).json({
+    // Send structured error response
+    res.status(error.statusCode).json({
         success: false,
-        msg: message,
-        error: message,
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        msg: error.message,
+        error: error.message,
+        ...(process.env.NODE_ENV === 'development' && {
+            stack: error.stack,
+            details: error.isOperational ? 'Operational' : 'Programmatic/Unknown'
+        })
     });
 };
 

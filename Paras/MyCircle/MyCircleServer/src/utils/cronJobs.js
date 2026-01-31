@@ -121,8 +121,17 @@ const checkExpiredPosts = async (io) => {
         });
 
         for (const post of warningPosts) {
-            // Only notify if it was created more than 24 hours ago (don't notify immediately for 1-day posts)
-            // Or just check if duration was > 1 day
+            // Check if post is at least 24 hours old OR if its total duration was > 2 days
+            // This prevents "1 Day Left" notifications immediately for 24h/48h posts.
+            const ageInHours = (now.getTime() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
+
+            if (ageInHours < 24 && post.duration <= 2880) {
+                // If post is new AND duration is <= 2 days, skip the 1d warning (it's too noisy)
+                post.notified1d = true; // Mark as "notified" to skip future checks for this post
+                await post.save();
+                continue;
+            }
+
             post.notified1d = true;
             await post.save();
 

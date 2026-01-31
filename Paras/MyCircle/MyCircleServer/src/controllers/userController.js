@@ -1,61 +1,52 @@
 ﻿const User = require('../models/User');
 const Post = require('../models/Post');
 const ContactRequest = require('../models/ContactRequest');
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/ApiError');
 
 // @desc    Get current user profile
 // @route   GET /api/user/profile
 // @access  Private
-exports.getUserProfile = async (req, res, next) => {
-    try {
-        const user = await User.findById(req.user.id).select('-password');
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-        res.json(user);
-    } catch (err) {
-        return next(err);
+exports.getUserProfile = asyncHandler(async (req, res, next) => {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+        throw new ApiError(404, 'User not found');
     }
-};
+    res.json(user);
+});
 
 // @desc    Update user profile
 // @route   PUT /api/user/profile
 // @access  Private
-exports.updateUserProfile = async (req, res, next) => {
-    try {
-        console.log('Update Profile Req Body:', req.body); // DEBUG LOG
-        const { bio, contactPhone, contactWhatsapp, location, skills } = req.body;
+exports.updateUserProfile = asyncHandler(async (req, res, next) => {
+    const { bio, contactPhone, contactWhatsapp, location, skills } = req.body;
 
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-
-        // Simple validation
-        if (bio && bio.length > 500) {
-            return res.status(400).json({ msg: 'Bio is too long (max 500 characters)' });
-        }
-
-        // Update fields
-        if (bio !== undefined) user.bio = bio;
-        if (contactPhone !== undefined) user.contactPhone = contactPhone;
-        if (contactWhatsapp !== undefined) user.contactWhatsapp = contactWhatsapp;
-        if (location !== undefined) user.location = location;
-
-        // Ensure skills is an array
-        if (skills !== undefined) {
-            user.skills = Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()) : user.skills);
-        }
-
-        if (req.file) user.avatar = req.file.path;
-
-        await user.save();
-        res.json(user);
-
-    } catch (err) {
-        return next(err);
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        throw new ApiError(404, 'User not found');
     }
-};
+
+    // Simple validation
+    if (bio && bio.length > 500) {
+        throw new ApiError(400, 'Bio is too long (max 500 characters)');
+    }
+
+    // Update fields
+    if (bio !== undefined) user.bio = bio;
+    if (contactPhone !== undefined) user.contactPhone = contactPhone;
+    if (contactWhatsapp !== undefined) user.contactWhatsapp = contactWhatsapp;
+    if (location !== undefined) user.location = location;
+
+    // Ensure skills is an array
+    if (skills !== undefined) {
+        user.skills = Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()) : user.skills);
+    }
+
+    if (req.file) user.avatar = req.file.path;
+
+    await user.save();
+    res.json(user);
+});
 
 // @desc    Get user statistics
 // @route   GET /api/user/stats
@@ -128,6 +119,9 @@ exports.updateUserSettings = async (req, res, next) => {
 exports.blockUser = async (req, res, next) => {
     try {
         const userToBlockId = req.params.userId;
+        if (userToBlockId === req.user.id) {
+            return res.status(400).json({ msg: 'You cannot block yourself' });
+        }
         const user = await User.findById(req.user.id);
 
         if (!user.blockedUsers.includes(userToBlockId)) {
@@ -176,6 +170,10 @@ exports.getBlockedUsers = async (req, res, next) => {
 exports.reportUser = async (req, res, next) => {
     try {
         const { reason, contentType, contentId, reportedUserId } = req.body;
+
+        if (reportedUserId === req.user.id) {
+            return res.status(400).json({ msg: 'You cannot report yourself' });
+        }
 
         const reportedUser = await User.findById(reportedUserId);
         if (!reportedUser) return res.status(404).json({ msg: 'User not found' });
@@ -235,20 +233,13 @@ exports.getConnections = async (req, res, next) => {
 // @desc    Get user by ID (Public Profile)
 // @route   GET /api/user/:userId
 // @access  Private
-exports.getUserById = async (req, res, next) => {
-    try {
-        const user = await User.findById(req.params.userId).select('-password -preferences -blockedUsers');
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-        res.json(user);
-    } catch (err) {
-        if (err.kind === 'ObjectId') {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-        return next(err);
+exports.getUserById = asyncHandler(async (req, res, next) => {
+    const user = await User.findById(req.params.userId).select('-password -preferences -blockedUsers');
+    if (!user) {
+        throw new ApiError(404, 'User not found');
     }
-};
+    res.json(user);
+});
 
 // @desc    Follow a user
 // @route   POST /api/user/follow/:userId
@@ -354,6 +345,107 @@ exports.getFollowing = async (req, res, next) => {
         }
 
         res.json(user.following);
+    } catch (err) {
+        return next(err);
+    }
+};
+// @desc    Endorse a user's skill
+// @route   POST /api/user/endorse/:userId
+// @access  Private
+exports.endorseSkill = async (req, res, next) => {
+    try {
+        const { skill } = req.body;
+        const targetUserId = req.params.userId;
+        const endorserId = req.user.id;
+
+        if (targetUserId === endorserId) {
+            return res.status(400).json({ msg: 'You cannot endorse yourself' });
+        }
+
+        const targetUser = await User.findById(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        // Initialize skillEndorsements if undefined
+        if (!targetUser.skillEndorsements) {
+            targetUser.skillEndorsements = [];
+        }
+
+        let skillEntry = targetUser.skillEndorsements.find(e => e.skill.toLowerCase() === skill.toLowerCase());
+
+        if (skillEntry) {
+            // Check if already endorsed
+            if (skillEntry.endorsedBy.includes(endorserId)) {
+                return res.status(400).json({ msg: 'You have already endorsed this skill for this user' });
+            }
+            skillEntry.count += 1;
+            skillEntry.endorsedBy.push(endorserId);
+        } else {
+            // Add new skill endorsement
+            targetUser.skillEndorsements.push({
+                skill: skill,
+                count: 1,
+                endorsedBy: [endorserId]
+            });
+        }
+
+        await targetUser.save();
+        res.json({ msg: 'Skill endorsed successfully', skillEndorsements: targetUser.skillEndorsements });
+
+    } catch (err) {
+        return next(err);
+    }
+};
+
+// @desc    Get services (Search users by skill)
+// @route   GET /api/user/services
+// @access  Public (or Private)
+exports.getServices = async (req, res, next) => {
+    try {
+        const { sort } = req.query;
+        const skill = req.query.skill ? req.query.skill.trim() : '';
+        let query = {};
+
+        if (skill) {
+            // Flexible search: Case-insensitive regex for skills array OR skillEndorsements
+            query.$or = [
+                { skills: { $regex: skill, $options: 'i' } },
+                { 'skillEndorsements.skill': { $regex: skill, $options: 'i' } }
+            ];
+        }
+
+
+        let services = await User.find(query)
+            .select('displayName avatar bio skills skillEndorsements rating reviews location stats')
+            .lean(); // Use lean for performance since we'll process it
+
+
+        // Process results to add a specific sortable "endorsement count" for the searched skill
+        if (skill) {
+            services = services.map(user => {
+                const endorsement = user.skillEndorsements?.find(e => e.skill.toLowerCase() === skill.toLowerCase());
+                return {
+                    ...user,
+                    relevanceEndorsements: endorsement ? endorsement.count : 0
+                };
+            });
+        }
+
+        // Sorting
+        if (sort === 'rating') {
+            services.sort((a, b) => b.rating - a.rating);
+        } else if (sort === 'endorsements') {
+            // Sort by specific skill endorsement if searching, otherwise total endorsements
+            if (skill) {
+                services.sort((a, b) => b.relevanceEndorsements - a.relevanceEndorsements);
+            } else {
+                const getTotalEndorsements = (u) => u.skillEndorsements?.reduce((acc, curr) => acc + curr.count, 0) || 0;
+                services.sort((a, b) => getTotalEndorsements(b) - getTotalEndorsements(a));
+            }
+        }
+
+        res.json(services);
     } catch (err) {
         return next(err);
     }

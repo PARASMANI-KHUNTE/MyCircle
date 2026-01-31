@@ -54,8 +54,10 @@ api.interceptors.response.use(
                 // ignore storage errors
             }
 
-            if (typeof window !== 'undefined' && window.location?.pathname !== '/') {
-                window.location.href = '/';
+            // Simple notification or redirect
+            if (typeof window !== 'undefined' && (window.location?.pathname !== '/' && window.location?.pathname !== '/login')) {
+                // Redirect to landing page with a message
+                window.location.href = '/?expired=true';
             }
         }
 

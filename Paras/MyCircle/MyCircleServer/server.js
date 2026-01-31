@@ -8,6 +8,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./src/config/db');
+require('./src/config/firebase'); // Initialize Firebase Admin SDK
 const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
 
@@ -130,22 +131,7 @@ io.on('connection', (socket) => {
 
 // CORS Configuration
 const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) return callback(null, true);
-
-        // In development, allow all origins
-        if (!isProduction) {
-            return callback(null, true);
-        }
-
-        // In production, check whitelist
-        if (corsOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: true, // Allow all origins in development and production for simplicity (already gated by auth)
     credentials: true
 };
 

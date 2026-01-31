@@ -1,0 +1,14 @@
+{
+    "watch": [
+        "src",
+        "server.js",
+        ".env"
+    ],
+    "ext": "js,json",
+    "ignore": [
+        "node_modules",
+        "server_output.log",
+        "server_error.txt"
+    ],
+    "delay": "500"
+}

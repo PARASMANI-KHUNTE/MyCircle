@@ -13,15 +13,6 @@ module.exports = function (passport) {
                     proxy: true,
                 },
                 async (accessToken, refreshToken, profile, done) => {
-                    const newUser = {
-                        googleId: profile.id,
-                        displayName: profile.displayName,
-                        firstName: profile.name.givenName,
-                        lastName: profile.name.familyName,
-                        email: profile.emails[0].value,
-                        avatar: profile.photos[0].value,
-                    };
-
                     try {
                         let user = await User.findOne({ googleId: profile.id });
 
@@ -32,30 +23,29 @@ module.exports = function (passport) {
                         if (user) {
                             // Update existing user with latest Google info
                             user.displayName = profile.displayName;
-                            user.firstName = profile.name.givenName;
-                            user.lastName = profile.name.familyName;
+                            user.firstName = profile.name?.givenName || user.firstName;
+                            user.lastName = profile.name?.familyName || user.lastName;
                             // Only update avatar if Google provides one, or if current is missing
-                            // Use the calculated robust avatar
                             if (!user.avatar || (profile.photos && profile.photos.length > 0)) {
                                 user.avatar = avatar;
                             }
                             await user.save();
-                            done(null, user);
+                            return done(null, user);
                         } else {
                             const newUser = {
                                 googleId: profile.id,
                                 displayName: profile.displayName,
-                                firstName: profile.name.givenName,
-                                lastName: profile.name.familyName,
-                                email: profile.emails[0].value,
+                                firstName: profile.name?.givenName || '',
+                                lastName: profile.name?.familyName || '',
+                                email: profile.emails?.[0]?.value || '',
                                 avatar: avatar,
                             };
                             user = await User.create(newUser);
-                            done(null, user);
+                            return done(null, user);
                         }
                     } catch (err) {
                         console.error(err);
-                        done(err, null);
+                        return done(err, null);
                     }
                 }
             )

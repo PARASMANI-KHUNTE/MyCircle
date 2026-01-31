@@ -44,7 +44,9 @@ const Profile = () => {
                     location: userData.location || 'Location not set',
                     joined: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : '',
                     bio: userData.bio || '',
+                    bio: userData.bio || '',
                     skills: userData.skills || [],
+                    skillEndorsements: userData.skillEndorsements || [],
                     stats: isOwnProfile ? statsRes.data.stats : (userData.stats || {}),
                 });
             } catch (err) {
@@ -124,6 +126,19 @@ const Profile = () => {
         navigate(`/chat?recipientId=${userId}`);
     };
 
+    const handleEndorse = async (skill) => {
+        try {
+            const res = await api.post(`/user/endorse/${userId}`, { skill });
+            setProfile(prev => ({
+                ...prev,
+                skillEndorsements: res.data.skillEndorsements
+            }));
+            success(`Endorsed ${skill}!`);
+        } catch (err) {
+            showError(err.response?.data?.msg || 'Failed to endorse');
+        }
+    };
+
     if (!authUser && !userId) {
         return (
             <div className="min-h-screen flex items-center justify-center text-white">
@@ -199,11 +214,32 @@ const Profile = () => {
                     </p>
 
                     <div className="flex flex-wrap gap-2 mt-6">
-                        {profile.skills.map((skill, index) => (
-                            <span key={index} className="px-3 py-1 rounded-full glass hover:bg-white/10 text-xs text-primary font-bold">
-                                {skill}
-                            </span>
-                        ))}
+                        {profile.skills.map((skill, index) => {
+                            const endorsement = profile.skillEndorsements?.find(e => e.skill.toLowerCase() === skill.toLowerCase());
+                            const count = endorsement ? endorsement.count : 0;
+                            const isEndorsedByMe = endorsement?.endorsedBy?.includes(authUser?._id);
+
+                            return (
+                                <div key={index} className="flex items-center gap-1 bg-white/5 rounded-full px-3 py-1 border border-white/10 group hover:border-primary/50 transition-colors">
+                                    <span className="text-xs text-primary font-bold">{skill}</span>
+                                    {count > 0 && (
+                                        <span className="bg-primary/20 text-primary text-[10px] px-1.5 rounded-full">
+                                            {count}
+                                        </span>
+                                    )}
+                                    {!isOwnProfile && (
+                                        <button
+                                            onClick={() => handleEndorse(skill)}
+                                            disabled={isEndorsedByMe}
+                                            className={`ml-1 hover:scale-110 transition-transform ${isEndorsedByMe ? 'text-yellow-400 opacity-50 cursor-default' : 'text-gray-400 hover:text-yellow-400'}`}
+                                            title={isEndorsedByMe ? "You endorsed this" : "Endorse this skill"}
+                                        >
+                                            <Award className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 

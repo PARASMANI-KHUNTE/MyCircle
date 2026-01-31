@@ -32,18 +32,27 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
         }
     };
 
-    if (loading) return <div className="p-4 text-center text-gray-500">Loading chats...</div>;
+    if (loading) return <div className="p-4 text-center text-gray-400 font-medium">Loading chats...</div>;
 
     if (conversations.length === 0) {
-        return <div className="p-8 text-center text-gray-500">No conversations yet.</div>;
+        return <div className="p-8 text-center text-gray-400 font-medium">No conversations yet.</div>;
     }
+
+    console.log('ChatList Render:', { conversationsCount: conversations?.length, currentUserId, loading });
 
     return (
         <div className="flex flex-col">
             {conversations.map(conv => {
-                const otherParticipant = conv.participants.find(p => p._id !== currentUserId) || conv.participants[0];
+                const strUserId = currentUserId?.toString();
+                // Safe access to participants and robust ID comparison
+                const otherParticipant = conv.participants?.find(p => p._id?.toString() !== strUserId) || conv.participants?.[0];
                 const isSelected = selectedId === conv._id;
                 const isUnread = conv.unreadCount > 0;
+
+                if (!otherParticipant) {
+                    console.warn('No other participant found for conversation:', conv._id);
+                    return null;
+                }
 
                 return (
                     <div key={conv._id} className="group relative">

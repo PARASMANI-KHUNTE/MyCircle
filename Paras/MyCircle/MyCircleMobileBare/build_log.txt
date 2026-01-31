@@ -1,0 +1,181 @@
+
+> MyCircleMobileBare@0.0.1 android
+> react-native run-android
+
+info A dev server is already running for this project on port 8081.
+info Installing the app...
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :notifee_react-native
+:notifee_react-native @notifee/react-native found at F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\@notifee\react-native
+:notifee_react-native package.json found at F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\@notifee\react-native\package.json
+:notifee_react-native:version set from package.json: 9.1.8 (9,1,8 - 9001008)
+:notifee_react-native:android.compileSdk using custom value: 35
+:notifee_react-native:android.targetSdk using custom value: 35
+:notifee_react-native:android.minSdk using custom value: 24
+:notifee_react-native:reactNativeAndroidDir F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\react-native
+
+> Configure project :react-native-firebase_app
+:react-native-firebase_app package.json found at F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_app:firebase.bom using default value: 34.6.0
+:react-native-firebase_app:play.play-services-auth using default value: 21.4.0
+:react-native-firebase_app package.json found at F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_app:version set from package.json: 23.7.0 (23,7,0 - 23007000)
+:react-native-firebase_app:android.compileSdk using custom value: 35
+:react-native-firebase_app:android.targetSdk using custom value: 35
+:react-native-firebase_app:android.minSdk using custom value: 24
+:react-native-firebase_app:reactNativeAndroidDir F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\react-native
+
+> Configure project :react-native-firebase_firestore
+:react-native-firebase_firestore package.json found at F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\@react-native-firebase\firestore\package.json
+:react-native-firebase_app package.json found at F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\@react-native-firebase\app\package.json
+:react-native-firebase_firestore:firebase.bom using default value: 34.6.0
+:react-native-firebase_firestore package.json found at F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\@react-native-firebase\firestore\package.json
+:react-native-firebase_firestore:version set from package.json: 23.7.0 (23,7,0 - 23007000)
+:react-native-firebase_firestore:android.compileSdk using custom value: 35
+:react-native-firebase_firestore:android.targetSdk using custom value: 35
+:react-native-firebase_firestore:android.minSdk using custom value: 24
+:react-native-firebase_firestore:reactNativeAndroidDir F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\node_modules\react-native
+
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateAutolinkingNewArchitectureFiles UP-TO-DATE
+> Task :app:generateAutolinkingPackageList UP-TO-DATE
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :app:generateReactNativeEntryPoint UP-TO-DATE
+> Task :notifee_react-native:preBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
+> Task :react-native-community_geolocation:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-community_geolocation:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-community_geolocation:preBuild UP-TO-DATE
+> Task :react-native-firebase_app:preBuild UP-TO-DATE
+> Task :react-native-firebase_firestore:preBuild UP-TO-DATE
+> Task :react-native-gesture-handler:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-gesture-handler:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-gesture-handler:preBuild UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-google-signin_google-signin:preBuild UP-TO-DATE
+> Task :react-native-image-picker:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-image-picker:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-image-picker:preBuild UP-TO-DATE
+> Task :react-native-keychain:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-keychain:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-keychain:preBuild UP-TO-DATE
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask
+> Task :react-native-reanimated:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-reanimated:assertWorkletsVersionTask
+> Task :react-native-reanimated:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-reanimated:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs UP-TO-DATE
+> Task :react-native-reanimated:preBuild
+> Task :react-native-safe-area-context:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-screens:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-screens:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-sound:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-sound:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-sound:preBuild UP-TO-DATE
+> Task :react-native-svg:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-svg:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-svg:preBuild UP-TO-DATE
+> Task :react-native-webview:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-webview:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-webview:preBuild UP-TO-DATE
+> Task :react-native-worklets:assertMinimalReactNativeVersionTask
+> Task :react-native-worklets:assertNewArchitectureEnabledTask SKIPPED
+> Task :react-native-worklets:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-worklets:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs UP-TO-DATE
+> Task :react-native-worklets:preBuild
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :notifee_react-native:preDebugBuild UP-TO-DATE
+> Task :notifee_react-native:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preDebugBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-community_geolocation:preDebugBuild UP-TO-DATE
+> Task :react-native-community_geolocation:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-firebase_app:preDebugBuild UP-TO-DATE
+> Task :react-native-firebase_app:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-firebase_firestore:preDebugBuild UP-TO-DATE
+> Task :react-native-firebase_firestore:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-gesture-handler:preDebugBuild UP-TO-DATE
+> Task :react-native-gesture-handler:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-google-signin_google-signin:preDebugBuild UP-TO-DATE
+> Task :react-native-google-signin_google-signin:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-image-picker:preDebugBuild UP-TO-DATE
+> Task :react-native-image-picker:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-keychain:preDebugBuild UP-TO-DATE
+> Task :react-native-keychain:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-reanimated:preDebugBuild
+> Task :react-native-reanimated:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:preDebugBuild UP-TO-DATE
+> Task :react-native-safe-area-context:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-screens:preDebugBuild UP-TO-DATE
+> Task :react-native-screens:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-sound:preDebugBuild UP-TO-DATE
+> Task :react-native-sound:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-svg:preDebugBuild UP-TO-DATE
+> Task :react-native-svg:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-webview:preDebugBuild UP-TO-DATE
+> Task :react-native-webview:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-worklets:preDebugBuild
+> Task :react-native-worklets:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:processDebugGoogleServices FAILED
+
+[Incubating] Problems report is available at: file:///F:/Codes/MyCircle/Paras/MyCircle/MyCircleMobileBare/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+64 actionable tasks: 4 executed, 60 up-to-date
+
+info 💡 Tip: Make sure that you have set up your development environment correctly, by running npx react-native doctor. To read more about doctor command visit: https://github.com/react-native-community/cli/blob/main/packages/cli-doctor/README.md#doctor 
+
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:processDebugGoogleServices'.
+> File google-services.json is missing. 
+  The Google Services Plugin cannot function without it. 
+  Searched locations: F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\Debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\google-services.json
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3s
+error Failed to install the app. Command failed with exit code 1: gradlew.bat app:installDebug -PreactNativeDevServerPort=8081 FAILURE: Build failed with an exception. * What went wrong: Execution failed for task ':app:processDebugGoogleServices'. > File google-services.json is missing. The Google Services Plugin cannot function without it. Searched locations: F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\src\Debug\google-services.json, F:\Codes\MyCircle\Paras\MyCircle\MyCircleMobileBare\android\app\google-services.json * Try: > Run with --stacktrace option to get the stack trace. > Run with --info or --debug option to get more log output. > Run with --scan to get full insights. > Get more help at https://help.gradle.org. BUILD FAILED in 3s.
+info Run CLI with --verbose flag for more details.

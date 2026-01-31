@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api'; // Use API
 import { useToast } from '../components/ui/Toast';
 import PostCard from '../components/ui/PostCard';
+import ServiceCard from '../components/ui/ServiceCard'; // Import ServiceCard
 import PostSkeleton from '../components/ui/PostSkeleton';
 import {
     Filter, Search, Map as MapIcon,
@@ -62,6 +63,7 @@ const Feed = () => {
     const { isDark } = useTheme(); // Theme awareness
     const { success, error: showError } = useToast();
     const [posts, setPosts] = useState([]);
+    const [services, setServices] = useState([]); // State for services
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
@@ -85,10 +87,15 @@ const Feed = () => {
     }, [socket]);
 
     useEffect(() => {
-        fetchPosts();
-    }, []);
+        if (filter === 'service') {
+            fetchServices();
+        } else {
+            fetchPosts();
+        }
+    }, [filter]); // Re-fetch when filter changes (especially switching to/from Services)
 
     const fetchPosts = async () => {
+        setLoading(true);
         try {
             const res = await api.get('/posts');
             setPosts(res.data);
@@ -99,6 +106,38 @@ const Feed = () => {
         }
     };
 
+    const fetchServices = async () => {
+        setLoading(true);
+        try {
+            // Fetch services with flexible search if term exists
+            const params = new URLSearchParams();
+            if (searchTerm) params.append('skill', searchTerm);
+            params.append('sort', sortOrder === 'latest' ? 'rating' : 'endorsements'); // Map sort order to service sort
+
+            const res = await api.get(`/user/services?${params.toString()}`);
+            setServices(res.data);
+        } catch (err) {
+            console.error('Failed to fetch services:', err);
+            if (err.response) {
+                console.error('Error response:', err.response.data);
+                console.error('Error status:', err.response.status);
+                showError(`Search failed: ${err.response.data.msg || 'Server Error'}`);
+            } else {
+                showError("Network error. Please try again.");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Trigger service fetch on search/sort change if in service mode
+    useEffect(() => {
+        if (filter === 'service') {
+            fetchServices();
+        }
+    }, [searchTerm, sortOrder]);
+
+
     // Get unique locations for filter dropdown
     const availableLocations = React.useMemo(() => {
         const locations = [...new Set(posts.map(p => p.location).filter(Boolean))];
@@ -106,6 +145,8 @@ const Feed = () => {
     }, [posts]);
 
     const filteredPosts = React.useMemo(() => {
+        if (filter === 'service') return services; // Pass through services if in service mode
+
         let result = posts.filter(post => {
             const matchesFilter = filter === 'all' || post.type === filter;
             const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,10 +163,12 @@ const Feed = () => {
         });
 
         return result;
-    }, [posts, filter, searchTerm, locationFilter, sortOrder]);
+    }, [posts, services, filter, searchTerm, locationFilter, sortOrder]);
 
     // Map Specific logic
     const mapPosts = React.useMemo(() => {
+        if (filter === 'service') return []; // No map for services yet
+
         return filteredPosts
             .filter(p => p.locationCoords?.coordinates)
             .map(p => {
@@ -138,9 +181,14 @@ const Feed = () => {
                     displayLng: p.locationCoords.coordinates[0] + fuzzLng
                 };
             });
-    }, [filteredPosts]);
+    }, [filteredPosts, filter]);
 
     const toggleViewMode = () => {
+        if (filter === 'service') {
+            showError("Map view not available for Services yet.");
+            return;
+        }
+
         if (viewMode === 'list' && !userLocation) {
             setLoadingLocation(true);
             // Try to get user location
@@ -213,7 +261,7 @@ const Feed = () => {
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                             <input
                                 type="text"
-                                placeholder="Search by title, description or tags..."
+                                placeholder={filter === 'service' ? "Search for skills (e.g. Plumber)..." : "Search by title, description or tags..."}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full glass rounded-2xl pl-12 pr-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-lg font-medium bg-transparent"
@@ -248,7 +296,11 @@ const Feed = () => {
                                         className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
                                     >
                                         <option value="latest">Newest First</option>
-                                        <option value="oldest">Oldest First</option>
+                                        {filter === 'service' ? (
+                                            <option value="endorsements">Most Endorsed</option>
+                                        ) : (
+                                            <option value="oldest">Oldest First</option>
+                                        )}
                                     </select>
                                 </div>
 
@@ -258,6 +310,7 @@ const Feed = () => {
                                         value={locationFilter}
                                         onChange={(e) => setLocationFilter(e.target.value)}
                                         className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
+                                        disabled={filter === 'service'}
                                     >
                                         <option value="all">Everywhere</option>
                                         {availableLocations.map(loc => (
@@ -272,7 +325,6 @@ const Feed = () => {
                                         <button
                                             onClick={() => {
                                                 setSearchTerm('');
-                                                setFilter('all');
                                                 setLocationFilter('all');
                                             }}
                                             className="px-6 rounded-xl bg-white/5 text-xs font-bold text-muted-foreground hover:text-white hover:bg-white/10 transition-all border border-white/5"
@@ -310,7 +362,7 @@ const Feed = () => {
                         <PostSkeleton key={idx} />
                     ))}
                 </div>
-            ) : viewMode === 'map' ? (
+            ) : viewMode === 'map' && filter !== 'service' ? (
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -387,29 +439,60 @@ const Feed = () => {
                     }}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                 >
-                    {filteredPosts.length > 0 ? (
-                        filteredPosts.map((post) => (
-                            <motion.div
-                                key={post._id}
-                                variants={{
-                                    hidden: { opacity: 0, y: 20 },
-                                    visible: { opacity: 1, y: 0 }
-                                }}
-                                onClick={() => handlePostClick(post._id)}
-                                className="cursor-pointer h-full"
-                            >
-                                <PostCard
-                                    post={post}
-                                    currentUserId={user?._id}
-                                />
-                            </motion.div>
-                        ))
+                    {filter === 'service' ? (
+                        // Render Service Cards
+                        filteredPosts.length > 0 ? (
+                            filteredPosts.map((user, index) => (
+                                <motion.div
+                                    key={user._id}
+                                    variants={{
+                                        hidden: { opacity: 0, y: 20 },
+                                        visible: { opacity: 1, y: 0 }
+                                    }}
+                                    className="h-full"
+                                >
+                                    <ServiceCard user={user} searchedSkill={searchTerm} />
+                                </motion.div>
+                            ))
+                        ) : (
+                            <div className="col-span-full py-32 text-center bg-white/5 rounded-[2rem] border border-white/5 border-dashed">
+                                <Search className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-white mb-2">No Professionals Found</h3>
+                                <p className="text-gray-500 max-w-xs mx-auto">Try searching for a different skill or keyword.</p>
+                            </div>
+                        )
                     ) : (
-                        <div className="col-span-full py-32 text-center bg-white/5 rounded-[2rem] border border-white/5 border-dashed">
-                            <Sparkles className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-white mb-2">No Circles Found</h3>
-                            <p className="text-gray-500 max-w-xs mx-auto">We couldn't find any circular activities matching your criteria. Try adjusting your filters!</p>
-                        </div>
+                        // Render Post Cards
+                        filteredPosts.length > 0 ? (
+                            filteredPosts.map((post) => (
+                                <motion.div
+                                    key={post._id}
+                                    variants={{
+                                        hidden: { opacity: 0, y: 20 },
+                                        visible: { opacity: 1, y: 0 }
+                                    }}
+                                    onClick={() => handlePostClick(post._id)}
+                                    className="cursor-pointer h-full"
+                                >
+                                    <PostCard
+                                        post={post}
+                                        currentUserId={user?._id}
+                                    />
+                                </motion.div>
+                            ))
+                        ) : (
+                            <div className="col-span-full py-32 text-center bg-white/5 rounded-[2rem] border border-white/5 border-dashed">
+                                <Sparkles className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-white mb-2">No Circles Found</h3>
+                                <p className="text-gray-500 max-w-xs mx-auto mb-8">We couldn't find any circular activities matching your criteria. Try adjusting your filters or start your own circle!</p>
+                                <button
+                                    onClick={() => navigate('/create-post')}
+                                    className="px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+                                >
+                                    Create a Circle
+                                </button>
+                            </div>
+                        )
                     )}
                 </motion.div>
             )}

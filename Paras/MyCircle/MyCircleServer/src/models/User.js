@@ -32,6 +32,11 @@ const UserSchema = new mongoose.Schema({
     bio: String,
     location: String,
     skills: [String],
+    skillEndorsements: [{
+        skill: String,
+        count: { type: Number, default: 0 },
+        endorsedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    }],
     contactPhone: String,
     contactWhatsapp: String,
     rating: {

@@ -5,79 +5,74 @@ const { createNotification } = require('./notificationController');
 const Conversation = require('../models/Conversation');
 const { db } = require('../config/firebase');
 const { containsProfanity } = require('../utils/profanityFilter');
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/ApiError');
 
 // @desc    Create a post
 // @route   POST /api/posts
 // @access  Private
-exports.createPost = async (req, res, next) => {
-    try {
-        const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
+exports.createPost = asyncHandler(async (req, res, next) => {
+    const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
 
-        // Validation for price
-        const numericPrice = parseFloat(price);
-        if (price !== undefined && price !== '' && isNaN(numericPrice)) {
-            return res.status(400).json({ msg: 'Price must be a valid number' });
-        }
-
-        // Calculate expiresAt based on duration
-        let expiresAt = null;
-        if (duration) {
-            const durationInMinutes = parseInt(duration, 10);
-            if (!isNaN(durationInMinutes)) {
-                expiresAt = new Date(Date.now() + durationInMinutes * 60000);
-            }
-        }
-
-        let images = [];
-        if (req.files) {
-            images = req.files.map(file => file.path); // Cloudinary URL is in 'path' with multer-storage-cloudinary
-        }
-
-        // AI Safety Check
-        const safetyCheck = await checkContentSafety(`${title} ${description} `);
-        if (!safetyCheck.safe) {
-            return res.status(400).json({
-                msg: 'Post rejected by AI moderation',
-                reason: safetyCheck.reason || 'Content violation'
-            });
-        }
-
-        const newPost = new Post({
-            user: req.user.id,
-            type,
-            title,
-            description,
-            price,
-            location,
-            locationCoords: (req.body.latitude && req.body.longitude) ? {
-                type: 'Point',
-                coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
-            } : undefined,
-            images,
-            contactPhone,
-            contactWhatsapp,
-            expiresAt,
-            duration: req.body.duration ? parseInt(req.body.duration, 10) : undefined,
-            price: numericPrice || 0,
-            isUrgent: req.body.isUrgent === 'true' || req.body.isUrgent === true,
-            exchangePreference: req.body.exchangePreference || 'money',
-            acceptsBarter: req.body.acceptsBarter === 'true' || req.body.acceptsBarter === true || req.body.exchangePreference === 'barter' || req.body.exchangePreference === 'flexible',
-        });
-
-        const post = await newPost.save();
-        const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
-
-        // Emit real-time event
-        const io = req.app.get('io');
-        if (io) {
-            io.emit('new_post', populatedPost);
-        }
-
-        res.json(post);
-    } catch (err) {
-        return next(err);
+    // Validation for price
+    const numericPrice = parseFloat(price);
+    if (price !== undefined && price !== '' && isNaN(numericPrice)) {
+        throw new ApiError(400, 'Price must be a valid number');
     }
-};
+
+    // Calculate expiresAt based on duration
+    let expiresAt = null;
+    if (duration) {
+        const durationInMinutes = parseInt(duration, 10);
+        if (!isNaN(durationInMinutes)) {
+            expiresAt = new Date(Date.now() + durationInMinutes * 60000);
+        }
+    }
+
+    let images = [];
+    if (req.files) {
+        images = req.files.map(file => file.path); // Cloudinary URL is in 'path' with multer-storage-cloudinary
+    }
+
+    // AI Safety Check
+    const safetyCheck = await checkContentSafety(`${title} ${description} `);
+    if (!safetyCheck.safe) {
+        throw new ApiError(400, safetyCheck.reason || 'Post rejected by AI moderation');
+    }
+
+    const newPost = new Post({
+        user: req.user.id,
+        type,
+        title,
+        description,
+        price,
+        location,
+        locationCoords: (req.body.latitude && req.body.longitude) ? {
+            type: 'Point',
+            coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
+        } : undefined,
+        images,
+        contactPhone,
+        contactWhatsapp,
+        expiresAt,
+        duration: req.body.duration ? parseInt(req.body.duration, 10) : undefined,
+        price: numericPrice || 0,
+        isUrgent: req.body.isUrgent === 'true' || req.body.isUrgent === true,
+        exchangePreference: req.body.exchangePreference || 'money',
+        acceptsBarter: req.body.acceptsBarter === 'true' || req.body.acceptsBarter === true || req.body.exchangePreference === 'barter' || req.body.exchangePreference === 'flexible',
+    });
+
+    const post = await newPost.save();
+    const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
+
+    // Emit real-time event
+    const io = req.app.get('io');
+    if (io) {
+        io.emit('new_post', populatedPost);
+    }
+
+    res.json(post);
+});
 
 // @desc    Get all posts
 // @route   GET /api/posts
@@ -455,7 +450,7 @@ exports.likePost = async (req, res, next) => {
                 type: 'like',
                 title: 'New Like',
                 message: `${senderName} liked your post: "${postTitle}"`,
-                link: `/ post / ${post._id} `,
+                link: `/post/${post._id}`,
                 relatedId: post._id,
                 postId: post._id
             });
@@ -491,7 +486,7 @@ exports.sharePost = async (req, res, next) => {
             return res.status(500).json({ msg: 'Client URL is not configured' });
         }
 
-        res.json({ shares: post.shares, link: `${clientUrl} /post/${post._id} ` });
+        res.json({ shares: post.shares, link: `${clientUrl}/post/${post._id}` });
     } catch (err) {
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });
@@ -585,6 +580,17 @@ exports.updatePostStatus = async (req, res, next) => {
 
                 // Delete from MongoDB
                 await Conversation.findByIdAndDelete(conv._id);
+
+                // Notify participants that conversation is closed
+                const io = req.app.get('io');
+                if (io) {
+                    conv.participants.forEach(p => {
+                        io.to(`user:${p.toString()}`).emit('conversation_deleted', {
+                            conversationId: conv._id,
+                            reason: 'Post closed'
+                        });
+                    });
+                }
             }
         }
 
@@ -682,7 +688,7 @@ exports.commentOnPost = async (req, res, next) => {
                 type: 'comment',
                 title: 'New Comment',
                 message: `${senderName} commented on "${postTitle}": ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''} `,
-                link: `/ post / ${post._id} `,
+                link: `/post/${post._id}`,
                 relatedId: post._id,
                 postId: post._id // Explicitly add postId for mobile navigation
             });
@@ -836,7 +842,7 @@ exports.replyToComment = async (req, res, next) => {
                     type: 'request', // Using 'request' as generic 'reply' or add 'reply' to enum
                     title: 'New Reply',
                     message: `${senderName} replied: ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''} `,
-                    link: `/ post / ${post._id} `,
+                    link: `/post/${post._id}`,
                     relatedId: post._id
                 });
             }

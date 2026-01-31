@@ -6,7 +6,6 @@ import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
 import { getAvatarUrl } from '../../utils/avatar';
 import { db } from '../../config/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead }) => {
     const { success, error: showError } = useToast();
@@ -19,7 +18,9 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     const [isTyping, setIsTyping] = useState(false);
     const typingTimeoutRef = useRef(null);
 
-    const otherParticipant = conversation.participants.find(p => p._id !== (currentUser?._id || currentUser?.id)) || conversation.participants[0];
+    const currentUserId = currentUser?._id || currentUser?.id;
+    const strUserId = currentUserId?.toString();
+    const otherParticipant = conversation.participants?.find(p => p._id?.toString() !== strUserId) || conversation.participants?.[0];
 
     useEffect(() => {
         fetchMessages();
@@ -32,42 +33,33 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     }, [conversation._id]);
 
     useEffect(() => {
-        if (!db || !conversation._id) return;
-
-        // Firestore real-time listener for messages
-        const messagesRef = collection(db, 'conversations', conversation._id.toString(), 'messages');
-        const q = query(messagesRef, orderBy('createdAt', 'asc'));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const newMessages = snapshot.docs.map(doc => ({
-                _id: doc.id,
-                ...doc.data()
-            }));
-
-            setMessages(newMessages);
-            setLoading(false);
-            scrollToBottom();
-
-            // Generate suggestions if there are new messages
-            if (newMessages.length > 0) {
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg.sender !== (currentUser?._id || currentUser?.id)) {
-                    generateSuggestions(lastMsg.text);
-                    markAsRead();
-                }
-            }
-        });
-
-        return () => unsubscribe();
+        if (!conversation._id) return;
+        fetchMessages();
+        markAsRead();
     }, [conversation._id]);
 
     useEffect(() => {
         if (!socket) return;
 
+        const handleReceiveMessage = (data) => {
+            if (data.conversationId === conversation._id) {
+                setMessages(prev => {
+                    // Avoid duplicates
+                    if (prev.find(m => m._id === data.message._id)) return prev;
+                    return [...prev, data.message];
+                });
+                scrollToBottom();
+
+                // If message is from other user, generate suggestions and mark read
+                if (data.message.sender !== (currentUser?._id || currentUser?.id)) {
+                    generateSuggestions(data.message.text);
+                    markAsRead();
+                }
+            }
+        };
+
         const handleReadReceipt = (data) => {
             if (data.conversationId === conversation._id && data.readerId !== currentUser._id) {
-                // If using Firestore, we might handle status differently, 
-                // but for now let's keep the UI sync for read receipts via socket
                 setMessages(prev => prev.map(msg =>
                     msg.sender === currentUser._id ? { ...msg, status: 'read' } : msg
                 ));
@@ -86,21 +78,47 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             }
         };
 
+        const handleConversationDeleted = (data) => {
+            if (data.conversationId === conversation._id) {
+                dialog.alert('This conversation has been closed because the post is no longer available.', 'Chat Closed');
+                onBack();
+            }
+        };
+
+        socket.on('receive_message', handleReceiveMessage);
         socket.on('messages_read', handleReadReceipt);
         socket.on('user_typing', handleUserTyping);
         socket.on('user_stop_typing', handleUserStopTyping);
+        socket.on('conversation_deleted', handleConversationDeleted);
 
         return () => {
+            socket.off('receive_message', handleReceiveMessage);
             socket.off('messages_read', handleReadReceipt);
             socket.off('user_typing', handleUserTyping);
             socket.off('user_stop_typing', handleUserStopTyping);
+            socket.off('conversation_deleted', handleConversationDeleted);
         };
     }, [socket, conversation._id]);
 
     const fetchMessages = async () => {
-        // We use Firestore onSnapshot now, so fetchMessages is mostly redundant 
-        // but could be kept for initial load if onSnapshot is slow?
-        // Actually, onSnapshot is fast and handles initial data.
+        try {
+            setLoading(true);
+            const res = await api.get(`/chat/messages/${conversation._id}`);
+            setMessages(res.data);
+            setLoading(false);
+            scrollToBottom();
+
+            // Generate suggestions from last message
+            if (res.data.length > 0) {
+                const lastMsg = res.data[res.data.length - 1];
+                if (lastMsg.sender !== (currentUser?._id || currentUser?.id)) {
+                    generateSuggestions(lastMsg.text);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch messages:', err);
+            setLoading(false);
+        }
     };
 
     const markAsRead = async () => {
@@ -178,10 +196,11 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                 text: tempMessage.text,
                 postId: conversation.postId
             });
-            // We don't need to manually update status to 'delivered' here 
-            // because Firestore onSnapshot will update the message list automatically 
-            // once it's written by the backend. 
-            // However, to keep it smooth, we remove the optimistic one once the snapshot comes or just let it replace.
+            // Status will be updated via socket (if self-event sent) or just kept as 'sent'
+            // Ideally we get the real message back and replace the optimistic one, 
+            // but for simplicity we rely on the optimistic one matching what's saved.
+            // A better way is to update the optimistic message with the real ID if returned.
+            // A better way is to update the optimistic message with the real ID if returned.
 
         } catch (err) {
             console.error("Failed to send", err);
@@ -270,7 +289,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {loading ? (
-                    <div className="text-center text-gray-500 mt-10">Loading messages...</div>
+                    <div className="text-center text-gray-400 mt-10 font-medium">Loading messages...</div>
                 ) : (
                     messages.map((msg, index) => {
                         const isOwn = msg.sender === (currentUser?._id || currentUser?.id);

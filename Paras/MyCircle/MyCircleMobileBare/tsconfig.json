@@ -1,6 +1,7 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
     "types": [
       "jest"
     ]

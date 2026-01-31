@@ -60,7 +60,13 @@ const checkContentSafety = async (text) => {
             const prompt = `Analyze logic text for safety. JSON: {"safe": boolean, "reason": "why"}. Text: "${text}"`;
             const result = await model.generateContent(prompt);
             const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
-            if (jsonText) return JSON.parse(jsonText);
+            if (jsonText) {
+                try {
+                    return JSON.parse(jsonText);
+                } catch (parseErr) {
+                    console.error("Gemini JSON Parse Error (checkContentSafety):", parseErr.message);
+                }
+            }
         } catch (err) {
             console.warn("Gemini Safety Check Failed, trying Local AI...", err.message);
         }
@@ -117,7 +123,13 @@ const checkImageSafety = async (imageBuffer, mimeType) => {
 
             const result = await model.generateContent(prompt);
             const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
-            if (jsonText) return JSON.parse(jsonText);
+            if (jsonText) {
+                try {
+                    return JSON.parse(jsonText);
+                } catch (parseErr) {
+                    console.error("Gemini JSON Parse Error (checkImageSafety):", parseErr.message);
+                }
+            }
         }
 
         return { safe: true };
@@ -141,7 +153,13 @@ const generateSuggestions = async (contextMessages) => {
         try {
             const result = await model.generateContent(systemPrompt);
             const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
-            if (jsonText) return JSON.parse(jsonText).suggestions || [];
+            if (jsonText) {
+                try {
+                    return JSON.parse(jsonText).suggestions || [];
+                } catch (parseErr) {
+                    console.error("Gemini JSON Parse Error (generateSuggestions):", parseErr.message);
+                }
+            }
         } catch (err) {
             console.warn("Gemini Suggestions Failed, switching to Local AI...", err.message);
         }
@@ -164,7 +182,13 @@ const analyzePost = async (postData) => {
         try {
             const result = await model.generateContent(prompt);
             const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
-            if (jsonText) return JSON.parse(jsonText);
+            if (jsonText) {
+                try {
+                    return JSON.parse(jsonText);
+                } catch (parseErr) {
+                    console.error("Gemini JSON Parse Error (analyzePost):", parseErr.message);
+                }
+            }
         } catch (err) {
             console.warn("Gemini Analyze Failed, trying Local AI...", err.message);
         }
@@ -193,7 +217,13 @@ const explainPost = async (postData) => {
         try {
             const result = await model.generateContent(prompt);
             const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
-            if (jsonText) return JSON.parse(jsonText);
+            if (jsonText) {
+                try {
+                    return JSON.parse(jsonText);
+                } catch (parseErr) {
+                    console.error("Gemini JSON Parse Error (explainPost):", parseErr.message);
+                }
+            }
         } catch (err) {
             console.warn("Gemini Explain Failed...", err.message);
         }

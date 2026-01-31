@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { launchImageLibrary } from 'react-native-image-picker';
 import api from '../services/api';
@@ -647,12 +647,23 @@ const CreatePostScreen = ({ navigation }: any) => {
                 <Stepper currentStep={step} steps={steps} />
             </View>
 
-            <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {step === 1 && renderStep1()}
-                {step === 2 && renderStep2()}
-                {step === 3 && renderStep3()}
-                {step === 4 && renderStep4()}
-            </ScrollView>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView
+                    style={styles.scrollContainer}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {step === 1 && renderStep1()}
+                    {step === 2 && renderStep2()}
+                    {step === 3 && renderStep3()}
+                    {step === 4 && renderStep4()}
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
                 <TouchableOpacity onPress={goBack} style={styles.backButton}>
@@ -761,7 +772,7 @@ const styles = StyleSheet.create({
     header: { padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1 },
     headerTitle: { fontSize: 18, fontWeight: 'bold' },
     scrollContainer: { flex: 1 },
-    scrollContent: { padding: 16, paddingBottom: 100 },
+    scrollContent: { padding: 16, paddingBottom: 150 }, // Increased padding to avoid footer overlap
     stepContainer: { flex: 1 },
     stepTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 24 },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -787,14 +798,6 @@ const styles = StyleSheet.create({
     selectCityButton: { width: 50, height: 50, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderLeftWidth: 0, borderTopRightRadius: 12, borderBottomRightRadius: 12 },
     pinMapButton: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
     previewCard: { padding: 16, borderRadius: 16, borderWidth: 1 },
-    reviewCard: { padding: 20, borderRadius: 16, borderWidth: 1 },
-    reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-    reviewLabel: { color: '#71717a', fontSize: 14 },
-    reviewValue: { fontSize: 16, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
-    modalContent: { flex: 1, backgroundColor: '#000' },
-    methodTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, marginRight: 8 },
-    suggestionsList: { maxHeight: 200, borderWidth: 1, borderTopWidth: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: 'hidden' },
-    suggestionItem: { padding: 12, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center' }
 });
 
 export default CreatePostScreen;

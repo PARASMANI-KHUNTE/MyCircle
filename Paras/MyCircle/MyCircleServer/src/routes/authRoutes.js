@@ -4,6 +4,9 @@ const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/ApiError');
+
 // @desc    Auth with Google
 // @route   GET /auth/google
 router.get('/google', passport.authenticate('google', {
@@ -20,7 +23,7 @@ router.get(
         failureRedirect: '/',
         session: false  // Disable sessions, we're using JWT
     }),
-    (req, res) => {
+    asyncHandler(async (req, res) => {
         // Successful authentication
         const payload = {
             user: {
@@ -36,8 +39,7 @@ router.get(
             { expiresIn: '30d' },
             (err, token) => {
                 if (err) {
-                    console.error('JWT signing error:', err);
-                    return res.status(500).json({ msg: 'Error generating token' });
+                    throw new ApiError(500, 'Error generating authentication token');
                 }
                 // Redirect to frontend with token
                 const isProduction = process.env.NODE_ENV === 'production';
@@ -48,7 +50,7 @@ router.get(
                 res.redirect(`${clientUrl}/login/success?token=${token}`);
             }
         );
-    }
+    })
 );
 
 // @desc    Logout user
@@ -66,79 +68,74 @@ const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// @desc    Dev Login (Get Token without Google)
-// @route   POST /auth/dev-login
-// @access  Public
 // @desc    Mobile Google Login (Verify ID Token)
 // @route   POST /auth/google-mobile
 // @access  Public
-router.post('/google-mobile', async (req, res) => {
+router.post('/google-mobile', asyncHandler(async (req, res) => {
     const { idToken } = req.body;
 
     if (!idToken) {
-        return res.status(400).json({ msg: 'No token provided' });
+        throw new ApiError(400, 'No Google ID Token provided');
     }
 
+    let ticket;
     try {
-        const ticket = await client.verifyIdToken({
+        ticket = await client.verifyIdToken({
             idToken,
             audience: [
                 process.env.GOOGLE_CLIENT_ID,
-                // Add Android/iOS client IDs if they differ from the Web/Server client ID
                 process.env.GOOGLE_ANDROID_CLIENT_ID,
                 process.env.GOOGLE_IOS_CLIENT_ID
             ].filter(Boolean),
         });
-
-        const { sub, email, name, picture } = ticket.getPayload();
-
-        // Find or create user
-        let user = await User.findOne({
-            $or: [
-                { googleId: sub },
-                { email: email }
-            ]
-        });
-
-        if (!user) {
-            user = new User({
-                googleId: sub,
-                displayName: name,
-                email,
-                avatar: picture,
-            });
-            await user.save();
-        } else if (!user.googleId) {
-            // Update existing email-only user with googleId
-            user.googleId = sub;
-            user.avatar = user.avatar || picture;
-            await user.save();
-        }
-
-        const payload = {
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-            },
-        };
-
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: '30d' },
-            (err, token) => {
-                if (err) {
-                    console.error('JWT signing error:', err);
-                    return res.status(500).json({ msg: 'Error generating token' });
-                }
-                res.json({ token });
-            }
-        );
     } catch (err) {
-        console.error('Google verification error:', err);
-        res.status(401).json({ msg: 'Invalid Google token' });
+        throw new ApiError(401, `Google verification failed: ${err.message}`);
     }
-});
+
+    const { sub, email, name, picture } = ticket.getPayload();
+
+    // Find or create user
+    let user = await User.findOne({
+        $or: [
+            { googleId: sub },
+            { email: email }
+        ]
+    });
+
+    if (!user) {
+        user = new User({
+            googleId: sub,
+            displayName: name,
+            email,
+            avatar: picture,
+        });
+        await user.save();
+    } else if (!user.googleId) {
+        // Update existing email-only user with googleId
+        user.googleId = sub;
+        user.avatar = user.avatar || picture;
+        await user.save();
+    }
+
+    const payload = {
+        user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        },
+    };
+
+    jwt.sign(
+        payload,
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' },
+        (err, token) => {
+            if (err) {
+                throw new ApiError(500, 'Error generating authentication token');
+            }
+            res.json({ token });
+        }
+    );
+}));
 
 module.exports = router;

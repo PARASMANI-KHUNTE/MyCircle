@@ -1,667 +1,335 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image, StyleSheet, Modal, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import { ArrowLeft, Send, MoreVertical, Sparkles, X } from 'lucide-react-native';
-import { moderateContent, getChatSuggestions } from '../services/aiService';
-import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
-import firestore from '@react-native-firebase/firestore';
+import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles } from 'lucide-react-native';
+import { getSmartSuggestions } from '../utils/smartSuggestions';
+import { getAvatarUrl } from '../utils/avatar';
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
-    const { id, recipient } = route.params;
-    const auth = useAuth() as any;
-    const { socket } = useSocket() as any;
+    const { conversation } = route.params;
+    const { socket } = useSocket();
+    const { user } = useAuth();
     const { colors } = useTheme();
-
     const [messages, setMessages] = useState<any[]>([]);
-    const [conversation, setConversation] = useState<any>(null);
-    const [inputText, setInputText] = useState('');
+    const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
-    const flatListRef = useRef<FlatList>(null);
-
-    const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
-    const [sending, setSending] = useState(false);
-    const [replyTo, setReplyTo] = useState<any>(null);
     const [suggestions, setSuggestions] = useState<string[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(true);
-    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [isTyping, setIsTyping] = useState(false);
+    const flatListRef = useRef<FlatList>(null);
+    const typingTimeoutRef = useRef<any>(null);
 
-    // ActionSheet State
-    const [actionSheetVisible, setActionSheetVisible] = useState(false);
-    const [actionSheetConfig, setActionSheetConfig] = useState<{ title?: string; description?: string; actions: ActionItem[] }>({ actions: [] });
-
-    useEffect(() => {
-        if (id) {
-            fetchMessages();
-        }
-    }, [id]);
+    const otherParticipant = conversation.participants?.find((p: any) => p._id !== user?._id) || conversation.participants?.[0];
 
     useEffect(() => {
-        const myId = auth?.user?._id || auth?.user?.id;
-
-        if (messages.length === 0) {
-            if (showSuggestions) {
-                console.log("Empty chat: showing starters");
-                setSuggestions(["Hi there!", "Interested in this!", "Is this still available?"]);
-            }
-        } else {
-            if (showSuggestions) {
-                // Fetch suggestions
-                const context = messages.slice(-5).map(m => ({
-                    sender: (typeof m.sender === 'string' ? m.sender : m.sender?._id) === myId ? 'user' : 'other',
-                    text: m.text
-                })) as { sender: 'user' | 'other'; text: string }[];
-
-                console.log("Fetching suggestions for context length:", context.length);
-                getChatSuggestions(context)
-                    .then(res => {
-                        console.log("Suggestions received:", res);
-                        if (res && res.length > 0) {
-                            setSuggestions(res);
-                        } else if (messages.length > 0) {
-                            // If AI returns nothing but we have messages, maybe provide generic ones or clear
-                            setSuggestions([]);
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Failed to get suggestions:", err);
-                        setSuggestions([]);
-                    });
-            } else {
-                setSuggestions([]);
-            }
-        }
-    }, [messages.length, auth?.user?._id, showSuggestions]);
-
-    // Refresh messages when screen gains focus (e.g., after unblocking user)
-    useFocusEffect(
-        React.useCallback(() => {
-            if (id) {
-                fetchMessages();
-            }
-        }, [id])
-    );
+        fetchMessages();
+        markAsRead();
+        generateSuggestions(conversation.lastMessage?.text || '');
+    }, []);
 
     useEffect(() => {
-        if (!id) return;
+        if (!socket) return;
 
-        // Firestore real-time listener
-        const unsubscribe = firestore()
-            .collection('conversations')
-            .doc(id)
-            .collection('messages')
-            .orderBy('createdAt', 'asc')
-            .onSnapshot(querySnapshot => {
-                const newMessages = querySnapshot.docs.map(doc => ({
-                    _id: doc.id,
-                    ...doc.data()
-                }));
-                setMessages(newMessages);
-                setLoading(false);
-
-                // Auto-read
-                api.put(`/chat/read/${id}`).catch(err => console.error("Auto-read failed", err));
-            }, err => {
-                console.error("Firestore onSnapshot error:", err);
-                setLoading(false);
-            });
-
-        return () => unsubscribe();
-    }, [id]);
-
-    useEffect(() => {
-        if (recipient) {
-            setLoading(false); // New conversation
-        }
-
-        if (socket && id) {
-            socket.emit('join_conversation', id);
-
-            // We still keep socket for read receipts (UI sync) and typing
-            socket.on('messages_read', (data: any) => {
-                if (data.conversationId === id) {
-                    setMessages(prev => prev.map(m => ({ ...m, status: 'read' })));
+        const handleReceiveMessage = (data: any) => {
+            if (data.conversationId === conversation._id) {
+                setMessages(prev => {
+                    if (prev.find(m => m._id === data.message._id)) return prev;
+                    return [...prev, data.message];
+                });
+                // If message is from other user, generate suggestions and mark read
+                if (data.message.sender !== user?._id) {
+                    generateSuggestions(data.message.text);
+                    markAsRead();
                 }
-            });
-
-            socket.on('user_typing', (data: any) => {
-                if (data.conversationId === id) {
-                    setIsOtherUserTyping(true);
-                }
-            });
-
-            socket.on('user_stop_typing', (data: any) => {
-                if (data.conversationId === id) {
-                    setIsOtherUserTyping(false);
-                }
-            });
-        }
-
-        return () => {
-            if (socket && id) {
-                socket.emit('leave_conversation', id);
-                socket.off('messages_read');
-                socket.off('user_typing');
-                socket.off('user_stop_typing');
-            }
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current);
             }
         };
-    }, [id, socket]);
 
-    const handleTextChange = (text: string) => {
-        setInputText(text);
-
-        if (!socket || !id) return;
-
-        // Emit typing start
-        socket.emit('typing_start', {
-            conversationId: id,
-            recipientId: displayUser?._id || displayUser?.id
-        });
-
-        // Clear existing timeout
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        }
-
-        // Set timeout to stop typing after 2 seconds
-        typingTimeoutRef.current = setTimeout(() => {
-            socket.emit('typing_stop', {
-                conversationId: id,
-                recipientId: displayUser?._id || displayUser?.id
-            });
-        }, 2000);
-    };
-
-    const fetchConversationDetails = async () => {
-        try {
-            const res = await api.get(`/chat/${id}`); // Assuming this endpoint exists, or use getConversations and filter
-            // Wait, does /api/chat/:conversationId exist? Let's check routes.
-            // Actually, /api/chat/conversations returns all. 
-            // Let's use getOrCreateConversation with recipientId if we have it, 
-            // or just find it in the list for now.
-            const convsRes = await api.get('/chat/conversations');
-            const found = convsRes.data.find((c: any) => c._id === id);
-            if (found) {
-                setConversation(found);
+        const handleReadReceipt = (data: any) => {
+            if (data.conversationId === conversation._id && data.readerId !== user?._id) {
+                setMessages(prev => prev.map(msg =>
+                    msg.sender === user?._id ? { ...msg, status: 'read' } : msg
+                ));
             }
-        } catch (err) {
-            console.error("Failed to fetch conversation details:", err);
-        }
-    };
+        };
 
-    const fetchMessages = async () => {
-        // Handled by Firestore onSnapshot
-    };
-
-    const handleSend = async (textToSend?: string) => {
-        const text = textToSend || inputText;
-        if (!text.trim() || sending) return;
-
-        setSending(true);
-
-        // AI Moderation
-        const moderation = await moderateContent(text);
-        if (!moderation.safe) {
-            Alert.alert('Message Blocked', `Your message was flagged: ${moderation.reason}. Please be respectful.`);
-            setSending(false);
-            return;
-        }
-
-        // Stop typing immediately when sending
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        socket.emit('typing_stop', {
-            conversationId: id,
-            recipientId: displayUser?._id || displayUser?.id
-        });
-
-        try {
-            const messageData = {
-                recipientId: recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id,
-                text: text.trim(),
-                replyTo: replyTo?._id,
-                postId: conversation?.postId || route.params.postId
-            };
-
-            const res = await api.post('/chat/message', messageData);
-
-            // We no longer add to local state here as Firestore handles it
-            setInputText('');
-            setReplyTo(null);
-
-            if (!id && res.data.conversationId) {
-                // If this was new, we should ideally re-trigger the listener or navigate
-                navigation.setParams({ id: res.data.conversationId });
+        const handleTypingStart = (data: any) => {
+            if (data.conversationId === conversation._id && data.userId !== user?._id) {
+                setIsTyping(true);
             }
-        } catch (err: any) {
-            console.error('Failed to send message:', err);
+        };
 
-            // Show user-friendly error messages
-            if (err.response?.status === 403) {
-                const errorMsg = err.response?.data?.msg || 'Cannot send message';
-                Alert.alert('Unable to Send', errorMsg, [
+        const handleTypingStop = (data: any) => {
+            if (data.conversationId === conversation._id) {
+                setIsTyping(false);
+            }
+        };
+
+        const handleConversationDeleted = (data: any) => {
+            if (data.conversationId === conversation._id) {
+                Alert.alert('Chat Closed', 'This conversation has been closed because the post is no longer available.', [
                     { text: 'OK', onPress: () => navigation.goBack() }
                 ]);
-            } else if (err.response?.status === 400) {
-                Alert.alert('Message Blocked', err.response?.data?.msg || 'Your message contains inappropriate content');
-            } else {
-                Alert.alert('Error', 'Failed to send message. Please try again.');
             }
-        } finally {
-            setSending(false);
-        }
-    };
+        };
 
-    const displayUser = recipient || conversation?.participants.find((p: any) => p._id !== auth?.user?._id);
+        socket.on('receive_message', handleReceiveMessage);
+        socket.on('messages_read', handleReadReceipt);
+        socket.on('user_typing', handleTypingStart);
+        socket.on('user_stop_typing', handleTypingStop);
+        socket.on('conversation_deleted', handleConversationDeleted);
 
-    if (loading) {
-        return (
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-                <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 50 }} />
-            </SafeAreaView>
-        );
-    }
+        return () => {
+            socket.off('receive_message', handleReceiveMessage);
+            socket.off('messages_read', handleReadReceipt);
+            socket.off('user_typing', handleTypingStart);
+            socket.off('user_stop_typing', handleTypingStop);
+            socket.off('conversation_deleted', handleConversationDeleted);
+        };
+    }, [socket, conversation._id]);
 
-
-    const submitReport = async (userId: string, reason: string) => {
+    const fetchMessages = async () => {
         try {
-            await api.post('/user/report', {
-                reportedUserId: userId,
-                reason,
-                contentType: 'chat',
-                contentId: id // conversation ID
-            });
-            // We can add a toast here if we had one, or a simple transient alert
-            console.log("Report submitted");
+            const res = await api.get(`/chat/messages/${conversation._id}`);
+            setMessages(res.data);
+            setLoading(false);
         } catch (err) {
-            console.error("Failed to submit report");
+            console.error(err);
+            setLoading(false);
         }
     };
 
-    const showMenu = () => {
-        setActionSheetConfig({
-            title: "Options",
-            actions: [
-                {
-                    label: "Report User",
-                    onPress: () => {
-                        setTimeout(() => handleReportUser(), 500); // Delay to allow sheet to close and next one to open if needed
-                    }
-                },
-                {
-                    label: "Block User",
-                    isDestructive: true,
-                    onPress: () => {
-                        setTimeout(() => handleBlockUser(), 500);
-                    }
-                }
-            ]
-        });
-        setActionSheetVisible(true);
+    const markAsRead = async () => {
+        try {
+            await api.put(`/chat/read/${conversation._id}`);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-    const handleReportUser = () => {
-        const userIdToReport = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
-        setActionSheetConfig({
-            title: "Report User",
-            description: "Select a reason for reporting:",
-            actions: [
-                { label: "Spam", onPress: () => submitReport(userIdToReport, "Spam") },
-                { label: "Harassment", onPress: () => submitReport(userIdToReport, "Harassment") },
-                { label: "Inappropriate Content", onPress: () => submitReport(userIdToReport, "Inappropriate Content") }
-            ]
-        });
-        setActionSheetVisible(true);
+    const generateSuggestions = (lastMsg = '') => {
+        const newSuggestions = getSmartSuggestions(lastMsg);
+        setSuggestions(newSuggestions.slice(0, 3));
     };
 
-    const handleBlockUser = () => {
-        const userIdToBlock = recipient?._id || conversation?.participants.find((p: any) => p._id !== auth?.user?._id)?._id;
+    const handleInputChange = (text: string) => {
+        setNewMessage(text);
+        if (!socket) return;
 
-        if (!userIdToBlock) {
-            console.error('Cannot block user: user ID not found');
-            return;
+        // Typing indicator logic
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        else {
+            socket.emit('typing_start', {
+                conversationId: conversation._id,
+                userId: user?._id,
+                recipientId: otherParticipant?._id
+            });
         }
 
-        setActionSheetConfig({
-            title: "Block User",
-            description: "Are you sure? You won't receive messages from them.",
-            actions: [
+        typingTimeoutRef.current = setTimeout(() => {
+            socket.emit('typing_stop', {
+                conversationId: conversation._id,
+                userId: user?._id,
+                recipientId: otherParticipant?._id
+            });
+            typingTimeoutRef.current = null;
+        }, 1500);
+    };
+
+    const handleSend = async () => {
+        if (!newMessage.trim()) return;
+
+        const msgText = newMessage.trim();
+        setNewMessage('');
+        setSuggestions([]);
+
+        const optimisticMsg = {
+            _id: Date.now().toString(),
+            sender: user?._id,
+            text: msgText,
+            status: 'sent',
+            createdAt: new Date().toISOString()
+        };
+
+        setMessages(prev => [...prev, optimisticMsg]);
+
+        try {
+            await api.post('/chat/message', {
+                recipientId: otherParticipant._id,
+                text: msgText,
+                postId: conversation.postId
+            });
+        } catch (err: any) {
+            setMessages(prev => prev.filter(m => m._id !== optimisticMsg._id));
+            Alert.alert('Error', err.response?.data?.msg || 'Failed to send message');
+        }
+    };
+
+    const handleBlock = () => {
+        Alert.alert(
+            'Block User',
+            `Are you sure you want to block ${otherParticipant.displayName}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
                 {
-                    label: "Block",
-                    isDestructive: true,
+                    text: 'Block',
+                    style: 'destructive',
                     onPress: async () => {
                         try {
-                            await api.post(`/user/block/${userIdToBlock}`);
+                            await api.post(`/user/block/${otherParticipant._id}`);
                             navigation.goBack();
                         } catch (err) {
-                            console.error("Failed to block user");
+                            Alert.alert('Error', 'Failed to block user');
                         }
                     }
                 }
             ]
-        });
-        setActionSheetVisible(true);
+        );
+    };
+
+    const handleReport = () => {
+        Alert.alert(
+            'Report User',
+            'Would you like to report this user for inappropriate behavior?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Report',
+                    onPress: () => {
+                        // In a real app, show a prompt for reason
+                        Alert.alert('Report Submitted', 'Our team will review this conversation.');
+                    }
+                }
+            ]
+        );
+    };
+
+    const renderMessage = ({ item }: any) => {
+        const isOwn = item.sender === user?._id;
+        return (
+            <View style={{
+                alignSelf: isOwn ? 'flex-end' : 'flex-start',
+                backgroundColor: isOwn ? colors.primary : colors.card,
+                padding: 12,
+                borderRadius: 16,
+                borderBottomRightRadius: isOwn ? 4 : 16,
+                borderBottomLeftRadius: isOwn ? 16 : 4,
+                marginVertical: 4,
+                maxWidth: '80%',
+                borderWidth: 1,
+                borderColor: colors.border
+            }}>
+                <Text style={{ color: isOwn ? 'white' : colors.text }}>{item.text}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>
+                    <Text style={{ fontSize: 10, color: isOwn ? 'rgba(255,255,255,0.7)' : colors.textSecondary, marginRight: 4 }}>
+                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    {isOwn && (
+                        item.status === 'read' ? <CheckCheck size={12} color="#93c5fd" /> :
+                            item.status === 'delivered' ? <CheckCheck size={12} color="rgba(255,255,255,0.7)" /> :
+                                <Check size={12} color="rgba(255,255,255,0.4)" />
+                    )}
+                </View>
+            </View>
+        );
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-            <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
-                        <ArrowLeft color={colors.text} size={24} />
-                    </TouchableOpacity>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <ArrowLeft size={24} color={colors.text} />
+                </TouchableOpacity>
+
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
                     <Image
-                        source={{ uri: displayUser?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${displayUser?.displayName}` }}
-                        style={styles.headerAvatar}
+                        source={{ uri: getAvatarUrl(otherParticipant) }}
+                        style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.input }}
                     />
-                    <View style={styles.headerInfo}>
-                        <Text style={[styles.headerName, { color: colors.text }]}>{displayUser?.displayName}</Text>
-                        {isOtherUserTyping ? (
-                            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Typing...</Text>
-                        ) : (
-                            <Text style={[styles.onlineStatus, { color: colors.textSecondary }]}>Online</Text>
-                        )}
+                    <View style={{ marginLeft: 12 }}>
+                        <Text style={{ color: colors.text, fontWeight: 'bold' }}>{otherParticipant?.displayName}</Text>
+                        <Text style={{ color: colors.success, fontSize: 12 }}>Online</Text>
                     </View>
                 </View>
-                <TouchableOpacity onPress={showMenu} style={{ padding: 8 }}>
-                    <MoreVertical color={colors.text} size={24} />
-                </TouchableOpacity>
+
+                <View style={{ flexDirection: 'row', gap: 16 }}>
+                    <TouchableOpacity onPress={handleBlock}>
+                        <Shield size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleReport}>
+                        <Flag size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={styles.keyboardView}
+                style={{ flex: 1 }}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
                 <FlatList
                     ref={flatListRef}
                     data={messages}
-                    keyExtractor={item => item._id || Math.random().toString()}
-                    renderItem={({ item }) => {
-                        // Handle both populated sender objects and sender IDs
-                        const senderId = typeof item.sender === 'string' ? item.sender : item.sender?._id;
-                        const isMe = senderId === (auth?.user?._id || auth?.user?.id);
-                        return (
-                            <TouchableOpacity
-                                onLongPress={() => {
-                                    setActionSheetConfig({
-                                        title: "Message Options",
-                                        actions: [
-                                            {
-                                                label: "Reply",
-                                                onPress: () => setReplyTo(item)
-                                            }
-                                        ]
-                                    });
-                                    setActionSheetVisible(true);
-                                }}
-                                activeOpacity={0.7}
-                                style={[styles.messageRow, isMe ? styles.myMessageRow : styles.otherMessageRow]}
-                            >
-                                <View style={[
-                                    styles.messageBubble,
-                                    isMe ? { backgroundColor: colors.primary } : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }
-                                ]}>
-                                    {item.replyTo && (
-                                        <View style={[styles.replyPreview, { borderLeftColor: isMe ? '#ffffff50' : colors.primary }]}>
-                                            <Text style={[styles.replyName, { color: isMe ? '#ffffffa0' : colors.primary }]} numberOfLines={1}>
-                                                {messages.find(m => m._id === item.replyTo)?.text || "Replying to..."}
-                                            </Text>
-                                        </View>
-                                    )}
-                                    <Text style={[styles.messageText, { color: isMe ? '#ffffff' : colors.text }]}>{item.text}</Text>
-                                    <View style={styles.messageFooter}>
-                                        <Text style={styles.timeText}>
-                                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </Text>
-                                        {isMe && (
-                                            <Text style={styles.statusText}>
-                                                {item.status === 'read' ? '✓✓' : '✓'}
-                                            </Text>
-                                        )}
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        );
-                    }}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                    onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                    contentContainerStyle={styles.listContent}
+                    renderItem={renderMessage}
+                    keyExtractor={item => item._id}
+                    contentContainerStyle={{ padding: 16 }}
+                    onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+                    initialNumToRender={20}
                 />
 
-                <View style={[styles.inputArea, { backgroundColor: colors.card, borderTopColor: colors.border, flexDirection: 'column', alignItems: 'stretch' }]}>
-                    {replyTo && (
-                        <View style={[styles.replyInputPreview, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.replyToLabel, { color: colors.primary }]}>Replying to...</Text>
-                                <Text style={[styles.replyToText, { color: colors.textSecondary }]} numberOfLines={1}>{replyTo.text}</Text>
-                            </View>
-                            <TouchableOpacity onPress={() => setReplyTo(null)}>
-                                <X color={colors.textSecondary} size={20} />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                {isTyping && (
+                    <Text style={{ paddingHorizontal: 16, color: colors.textSecondary, fontSize: 12, fontStyle: 'italic', marginBottom: 8 }}>
+                        {otherParticipant?.displayName} is typing...
+                    </Text>
+                )}
+
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, padding: 12 }}>
                     {suggestions.length > 0 && (
-                        <View style={{ flexDirection: 'row', marginBottom: 8, paddingHorizontal: 4 }}>
-                            {suggestions.map((s, i) => (
-                                <TouchableOpacity
-                                    key={i}
-                                    style={{
-                                        backgroundColor: colors.primary + '20',
-                                        borderColor: colors.primary,
-                                        borderWidth: 1,
-                                        borderRadius: 16,
-                                        paddingHorizontal: 12,
-                                        paddingVertical: 6,
-                                        marginRight: 8
-                                    }}
-                                    onPress={() => handleSend(s)}
-                                >
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <Sparkles size={12} color={colors.primary} style={{ marginRight: 4 }} />
-                                        <Text style={{ color: colors.primary, fontSize: 12 }}>{s}</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
+                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                            <Sparkles size={14} color={colors.primary} />
+                            <FlatList
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                data={suggestions}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setNewMessage(item);
+                                            setSuggestions([]);
+                                        }}
+                                        style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: colors.primary + '30', marginRight: 8 }}
+                                    >
+                                        <Text style={{ color: colors.primary, fontSize: 12 }}>{item}</Text>
+                                    </TouchableOpacity>
+                                )}
+                            />
                         </View>
                     )}
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                         <TextInput
-                            style={[styles.input, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
+                            style={{ flex: 1, backgroundColor: colors.input, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10, color: colors.text, borderWidth: 1, borderColor: colors.border }}
                             placeholder="Type a message..."
                             placeholderTextColor={colors.textSecondary}
-                            value={inputText}
-                            onChangeText={handleTextChange}
+                            value={newMessage}
+                            onChangeText={handleInputChange}
                             multiline
                         />
                         <TouchableOpacity
-                            onPress={() => handleSend()}
-                            disabled={sending || !inputText.trim()}
-                            style={[
-                                styles.sendButton,
-                                { backgroundColor: (sending || !inputText.trim()) ? colors.input : colors.primary }
-                            ]}
+                            onPress={handleSend}
+                            disabled={!newMessage.trim()}
+                            style={{ width: 44, height: 44, backgroundColor: colors.primary, borderRadius: 22, alignItems: 'center', justifyContent: 'center', opacity: newMessage.trim() ? 1 : 0.5 }}
                         >
-                            {sending ? (
-                                <ActivityIndicator size="small" color="white" />
-                            ) : (
-                                <Send size={20} color="white" />
-                            )}
+                            <Send size={20} color="white" />
                         </TouchableOpacity>
                     </View>
                 </View>
             </KeyboardAvoidingView>
-
-            <ActionSheet
-                visible={actionSheetVisible}
-                onClose={() => setActionSheetVisible(false)}
-                title={actionSheetConfig.title}
-                description={actionSheetConfig.description}
-                actions={actionSheetConfig.actions}
-            />
-        </SafeAreaView >
+        </SafeAreaView>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000000',
-    },
-    centerContent: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    header: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(24, 24, 27, 0.5)', // zinc-900/50
-    },
-    backButton: {
-        marginRight: 12,
-        padding: 4,
-    },
-    headerAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#27272a',
-    } as const,
-    headerInfo: {
-        marginLeft: 12,
-    },
-    headerName: {
-        color: '#ffffff',
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-    onlineStatus: {
-        color: '#22c55e', // green-500
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    keyboardView: {
-        flex: 1,
-    },
-    listContent: {
-        paddingTop: 16,
-        paddingBottom: 16,
-    },
-    messageRow: {
-        flexDirection: 'row',
-        marginBottom: 12,
-        paddingHorizontal: 16,
-    },
-    myMessageRow: {
-        justifyContent: 'flex-end',
-    },
-    otherMessageRow: {
-        justifyContent: 'flex-start',
-    },
-    messageBubble: {
-        maxWidth: '80%',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 16,
-    },
-    myBubble: {
-        backgroundColor: '#7c3aed', // violet-600
-        borderTopRightRadius: 2,
-    },
-    otherBubble: {
-        backgroundColor: '#3f3f46', // zinc-800
-        borderTopLeftRadius: 2,
-    },
-    messageText: {
-        color: '#ffffff',
-        fontSize: 16,
-    },
-    messageFooter: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        marginTop: 4,
-    },
-    timeText: {
-        fontSize: 10,
-        color: '#a1a1aa', // zinc-400
-    },
-    statusText: {
-        fontSize: 10,
-        color: '#71717a', // zinc-500
-        marginLeft: 4,
-    },
-    inputArea: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.1)',
-        backgroundColor: 'rgba(24, 24, 27, 0.8)', // zinc-900/80
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    input: {
-        flex: 1,
-        backgroundColor: '#27272a', // zinc-800
-        color: '#ffffff',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-        marginRight: 12,
-        maxHeight: 100,
-    },
-    sendButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    sendButtonActive: {
-        backgroundColor: '#7c3aed', // violet-600
-    },
-    chatButtonText: {
-        color: '#ffffff',
-        fontWeight: 'bold',
-    },
-    replyPreview: {
-        borderLeftWidth: 3,
-        paddingLeft: 8,
-        marginBottom: 4,
-        opacity: 0.8,
-    },
-    replyName: {
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    replyInputPreview: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 8,
-        borderRadius: 8,
-        marginBottom: 8,
-        borderWidth: 1,
-    },
-    replyToLabel: {
-        fontSize: 11,
-        fontWeight: 'bold',
-        marginBottom: 2,
-    },
-    replyToText: {
-        fontSize: 13,
-    },
-});
 
 export default ChatWindowScreen;

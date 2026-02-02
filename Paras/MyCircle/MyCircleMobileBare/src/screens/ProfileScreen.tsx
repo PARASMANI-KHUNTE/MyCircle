@@ -6,7 +6,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, Settings, LogOut, MessageCircle, Star, User, Edit3, Clock, Edit, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
 import api from '../services/api';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import GlassView from '../components/ui/GlassView';
+import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
+
 
 const ProfileScreen = ({ navigation, route }: any) => {
     const { user: authUser, logout } = useAuth();
@@ -210,16 +215,9 @@ const ProfileScreen = ({ navigation, route }: any) => {
             const img = post.images[0];
             return typeof img === 'string' ? img : img.uri;
         }
-        const keywords: Record<string, string> = {
-            job: 'workspace,office',
-            service: 'tools,work',
-            sell: 'product,tech',
-            rent: 'key,house',
-            barter: 'deal,handshake'
-        };
-        const keyword = keywords[post.type?.toLowerCase()] || 'abstract';
-        return `https://loremflickr.com/400/400/${keyword}?lock=${post._id ? post._id.substring(post._id.length - 4) : '0000'}`;
+        return null;
     };
+
 
     const getProgress = (createdAt: string, expiresAt: string, durationMinutes: number) => {
         const total = durationMinutes * 60000;
@@ -306,43 +304,43 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             >
-                <View style={styles.profileHeader}>
+                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.profileHeader}>
                     <Image
                         source={{ uri: user.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${user.displayName}` }}
                         style={styles.avatar}
                     />
                     <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
                     <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
-                </View>
+                </Animated.View>
 
-                <View style={styles.statsRow}>
-                    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+                <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.statsRow}>
+                    <GlassView intensity={10} style={[styles.statCard, { borderColor: colors.primary, backgroundColor: colors.card + '40' }]}>
                         <Text style={[styles.statValue, { color: colors.text }]}>{stats.posts}</Text>
                         <Text style={[styles.statLabel, { color: colors.primary }]}>POSTS</Text>
-                    </View>
-                    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    </GlassView>
+                    <GlassView intensity={10} style={[styles.statCard, { borderColor: colors.border, backgroundColor: colors.card + '40' }]}>
                         <Text style={[styles.statValue, { color: colors.text }]}>{stats.requests}</Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>REQUESTS</Text>
-                    </View>
-                    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    </GlassView>
+                    <GlassView intensity={10} style={[styles.statCard, { borderColor: colors.border, backgroundColor: colors.card + '40' }]}>
                         <Text style={[styles.statValue, { color: '#22c55e' }]}>{stats.rating}</Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>RATING</Text>
-                    </View>
-                </View>
+                    </GlassView>
+                </Animated.View>
 
-                <View style={styles.section}>
+                <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Bio</Text>
                     <Text style={[styles.sectionContent, { color: colors.text }]}>
                         {user.bio || "No bio added yet."}
                     </Text>
-                </View>
+                </Animated.View>
 
-                <View style={styles.section}>
+                <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.section}>
                     <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Skills & Interests</Text>
                     <Text style={[styles.sectionContent, { color: colors.text, fontStyle: user.skills?.length ? 'normal' : 'italic' }]}>
                         {user.skills && user.skills.length > 0 ? user.skills.join(', ') : "No skills listed."}
                     </Text>
-                </View>
+                </Animated.View>
 
                 <View style={styles.sectionHeader}>
                     <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>My Posts</Text>
@@ -368,11 +366,24 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             >
                                 {viewMode === 'grid' ? (
                                     <View style={[styles.gridCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderWidth: 1.5 }]}>
-                                        <Image
-                                            source={{ uri: getPostImage(post) || undefined }}
-                                            style={styles.gridImage}
-                                            defaultSource={require('../assets/logo.png')}
-                                        />
+                                        {getPostImage(post) ? (
+                                            <Image
+                                                source={{ uri: getPostImage(post)! }}
+                                                style={styles.gridImage}
+                                                defaultSource={require('../assets/logo.png')}
+                                            />
+                                        ) : (
+                                            <GenerativePlaceholder
+                                                id={post._id}
+                                                type={post.type}
+                                                style={styles.gridImage}
+                                                showIcon={false}
+                                                title={post.title}
+                                                description={post.description}
+                                            />
+                                        )}
+
+
                                         <View style={styles.gridOverlay}>
                                             <View style={[styles.typeTag, { backgroundColor: getTypeColor(post.type) }]}>
                                                 <Text style={styles.typeTagText}>{post.type?.toUpperCase()}</Text>
@@ -394,7 +405,20 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                     </View>
                                 ) : (
                                     <View style={[styles.listCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderLeftWidth: 4 }]}>
-                                        <Image source={{ uri: getPostImage(post) }} style={styles.listImage} />
+                                        {getPostImage(post) ? (
+                                            <Image source={{ uri: getPostImage(post)! }} style={styles.listImage} />
+                                        ) : (
+                                            <GenerativePlaceholder
+                                                id={post._id}
+                                                type={post.type}
+                                                style={styles.listImage}
+                                                showIcon={false}
+                                                title={post.title}
+                                                description={post.description}
+                                            />
+                                        )}
+
+
                                         <View style={{ flex: 1, marginLeft: 12 }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                                                 <Text style={[styles.typeLabel, { color: getTypeColor(post.type) }]}>{post.type.toUpperCase()}</Text>

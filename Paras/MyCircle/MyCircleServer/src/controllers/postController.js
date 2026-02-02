@@ -7,72 +7,79 @@ const { db } = require('../config/firebase');
 const { containsProfanity } = require('../utils/profanityFilter');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
+const ContactRequest = require('../models/ContactRequest');
+const Notification = require('../models/Notification');
+const jwt = require('jsonwebtoken');
 
 // @desc    Create a post
 // @route   POST /api/posts
 // @access  Private
-exports.createPost = asyncHandler(async (req, res, next) => {
-    const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
+exports.createPost = async (req, res, next) => {
+    try {
+        const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
 
-    // Validation for price
-    const numericPrice = parseFloat(price);
-    if (price !== undefined && price !== '' && isNaN(numericPrice)) {
-        throw new ApiError(400, 'Price must be a valid number');
-    }
-
-    // Calculate expiresAt based on duration
-    let expiresAt = null;
-    if (duration) {
-        const durationInMinutes = parseInt(duration, 10);
-        if (!isNaN(durationInMinutes)) {
-            expiresAt = new Date(Date.now() + durationInMinutes * 60000);
+        // Validation for price
+        const numericPrice = parseFloat(price);
+        if (price !== undefined && price !== '' && isNaN(numericPrice)) {
+            throw new ApiError(400, 'Price must be a valid number');
         }
+
+        // Calculate expiresAt based on duration
+        let expiresAt = null;
+        if (duration) {
+            const durationInMinutes = parseInt(duration, 10);
+            if (!isNaN(durationInMinutes)) {
+                expiresAt = new Date(Date.now() + durationInMinutes * 60000);
+            }
+        }
+
+        let images = [];
+        if (req.files) {
+            images = req.files.map(file => file.path); // Cloudinary URL is in 'path' with multer-storage-cloudinary
+        }
+
+        // AI Safety Check
+        const safetyCheck = await checkContentSafety(`${title} ${description} `);
+        if (!safetyCheck.safe) {
+            throw new ApiError(400, safetyCheck.reason || 'Post rejected by AI moderation');
+        }
+
+        const newPost = new Post({
+            user: req.user.id,
+            type,
+            title,
+            description,
+            location,
+            locationCoords: (req.body.latitude && req.body.longitude && !isNaN(parseFloat(req.body.latitude)) && !isNaN(parseFloat(req.body.longitude))) ? {
+                type: 'Point',
+                coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
+            } : undefined,
+            images,
+
+            contactPhone,
+            contactWhatsapp,
+            expiresAt,
+            duration: req.body.duration ? parseInt(req.body.duration, 10) : undefined,
+            price: numericPrice || 0,
+            isUrgent: req.body.isUrgent === 'true' || req.body.isUrgent === true,
+            exchangePreference: req.body.exchangePreference || 'money',
+            acceptsBarter: req.body.acceptsBarter === 'true' || req.body.acceptsBarter === true || req.body.exchangePreference === 'barter' || req.body.exchangePreference === 'flexible',
+        });
+
+        const post = await newPost.save();
+        const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
+
+        // Emit real-time event
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new_post', populatedPost);
+        }
+
+        res.json(post);
+    } catch (err) {
+        next(err);
     }
-
-    let images = [];
-    if (req.files) {
-        images = req.files.map(file => file.path); // Cloudinary URL is in 'path' with multer-storage-cloudinary
-    }
-
-    // AI Safety Check
-    const safetyCheck = await checkContentSafety(`${title} ${description} `);
-    if (!safetyCheck.safe) {
-        throw new ApiError(400, safetyCheck.reason || 'Post rejected by AI moderation');
-    }
-
-    const newPost = new Post({
-        user: req.user.id,
-        type,
-        title,
-        description,
-        price,
-        location,
-        locationCoords: (req.body.latitude && req.body.longitude) ? {
-            type: 'Point',
-            coordinates: [parseFloat(req.body.longitude), parseFloat(req.body.latitude)]
-        } : undefined,
-        images,
-        contactPhone,
-        contactWhatsapp,
-        expiresAt,
-        duration: req.body.duration ? parseInt(req.body.duration, 10) : undefined,
-        price: numericPrice || 0,
-        isUrgent: req.body.isUrgent === 'true' || req.body.isUrgent === true,
-        exchangePreference: req.body.exchangePreference || 'money',
-        acceptsBarter: req.body.acceptsBarter === 'true' || req.body.acceptsBarter === true || req.body.exchangePreference === 'barter' || req.body.exchangePreference === 'flexible',
-    });
-
-    const post = await newPost.save();
-    const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
-
-    // Emit real-time event
-    const io = req.app.get('io');
-    if (io) {
-        io.emit('new_post', populatedPost);
-    }
-
-    res.json(post);
-});
+};
 
 // @desc    Get all posts
 // @route   GET /api/posts
@@ -84,19 +91,25 @@ exports.getPosts = async (req, res, next) => {
         let pipeline = [];
 
         // 1. Geospatial Stage (Must be first if present)
-        if (latitude && longitude) {
-            pipeline.push({
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+            /** @type {any} */
+            const geoNearStage = {
                 $geoNear: {
                     near: {
                         type: 'Point',
-                        coordinates: [parseFloat(longitude), parseFloat(latitude)]
+                        coordinates: [lng, lat]
                     },
+
                     distanceField: 'dist.calculated', // Output field
                     maxDistance: parseFloat(radius) * 1000, // Meters
                     spherical: true,
                     query: { isActive: true } // Filter for active posts
                 }
-            });
+            };
+            pipeline.push(geoNearStage);
         } else {
             // If no location, just match active posts
             pipeline.push({ $match: { isActive: true } });
@@ -156,7 +169,6 @@ exports.getPosts = async (req, res, next) => {
 
         // Add application count for each post (Aggregation makes this harder to do efficiently in one go without complex lookups)
         // We can do it in parallel
-        const ContactRequest = require('../models/ContactRequest');
         const postsWithCount = await Promise.all(posts.map(async (post) => {
             // Convert distance to km/m string if present
             let distanceDisplay = null;
@@ -202,7 +214,7 @@ exports.getPostById = async (req, res, next) => {
         }
 
         // Add application count
-        const ContactRequest = require('../models/ContactRequest');
+
         const applicationCount = await ContactRequest.countDocuments({ post: post._id });
 
         // Check if current user has already requested contact
@@ -211,16 +223,17 @@ exports.getPostById = async (req, res, next) => {
         const token = req.header('x-auth-token');
         if (token) {
             try {
-                const jwt = require('jsonwebtoken');
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                const requesterId = decoded.user.id;
+                if (decoded && typeof decoded === 'object' && decoded.user) {
+                    const requesterId = decoded.user.id;
 
-                const existingRequest = await ContactRequest.findOne({
-                    requester: requesterId,
-                    post: post._id
-                });
-                hasRequested = !!existingRequest;
-                contactRequestStatus = existingRequest?.status || 'none';
+                    const existingRequest = await ContactRequest.findOne({
+                        requester: requesterId,
+                        post: post._id
+                    });
+                    hasRequested = !!existingRequest;
+                    contactRequestStatus = existingRequest?.status || 'none';
+                }
             } catch (err) {
                 // Token invalid or expired, just ignore and keep hasRequested as false
             }
@@ -257,8 +270,8 @@ exports.deletePost = async (req, res, next) => {
         }
 
         // Cascade Delete: Remove related data
-        const ContactRequest = require('../models/ContactRequest');
-        const Notification = require('../models/Notification');
+
+
 
         // 1. Delete Contact Requests for this post
         await ContactRequest.deleteMany({ post: req.params.id });
@@ -288,7 +301,7 @@ exports.getMyPosts = async (req, res, next) => {
             .populate('user', ['displayName', 'avatar']);
 
         // Add application count for each post
-        const ContactRequest = require('../models/ContactRequest');
+
         const postsWithCount = await Promise.all(posts.map(async (post) => {
             const applicationCount = await ContactRequest.countDocuments({ post: post._id });
             return {
@@ -413,7 +426,6 @@ exports.likePost = async (req, res, next) => {
 
         // Check block status (only if liking, unliking is always allowed)
         if (likeIndex === -1 && post.user.toString() !== req.user.id) {
-            const User = require('../models/User');
             // Check if post owner blocked current user
             const postOwner = await User.findById(post.user);
             if (postOwner.blockedUsers.includes(req.user.id)) {
@@ -438,7 +450,6 @@ exports.likePost = async (req, res, next) => {
 
         // Notify if liked and not self
         if (likeIndex === -1 && post.user.toString() !== req.user.id) {
-            const User = require('../models/User');
             const sender = await User.findById(req.user.id);
             const senderName = sender ? sender.displayName : 'Someone';
             const postTitle = post.title.length > 25 ? post.title.substring(0, 25) + '...' : post.title;
@@ -451,8 +462,7 @@ exports.likePost = async (req, res, next) => {
                 title: 'New Like',
                 message: `${senderName} liked your post: "${postTitle}"`,
                 link: `/post/${post._id}`,
-                relatedId: post._id,
-                postId: post._id
+                relatedId: post._id
             });
         }
 
@@ -623,7 +633,7 @@ exports.getPostAnalytics = async (req, res, next) => {
             views: post.views,
             likes: post.likes.length,
             shares: post.shares,
-            daysActive: Math.floor((Date.now() - new Date(post.createdAt)) / (1000 * 60 * 60 * 24))
+            daysActive: Math.floor((Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60 * 24))
         });
     } catch (err) {
         if (err.kind === 'ObjectId') {
@@ -650,7 +660,6 @@ exports.commentOnPost = async (req, res, next) => {
 
         // Check block status
         if (post.user.toString() !== req.user.id) {
-            const User = require('../models/User');
             const postOwner = await User.findById(post.user);
             if (postOwner.blockedUsers.includes(req.user.id)) {
                 return res.status(403).json({ msg: 'You cannot comment on this post' });
@@ -676,7 +685,6 @@ exports.commentOnPost = async (req, res, next) => {
 
         // Emit notification to post owner (if not self)
         if (post.user.toString() !== req.user.id) {
-            const User = require('../models/User');
             const sender = await User.findById(req.user.id);
             const senderName = sender ? sender.displayName : 'Someone';
             const postTitle = post.title.length > 25 ? post.title.substring(0, 25) + '...' : post.title;
@@ -689,8 +697,7 @@ exports.commentOnPost = async (req, res, next) => {
                 title: 'New Comment',
                 message: `${senderName} commented on "${postTitle}": ${req.body.text.substring(0, 30)}${req.body.text.length > 30 ? '...' : ''} `,
                 link: `/post/${post._id}`,
-                relatedId: post._id,
-                postId: post._id // Explicitly add postId for mobile navigation
+                relatedId: post._id
             });
         }
 
@@ -712,7 +719,7 @@ exports.deleteComment = async (req, res, next) => {
         }
 
         // Pull out comment
-        const comment = post.comments.find(comment => comment.id === req.params.commentId);
+        const comment = post.comments.find(comment => comment._id.toString() === req.params.commentId);
 
         if (!comment) {
             return res.status(404).json({ msg: 'Comment not found' });
@@ -724,7 +731,7 @@ exports.deleteComment = async (req, res, next) => {
         }
 
         // Get remove index
-        const removeIndex = post.comments.map(comment => comment.id.toString()).indexOf(req.params.commentId);
+        const removeIndex = post.comments.map(comment => comment._id.toString()).indexOf(req.params.commentId);
 
         post.comments.splice(removeIndex, 1);
 
@@ -747,7 +754,7 @@ exports.editComment = async (req, res, next) => {
         }
 
         // Find comment
-        const comment = post.comments.find(comment => comment.id === req.params.commentId);
+        const comment = post.comments.find(comment => comment._id.toString() === req.params.commentId);
 
         if (!comment) {
             return res.status(404).json({ msg: 'Comment not found' });
@@ -764,7 +771,7 @@ exports.editComment = async (req, res, next) => {
 
         // Return updated comment with populated user
         const populatedPost = await Post.findById(req.params.id).populate('comments.user', ['displayName', 'avatar']);
-        const updatedComment = populatedPost.comments.find(c => c.id === req.params.commentId);
+        const updatedComment = populatedPost.comments.find(c => c._id.toString() === req.params.commentId);
 
         res.json(updatedComment);
     } catch (err) {
@@ -783,7 +790,7 @@ exports.replyToComment = async (req, res, next) => {
             return res.status(404).json({ msg: 'Post not found' });
         }
 
-        const comment = post.comments.find(comment => comment.id === req.params.commentId);
+        const comment = post.comments.find(comment => comment._id.toString() === req.params.commentId);
 
         if (!comment) {
             return res.status(404).json({ msg: 'Comment not found' });
@@ -796,7 +803,6 @@ exports.replyToComment = async (req, res, next) => {
 
         // Check block status (with comment owner)
         if (comment.user.toString() !== req.user.id) {
-            const User = require('../models/User');
             const commentOwner = await User.findById(comment.user);
             if (commentOwner.blockedUsers.includes(req.user.id)) {
                 return res.status(403).json({ msg: 'You cannot reply to this user' });
@@ -814,6 +820,7 @@ exports.replyToComment = async (req, res, next) => {
         };
 
         if (!comment.replies) {
+            // @ts-ignore
             comment.replies = [];
         }
 
@@ -824,7 +831,7 @@ exports.replyToComment = async (req, res, next) => {
         const populatedPost = await Post.findById(req.params.id)
             .populate('comments.replies.user', ['displayName', 'avatar']);
 
-        const updatedComment = populatedPost.comments.find(c => c.id === req.params.commentId);
+        const updatedComment = populatedPost.comments.find(c => c._id.toString() === req.params.commentId);
         const addedReply = updatedComment.replies[updatedComment.replies.length - 1];
 
 
@@ -832,7 +839,6 @@ exports.replyToComment = async (req, res, next) => {
         if (comment.user.toString() !== req.user.id) {
             const io = req.app.get('io');
             if (io) {
-                const User = require('../models/User');
                 const sender = await User.findById(req.user.id);
                 const senderName = sender ? sender.displayName : 'Someone';
 

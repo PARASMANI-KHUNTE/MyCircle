@@ -48,3 +48,14 @@ export const getPostExplanation = async (post: any): Promise<{ summary: string; 
         return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
     }
 };
+
+export const getPlaceholderSuggestions = async (title: string, description: string): Promise<{ icon: string; gifKeywords: string[] }> => {
+    try {
+        const response = await api.post('/ai/placeholder-suggestion', { title, description });
+        return response.data;
+    } catch (error) {
+        console.error('Placeholder suggestion error:', error);
+        return { icon: 'Zap', gifKeywords: ['abstract'] };
+    }
+};
+

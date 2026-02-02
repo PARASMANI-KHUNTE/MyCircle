@@ -6,37 +6,28 @@
 
 :root {
     /* Dark Mode (Default) - Deep Slate & Violet Theme */
-    --background: #020617;
-    /* Slate 950 */
+    --background: #0f172a;
     --foreground: #f8fafc;
-    /* Slate 50 */
 
-    --primary: 139 92 246;
-    /* Violet 500 */
+    --primary: 59 130 246;
+    /* Blue 500 */
     --primary-foreground: 255 255 255;
-    --primary-hover: 124 58 237;
-    /* Violet 600 */
+    --primary-hover: 37 99 235;
+    /* Blue 600 */
 
-    --secondary: 15 23 42;
-    /* Slate 900 */
+    --secondary: 30 41 59;
     --secondary-foreground: 226 232 240;
-    /* Slate 200 */
-    --secondary-hover: 30 41 59;
-    /* Slate 800 */
+    --secondary-hover: 51 65 85;
 
-    --accent: 244 63 94;
-    /* Rose 500 */
+    --accent: 34 197 94;
+    /* Green 500 */
     --accent-foreground: 255 255 255;
 
-    --muted: 15 23 42;
-    /* Slate 900 */
+    --muted: 30 41 59;
     --muted-foreground: 148 163 184;
-    /* Slate 400 */
 
-    --card: 15 23 42;
-    /* Slate 900 */
+    --card: 30 41 59;
     --card-foreground: 248 250 252;
-    /* Slate 50 */
     --card-border: 255 255 255;
     /* White (opacity handled in utility) */
 
@@ -51,31 +42,23 @@
 [data-theme='light'] {
     /* Light Mode - Crisp Slate & Violet */
     --background: #f8fafc;
-    /* Slate 50 */
     --foreground: #0f172a;
-    /* Slate 900 */
 
-    --primary: 124 58 237;
-    /* Violet 600 */
+    --primary: 37 99 235;
+    /* Blue 600 */
     --primary-foreground: 255 255 255;
-    --primary-hover: 109 40 217;
-    /* Violet 700 */
+    --primary-hover: 29 78 216;
 
     --secondary: 241 245 249;
-    /* Slate 100 */
     --secondary-foreground: 30 41 59;
-    /* Slate 800 */
     --secondary-hover: 226 232 240;
-    /* Slate 200 */
 
-    --accent: 225 29 72;
-    /* Rose 600 */
+    --accent: 22 163 74;
+    /* Green 600 */
     --accent-foreground: 255 255 255;
 
     --muted: 241 245 249;
-    /* Slate 100 */
     --muted-foreground: 100 116 139;
-    /* Slate 500 */
 
     --card: 255 255 255;
     --card-foreground: 15 23 42;
@@ -140,7 +123,7 @@
 
     /* Map UI Classes - Seamless Integration */
     .map-container {
-        @apply w-full h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-white/10;
+        @apply w-full h-[500px] rounded-[3rem] overflow-hidden shadow-2xl ring-1 ring-white/10;
     }
 
     .leaflet-popup-content-wrapper {

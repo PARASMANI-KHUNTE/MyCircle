@@ -1,9 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, Dimensions, PermissionsAndroid, Platform, Modal } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, FlatList, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check, Repeat, MessageCircle, Bell } from 'lucide-react-native';
+import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check, MessageCircle, Bell, Wrench } from 'lucide-react-native';
 import api from '../services/api';
+
+const getCatColor = (catId: string, colors: any) => {
+    return colors.primary; // Unified MyCircle Blue for all categories
+};
+
 import PostCard from '../components/ui/PostCard';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
@@ -11,7 +16,8 @@ import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
 import { useNotifications } from '../context/NotificationContext';
 import Sound from 'react-native-sound';
-import Animated, { useAnimatedStyle, withSpring, withTiming, interpolateColor, useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import GlassView from '../components/ui/GlassView';
 
 // Enable playback in silent mode
 Sound.setCategory('Playback');
@@ -20,129 +26,13 @@ const CATEGORIES = [
     { id: 'all', label: 'All', icon: Zap },
     { id: 'job', label: 'Jobs', icon: Briefcase },
     { id: 'service', label: 'Services', icon: Zap },
-    { id: 'sell', label: 'Market', icon: ShoppingCart },
-    { id: 'rent', label: 'Rentals', icon: Key },
-    { id: 'barter', label: 'Barter', icon: Repeat },
+    { id: 'sell', label: 'Sell or Rent', icon: ShoppingCart },
 ];
 
-const CategoryButton = ({ cat, isSelected, onPress, catColor, colors }: any) => {
-    const scale = useSharedValue(1);
-    const Icon = cat.icon;
+// Components like CategoryButton and AnimatedFilterChip have been integrated into the Floating Orbit UI for a more organic feel.
 
-    const animatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ scale: withSpring(isSelected ? 1.05 : 1) }],
-            backgroundColor: isSelected ? catColor + '25' : colors.card,
-            borderColor: isSelected ? catColor : catColor + '40',
-            borderWidth: isSelected ? 1.5 : 1,
-        };
-    });
-
-    const iconStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ scale: withSpring(isSelected ? 1.2 : 1) }, { rotate: withSpring(isSelected ? '10deg' : '0deg') }],
-            color: isSelected ? catColor : catColor + '90',
-        };
-    });
-
-    return (
-        <TouchableOpacity
-            activeOpacity={0.7}
-            onPressIn={() => (scale.value = 0.95)}
-            onPressOut={() => (scale.value = 1)}
-            onPress={onPress}
-        >
-            <Animated.View style={[styles.categoryButton, animatedStyle]}>
-                <Animated.View style={iconStyle}>
-                    <Icon size={16} color={isSelected ? catColor : catColor + '90'} />
-                </Animated.View>
-                <Text style={[
-                    styles.categoryText,
-                    isSelected ? { color: catColor } : { color: colors.textSecondary }
-                ]}>
-                    {cat.label}
-                </Text>
-            </Animated.View>
-        </TouchableOpacity>
-    );
-};
-
-const AnimatedHeaderButton = ({ icon: Icon, badgeCount, onPress, colors }: any) => {
-    const scale = useSharedValue(1);
-    const badgeScale = useSharedValue(1);
-
-    useEffect(() => {
-        if (badgeCount > 0) {
-            badgeScale.value = withSpring(1.2, { damping: 2 }, () => {
-                badgeScale.value = withSpring(1);
-            });
-        }
-    }, [badgeCount]);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: withSpring(scale.value) }],
-    }));
-
-    const badgeStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: withSpring(badgeScale.value) }],
-    }));
-
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            onPressIn={() => (scale.value = 0.9)}
-            onPressOut={() => (scale.value = 1)}
-            style={styles.iconButton}
-        >
-            <Animated.View style={animatedStyle}>
-                <Icon size={24} color={colors.text} />
-                {badgeCount > 0 && (
-                    <Animated.View style={[styles.badge, badgeStyle]}>
-                        <Text style={styles.badgeText}>
-                            {badgeCount > 99 ? '99+' : badgeCount}
-                        </Text>
-                    </Animated.View>
-                )}
-            </Animated.View>
-        </TouchableOpacity>
-    );
-};
-
-const AnimatedFilterChip = ({ icon: Icon, label, isActive, onPress, colors, loading, hasX }: any) => {
-    const scale = useSharedValue(1);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: withSpring(scale.value) }],
-        borderColor: isActive ? colors.primary : colors.border,
-        backgroundColor: isActive ? colors.primary + '20' : colors.card,
-    }));
-
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            onPressIn={() => (scale.value = 0.95)}
-            onPressOut={() => (scale.value = 1)}
-            disabled={loading}
-        >
-            <Animated.View style={[styles.filterChip, animatedStyle]}>
-                {loading ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                    <Icon size={14} color={isActive ? colors.primary : colors.textSecondary} />
-                )}
-                <Text style={[
-                    styles.filterText,
-                    isActive ? { color: colors.primary } : { color: colors.textSecondary }
-                ]}>
-                    {label}
-                </Text>
-                {hasX && <X size={12} color={colors.primary} style={{ marginLeft: 4 }} />}
-            </Animated.View>
-        </TouchableOpacity>
-    );
-};
-
-const FeedScreen = ({ navigation }: any) => {
+const FeedScreen = ({ navigation, route }: any) => {
+    const initialViewMode = route?.params?.viewMode || 'list';
     const { colors } = useTheme();
     const { socket } = useSocket() as any; // Type assertion if needed
     const { success } = useToast();
@@ -152,53 +42,12 @@ const FeedScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
     // Chat Badge Logic
-    const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-    const [mapLoading, setMapLoading] = useState(false);
 
-    const fetchUnreadMsgCount = async () => {
-        try {
-            const res = await api.get('/chat/unread/count');
-            setUnreadMsgCount(res.data.count);
-        } catch (err) {
-            console.error('Failed to fetch unread messages count', err);
-        }
-    };
 
-    useEffect(() => {
-        fetchUnreadMsgCount();
-    }, []);
 
-    useEffect(() => {
-        if (!socket) return;
-
-        const handleNewMessage = () => {
-            fetchUnreadMsgCount();
-            // Sound logic could be optional here if we don't want double sounds (if main tabs also has it running)
-            // But since we are removing it from main tabs, it should be here.
-            const ding = new Sound('notification.mp3', Sound.MAIN_BUNDLE, (error) => {
-                if (error) {
-                    return;
-                }
-                ding.play();
-            });
-        };
-
-        const handleMessagesRead = () => {
-            fetchUnreadMsgCount();
-        };
-
-        socket.on('receive_message', handleNewMessage);
-        socket.on('messages_read', handleMessagesRead);
-        socket.on('unread_count_update', handleMessagesRead);
-
-        return () => {
-            socket.off('receive_message', handleNewMessage);
-            socket.off('messages_read', handleMessagesRead);
-            socket.off('unread_count_update', handleMessagesRead);
-        };
-    }, [socket]);
 
     // Filters
     const [sortOrder, setSortOrder] = useState<'latest' | 'oldest' | 'urgent' | 'nearest'>('latest');
@@ -210,31 +59,10 @@ const FeedScreen = ({ navigation }: any) => {
 
     // Distance filter (radius in km)
     const [distanceRadius, setDistanceRadius] = useState<number>(50); // Default 50km (All)
-    const distanceOptions = [
-        { label: 'All', value: 50 },
-        { label: '1 km', value: 1 },
-        { label: '5 km', value: 5 },
-        { label: '10 km', value: 10 },
-        { label: '25 km', value: 25 },
-    ];
 
-    // For date, simple string match or picker? User said "select date". 
-    // Implementing a simple text match for now or a list of available dates would be better but let's stick to simple "Date" sort/filter.
     // Actually, "Select Date" implies filtering by specific date.
     const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
-    const [showDatePicker, setShowDatePicker] = useState(false); // Just a simulation of picker or simple list
 
-    const getCatColor = (catId: string) => {
-        switch (catId) {
-            case 'job': return '#3b82f6'; // Blue
-            case 'service': return '#06b6d4'; // Cyan
-            case 'sell': return '#f59e0b'; // Amber
-            case 'rent': return '#8b5cf6'; // Violet
-            case 'barter': return '#ec4899'; // Pink
-            case 'all': return colors.primary;
-            default: return colors.primary;
-        }
-    };
 
     // Theme Styles
     const themeStyles = {
@@ -252,7 +80,14 @@ const FeedScreen = ({ navigation }: any) => {
     useEffect(() => {
         fetchPosts();
         requestLocationPermission();
+        fetchUnreadMsgCount();
     }, []);
+
+    useEffect(() => {
+        if (viewMode !== initialViewMode) {
+            setViewMode(initialViewMode);
+        }
+    }, [initialViewMode]);
 
     useEffect(() => {
         if (socket) {
@@ -260,8 +95,14 @@ const FeedScreen = ({ navigation }: any) => {
                 setPosts((prev: any) => [newPost, ...prev]);
                 success('New post added!');
             });
+            socket.on('receive_message', () => fetchUnreadMsgCount());
+            socket.on('messages_read', () => fetchUnreadMsgCount());
+            socket.on('unread_count_update', () => fetchUnreadMsgCount());
             return () => {
                 socket.off('new_post');
+                socket.off('receive_message');
+                socket.off('messages_read');
+                socket.off('unread_count_update');
             };
         }
     }, [socket]);
@@ -274,37 +115,50 @@ const FeedScreen = ({ navigation }: any) => {
         filterPosts();
     }, [posts, searchQuery, selectedCategory, sortOrder, locationFilter, selectedDate, isNearby]);
 
-    const requestLocationPermission = async () => {
-        if (Platform.OS === 'android') {
-            try {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                    {
-                        title: "Location Permission",
-                        message: "MyCircle needs access to your location to show relevant posts.",
-                        buttonNeutral: "Ask Me Later",
-                        buttonNegative: "Cancel",
-                        buttonPositive: "OK"
-                    }
-                );
-                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-                    // console.log("You can use the location");
-                    // In future: Get current location and auto-filter or sort
-                } else {
-                    console.log("Location permission denied");
-                }
-            } catch (err) {
-                console.warn(err);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        if (isNearby) {
+            const loc = await getCurrentLocation() as any;
+            if (loc) {
+                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude }, distanceRadius);
+                return;
             }
+        }
+        fetchPosts();
+    };
+
+    const requestLocationPermission = async () => {
+        try {
+            const loc = await getCurrentLocation();
+            if (loc) {
+                setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.warn('Location permission request failed', err);
+            return false;
         }
     };
 
-    const fetchPosts = async (locationParams?: { latitude: number, longitude: number }) => {
+    const fetchUnreadMsgCount = async () => {
+        try {
+            const res = await api.get('/chat/unread/count');
+            setUnreadMsgCount(res.data.count);
+        } catch (err) {
+            console.error('Failed to fetch unread messages count', err);
+        }
+    };
+
+    const fetchPosts = async (locationParams?: { latitude: number, longitude: number }, radius?: number) => {
         try {
             setLoading(true);
             let url = '/posts';
+            const searchRadius = radius || distanceRadius;
             if (locationParams) {
-                url += `?latitude=${locationParams.latitude}&longitude=${locationParams.longitude}&radius=50`;
+                url += `?latitude=${locationParams.latitude}&longitude=${locationParams.longitude}&radius=${searchRadius}`;
             }
             const res = await api.get(url);
             setPosts(res.data);
@@ -315,6 +169,17 @@ const FeedScreen = ({ navigation }: any) => {
         } finally {
             setLoading(false);
             setNearbyLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const handleDistanceChange = async (newRadius: number) => {
+        if (isNearby) {
+            setNearbyLoading(true);
+            const loc = await getCurrentLocation() as any;
+            if (loc) {
+                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude }, newRadius);
+            }
         }
     };
 
@@ -325,7 +190,7 @@ const FeedScreen = ({ navigation }: any) => {
             if (loc) {
                 setIsNearby(true);
                 setLocationFilter('All'); // Reset other location filters
-                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude });
+                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude }, distanceRadius);
             } else {
                 setNearbyLoading(false);
             }
@@ -389,23 +254,24 @@ const FeedScreen = ({ navigation }: any) => {
         setFilteredPosts(result);
     };
 
-    const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
     const [selectedPost, setSelectedPost] = useState<any | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [mapLoading, setMapLoading] = useState(false);
 
     // Filter posts that have location coordinates for the map
     const mapPosts = React.useMemo(() => {
         return filteredPosts.filter(p => p.locationCoords && p.locationCoords.coordinates);
     }, [filteredPosts]);
 
-    // Pre-fuzz coordinates to ensure stability (only re-fuzz if posts change)
+    // Pre-fuzz coordinates to ensure stability (deterministic fuzz base on ID)
     const fuzzedPosts = React.useMemo(() => {
         return mapPosts.map(p => {
-            // Check if we already have cached fuzz for this ID (in a real app), here we just deterministic-ish fuzz based on ID chars or random if fresh
-            // Simple random fuzzing: +/- 0.0025 degrees (~250m)
-            // To keep it stable per post, we could use a hash of the ID, but for now standard random is okay as long as useMemo holds
-            const latOffset = (Math.random() - 0.5) * 0.005;
-            const lngOffset = (Math.random() - 0.5) * 0.005;
+            // Use post ID to create a deterministic offset
+            const seed = p._id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+            const latOffset = ((seed % 100) / 100 - 0.5) * 0.004;
+            const lngOffset = (((seed * 13) % 100) / 100 - 0.5) * 0.004;
+
             return {
                 ...p,
                 fuzzedLat: p.locationCoords.coordinates[1] + latOffset,
@@ -418,10 +284,13 @@ const FeedScreen = ({ navigation }: any) => {
         if (viewMode === 'list') {
             setMapLoading(true);
             try {
-                // Fetch user location when switching to map
+                // Fetch fresh user location when switching to map
                 const loc = await getCurrentLocation();
                 if (loc) {
                     setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+                } else {
+                    // If denied, still allow map but center on default
+                    console.log('Location denied or failed, using default center');
                 }
             } catch (err) {
                 console.error('Error fetching location:', err);
@@ -430,7 +299,7 @@ const FeedScreen = ({ navigation }: any) => {
                 setTimeout(() => {
                     setViewMode('map');
                     setMapLoading(false);
-                }, 500);
+                }, 300);
             }
         } else {
             setViewMode('list');
@@ -485,16 +354,114 @@ const FeedScreen = ({ navigation }: any) => {
                     .post-marker-anim {
                         animation: markerEntrance 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
                     }
+
+                    .custom-marker {
+                        position: relative;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                    }
+                    .marker-glass {
+                        background: rgba(255, 255, 255, 0.1);
+                        backdrop-filter: blur(8px);
+                        -webkit-backdrop-filter: blur(8px);
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        padding: 4px 10px;
+                        border-radius: 12px;
+                        color: white;
+                        font-family: sans-serif;
+                        font-weight: bold;
+                        font-size: 12px;
+                        white-space: nowrap;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                        border-bottom: 2px solid var(--marker-color);
+                        transition: all 0.2s ease;
+                    }
+                    .custom-marker:hover .marker-glass {
+                        transform: translateY(-2px);
+                        background: rgba(255, 255, 255, 0.2);
+                    }
+                    .marker-tail {
+                        width: 0;
+                        height: 0;
+                        border-left: 6px solid transparent;
+                        border-right: 6px solid transparent;
+                        border-top: 6px solid var(--marker-color);
+                        margin-top: -1px;
+                        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+                    }
+                    .marker-price {
+                        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+                    }
+
+                    /* Locate Me Button */
+                    .locate-me-btn {
+                        position: absolute;
+                        bottom: 180px; /* Above the bottom sheet if open */
+                        right: 20px;
+                        width: 44px;
+                        height: 44px;
+                        background: rgba(255, 255, 255, 0.1);
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        border-radius: 12px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 1000;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    }
+                    .locate-me-btn:active {
+                        transform: scale(0.9);
+                        background: rgba(139, 92, 246, 0.3);
+                    }
+                    .locate-icon {
+                        width: 20px;
+                        height: 20px;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        position: relative;
+                    }
+                    .locate-icon::after {
+                        content: '';
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 8px;
+                        height: 8px;
+                        background: white;
+                        border-radius: 50%;
+                    }
                 </style>
             </head>
             <body>
                 <div id="map"></div>
+                <div class="locate-me-btn" onclick="recenterMap()">
+                    <div class="locate-icon"></div>
+                </div>
                 <script>
                     var userLoc = ${userLocation ? JSON.stringify(userLocation) : 'null'};
                     var defaultCenter = [28.6139, 77.2090];
                     var center = userLoc ? [userLoc.lat, userLoc.lng] : defaultCenter;
 
-                    var map = L.map('map', {zoomControl: false }).setView(center, userLoc ? 13 : 10);
+                    var map = L.map('map', {zoomControl: false, zoomSnap: 0.1 }).setView(center, userLoc ? 15.5 : 12);
+
+                    window.recenterMap = function() {
+                        if (userLoc) {
+                            map.flyTo([userLoc.lat, userLoc.lng], 16.5, {
+                                animate: true,
+                                duration: 1.5,
+                                easeLinearity: 0.25
+                            });
+                        } else {
+                            // Request location through RN if null
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'requestLocation' }));
+                        }
+                    };
 
                     var isDark = ${colors.background === '#000000'};
                     var mapStyle = isDark 
@@ -507,7 +474,7 @@ const FeedScreen = ({ navigation }: any) => {
                         maxZoom: 20
                     }).addTo(map);
 
-                    // Add user location marker with animation
+                    // Add user location marker with premium animation
                     if (userLoc) {
                         var userIcon = L.divIcon({
                             className: 'user-loc-container',
@@ -515,10 +482,10 @@ const FeedScreen = ({ navigation }: any) => {
                             iconSize: [30, 30],
                             iconAnchor: [15, 15]
                         });
-                        L.marker([userLoc.lat, userLoc.lng], { icon: userIcon }).addTo(map);
+                        L.marker([userLoc.lat, userLoc.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
 
                         L.circle([userLoc.lat, userLoc.lng], {
-                            radius: 120,
+                            radius: 100,
                             fillColor: '#8b5cf6',
                             color: '#8b5cf6',
                             weight: 1,
@@ -532,6 +499,8 @@ const FeedScreen = ({ navigation }: any) => {
         lat: p.fuzzedLat,
         lng: p.fuzzedLng,
         type: p.type,
+        price: p.price,
+        title: p.title,
         color: p.type === 'job' ? '#3b82f6' :
             p.type === 'service' ? '#06b6d4' :
                 p.type === 'sell' ? '#f59e0b' :
@@ -545,26 +514,40 @@ const FeedScreen = ({ navigation }: any) => {
 
                     posts.forEach(function(p, index) {
                         setTimeout(function() {
-                            var marker = L.circleMarker([p.lat, p.lng], {
-                                radius: 8,
-                                fillColor: p.color,
-                                color: isDark ? "#000" : "#fff",
-                                weight: 2,
-                                opacity: 1,
-                                fillOpacity: 0.9,
+                            // Custom Premium Marker
+                            var markerHtml = '<div class="custom-marker" style="--marker-color: ' + p.color + '">' +
+                                '<div class="marker-glass">' +
+                                    '<span class="marker-price">₹' + p.price + '</span>' +
+                                '</div>' +
+                                '<div class="marker-tail"></div>' +
+                            '</div>';
+
+                            var markerIcon = L.divIcon({
+                                className: 'custom-marker-wrapper',
+                                html: markerHtml,
+                                iconSize: [60, 30],
+                                iconAnchor: [30, 30]
+                            });
+
+                            var marker = L.marker([p.lat, p.lng], {
+                                icon: markerIcon,
                                 className: 'post-marker-anim'
                             }).addTo(map);
 
                             marker.on('click', function() {
                                 window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', postId: p.id }));
+                                map.flyTo([p.lat, p.lng], 16.5, { duration: 1.2, easeLinearity: 0.25 });
                             });
 
                             bounds.push([p.lat, p.lng]);
                         }, index * 100); // Staggered entrance
                     });
 
+                    // Initial entrance animation
                     if (userLoc) {
-                        map.setView([userLoc.lat, userLoc.lng], 14);
+                        setTimeout(function() {
+                            map.flyTo([userLoc.lat, userLoc.lng], 16, { animate: true, duration: 1.8 });
+                        }, 500);
                     } else if (bounds.length > 0) {
                         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
                     }
@@ -579,6 +562,8 @@ const FeedScreen = ({ navigation }: any) => {
             if (data.type === 'markerClick') {
                 const post = filteredPosts.find(p => p._id === data.postId);
                 if (post) setSelectedPost(post);
+            } else if (data.type === 'requestLocation') {
+                requestLocationPermission();
             }
         } catch (e) {
             console.error(e);
@@ -604,142 +589,159 @@ const FeedScreen = ({ navigation }: any) => {
                 <View style={styles.topBar}>
                     <Text style={[styles.title, themeStyles.text]}>Explore</Text>
                     <View style={styles.headerIcons}>
-                        <AnimatedHeaderButton
-                            icon={Bell}
-                            badgeCount={unreadCount}
-                            onPress={() => navigation.navigate('Notifications')}
-                            colors={colors}
-                        />
-                        <AnimatedHeaderButton
-                            icon={MessageCircle}
-                            badgeCount={unreadMsgCount}
-                            onPress={() => navigation.navigate('ChatList')}
-                            colors={colors}
-                        />
+                        <TouchableOpacity onPress={() => (navigation as any).navigate('Notifications')} style={styles.iconButton}>
+                            <Bell size={24} color={colors.text} />
+                            {unreadCount > 0 && (
+                                <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+                                    <Text style={styles.badgeText}>{unreadCount}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => (navigation as any).navigate('ChatList')} style={styles.iconButton}>
+                            <MessageCircle size={24} color={colors.text} />
+                            {unreadMsgCount > 0 && (
+                                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                                    <Text style={styles.badgeText}>{unreadMsgCount}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+
                     </View>
                 </View>
+            </View>
 
-                <View style={[styles.searchContainer, themeStyles.input]}>
-                    <Search size={20} color={colors.textSecondary} />
-                    <TextInput
-                        style={[styles.searchInput, { color: colors.text }]}
-                        placeholder="Search posts..."
-                        placeholderTextColor={colors.textSecondary}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                </View>
-
-                {/* Categories */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.categoriesScroll}
-                    contentContainerStyle={styles.categoriesContent}
-                >
-                    {CATEGORIES.map((cat) => (
-                        <CategoryButton
-                            key={cat.id}
-                            cat={cat}
-                            isSelected={selectedCategory === cat.id}
-                            onPress={() => setSelectedCategory(cat.id)}
-                            catColor={getCatColor(cat.id)}
-                            colors={colors}
+            {/* Discovery Orbit UI - Search and Filters */}
+            <View style={styles.floatingOrbitContainer}>
+                <GlassView intensity={10} style={styles.floatingOrbit}>
+                    {/* Search Row */}
+                    <View style={styles.orbitSearch}>
+                        <Search size={18} color={colors.textSecondary} />
+                        <TextInput
+                            style={[styles.orbitInput, { color: colors.text, paddingVertical: 0 }]}
+                            placeholder="Search your circle..."
+                            placeholderTextColor={colors.textSecondary}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
                         />
-                    ))}
-                </ScrollView>
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                <X size={18} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
-                {/* Filters Row */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.filtersScroll}
-                    contentContainerStyle={styles.categoriesContent}
-                >
-                    <AnimatedFilterChip
-                        icon={MapPin}
-                        label={viewMode === 'map' ? 'Map' : 'List'}
-                        isActive={viewMode === 'map'}
-                        onPress={toggleViewMode}
-                        colors={colors}
-                    />
+                    {/* Categories and Distance Scroll - Context sensitive */}
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.orbitCategories}
+                    >
+                        {viewMode === 'map' ? (
+                            <>
+                                {/* Nearby / Distance Toggle for Map */}
+                                <TouchableOpacity
+                                    style={[
+                                        styles.orbitCatChip,
+                                        isNearby && styles.filterChipActive
+                                    ]}
+                                    onPress={handleNearbyToggle}
+                                >
+                                    <MapPin size={14} color={isNearby ? '#fff' : colors.textSecondary} />
+                                    <Text style={[
+                                        styles.orbitCatText,
+                                        { color: isNearby ? '#fff' : colors.textSecondary, marginLeft: 6 }
+                                    ]}>
+                                        {isNearby ? `${distanceRadius}km` : 'Nearby'}
+                                    </Text>
+                                </TouchableOpacity>
 
-                    <AnimatedFilterChip
-                        icon={ArrowUpDown}
-                        label={sortOrder === 'latest' ? 'Latest' : sortOrder === 'oldest' ? 'Oldest' : sortOrder === 'urgent' ? '🔥 Urgent' : '📍 Nearest'}
-                        isActive={sortOrder !== 'latest'}
-                        onPress={() => {
-                            const sortOptions: Array<'latest' | 'oldest' | 'urgent' | 'nearest'> = ['latest', 'oldest', 'urgent', 'nearest'];
-                            const currentIdx = sortOptions.indexOf(sortOrder);
-                            setSortOrder(sortOptions[(currentIdx + 1) % sortOptions.length]);
-                        }}
-                        colors={colors}
-                    />
+                                {isNearby && (
+                                    <View style={styles.orbitDivider} />
+                                )}
 
-                    <AnimatedFilterChip
-                        icon={MapPin}
-                        label={distanceRadius === 50 ? 'Distance' : `${distanceRadius}km`}
-                        isActive={distanceRadius !== 50}
-                        onPress={() => {
-                            const distances = [50, 1, 5, 10, 25];
-                            const currentIdx = distances.indexOf(distanceRadius);
-                            setDistanceRadius(distances[(currentIdx + 1) % distances.length]);
-                        }}
-                        colors={colors}
-                    />
-
-                    <AnimatedFilterChip
-                        icon={MapPin}
-                        label={locationFilter === 'All' ? 'Location' : locationFilter}
-                        isActive={locationFilter !== 'All'}
-                        onPress={() => setShowLocationModal(true)}
-                        colors={colors}
-                    />
-
-                    <AnimatedFilterChip
-                        icon={MapPin}
-                        label="Nearby"
-                        isActive={isNearby}
-                        onPress={handleNearbyToggle}
-                        colors={colors}
-                        loading={nearbyLoading}
-                    />
-
-                    <AnimatedFilterChip
-                        icon={Calendar}
-                        label={selectedDate ? 'Today' : 'Date'}
-                        isActive={!!selectedDate}
-                        onPress={() => setSelectedDate(selectedDate ? null : new Date().toISOString().split('T')[0])}
-                        colors={colors}
-                        hasX={!!selectedDate}
-                    />
-                </ScrollView>
+                                {/* Distance Options for Map */}
+                                {isNearby && [5, 10, 25, 50, 100].map(radius => (
+                                    <TouchableOpacity
+                                        key={radius}
+                                        style={[
+                                            styles.orbitCatChip,
+                                            distanceRadius === radius && styles.filterChipActive
+                                        ]}
+                                        onPress={() => {
+                                            setDistanceRadius(radius);
+                                            handleDistanceChange(radius);
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.orbitCatText,
+                                            { color: distanceRadius === radius ? '#fff' : colors.textSecondary }
+                                        ]}>
+                                            {radius}km
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </>
+                        ) : (
+                            CATEGORIES.map((cat) => (
+                                <TouchableOpacity
+                                    key={cat.id}
+                                    style={[
+                                        styles.orbitCatChip,
+                                        selectedCategory === cat.id && styles.filterChipActive
+                                    ]}
+                                    onPress={() => setSelectedCategory(cat.id)}
+                                >
+                                    <cat.icon size={14} color={selectedCategory === cat.id ? '#fff' : colors.textSecondary} />
+                                    <Text style={[
+                                        styles.orbitCatText,
+                                        { color: selectedCategory === cat.id ? '#fff' : colors.textSecondary, marginLeft: 6 }
+                                    ]}>
+                                        {cat.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))
+                        )}
+                    </ScrollView>
+                </GlassView>
             </View>
 
             {viewMode === 'list' ? (
                 loading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#8b5cf6" />
+                        <ActivityIndicator size="large" color={colors.primary} />
                     </View>
                 ) : (
                     <FlatList
                         data={filteredPosts}
-                        keyExtractor={item => (item as any)._id}
-                        renderItem={({ item }) => (
-                            <PostCard
-                                post={item}
-                                onPress={() => navigation.navigate('PostDetails', { id: item._id })}
-                                onRequestContact={() => handleRequestContact(item._id)}
-                                navigation={navigation}
-                            />
-                        )}
+                        keyExtractor={item => item._id}
+                        numColumns={1}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                tintColor={colors.primary}
+                                colors={[colors.primary]} // Android
+                            />
+                        }
+                        renderItem={({ item, index }) => (
+                            <Animated.View
+                                entering={FadeInDown.delay(index * 100).springify()}
+                                style={styles.gridItemWrapper}
+                            >
+                                <PostCard
+                                    post={item}
+                                    onPress={() => navigation.navigate('PostDetails', { id: item._id })}
+                                />
+                            </Animated.View>
+                        )}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>No posts found</Text>
+                                <Text style={styles.emptyText}>Nothing here yet...</Text>
                                 <TouchableOpacity onPress={() => { setSearchQuery(''); setSelectedCategory('all'); setLocationFilter('All'); setSelectedDate(null); }}>
-                                    <Text style={styles.clearFilterText}>Clear filters</Text>
+                                    <Text style={styles.clearFilterText}>Reset Discovery</Text>
                                 </TouchableOpacity>
                             </View>
                         }
@@ -761,7 +763,7 @@ const FeedScreen = ({ navigation }: any) => {
                             </TouchableOpacity>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                                 <View style={[styles.typeBadge, {
-                                    backgroundColor: getCatColor(selectedPost.type)
+                                    backgroundColor: getCatColor(selectedPost.type, colors)
                                 }]}>
                                     <Text style={styles.typeBadgeText}>{selectedPost.type.toUpperCase()}</Text>
                                 </View>
@@ -862,89 +864,54 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     title: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#ffffff',
+        fontSize: 28,
+        fontWeight: '800',
+        letterSpacing: -0.5,
     },
-    searchContainer: {
+    floatingOrbit: {
+        borderRadius: 24,
+        marginVertical: 12,
+        padding: 8,
+        flexDirection: 'column',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    orbitSearch: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#18181b', // zinc-900
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
         paddingHorizontal: 16,
-        marginTop: 16,
-        height: 48,
-    },
-    searchInput: {
-        flex: 1,
-        color: '#ffffff',
-        marginLeft: 12,
-        fontSize: 16,
-    },
-    categoriesScroll: {
-        marginTop: 16,
-        marginHorizontal: -16,
-    },
-    filtersScroll: {
-        marginTop: 12,
-        marginHorizontal: -16,
-        maxHeight: 40,
-    },
-    categoriesContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 8,
-        flexDirection: 'row',
-    },
-    categoryButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 10,
-        borderWidth: 1,
-    },
-    categoryButtonActive: {
-        backgroundColor: '#7c3aed', // violet-600
-        borderColor: '#8b5cf6', // violet-500
-    },
-    categoryButtonInactive: {
-        backgroundColor: '#18181b',
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-    },
-    categoryText: {
-        fontWeight: 'bold',
-        marginLeft: 8,
-    },
-    categoryTextActive: {
-        color: '#ffffff',
-    },
-    categoryTextInactive: {
-        color: '#a1a1aa',
-    },
-    filterChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#18181b',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        height: 44,
         borderRadius: 20,
-        marginRight: 8,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        marginBottom: 8,
+    },
+    orbitInput: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    orbitCategories: {
+        paddingHorizontal: 4,
+        gap: 8,
+    },
+    orbitCatChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     filterChipActive: {
         backgroundColor: '#2e1065', // violet-950
         borderColor: '#8b5cf6',
     },
-    filterText: {
-        color: '#a1a1aa',
-        fontSize: 12,
-        marginLeft: 6,
-        fontWeight: '500',
-    },
+
     filterTextActive: {
         color: '#ffffff',
     },
@@ -954,8 +921,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContent: {
-        padding: 16,
+        paddingHorizontal: 12,
         paddingTop: 8,
+    },
+    gridColumnWrapper: {
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    gridItemWrapper: {
+        flex: 1,
     },
     emptyContainer: {
         flex: 1,
@@ -985,6 +959,17 @@ const styles = StyleSheet.create({
         padding: 24,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    orbitCatText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    orbitDivider: {
+        width: 1,
+        height: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        marginHorizontal: 8,
+        alignSelf: 'center',
     },
     modalTitle: {
         fontSize: 20,
@@ -1076,6 +1061,55 @@ const styles = StyleSheet.create({
         marginTop: 12,
         fontSize: 16,
         fontWeight: '600',
+    },
+    floatingOrbitContainer: {
+        paddingHorizontal: 20,
+        marginBottom: 20,
+        zIndex: 10,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 50,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        marginBottom: 16,
+    },
+    searchInput: {
+        flex: 1,
+        height: '100%',
+        paddingHorizontal: 12,
+        fontSize: 16,
+    },
+    filterScrollContainer: {
+        flexDirection: 'row',
+    },
+    filterDataContainer: {
+        alignItems: 'center',
+        paddingRight: 20,
+        gap: 8,
+    },
+    filterChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        minHeight: 40,
+    },
+    filterText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    filterDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        marginHorizontal: 8,
     },
 });
 

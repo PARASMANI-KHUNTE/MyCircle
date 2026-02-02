@@ -208,6 +208,7 @@ app.get('/', (req, res) => {
     res.send('MyCircle API is running...');
 });
 
+// Test route
 app.get('/api/test', (req, res) => {
     res.json({
         message: 'MyCircle API test endpoint is working!',

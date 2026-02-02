@@ -3,7 +3,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 // Configuration
-const GEMINI_MODEL = "gemini-1.5-flash"; // Stable model
+const GEMINI_MODEL = "gemini-pro"; // Using legacy stable name
 const LOCAL_AI_URL = "http://localhost:8000";
 
 /**
@@ -40,6 +40,7 @@ const callLocalAI = async (endpoint, payload, isMultipart = false) => {
         };
 
         const response = await axios.post(url, payload, { headers, timeout: 30000 });
+
         return response.data;
     } catch (error) {
         console.error(`Local AI Error [${endpoint}]:`, error.message);
@@ -248,10 +249,41 @@ const explainPost = async (postData) => {
     };
 };
 
+/**
+ * 5. Placeholder Suggestions (Icons & GIF tags)
+ */
+const getPlaceholderSuggestions = async (title, description) => {
+    const prompt = `Based on this post, suggest a relevant Lucide icon name and 3 keywords for a GIF.
+    Title: "${title}"
+    Description: "${description}"
+    JSON format: {"icon": "IconName", "gifKeywords": ["tag1", "tag2", "tag3"]}`;
+
+    const model = getModel();
+    if (model) {
+        try {
+            const result = await model.generateContent(prompt);
+            const jsonText = result.response.text().match(/\{[\s\S]*\}/)?.[0];
+            if (jsonText) {
+                try {
+                    return JSON.parse(jsonText);
+                } catch (parseErr) {
+                    console.error("Gemini JSON Parse Error (getPlaceholderSuggestions):", parseErr.message);
+                }
+            }
+        } catch (err) {
+            console.warn("Gemini Suggestions Failed...", err.message);
+        }
+    }
+
+    return { icon: "Zap", gifKeywords: ["abstract", "dynamic", "circle"] };
+};
+
 module.exports = {
     checkContentSafety,
     checkImageSafety,
     generateSuggestions,
     analyzePost,
-    explainPost
+    explainPost,
+    getPlaceholderSuggestions
 };
+

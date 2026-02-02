@@ -7,5 +7,7 @@ router.post('/moderate', auth, aiController.moderateContent);
 router.post('/suggest', auth, aiController.getSuggestions);
 router.post('/analyze-post', auth, aiController.analyzePost);
 router.post('/explain-post', auth, aiController.explainPost);
+router.post('/placeholder-suggestion', auth, aiController.getPlaceholderSuggestions);
 
 module.exports = router;
+

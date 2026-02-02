@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { ToastProvider } from './src/components/ui/Toast';
-import { ThemeProvider } from './src/context/ThemeContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { navigationRef } from './src/services/navigationService';
+import StartupAnimation from './src/components/animations/StartupAnimation';
 
 // Screen Placeholders
 import LandingScreen from './src/screens/LandingScreen';
@@ -33,14 +34,19 @@ const RootNavigator = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
-        <ActivityIndicator size="large" color="#8b5cf6" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+      }}
+    >
       {!isAuthenticated ? (
         <>
           <Stack.Screen name="Landing" component={LandingScreen} />
@@ -65,6 +71,20 @@ const RootNavigator = () => {
   );
 };
 
+const MainContent = () => {
+  const [showStartup, setShowStartup] = useState(true);
+
+  if (showStartup) {
+    return <StartupAnimation onComplete={() => setShowStartup(false)} />;
+  }
+
+  return (
+    <NavigationContainer ref={navigationRef}>
+      <RootNavigator />
+    </NavigationContainer>
+  );
+}
+
 const App = () => {
   return (
     <SafeAreaProvider>
@@ -73,9 +93,7 @@ const App = () => {
           <AuthProvider>
             <SocketProvider>
               <NotificationProvider>
-                <NavigationContainer ref={navigationRef}>
-                  <RootNavigator />
-                </NavigationContainer>
+                <MainContent />
               </NotificationProvider>
             </SocketProvider>
           </AuthProvider>

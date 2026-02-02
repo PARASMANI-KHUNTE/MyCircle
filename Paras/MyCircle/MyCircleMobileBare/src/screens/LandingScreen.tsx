@@ -10,10 +10,11 @@ import Animated, {
     withRepeat,
     withTiming,
     withDelay,
-    interpolate,
-    Extrapolate
+    FadeInDown
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
+import GlassView from '../components/ui/GlassView';
 
 const { width, height } = Dimensions.get('window');
 
@@ -55,8 +56,9 @@ const FloatingShape = ({ delay = 0, size = 200, color = '#8b5cf6', top = 0, left
     );
 };
 
-const LandingScreen = ({ navigation }: any) => {
+const LandingScreen = () => {
     const { login, isLoading: authLoading } = useAuth();
+    const { colors } = useTheme();
 
     useEffect(() => {
         GoogleSignin.configure({
@@ -66,6 +68,7 @@ const LandingScreen = ({ navigation }: any) => {
     }, []);
 
     const handleGoogleLogin = async () => {
+        // ... same logic ...
         try {
             await GoogleSignin.hasPlayServices();
             try {
@@ -96,64 +99,82 @@ const LandingScreen = ({ navigation }: any) => {
 
     if (authLoading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#8b5cf6" />
+            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <StatusBar barStyle="light-content" />
 
-            {/* 3D Background Animations */}
+            {/* Background Decorations */}
             <View style={StyleSheet.absoluteFill}>
-                <FloatingShape size={300} color="#8b5cf6" top={-50} left={-50} delay={0} />
-                <FloatingShape size={250} color="#3b82f6" top={height * 0.4} left={width * 0.6} delay={1000} />
-                <FloatingShape size={200} color="#ec4899" top={height * 0.7} left={-50} delay={2000} />
+                <FloatingShape size={350} color={colors.primary} top={-100} left={-100} delay={0} />
+                <FloatingShape size={300} color={colors.accent} top={height * 0.5} left={width * 0.7} delay={1500} />
+                <FloatingShape size={200} color={colors.primary} top={height * 0.8} left={-50} delay={3000} />
             </View>
 
             <View style={styles.content}>
                 <View style={styles.header}>
-                    <View style={styles.logoWrapper}>
+                    <Animated.View
+                        entering={FadeInDown.delay(200).springify()}
+                        style={styles.logoWrapper}
+                    >
                         <Image
                             source={require('../assets/logo.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                    </View>
-                    <Text style={styles.brandName}>MyCircle</Text>
+                    </Animated.View>
+                    <Animated.Text
+                        entering={FadeInDown.delay(400).springify()}
+                        style={[styles.brandName, { color: colors.text }]}
+                    >
+                        My<Text style={{ color: colors.accent }}>Circle</Text>
+                    </Animated.Text>
 
                     <View style={styles.introContainer}>
-                        <Text style={styles.headline}>
-                            Connect, Exchange,{' '}
-                            <Text style={styles.highlight}>Thrive Locally.</Text>
-                        </Text>
-                        <Text style={styles.description}>
+                        <Animated.Text
+                            entering={FadeInDown.delay(600).springify()}
+                            style={[styles.headline, { color: colors.text }]}
+                        >
+                            Connect, Exchange,{'\n'}
+                            <Text style={{ color: colors.primary }}>Thrive Locally.</Text>
+                        </Animated.Text>
+                        <Animated.Text
+                            entering={FadeInDown.delay(800).springify()}
+                            style={[styles.description, { color: colors.textSecondary }]}
+                        >
                             The modern way to find tasks, offer services, and trade items in your neighborhood. Secure, fast, and beautiful.
-                        </Text>
+                        </Animated.Text>
                     </View>
                 </View>
 
-                <View style={styles.actions}>
+                <Animated.View
+                    entering={FadeInDown.delay(1000).springify()}
+                    style={styles.actions}
+                >
                     <TouchableOpacity
                         onPress={handleGoogleLogin}
-                        style={styles.googleButton}
                         activeOpacity={0.8}
                     >
-                        <Image
-                            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
-                            style={styles.googleIcon}
-                        />
-                        <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                        <GlassView intensity={20} borderRadius={24} style={styles.glassButton}>
+                            <Image
+                                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
+                                style={styles.googleIcon}
+                            />
+                            <Text style={[styles.googleButtonText, { color: colors.text }]}>Continue with Google</Text>
+                        </GlassView>
                     </TouchableOpacity>
 
-                    <Text style={styles.terms}>
+                    <Text style={[styles.terms, { color: colors.textSecondary }]}>
                         By continuing, you agree to our{' '}
-                        <Text style={{ color: '#fff' }}>Terms of Service</Text> and{' '}
-                        <Text style={{ color: '#fff' }}>Privacy Policy</Text>
+                        <Text style={{ color: colors.primary }}>Terms</Text> and{' '}
+                        <Text style={{ color: colors.primary }}>Privacy</Text>
                     </Text>
-                </View>
+                </Animated.View>
             </View>
         </SafeAreaView>
     );
@@ -162,11 +183,9 @@ const LandingScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000',
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#000',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -176,66 +195,52 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         justifyContent: 'space-between',
-        paddingHorizontal: 30,
-        paddingTop: 60,
+        paddingHorizontal: 32,
+        paddingTop: 80,
         paddingBottom: 40,
     },
     header: {
         alignItems: 'flex-start',
     },
     logoWrapper: {
-        width: 100,
-        height: 100,
-        marginBottom: 10,
-        overflow: 'hidden',
+        width: 80,
+        height: 80,
+        marginBottom: 16,
     },
     logo: {
         width: '100%',
         height: '100%',
     },
     brandName: {
-        color: '#fff',
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: '900',
-        marginBottom: 30,
-        letterSpacing: 0.5,
+        marginBottom: 40,
+        letterSpacing: -0.5,
     },
     introContainer: {
         maxWidth: '100%',
     },
     headline: {
-        color: '#fff',
-        fontSize: 48,
+        fontSize: 52,
         fontWeight: '800',
-        lineHeight: 56,
-        letterSpacing: -1,
-    },
-    highlight: {
-        color: '#8b5cf6',
+        lineHeight: 60,
+        letterSpacing: -1.5,
     },
     description: {
-        color: '#a1a1aa',
         fontSize: 18,
-        marginTop: 20,
+        marginTop: 24,
         lineHeight: 28,
         fontWeight: '500',
     },
     actions: {
         width: '100%',
     },
-    googleButton: {
-        backgroundColor: '#fff',
+    glassButton: {
         width: '100%',
         flexDirection: 'row',
         paddingVertical: 18,
-        borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#fff',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 10,
     },
     googleIcon: {
         width: 24,
@@ -243,12 +248,10 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     googleButtonText: {
-        color: '#000',
         fontWeight: '700',
         fontSize: 18,
     },
     terms: {
-        color: '#71717a',
         marginTop: 30,
         fontSize: 13,
         textAlign: 'center',

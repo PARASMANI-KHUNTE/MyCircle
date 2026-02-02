@@ -7,9 +7,12 @@ import { getAvatarUrl } from '../utils/avatar';
 import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getPostInsights, getPostExplanation } from '../services/aiService';
+import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
+
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 import ImagePreviewModal from '../components/ui/ImagePreviewModal';
+import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -39,6 +42,8 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     // ActionSheet State
     const [actionSheetVisible, setActionSheetVisible] = useState(false);
     const [actionSheetConfig, setActionSheetConfig] = useState<{ title?: string; description?: string; actions: ActionItem[] }>({ actions: [] });
+    const [aiPlaceholderSuggestion, setAiPlaceholderSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
+
 
     // Image Preview State
     const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
@@ -50,6 +55,13 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     useEffect(() => {
         fetchPostDetails();
     }, [id]);
+
+    useEffect(() => {
+        if (post && (!post.images || post.images.length === 0)) {
+            getPlaceholderSuggestions(post.title, post.description).then(setAiPlaceholderSuggestion);
+        }
+    }, [post?._id]);
+
 
     const fetchPostDetails = async () => {
         try {
@@ -375,12 +387,17 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                             ))}
                         </ScrollView>
                     ) : (
-                        <View style={[styles.placeholderContainer, themeStyles.dimBackground]}>
-                            {/* Note: require('../assets/logo.png') might fail if logo doesn't exist, using fallback */}
-                            <View style={[styles.placeholderLogo, { backgroundColor: colors.border }]} />
-                            <Text style={[styles.placeholderText, themeStyles.textSecondary]}>No images provided</Text>
-                        </View>
+                        <GenerativePlaceholder
+                            id={post._id}
+                            type={post.type}
+                            style={styles.imageGallery}
+                            iconSize={150}
+                            aiIcon={aiPlaceholderSuggestion?.icon}
+                            aiGifKeyword={aiPlaceholderSuggestion?.gifKeywords?.[0]}
+                        />
+
                     )}
+
 
                     <View style={styles.contentPadding}>
                         <View style={styles.typePriceRow}>

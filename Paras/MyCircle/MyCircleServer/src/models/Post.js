@@ -156,10 +156,10 @@ const PostSchema = new mongoose.Schema({
 });
 
 // Middleware to sync isActive with status before saving
-PostSchema.pre('save', function (next) {
+PostSchema.pre('save', async function () {
     const activeStatuses = ['active'];
     this.isActive = activeStatuses.includes(this.status);
-    next();
 });
+
 
 module.exports = mongoose.model('Post', PostSchema);

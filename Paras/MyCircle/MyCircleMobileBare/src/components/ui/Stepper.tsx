@@ -19,7 +19,7 @@ const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
                 const isCompleted = stepNum < currentStep;
 
                 return (
-                    <View key={index} style={styles.stepWrapper}>
+                    <View key={index} style={[styles.stepWrapper, !isActive && { flex: 0 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             {/* Circle */}
                             <View style={[
@@ -40,21 +40,23 @@ const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
                                 )}
                             </View>
 
-                            {/* Label (Only shown if active or next, to save space, or just show all but allow wrapping usually better to keep it simple) */}
-                            {/* Design shows labels next to numbers. Let's show label. */}
-                            <Text style={[
-                                styles.label,
-                                isActive ? { color: colors.text, fontWeight: 'bold' } : { color: colors.textSecondary }
-                            ]}>
-                                {label}
-                            </Text>
+                            {/* Label - Only show if active or if few steps to save space */}
+                            {(isActive || steps.length <= 3) && (
+                                <Text style={[
+                                    styles.label,
+                                    isActive ? { color: colors.text, fontWeight: 'bold' } : { color: colors.textSecondary }
+                                ]} numberOfLines={1}>
+                                    {label}
+                                </Text>
+                            )}
                         </View>
 
                         {/* Line connector (except for last item) */}
                         {index < steps.length - 1 && (
                             <View style={[
                                 styles.line,
-                                { backgroundColor: isCompleted ? colors.success : colors.border }
+                                { backgroundColor: isCompleted ? colors.success : colors.border },
+                                !isActive && steps.length > 3 && { minWidth: 20 }
                             ]} />
                         )}
                     </View>
@@ -68,14 +70,14 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         paddingHorizontal: 4,
         marginBottom: 24,
+        width: '100%',
     },
     stepWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1, // Distribute space
+        flex: 1,
     },
     circle: {
         width: 24,
@@ -84,20 +86,20 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 8,
+        marginRight: 4,
     },
     stepNum: {
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: 'bold',
     },
     label: {
-        fontSize: 12,
-        marginRight: 8,
+        fontSize: 11,
+        marginRight: 4,
     },
     line: {
         height: 2,
         flex: 1,
-        marginRight: 8,
+        marginHorizontal: 4,
     }
 });
 

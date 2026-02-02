@@ -2,41 +2,51 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define Color Palette
-// ... (Colors object remains unchanged, so I will target the lines around imports and load/save logic)
+import { Palette, Gradients } from '../constants/design';
 
-// Skipping Colors object in replacement for brevity if possible, but replace_file_content needs contiguous block. 
-// I will target specific blocks.
-
-// Actually, I can just replace the whole file content or specific functions. 
-// Let's replace the import and the functions.
-
-// Define Color Palette
 // Define Color Palette
 export const Colors = {
     dark: {
-        background: '#09090b', // Zinc-950 (Slightly reduced contrast from pure black)
-        card: '#18181b', // Zinc-900
-        text: '#f4f4f5', // Zinc-100
-        textSecondary: '#a1a1aa', // Zinc-400
-        border: '#27272a', // Zinc-800
-        primary: '#8b5cf6', // Violet-500
-        danger: '#ef4444',
-        success: '#22c55e',
-        input: '#27272a', // Zinc-800
-        placeholder: '#71717a',
+        background: Palette.dark.bg,
+        card: Palette.dark.surface,
+        text: '#f8fafc',
+        textSecondary: '#94a3b8',
+        border: Palette.dark.elevator,
+        input: Palette.dark.elevator,
+        placeholder: '#64748b',
+
+        primary: Palette.violet[500],
+        secondary: Palette.cyan[500],
+        accent: Palette.pink[500],
+
+        danger: Palette.error,
+        success: Palette.success,
+        warning: Palette.warning,
+
+        // Custom additions
+        glass: Palette.dark.glass,
+        neon: Palette.violet.neon,
     },
     light: {
-        background: '#f8fafc', // Slate-50 (Very light cool grey)
-        card: '#ffffff', // White
-        text: '#0f172a', // Slate-900
-        textSecondary: '#64748b', // Slate-500
-        border: '#e2e8f0', // Slate-200
-        primary: '#7c3aed', // Violet-600
-        danger: '#dc2626',
-        success: '#16a34a',
-        input: '#f1f5f9', // Slate-100
+        background: Palette.light.bg,
+        card: Palette.light.surface,
+        text: '#0f172a',
+        textSecondary: '#64748b',
+        border: Palette.light.elevator,
+        input: Palette.light.elevator,
         placeholder: '#94a3b8',
+
+        primary: Palette.violet[600],
+        secondary: Palette.cyan[500],
+        accent: Palette.pink[500],
+
+        danger: Palette.error,
+        success: Palette.success,
+        warning: Palette.warning,
+
+        // Custom additions
+        glass: Palette.light.glass,
+        neon: Palette.violet[500],
     }
 };
 

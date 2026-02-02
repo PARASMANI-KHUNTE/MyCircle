@@ -2,8 +2,10 @@ const {
     checkContentSafety,
     generateSuggestions,
     analyzePost,
-    explainPost
+    explainPost,
+    getPlaceholderSuggestions
 } = require('../config/gemini');
+
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 
@@ -64,3 +66,13 @@ exports.explainPost = async (req, res, next) => {
         return next(err);
     }
 };
+// @desc    Get placeholder suggestions (icon/gif)
+// @route   POST /api/ai/placeholder-suggestion
+// @access  Private
+exports.getPlaceholderSuggestions = asyncHandler(async (req, res, next) => {
+    const { title, description } = req.body;
+    if (!title) throw new ApiError(400, 'Title is required');
+
+    const result = await getPlaceholderSuggestions(title, description || '');
+    res.json(result);
+});

@@ -1,18 +1,28 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Clipboard, LayoutAnimation, Platform, UIManager } from 'react-native';
-import { MapPin, Clock, ArrowUpRight, MessageCircle, Heart, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import React, { useState, useRef, useEffect } from 'react';
+
+import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { MapPin, Heart, MessageCircle, Share2, Star } from 'lucide-react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
+import Animated, {
+
+
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withSequence,
+    withTiming
+} from 'react-native-reanimated';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useTheme } from '../../context/ThemeContext';
 import api, { BASE_URL } from '../../services/api';
+import { getPlaceholderSuggestions } from '../../services/aiService';
+import GlassView from './GlassView';
 
-if (Platform.OS === 'android') {
-    if (UIManager.setLayoutAnimationEnabledExperimental) {
-        UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-}
+import GenerativePlaceholder from './GenerativePlaceholder';
+import { Palette } from '../../constants/design';
+
 
 interface PostCardProps {
     post: {
@@ -28,480 +38,356 @@ interface PostCardProps {
         user: {
             _id: string;
             displayName: string;
-
             avatar: string;
         };
         distance?: string;
         images?: string[];
+        isUrgent?: boolean;
+        subType?: string;
     };
-    isOwnPost?: boolean;
     onPress?: () => void;
-    onRequestContact?: () => void;
 }
 
-const PostCard = ({ post, isOwnPost, onPress, onRequestContact, navigation }: PostCardProps & { navigation?: any }) => {
+const PostCard = ({ post, onPress }: PostCardProps) => {
     const { user: currentUser } = useAuth();
     const { success, error } = useToast();
     const { colors } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
-    const [shares, setShares] = useState(post.shares || 0);
-    const [expanded, setExpanded] = useState(false);
     const lastTapRef = useRef<number>(0);
+    const [aiSuggestion, setAiSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
+
+    useEffect(() => {
+        if (!post.images || post.images.length === 0) {
+            getPlaceholderSuggestions(post.title, post.description).then(setAiSuggestion);
+        }
+    }, [post._id]);
+
 
     const isLiked = currentUser && likes.includes(currentUser._id);
+    const scale = useSharedValue(1);
+    const heartScale = useSharedValue(0);
+
+    const handlePressIn = () => {
+        scale.value = withSpring(0.97);
+    };
+
+    const handlePressOut = () => {
+        scale.value = withSpring(1);
+    };
+
+    const animatedCardStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+
+    const animatedHeartStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: heartScale.value }],
+        opacity: heartScale.value,
+    }));
+
+    const triggerHeartAnimation = () => {
+        heartScale.value = 1;
+        heartScale.value = withSequence(
+            withSpring(1.5),
+            withTiming(0, { duration: 500 })
+        );
+    };
 
     const handleDoubleTap = () => {
         const now = Date.now();
         const DOUBLE_TAP_DELAY = 300;
         if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-            // Double tap detected
             handleLike();
+            triggerHeartAnimation();
         } else {
-            // Single tap - delayed action
-            setTimeout(() => {
+            setTimeout(() => { // Single tap delay check
                 if (Date.now() - lastTapRef.current >= DOUBLE_TAP_DELAY) {
-                    onPress?.();
+                    if (onPress) onPress();
                 }
             }, DOUBLE_TAP_DELAY);
         }
         lastTapRef.current = now;
     };
 
-    const toggleExpand = () => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setExpanded(!expanded);
-    };
-
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
-    };
-
-    const getTypeColor = (type: string) => {
-        switch (type) {
-            case 'job': return '#3b82f6'; // Blue
-            case 'service': return '#06b6d4'; // Cyan
-            case 'sell': return '#f59e0b'; // Amber
-            case 'rent': return '#8b5cf6'; // Violet
-            case 'barter': return '#ec4899'; // Pink
-            default: return colors.primary;
-        }
-    };
-
     const getPostImage = (post: any) => {
         if (post.images && post.images.length > 0) return post.images[0];
-        const keywords: Record<string, string> = {
-            job: 'workspace,office',
-            service: 'tools,work',
-            sell: 'product,tech',
-            rent: 'key,house',
-            barter: 'deal,handshake'
-        };
-        const keyword = keywords[post.type] || 'abstract';
-        return `https://loremflickr.com/400/400/${keyword}?lock=${post._id.substring(post._id.length - 4)}`;
+        return null;
     };
+
+
 
     const handleLike = async () => {
-        if (!currentUser) {
-            error("Please login to like posts");
-            return;
-        }
+        if (!currentUser) return error("Please login to like");
+        const newLikes = isLiked
+            ? likes.filter(id => id !== currentUser._id)
+            : [...likes, currentUser._id];
+        setLikes(newLikes);
+        triggerHeartAnimation(); // Always pop heart on dedicated like button too
+
         try {
             await api.post(`/posts/${post._id}/like`);
-            if (isLiked) {
-                setLikes(likes.filter(id => id !== currentUser._id));
-            } else {
-                setLikes([...likes, currentUser._id]);
-            }
         } catch (err) {
             console.error(err);
+            setLikes(likes);
         }
     };
 
-    const handleShare = async () => {
-        try {
-            await api.post(`/posts/${post._id}/share`);
-            setShares(shares + 1);
-            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
-            const shareUrl = `${serverBase}/post/${post._id}`;
-            Clipboard.setString(shareUrl);
-            success("Link copied to clipboard!");
-        } catch (err) {
-            console.error(err);
+    const getTypeColor = () => {
+        switch (post.type) {
+            case 'job': return Palette.info; // Blue
+            case 'service': return Palette.cyan[500]; // Teal/Cyan
+            case 'sell':
+            case 'rent': return Palette.warning; // Orange/Amber
+            default: return Palette.pink[500];
         }
-    };
-
-    // Dynamic styles
-    const themeStyles = {
-        card: {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-        },
-        text: { color: colors.text },
-        textSecondary: { color: colors.textSecondary },
-        divider: { backgroundColor: colors.border },
-        icon: colors.textSecondary,
     };
 
     return (
-        <TouchableOpacity
+        <Pressable
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
             onPress={handleDoubleTap}
-            activeOpacity={0.9}
-            style={[styles.card, themeStyles.card, { borderLeftColor: getTypeColor(post.type), borderLeftWidth: 4 }]}
+            style={styles.cardContainer}
         >
-            {post.images && post.images.length > 0 && (
-                <View style={styles.heroImageWrap}>
+            <Animated.View style={[styles.cardWrapper, animatedCardStyle]}>
+                {/* Full Background Image or Generative Alternative */}
+                {getPostImage(post) ? (
                     <Image
-                        source={{ uri: post.images[0] }}
-                        style={styles.heroImage}
+                        source={{ uri: getPostImage(post)! }}
+                        style={styles.backgroundImage}
                         resizeMode="cover"
                     />
-                    <Svg pointerEvents="none" style={StyleSheet.absoluteFill}>
-                        <Defs>
-                            <LinearGradient id="postCardHeroShade" x1="0" y1="0" x2="0" y2="1">
-                                <Stop offset="0" stopColor="#000" stopOpacity="0.30" />
-                                <Stop offset="0.35" stopColor="#000" stopOpacity="0.05" />
-                                <Stop offset="0.70" stopColor="#000" stopOpacity="0.10" />
-                                <Stop offset="1" stopColor="#000" stopOpacity="0.55" />
-                            </LinearGradient>
-                        </Defs>
-                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#postCardHeroShade)" />
-                    </Svg>
-                    <View style={[styles.typePill, { borderColor: getTypeColor(post.type), backgroundColor: colors.card }]}>
-                        <Text style={[styles.typePillText, { color: getTypeColor(post.type) }]}>{post.type}</Text>
-                    </View>
-                    {post.price != null && (
-                        <View style={styles.pricePill}>
-                            <Text style={styles.priceText}>₹{post.price}</Text>
-                        </View>
-                    )}
-                </View>
-            )}
+                ) : (
+                    <GenerativePlaceholder
+                        id={post._id}
+                        type={post.type}
+                        style={styles.backgroundImage}
+                        iconSize={120}
+                        aiIcon={aiSuggestion?.icon}
+                        aiGifKeyword={aiSuggestion?.gifKeywords?.[0]}
+                    />
 
-            <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>
-                {post.title}
-            </Text>
-
-            <View style={styles.userRow}>
-                <TouchableOpacity onPress={() => (navigation as any).navigate('UserProfile', { userId: post.user._id })} style={styles.userRowLeft}>
-                    <Image source={{ uri: getAvatarUrl(post.user as any) }} style={styles.avatarSmall} />
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.displayName, themeStyles.text]} numberOfLines={1}>{post.user.displayName}</Text>
-                        <View style={styles.userMetaRow}>
-                            <Clock size={12} color={colors.textSecondary} />
-                            <Text style={[styles.userMetaText, themeStyles.textSecondary]}>{formatDate(post.createdAt)}</Text>
-                        </View>
-                    </View>
-                </TouchableOpacity>
-                {isOwnPost && (post as any).applicationCount > 0 && (
-                    <View style={styles.requestBadge}>
-                        <MessageCircle size={12} color="#ffffff" fill="#ffffff" />
-                        <Text style={styles.requestBadgeText}>{(post as any).applicationCount}</Text>
-                    </View>
                 )}
-            </View>
 
-            <Text style={[styles.description, themeStyles.textSecondary]} numberOfLines={expanded ? undefined : 2}>
-                {post.description}
-            </Text>
 
-            {expanded && (
-                <Image
-                    source={{ uri: getPostImage(post) }}
-                    style={[styles.expandedImage, { borderColor: getTypeColor(post.type) }]}
-                />
-            )}
 
-            {expanded && (
-                <View style={styles.metaContainer}>
-                    <View style={styles.metaItem}>
-                        <MapPin size={14} color={colors.textSecondary} />
-                        <Text style={[styles.metaText, themeStyles.textSecondary]}>{post.distance || post.location}</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                        <Clock size={14} color={colors.textSecondary} />
-                        <Text style={[styles.metaText, themeStyles.textSecondary]}>{formatDate(post.createdAt)}</Text>
-                    </View>
-                </View>
-            )}
+                {/* Dark Gradient Overlay - Subtle top, strong bottom */}
+                <Svg style={StyleSheet.absoluteFill}>
+                    <Defs>
+                        <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                            <Stop offset="0" stopColor="#000" stopOpacity="0.2" />
+                            <Stop offset="0.5" stopColor="#000" stopOpacity="0" />
+                            <Stop offset="0.75" stopColor="#000" stopOpacity="0.6" />
+                            <Stop offset="1" stopColor="#000" stopOpacity="0.95" />
+                        </SvgLinearGradient>
+                    </Defs>
+                    <Rect width="100%" height="100%" fill="url(#grad)" />
+                </Svg>
 
-            {/* Social Actions Section - Always visible but compact */}
-            <View style={styles.socialActions}>
-                <View style={styles.socialLeft}>
-                    <TouchableOpacity onPress={handleLike} style={styles.socialButton}>
-                        <Heart size={18} color={isLiked ? "#ef4444" : colors.textSecondary} fill={isLiked ? "#ef4444" : "transparent"} />
-                        <Text style={[styles.socialCount, themeStyles.textSecondary, isLiked && { color: "#ef4444" }]}>{likes.length}</Text>
-                    </TouchableOpacity>
 
-                    <TouchableOpacity onPress={handleShare} style={styles.socialButton}>
-                        <Share2 size={18} color={colors.textSecondary} />
-                        <Text style={[styles.socialCount, themeStyles.textSecondary]}>{shares}</Text>
-                    </TouchableOpacity>
-                </View>
+                {/* Floating Top Elements */}
+                <View style={styles.topRow}>
+                    <GlassView intensity={30} borderRadius={16} style={styles.typeBadge}>
+                        <View style={[styles.typeDot, { backgroundColor: getTypeColor() }]} />
+                        <Text style={styles.typeText}>{post.subType || post.type}</Text>
+                    </GlassView>
 
-                {/* Collapsible toggle */}
-                <TouchableOpacity onPress={toggleExpand} style={styles.expandButton}>
-                    {expanded ? <ChevronUp size={20} color={colors.textSecondary} /> : <ChevronDown size={20} color={colors.textSecondary} />}
-                </TouchableOpacity>
-            </View>
-
-            {expanded && (
-                <>
-                    <View style={[styles.divider, themeStyles.divider]} />
-
-                    <View style={styles.footer}>
-                        <TouchableOpacity
-                            onPress={onPress}
-                            style={styles.detailsButton}
-                        >
-                            <Text style={[styles.detailsText, themeStyles.textSecondary]}>Full View</Text>
-                            <ArrowUpRight size={14} color={colors.textSecondary} />
+                    <GlassView intensity={30} borderRadius={20} style={styles.likeButtonContainer}>
+                        <TouchableOpacity onPress={handleLike} hitSlop={10} style={styles.likeButton}>
+                            <Heart
+                                size={20}
+                                color={isLiked ? "#ef4444" : "#fff"}
+                                fill={isLiked ? "#ef4444" : "transparent"}
+                            />
                         </TouchableOpacity>
+                    </GlassView>
+                </View>
 
-                        {!isOwnPost && (
-                            <TouchableOpacity
-                                onPress={onRequestContact}
-                                style={styles.contactButton}
-                            >
-                                <MessageCircle size={14} color={colors.primary} />
-                                <Text style={[styles.contactButtonText, { color: colors.primary }]}>Request Contact</Text>
-                            </TouchableOpacity>
+                {/* Big Heart Animation Overlay */}
+                <View style={[StyleSheet.absoluteFill, styles.centered]} pointerEvents="none">
+                    <Animated.View style={animatedHeartStyle}>
+                        <Heart size={100} color="#fff" fill="#fff" />
+                    </Animated.View>
+                </View>
+
+                {/* Bottom Content Area */}
+                <View style={styles.contentOverlay}>
+                    <View style={styles.mainInfo}>
+                        <Text style={styles.title} numberOfLines={2}>
+                            {post.title}
+                        </Text>
+
+                        <View style={styles.locationRow}>
+                            <MapPin size={14} color={colors.textSecondary} />
+                            <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
+                                {post.location.split(',')[0]} • {post.distance || '2km'} away
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.footerRow}>
+                        <View style={styles.userSection}>
+                            <Image source={{ uri: getAvatarUrl(post.user) }} style={styles.avatar} />
+                            <Text style={styles.userName}>{post.user.displayName}</Text>
+                        </View>
+
+                        {post.price != null && (
+                            <View style={styles.priceTag}>
+                                <Text style={[styles.priceSymbol, { color: colors.primary }]}>₹</Text>
+                                <Text style={styles.priceValue}>{post.price.toLocaleString()}</Text>
+                            </View>
                         )}
                     </View>
-                </>
-            )}
-        </TouchableOpacity>
+                </View>
+
+            </Animated.View>
+        </Pressable>
     );
 };
 
 const styles = StyleSheet.create({
-    card: {
-        borderRadius: 20, // Slightly reduced
-        padding: 16, // Reduced from 20
-        marginBottom: 16, // Reduced from 20
-        borderWidth: 1,
-        // shadowColor: "#000",
-        // shadowOffset: {
-        // 	width: 0,
-        // 	height: 1,
-        // },
-        // shadowOpacity: 0.1,
-        // shadowRadius: 2,
-        // elevation: 2,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    heroImageWrap: {
-        height: 180,
+    cardContainer: {
+        marginBottom: 24,
         width: '100%',
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginBottom: 12,
-        position: 'relative',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)'
+        paddingHorizontal: 4, // Tiny breathing room if needed, or 0 for edge-to-edge
     },
-    heroImage: {
+    cardWrapper: {
+        width: '100%',
+        height: 420, // Taller, fixed height for consistency
+        borderRadius: 32, // Super rounded corners
+        overflow: 'hidden',
+        backgroundColor: '#18181b', // Fallback
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 8,
+        },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    backgroundImage: {
+        ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
-        backgroundColor: 'rgba(0,0,0,0.2)'
     },
-    typePill: {
-        position: 'absolute',
-        top: 10,
-        left: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1,
-    },
-    typePillText: {
-        fontSize: 11,
-        fontWeight: '700',
-        textTransform: 'uppercase'
-    },
-    pricePill: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        backgroundColor: 'rgba(0,0,0,0.55)'
-    },
-    priceText: {
-        color: '#ffffff',
-        fontSize: 13,
-        fontWeight: 'bold'
-    },
-    userRow: {
-        flexDirection: 'row',
+    centered: {
+        justifyContent: 'center',
         alignItems: 'center',
+        zIndex: 20,
+    },
+
+
+    topRow: {
+        flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 8,
-        gap: 12,
+        padding: 16,
+        width: '100%',
+        zIndex: 10,
     },
-    userRowLeft: {
+    typeBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
-        gap: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
     },
-    avatarSmall: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        backgroundColor: '#00000022'
+    typeDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 6,
     },
-    userMetaRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 2,
-    },
-    userMetaText: {
+    typeText: {
+        color: '#fff',
+        fontWeight: '700',
         fontSize: 12,
-    },
-    avatar: {
-        width: 36, // Reduced from 40
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#27272a',
-    } as any,
-    userInfo: {
-        marginLeft: 10,
-        flex: 1,
-    },
-    displayName: {
-        fontWeight: 'bold',
-        fontSize: 15, // Reduced from 16
-    },
-    type: {
-        fontSize: 9, // Reduced from 10
-        fontWeight: 'bold',
         textTransform: 'uppercase',
-        letterSpacing: 1,
+        letterSpacing: 0.5,
     },
-    priceTag: {
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(59, 130, 246, 0.2)',
-    },
-    priceTagText: {
-        color: '#3b82f6',
-        fontWeight: 'bold',
-        fontSize: 13,
-    },
-    title: {
-        fontSize: 18, // Reduced from 20
-        fontWeight: 'bold',
-        marginBottom: 6,
-        lineHeight: 22,
-    },
-    description: {
-        fontSize: 13, // Reduced from 14
-        marginBottom: 12,
-        lineHeight: 18,
-    },
-    metaContainer: {
-        flexDirection: 'row',
+    likeButtonContainer: {
+        width: 44,
+        height: 44,
         alignItems: 'center',
+        justifyContent: 'center',
+    },
+    likeButton: {
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    contentOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 20,
+        paddingBottom: 24,
+    },
+    mainInfo: {
         marginBottom: 16,
     },
-    metaItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 16,
+    title: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#fff',
+        marginBottom: 8,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
-    metaText: {
-        fontSize: 11,
-        marginLeft: 4,
-    },
-    socialActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 0, // Removed bottom margin when collapsed
-    },
-    socialLeft: {
-        flexDirection: 'row',
-        gap: 20,
-    },
-    socialButton: {
+    locationRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
     },
-    socialCount: {
+    locationText: {
+        color: '#e4e4e7', // zinc-200
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    footerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    userSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        padding: 6,
+        paddingRight: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    avatar: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: '#fff',
+        marginRight: 10,
+    },
+    userName: {
+        color: '#fff',
         fontSize: 13,
         fontWeight: '600',
     },
-    expandButton: {
-        padding: 4,
-    },
-    divider: {
-        height: 1,
-        width: '100%',
-        marginVertical: 12,
-    },
-    footer: {
+    priceTag: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        alignItems: 'flex-start',
     },
-    detailsButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    priceSymbol: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginTop: 2,
+        marginRight: 2,
     },
-    detailsText: {
-        fontSize: 13,
-        fontWeight: '500',
-        marginRight: 4,
-    },
-    contactButton: {
-        backgroundColor: 'rgba(139, 92, 246, 0.1)', // violet-600/10
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 9999,
-        borderWidth: 1,
-        borderColor: 'rgba(139, 92, 246, 0.2)',
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    contactButtonText: {
-        fontWeight: 'bold',
-        fontSize: 13,
-        marginLeft: 6,
-    },
-    requestBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ef4444',
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        borderRadius: 10,
-        marginLeft: 8,
-        gap: 4,
-    },
-    requestBadgeText: {
-        color: '#ffffff',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    expandedImage: {
-        width: '100%',
-        height: 180,
-        borderRadius: 12,
-        marginBottom: 16,
-        borderWidth: 1,
-        resizeMode: 'contain',
-    },
+    priceValue: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: '800',
+    }
 });
 
 export default PostCard;

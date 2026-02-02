@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl } from 'react-native';
+import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl } from 'react-native';
+import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check, MessageCircle, Bell, Wrench } from 'lucide-react-native';
@@ -712,9 +713,9 @@ const FeedScreen = ({ navigation, route }: any) => {
                         <ActivityIndicator size="large" color={colors.primary} />
                     </View>
                 ) : (
-                    <FlatList
+                    <FlashList
                         data={filteredPosts}
-                        keyExtractor={item => item._id}
+                        keyExtractor={(item: any) => item._id}
                         numColumns={1}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
@@ -726,7 +727,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                                 colors={[colors.primary]} // Android
                             />
                         }
-                        renderItem={({ item, index }) => (
+                        renderItem={({ item, index }: any) => (
                             <Animated.View
                                 entering={FadeInDown.delay(index * 100).springify()}
                                 style={styles.gridItemWrapper}

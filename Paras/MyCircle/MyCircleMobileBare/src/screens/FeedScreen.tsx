@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { usePosts } from '../hooks/usePosts';
+import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
@@ -37,13 +39,15 @@ const FeedScreen = ({ navigation, route }: any) => {
     const { colors } = useTheme();
     const { socket } = useSocket() as any; // Type assertion if needed
     const { success } = useToast();
+    const queryClient = useQueryClient();
     const { unreadCount } = useNotifications();
-    const [posts, setPosts] = useState<any[]>([]);
-    const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+    const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
+    const [selectedPost, setSelectedPost] = useState<any | null>(null);
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [mapLoading, setMapLoading] = useState(false);
 
     // Chat Badge Logic
 
@@ -60,6 +64,15 @@ const FeedScreen = ({ navigation, route }: any) => {
 
     // Distance filter (radius in km)
     const [distanceRadius, setDistanceRadius] = useState<number>(50); // Default 50km (All)
+
+    // React Query Hook
+    const { data: postsData, isLoading: loading, refetch, isRefetching, isError, error } = usePosts(
+        isNearby ? userLocation?.lat : undefined,
+        isNearby ? userLocation?.lng : undefined,
+        distanceRadius
+    );
+
+    const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
 
     // Actually, "Select Date" implies filtering by specific date.
     const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
@@ -79,7 +92,6 @@ const FeedScreen = ({ navigation, route }: any) => {
     };
 
     useEffect(() => {
-        fetchPosts();
         requestLocationPermission();
         fetchUnreadMsgCount();
     }, []);
@@ -93,7 +105,14 @@ const FeedScreen = ({ navigation, route }: any) => {
     useEffect(() => {
         if (socket) {
             socket.on('new_post', (newPost: any) => {
-                setPosts((prev: any) => [newPost, ...prev]);
+                const queryKey = ['posts', {
+                    latitude: isNearby ? userLocation?.lat : undefined,
+                    longitude: isNearby ? userLocation?.lng : undefined,
+                    radius: distanceRadius
+                }];
+                queryClient.setQueryData(queryKey, (oldData: any[]) => {
+                    return oldData ? [newPost, ...oldData] : [newPost];
+                });
                 success('New post added!');
             });
             socket.on('receive_message', () => fetchUnreadMsgCount());
@@ -109,25 +128,17 @@ const FeedScreen = ({ navigation, route }: any) => {
     }, [socket]);
 
     useEffect(() => {
-        if (posts.length > 0) {
-            const locs = Array.from(new Set(posts.map(p => p.location).filter(Boolean)));
+        if (postsData) {
+            const locs = Array.from(new Set((postsData as any[]).map(p => p.location).filter(Boolean)));
             setAvailableLocations(['All', ...locs]);
         }
         filterPosts();
-    }, [posts, searchQuery, selectedCategory, sortOrder, locationFilter, selectedDate, isNearby]);
+    }, [postsData, searchQuery, selectedCategory, sortOrder, locationFilter, selectedDate, isNearby]);
 
-    const [refreshing, setRefreshing] = useState(false);
+    // const [refreshing, setRefreshing] = useState(false); // Managed by React Query now
 
     const onRefresh = async () => {
-        setRefreshing(true);
-        if (isNearby) {
-            const loc = await getCurrentLocation() as any;
-            if (loc) {
-                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude }, distanceRadius);
-                return;
-            }
-        }
-        fetchPosts();
+        refetch();
     };
 
     const requestLocationPermission = async () => {
@@ -153,33 +164,14 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
     };
 
-    const fetchPosts = async (locationParams?: { latitude: number, longitude: number }, radius?: number) => {
-        try {
-            setLoading(true);
-            let url = '/posts';
-            const searchRadius = radius || distanceRadius;
-            if (locationParams) {
-                url += `?latitude=${locationParams.latitude}&longitude=${locationParams.longitude}&radius=${searchRadius}`;
-            }
-            const res = await api.get(url);
-            setPosts(res.data);
-            setFilteredPosts(res.data);
-        } catch (err) {
-            console.log('API Error:', err);
-            Alert.alert("Connection Error", "Could not connect to server.");
-        } finally {
-            setLoading(false);
-            setNearbyLoading(false);
-            setRefreshing(false);
-        }
-    };
+    // Removed manual fetchPosts function
 
     const handleDistanceChange = async (newRadius: number) => {
         if (isNearby) {
             setNearbyLoading(true);
             const loc = await getCurrentLocation() as any;
             if (loc) {
-                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude }, newRadius);
+                // usePosts will auto-refetch
             }
         }
     };
@@ -190,19 +182,19 @@ const FeedScreen = ({ navigation, route }: any) => {
             const loc = await getCurrentLocation() as any;
             if (loc) {
                 setIsNearby(true);
-                setLocationFilter('All'); // Reset other location filters
-                fetchPosts({ latitude: loc.latitude, longitude: loc.longitude }, distanceRadius);
+                setLocationFilter('All');
+                // State change (isNearby) triggers refetch
             } else {
                 setNearbyLoading(false);
             }
         } else {
             setIsNearby(false);
-            fetchPosts(); // Refetch standard feed
+            // State change triggers refetch
         }
     };
 
     const filterPosts = () => {
-        let result = [...posts];
+        let result = [...(postsData || [])];
 
         // 1. Search
         if (searchQuery) {
@@ -255,10 +247,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         setFilteredPosts(result);
     };
 
-    const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
-    const [selectedPost, setSelectedPost] = useState<any | null>(null);
-    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-    const [mapLoading, setMapLoading] = useState(false);
+    // State moved to top
 
     // Filter posts that have location coordinates for the map
     const mapPosts = React.useMemo(() => {
@@ -584,6 +573,65 @@ const FeedScreen = ({ navigation, route }: any) => {
         setSortOrder(prev => prev === 'latest' ? 'oldest' : 'latest');
     };
 
+    const renderListContent = () => {
+        if (loading) return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+        );
+
+        if (isError) return (
+            <View style={[styles.loadingContainer, { padding: 20 }]}>
+                <Text style={[themeStyles.text, { marginBottom: 12, textAlign: 'center' }]}>
+                    Failed to load posts.
+                </Text>
+                <TouchableOpacity
+                    onPress={() => refetch()}
+                    style={{ padding: 12, backgroundColor: colors.primary, borderRadius: 8 }}
+                >
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Retry</Text>
+                </TouchableOpacity>
+            </View>
+        );
+
+        return (
+            <FlashList
+                data={filteredPosts}
+                keyExtractor={(item: any) => item._id}
+                numColumns={1}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isRefetching}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]} // Android
+                    />
+                }
+                renderItem={({ item, index }: any) => (
+                    <Animated.View
+                        entering={FadeInDown.delay(index * 100).springify()}
+                        style={styles.gridItemWrapper}
+                    >
+                        <PostCard
+                            post={item}
+                            onPress={() => navigation.navigate('PostDetails', { id: item._id })}
+                        />
+                    </Animated.View>
+                )}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>Nothing here yet...</Text>
+                        <TouchableOpacity onPress={() => { setSearchQuery(''); setSelectedCategory('all'); setLocationFilter('All'); setSelectedDate(null); }}>
+                            <Text style={styles.clearFilterText}>Reset Discovery</Text>
+                        </TouchableOpacity>
+                    </View>
+                }
+            />
+        );
+    };
+
     return (
         <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
             <View style={styles.header}>
@@ -708,46 +756,7 @@ const FeedScreen = ({ navigation, route }: any) => {
             </View>
 
             {viewMode === 'list' ? (
-                loading ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color={colors.primary} />
-                    </View>
-                ) : (
-                    <FlashList
-                        data={filteredPosts}
-                        keyExtractor={(item: any) => item._id}
-                        numColumns={1}
-                        contentContainerStyle={styles.listContent}
-                        showsVerticalScrollIndicator={false}
-                        refreshControl={
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={onRefresh}
-                                tintColor={colors.primary}
-                                colors={[colors.primary]} // Android
-                            />
-                        }
-                        renderItem={({ item, index }: any) => (
-                            <Animated.View
-                                entering={FadeInDown.delay(index * 100).springify()}
-                                style={styles.gridItemWrapper}
-                            >
-                                <PostCard
-                                    post={item}
-                                    onPress={() => navigation.navigate('PostDetails', { id: item._id })}
-                                />
-                            </Animated.View>
-                        )}
-                        ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>Nothing here yet...</Text>
-                                <TouchableOpacity onPress={() => { setSearchQuery(''); setSelectedCategory('all'); setLocationFilter('All'); setSelectedDate(null); }}>
-                                    <Text style={styles.clearFilterText}>Reset Discovery</Text>
-                                </TouchableOpacity>
-                            </View>
-                        }
-                    />
-                )
+                renderListContent()
             ) : (
                 <View style={{ flex: 1 }}>
                     <WebView

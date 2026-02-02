@@ -82,20 +82,19 @@ const RequestsScreen = ({ navigation }: any) => {
     );
 
     const handleAction = async (id: string, status: string) => {
+        // Optimistic Update
+        const previousReceived = [...receivedRequests];
+        setReceivedRequests(prev => prev.map(req =>
+            req._id === id ? { ...req, status } : req
+        ));
+
         try {
             await api.put(`/contacts/${id}/status`, { status });
-            setAlertConfig({
-                visible: true,
-                title: 'Success',
-                message: `Request ${status} successfully`,
-                confirmText: 'Great',
-                isDestructive: false,
-                onConfirm: () => {
-                    setAlertConfig(prev => ({ ...prev, visible: false }));
-                    fetchRequests();
-                }
-            });
+            // Success - no need to do anything as UI is already updated
         } catch (error) {
+            console.error(error);
+            // Rollback
+            setReceivedRequests(previousReceived);
             setAlertConfig({
                 visible: true,
                 title: 'Error',

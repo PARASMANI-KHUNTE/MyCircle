@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -28,6 +29,7 @@ import EditPostScreen from './src/screens/EditPostScreen';
 
 
 const Stack = createStackNavigator();
+const queryClient = new QueryClient();
 
 const RootNavigator = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -89,15 +91,17 @@ const App = () => {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <SocketProvider>
-              <NotificationProvider>
-                <MainContent />
-              </NotificationProvider>
-            </SocketProvider>
-          </AuthProvider>
-        </ToastProvider>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <AuthProvider>
+              <SocketProvider>
+                <NotificationProvider>
+                  <MainContent />
+                </NotificationProvider>
+              </SocketProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </QueryClientProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

@@ -22,6 +22,7 @@ import GlassView from './GlassView';
 
 import GenerativePlaceholder from './GenerativePlaceholder';
 import { Palette } from '../../constants/design';
+import TrustBadge from './TrustBadge';
 
 
 interface PostCardProps {
@@ -39,6 +40,10 @@ interface PostCardProps {
             _id: string;
             displayName: string;
             avatar: string;
+            reputation?: { // Added reputation to type definition
+                trustScore: number;
+                isVerified: boolean;
+            };
         };
         distance?: string;
         images?: string[];
@@ -128,6 +133,7 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
         } catch (err) {
             console.error(err);
             setLikes(likes);
+            error("Failed to like post");
         }
     };
 
@@ -227,7 +233,18 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
                     <View style={styles.footerRow}>
                         <View style={styles.userSection}>
                             <Image source={{ uri: getAvatarUrl(post.user) }} style={styles.avatar} />
-                            <Text style={styles.userName}>{post.user.displayName}</Text>
+                            <View>
+                                <Text style={styles.userName}>{post.user.displayName}</Text>
+                                {post.user.reputation && (
+                                    <View style={{ marginTop: 2 }}>
+                                        <TrustBadge
+                                            score={post.user.reputation.trustScore}
+                                            isVerified={post.user.reputation.isVerified}
+                                            size="small"
+                                        />
+                                    </View>
+                                )}
+                            </View>
                         </View>
 
                         {post.price != null && (

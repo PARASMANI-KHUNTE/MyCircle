@@ -11,6 +11,7 @@ import api from '../services/api';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import GlassView from '../components/ui/GlassView';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
+import TrustBadge from '../components/ui/TrustBadge';
 
 
 const ProfileScreen = ({ navigation, route }: any) => {
@@ -311,6 +312,13 @@ const ProfileScreen = ({ navigation, route }: any) => {
                     />
                     <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
                     <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
+                    <View style={{ marginTop: 8 }}>
+                        <TrustBadge
+                            score={user.reputation?.trustScore || 50}
+                            isVerified={user.reputation?.isVerified}
+                            showLabel
+                        />
+                    </View>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.statsRow}>

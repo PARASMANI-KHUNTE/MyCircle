@@ -12,6 +12,7 @@ import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 import ImagePreviewModal from '../components/ui/ImagePreviewModal';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
+import TrustBadge from '../components/ui/TrustBadge';
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -134,6 +135,8 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             }
         } catch (err) {
             console.error(err);
+            setLikes(likes); // Rollback to previous state
+            Alert.alert("Error", "Failed to update like");
         }
     };
 
@@ -147,6 +150,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             Alert.alert("Link Copied", "Post link copied to clipboard!");
         } catch (err) {
             console.error(err);
+            Alert.alert("Error", "Failed to share post");
         }
     };
 
@@ -429,10 +433,20 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                             />
                             <View style={styles.userInfo}>
                                 <Text style={[styles.userName, themeStyles.text]}>{post.user?.displayName}</Text>
-                                <View style={styles.verifiedRow}>
-                                    <Shield size={12} color="#22c55e" />
-                                    <Text style={styles.verifiedText}>Verified Local Provider</Text>
-                                </View>
+                                {post.user?.reputation ? (
+                                    <View style={{ marginTop: 4 }}>
+                                        <TrustBadge
+                                            score={post.user.reputation.trustScore}
+                                            isVerified={post.user.reputation.isVerified}
+                                            size="medium"
+                                        />
+                                    </View>
+                                ) : (
+                                    <View style={styles.verifiedRow}>
+                                        <Shield size={12} color="#22c55e" />
+                                        <Text style={styles.verifiedText}>Verified Local Provider</Text>
+                                    </View>
+                                )}
                             </View>
                             <TouchableOpacity
                                 onPress={() => navigation.navigate('UserProfile', { userId: post.user?._id })}

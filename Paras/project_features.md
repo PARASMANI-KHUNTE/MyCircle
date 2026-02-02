@@ -1,7 +1,7 @@
 # MyCircle Project Feature Overview
 
-## 🚀 Project Status: Alpha v0.5
-**MyCircle** is a hyperlocal exchange platform designed to connect neighbors for jobs, services, selling, and renting. The application focuses on trust, ease of use, and a modern, premium user experience.
+## 🚀 Project Status: Beta v1.0
+**MyCircle** is a hyperlocal exchange platform designed to connect neighbors for jobs, services, selling, and renting. The application focuses on trust, ease of use, and a modern, premium user experience. Recently hardened with a comprehensive system audit.
 
 ---
 
@@ -15,6 +15,9 @@
 
 ### 2. **Mobile Exclusive Flows**
 - **Touch-Optimized UI**: Larger tap targets, swipeable lists, and native-feel animations.
+- **High Performance**: Powered by `FlashList` for buttery smooth scrolling.
+- **Optimistic UI**: Instant feedback on interactions (Like, Share, Accept Request) with automatic error rollback.
+- **Map Discovery**: Interactive map view to find listings near you.
 - **Mobile Auth**: Secure storage-based session management.
 - **Status Dashboard**: Manage post availability on the go.
 
@@ -59,6 +62,10 @@
 
 ### 6. **Engagement Center**
 - **Requests Management**: Track incoming and outgoing contact requests.
+- **Real-time Chat**:
+    - **Instant Messaging**: Socket.io powered 1-on-1 chat.
+    - **Optimistic Updates**: Messages appear instantly before server confirmation.
+    - **Read Receipts**: Status indicators for message delivery.
 - **Notifications Page**: Central hub for system alerts and interactions.
 
 ---
@@ -97,7 +104,8 @@
 ---
 
 ## 🔜 Upcoming / Roadmap
-- [ ] Real-time Chat Integration (Socket.io).
-- [ ] Map View for "Near Me" discovery.
-- [ ] Review & Rating System.
+- [x] Real-time Chat Integration (Socket.io).
+- [x] Map View for "Near Me" discovery.
+- [x] Reputation System (Trust Scores & Badges).
 - [ ] Push Notifications (Expo).
+- [ ] Wallet / Payment Integration.

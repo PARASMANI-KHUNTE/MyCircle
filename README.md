@@ -36,10 +36,13 @@ MyCircle/
 
 ## ✨ Highlights
 - **Marketplace feed** for jobs/services/sell/rent
+- **Trust & Reputation** (Trust Score 0-100, Verification Badges)
 - **Contact request flow** to reduce spam
-- **Real-time updates** (Socket.io)
+- **Real-time Chat** (Socket.io) with optimistic updates
+- **Interactive Map View** for discovery
 - **Post analytics** (views/likes/shares)
 - **AI moderation** for safer content
+- **High Performance** (FlashList, NativeWind)
 
 ---
 

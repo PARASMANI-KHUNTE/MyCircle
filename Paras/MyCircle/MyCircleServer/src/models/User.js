@@ -67,6 +67,11 @@ const UserSchema = new mongoose.Schema({
         activePosts: { type: Number, default: 0 },
         tasksCompleted: { type: Number, default: 0 },
     },
+    reputation: {
+        trustScore: { type: Number, default: 50 },
+        reviewsCount: { type: Number, default: 0 },
+        isVerified: { type: Boolean, default: false }
+    },
     createdAt: {
         type: Date,
         default: Date.now,

@@ -1,101 +1,69 @@
-import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
-import Sound from 'react-native-sound';
+import messaging from '@react-native-firebase/messaging';
+import { PermissionsAndroid, Platform } from 'react-native';
+import { Alert } from 'react-native';
 
-class NotificationService {
-    private notificationSound: Sound | null = null;
+export const requestUserPermission = async () => {
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+        const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('Notification permission denied');
+            return false;
+        }
+    }
 
-    async initialize() {
-        // Create notification channel for Android
-        await notifee.createChannel({
-            id: 'mycircle_channel_v1',
-            name: 'MyCircle Notifications',
-            importance: AndroidImportance.HIGH,
-            sound: 'default',
-            vibration: true,
-            vibrationPattern: [300, 500],
-        });
+    const authStatus = await messaging().requestPermission();
+    const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-        await notifee.createChannel({
-            id: 'mycircle_requests_v1',
-            name: 'Contact Requests',
-            importance: AndroidImportance.HIGH,
-            sound: 'default',
-            vibration: true,
-            vibrationPattern: [300, 500],
-        });
+    if (enabled) {
+        console.log('Authorization status:', authStatus);
+        return true;
+    }
+    return false;
+};
 
-        // Load notification sound
-        this.notificationSound = new Sound('notification.mp3', Sound.MAIN_BUNDLE, (error) => {
-            if (error) {
-                console.log('Failed to load notification sound', error);
+export const getFCMToken = async () => {
+    try {
+        const token = await messaging().getToken();
+        console.log('FCM Token:', token);
+        return token;
+    } catch (error) {
+        console.error('Failed to get FCM token:', error);
+        return null;
+    }
+};
+
+export const notificationListener = () => {
+    // Assume a message-notification contains a "type" property in the data payload of the screen to open
+
+    messaging().onNotificationOpenedApp(remoteMessage => {
+        console.log(
+            'Notification caused app to open from background state:',
+            remoteMessage.notification,
+        );
+        // Navigation logic could go here later
+    });
+
+    // Check whether an initial notification is available
+    messaging()
+        .getInitialNotification()
+        .then(remoteMessage => {
+            if (remoteMessage) {
+                console.log(
+                    'Notification caused app to open from quit state:',
+                    remoteMessage.notification,
+                );
             }
         });
 
-        // Handle notification interactions
-        notifee.onForegroundEvent(({ type, detail }) => {
-            if (type === EventType.PRESS) {
-                console.log('Notification pressed:', detail.notification);
-            }
-        });
-    }
-
-    async showNotification(title: string, body: string, type: string = 'default', data?: any) {
-        // Play sound
-        if (this.notificationSound) {
-            this.notificationSound.play();
-        }
-
-        // Determine channel based on type
-        const channelId = type === 'request' ? 'mycircle_requests_v1' : 'mycircle_channel_v1';
-
-        // Convert data to string values (notifee requirement)
-        const notificationData: Record<string, string> = {};
-        if (data) {
-            Object.keys(data).forEach(key => {
-                notificationData[key] = String(data[key]);
-            });
-        }
-
-        // Display notification
-        await notifee.displayNotification({
-            title,
-            body,
-            android: {
-                channelId,
-                importance: AndroidImportance.HIGH,
-                sound: 'default',
-                vibrationPattern: [300, 500], // Must be even number of values
-                pressAction: {
-                    id: 'default',
-                },
-                smallIcon: 'ic_launcher',
-                color: '#8b5cf6',
-            },
-            data: notificationData,
-        });
-    }
-
-    async showRequestNotification(senderName: string, postTitle: string, requestId: string) {
-        await this.showNotification(
-            '🔔 New Contact Request',
-            `${senderName} wants to connect about "${postTitle}"`,
-            'request',
-            { type: 'request', requestId }
+    // Foreground messages
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+        Alert.alert(
+            remoteMessage.notification?.title || 'New Notification',
+            remoteMessage.notification?.body || ''
         );
-    }
+    });
 
-    async showMessageNotification(senderName: string, message: string, conversationId: string) {
-        await this.showNotification(
-            `💬 ${senderName}`,
-            message,
-            'message',
-            { type: 'message', conversationId }
-        );
-    }
-
-    async cancelAll() {
-        await notifee.cancelAllNotifications();
-    }
-}
-
-export default new NotificationService();
+    return unsubscribe;
+};

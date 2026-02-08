@@ -12,8 +12,8 @@ export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null) => {
     unauthorizedHandler = handler;
 };
 
-// Prioritizing Development API as requested
-export const BASE_URL = DEV_API_URL || API_URL;
+// Prioritizing Production API for release
+export const BASE_URL = API_URL || DEV_API_URL;
 
 const api = axios.create({
     baseURL: BASE_URL,

@@ -1,5 +1,6 @@
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import { promptForEnableLocationIfNeeded } from 'react-native-android-location-enabler';
 
 
 export interface LocationObject {
@@ -69,12 +70,29 @@ export const getCurrentLocation = async (): Promise<LocationObject | null> => {
             },
             (error) => {
                 console.error('Location error:', error);
-                if (error.code === 2) {
+                if (error.code === 2 && Platform.OS === 'android') {
+                    // Provider unavailable - try to enable
+                    promptForEnableLocationIfNeeded({
+                        interval: 10000,
+                    }).then(() => {
+                        // Retry once if user enabled it
+                        Geolocation.getCurrentPosition(
+                            (pos) => resolve({ address: "Current Location", latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+                            () => resolve(null),
+                            { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+                        );
+                    }).catch((err) => {
+                        console.warn("User declined or failed to enable location", err);
+                        // Only alert if this wasn't a manual "Locate Me" tap (handling that in UI)
+                        resolve(null);
+                    });
+                } else if (error.code === 2) {
                     Alert.alert('Location Services Disabled', 'Please turn on GPS/Location services on your device.');
+                    resolve(null);
                 } else {
                     Alert.alert('Error', 'Failed to get current location.');
+                    resolve(null);
                 }
-                resolve(null);
             },
             { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
         );

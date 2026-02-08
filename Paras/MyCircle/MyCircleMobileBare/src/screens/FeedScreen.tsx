@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl } from 'react-native';
+import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl, AppState } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -139,7 +139,19 @@ const FeedScreen = ({ navigation, route }: any) => {
 
     const onRefresh = async () => {
         refetch();
+        // Also try to refresh location if it was missing
+        if (!userLocation) requestLocationPermission();
     };
+
+    // Auto-check location when returning to app (e.g. from Settings)
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (nextAppState === 'active') {
+                requestLocationPermission();
+            }
+        });
+        return () => subscription.remove();
+    }, []);
 
     const requestLocationPermission = async () => {
         try {

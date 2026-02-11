@@ -15,27 +15,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
+import { cn } from '../utils/cn';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icons
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-    iconUrl: markerIcon,
-    iconRetinaUrl: markerIconRetina,
-    shadowUrl: markerShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    tooltipAnchor: [16, -28],
-    shadowSize: [41, 41]
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-
-L.Marker.prototype.options.icon = DefaultIcon;
 
 const categories = [
     { id: 'all', label: 'All Circles', icon: Package },
@@ -140,7 +129,7 @@ const Feed = () => {
 
     // Get unique locations for filter dropdown
     const availableLocations = React.useMemo(() => {
-        const locations = [...new Set(posts.map(p => p.location).filter(Boolean))];
+        const locations = Array.from(new Set(posts.map(p => p.location).filter(Boolean)));
         return locations.sort();
     }, [posts]);
 
@@ -157,8 +146,8 @@ const Feed = () => {
 
         // Sort posts
         result.sort((a, b) => {
-            const dateA = new Date(a.createdAt);
-            const dateB = new Date(b.createdAt);
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
             return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
         });
 
@@ -217,65 +206,127 @@ const Feed = () => {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             {/* Premium Header Section */}
-            <div className="flex flex-col gap-10 mb-12">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                    <div className="space-y-3">
+            <header className="relative mb-12 py-10 overflow-hidden">
+                {/* Decorative Background Elements */}
+                <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.1, 1],
+                            rotate: [0, 5, 0],
+                            x: [0, 10, 0]
+                        }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                        className="absolute -top-[10%] -left-[5%] w-[40%] h-[120%] bg-primary/5 blur-[100px] rounded-full"
+                    />
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.2, 1],
+                            rotate: [0, -5, 0],
+                            x: [0, -15, 0]
+                        }}
+                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                        className="absolute top-[20%] -right-[10%] w-[30%] h-[100%] bg-secondary/5 blur-[120px] rounded-full"
+                    />
+                </div>
+
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
+                    <div className="space-y-4 max-w-2xl">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest mb-2"
+                        >
+                            <Sparkles className="w-3 h-3" />
+                            <span>Hyper-Local Networking</span>
+                        </motion.div>
                         <motion.h1
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="text-5xl font-black text-foreground tracking-tight leading-none"
+                            transition={{ delay: 0.1 }}
+                            className="text-6xl md:text-7xl font-black text-text-heading tracking-tight leading-[0.9] flex flex-col"
                         >
-                            Discover <span className="text-primary italic">Circles</span>
+                            <span>Discover Your</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-500 to-secondary italic">Inner Circle</span>
                         </motion.h1>
                         <motion.p
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="text-lg text-muted-foreground font-medium max-w-md leading-relaxed"
+                            transition={{ delay: 0.2 }}
+                            className="text-lg text-text-muted font-medium max-w-lg leading-relaxed pt-2"
                         >
-                            Explore hyper-local opportunities, services, and connections in your immediate circle.
+                            Find trusted services, trade items, and explore unique local opportunities in our modern minimalist marketplace.
                         </motion.p>
                     </div>
 
                     {/* View Mode Switcher */}
-                    <div className="glass rounded-2xl p-1 w-full md:w-auto">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="glass-panel p-1.5 flex gap-1 shadow-xl hover:shadow-2xl transition-all duration-500"
+                    >
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
+                            className={cn(
+                                "relative flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black tracking-wide transition-all duration-300",
+                                viewMode === 'list'
+                                    ? "bg-primary text-primary-foreground shadow-button scale-105"
+                                    : "text-text-muted hover:text-text-heading hover:bg-hover-bg"
+                            )}
                         >
-                            <ListIcon className="w-4 h-4" /> List
+                            <ListIcon className="w-4 h-4" />
+                            <span>LIST</span>
+                            {viewMode === 'list' && (
+                                <motion.div layoutId="view-blob" className="absolute inset-0 bg-primary rounded-xl -z-10" />
+                            )}
                         </button>
                         <button
                             onClick={toggleViewMode}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${viewMode === 'map' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
+                            className={cn(
+                                "relative flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black tracking-wide transition-all duration-300",
+                                viewMode === 'map'
+                                    ? "bg-primary text-white shadow-button scale-105"
+                                    : "text-text-muted hover:text-text-heading hover:bg-hover-bg"
+                            )}
                         >
-                            <MapIcon className="w-4 h-4" /> Map
+                            <MapIcon className="w-4 h-4" />
+                            <span>MAP</span>
+                            {viewMode === 'map' && (
+                                <motion.div layoutId="view-blob" className="absolute inset-0 bg-primary rounded-xl -z-10" />
+                            )}
                         </button>
-                    </div>
+                    </motion.div>
                 </div>
+            </header>
 
-                {/* Search & Filter Container */}
-                <div className="flex flex-col gap-6">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="relative group flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            {/* Main Action Bar */}
+            <div className="sticky top-24 z-40 mb-12">
+                <div className="glass-panel p-2 shadow-2xl flex flex-col gap-4">
+                    <div className="flex flex-col lg:flex-row gap-3">
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted group-focus-within:text-primary transition-colors" />
                             <input
                                 type="text"
-                                placeholder={filter === 'service' ? "Search for skills (e.g. Plumber)..." : "Search by title, description or tags..."}
+                                placeholder={filter === 'service' ? "Search for skills (e.g. Graphic Designer)..." : "What are you looking for?"}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full glass rounded-2xl pl-12 pr-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-lg font-medium bg-transparent"
+                                className="w-full bg-background/50 border border-card-border rounded-2xl pl-14 pr-6 py-5 text-text-heading placeholder:text-text-muted focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all text-[15px] font-bold"
                             />
                         </div>
 
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                                className={`flex items-center gap-2 px-8 py-4 rounded-2xl text-sm font-bold transition-all ${isFilterExpanded ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'glass text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
+                                className={cn(
+                                    "flex items-center gap-2 px-8 py-4 rounded-2xl text-[13px] font-black tracking-widest uppercase transition-all duration-300 border border-card-border",
+                                    isFilterExpanded
+                                        ? "bg-text-heading text-primary-foreground"
+                                        : "bg-card text-text-heading hover:bg-hover-bg"
+                                )}
                             >
                                 <Filter className="w-4 h-4" />
-                                Filters
-                                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isFilterExpanded ? 'rotate-180' : ''}`} />
+                                {isFilterExpanded ? 'Close' : 'Filter'}
+                                <ChevronDown className={cn("w-4 h-4 transition-transform duration-500", isFilterExpanded && "rotate-180")} />
                             </button>
                         </div>
                     </div>
@@ -283,53 +334,57 @@ const Feed = () => {
                     <AnimatePresence>
                         {isFilterExpanded && (
                             <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="glass-panel grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
                             >
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase px-1">Sort By</label>
-                                    <select
-                                        value={sortOrder}
-                                        onChange={(e) => setSortOrder(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
-                                    >
-                                        <option value="latest">Newest First</option>
-                                        {filter === 'service' ? (
-                                            <option value="endorsements">Most Endorsed</option>
-                                        ) : (
-                                            <option value="oldest">Oldest First</option>
-                                        )}
-                                    </select>
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 pt-0">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black tracking-widest text-text-muted uppercase px-1">Sort By Priority</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {['latest', 'oldest'].map((order) => (
+                                                <button
+                                                    key={order}
+                                                    onClick={() => setSortOrder(order)}
+                                                    className={cn(
+                                                        "py-3 rounded-xl text-xs font-bold uppercase transition-all tracking-wide border",
+                                                        sortOrder === order
+                                                            ? "bg-primary text-primary-foreground border-primary/20"
+                                                            : "bg-background-section border-card-border text-text-muted hover:bg-hover-bg"
+                                                    )}
+                                                >
+                                                    {order}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase px-1">Location</label>
-                                    <select
-                                        value={locationFilter}
-                                        onChange={(e) => setLocationFilter(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none"
-                                        disabled={filter === 'service'}
-                                    >
-                                        <option value="all">Everywhere</option>
-                                        {availableLocations.map(loc => (
-                                            <option key={loc} value={loc}>{loc}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black tracking-widest text-text-muted uppercase px-1">Local Reach</label>
+                                        <select
+                                            value={locationFilter}
+                                            onChange={(e) => setLocationFilter(e.target.value)}
+                                            className="w-full bg-background-section border border-card-border rounded-xl px-4 py-3 text-sm text-text-heading font-bold focus:outline-none focus:border-primary/30 transition-all appearance-none cursor-pointer"
+                                            disabled={filter === 'service'}
+                                        >
+                                            <option value="all">EVERYWHERE</option>
+                                            {availableLocations.map(loc => (
+                                                <option key={loc} value={loc}>{loc.toUpperCase()}</option>
+                                            ))}
+                                        </select>
+                                    </div>
 
-                                <div className="lg:col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase px-1">Quick Action</label>
-                                    <div className="flex gap-2 h-[46px]">
+                                    <div className="flex items-end">
                                         <button
                                             onClick={() => {
                                                 setSearchTerm('');
                                                 setLocationFilter('all');
+                                                setSortOrder('latest');
                                             }}
-                                            className="px-6 rounded-xl bg-white/5 text-xs font-bold text-muted-foreground hover:text-white hover:bg-white/10 transition-all border border-white/5"
+                                            className="w-full py-3.5 rounded-xl border border-red-500/20 text-red-500 text-[11px] font-black tracking-widest uppercase hover:bg-red-500/10 transition-all"
                                         >
-                                            Reset Filters
+                                            Clear All Filters
                                         </button>
                                     </div>
                                 </div>
@@ -337,21 +392,24 @@ const Feed = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Category Tabs */}
-                    {!isFilterExpanded && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
-                            {categories.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setFilter(cat.id)}
-                                    className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filter === cat.id ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105' : 'glass hover:bg-white/5 text-muted-foreground hover:text-foreground hover:translate-y-[-2px]'}`}
-                                >
-                                    <cat.icon className="w-4 h-4" />
-                                    {cat.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    {/* Category Selection Tabs */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar pt-2 px-2">
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                onClick={() => setFilter(cat.id)}
+                                className={cn(
+                                    "flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-300 uppercase tracking-wider group",
+                                    filter === cat.id
+                                        ? "bg-primary text-primary-foreground shadow-button"
+                                        : "text-text-muted hover:text-text-heading hover:bg-hover-bg"
+                                )}
+                            >
+                                <cat.icon className={cn("w-4 h-4 transition-transform group-hover:scale-110", filter === cat.id ? "scale-110" : "")} />
+                                {cat.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -392,23 +450,29 @@ const Feed = () => {
                                 position={[post.displayLat, post.displayLng]}
                             >
                                 <Popup className="custom-popup">
-                                    <div className="min-w-[240px] overflow-hidden">
+                                    <div className="min-w-[280px] p-1">
                                         {post.images && post.images[0] && (
-                                            <div className="h-32 -mx-3 -mt-3 mb-3">
+                                            <div className="h-40 -mx-1 -mt-1 mb-4 rounded-xl overflow-hidden">
                                                 <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
                                             </div>
                                         )}
-                                        <div className="flex justify-between items-start mb-2 px-1">
-                                            <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest">{post.type}</span>
-                                            {post.price && <span className="font-bold text-sm text-foreground">₹{post.price}</span>}
+                                        <div className="flex justify-between items-start mb-3">
+                                            <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest border border-primary/20">
+                                                {post.type}
+                                            </span>
+                                            {post.price && (
+                                                <span className="font-bold text-base text-text-heading">₹{post.price}</span>
+                                            )}
                                         </div>
-                                        <h3 className="font-bold text-sm mb-1 text-foreground px-1">{post.title}</h3>
-                                        <p className="text-xs text-muted-foreground line-clamp-2 mb-4 leading-relaxed px-1">{post.description}</p>
+                                        <h3 className="font-bold text-base mb-1 text-text-heading leading-snug">{post.title}</h3>
+                                        <p className="text-xs text-text-muted line-clamp-2 mb-4 leading-relaxed font-medium">
+                                            {post.description}
+                                        </p>
                                         <button
                                             onClick={() => handlePostClick(post._id)}
-                                            className="w-full py-2 bg-primary text-white text-[10px] font-bold rounded-lg shadow-lg shadow-primary/20 hover:tracking-widest transition-all"
+                                            className="w-full py-3 bg-primary text-primary-foreground text-[11px] font-black rounded-xl shadow-xl hover:bg-primary-hover transition-all uppercase tracking-widest"
                                         >
-                                            VIEW CIRCLE
+                                            Explore Circle
                                         </button>
                                     </div>
                                 </Popup>
@@ -455,10 +519,10 @@ const Feed = () => {
                                 </motion.div>
                             ))
                         ) : (
-                            <div className="col-span-full py-32 text-center bg-white/5 rounded-[2rem] border border-white/5 border-dashed">
-                                <Search className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold text-white mb-2">No Professionals Found</h3>
-                                <p className="text-gray-500 max-w-xs mx-auto">Try searching for a different skill or keyword.</p>
+                            <div className="col-span-full py-32 text-center bg-card/10 rounded-[2.5rem] border border-card-border/30 border-dashed">
+                                <Search className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-30" />
+                                <h3 className="text-xl font-black text-text-heading mb-2 uppercase">No Professionals Found</h3>
+                                <p className="text-text-muted max-w-xs mx-auto font-medium">Try searching for a different skill or keyword.</p>
                             </div>
                         )
                     ) : (
@@ -477,19 +541,31 @@ const Feed = () => {
                                     <PostCard
                                         post={post}
                                         currentUserId={user?._id}
+                                        onRequestContact={() => handlePostClick(post._id)}
                                     />
                                 </motion.div>
                             ))
                         ) : (
-                            <div className="col-span-full py-32 text-center bg-white/5 rounded-[2rem] border border-white/5 border-dashed">
-                                <Sparkles className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold text-white mb-2">No Circles Found</h3>
-                                <p className="text-gray-500 max-w-xs mx-auto mb-8">We couldn't find any circular activities matching your criteria. Try adjusting your filters or start your own circle!</p>
+                            <div className="col-span-full py-32 flex flex-col items-center text-center">
+                                <div className="relative mb-10">
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                                        className="absolute -inset-10 border-2 border-dashed border-primary/20 rounded-full"
+                                    />
+                                    <div className="w-32 h-32 rounded-full bg-primary/5 flex items-center justify-center border border-primary/20 shadow-inner">
+                                        <Sparkles className="w-12 h-12 text-primary/30" />
+                                    </div>
+                                </div>
+                                <h3 className="text-3xl font-black text-text-heading mb-3 tracking-tight uppercase">Circle Unknown</h3>
+                                <p className="text-text-muted max-w-sm mx-auto mb-10 font-bold leading-relaxed">
+                                    We couldn't find any circular activities in this orbit. Try a different skill or create your own gravity.
+                                </p>
                                 <button
                                     onClick={() => navigate('/create-post')}
-                                    className="px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+                                    className="px-10 py-4 bg-primary text-primary-foreground text-[13px] font-black rounded-2xl shadow-button hover:scale-105 active:scale-95 transition-all tracking-widest uppercase"
                                 >
-                                    Create a Circle
+                                    Begin a Circle
                                 </button>
                             </div>
                         )

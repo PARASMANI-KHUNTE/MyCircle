@@ -32,10 +32,10 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
         }
     };
 
-    if (loading) return <div className="p-4 text-center text-gray-400 font-medium">Loading chats...</div>;
+    if (loading) return <div className="p-4 text-center text-text-muted font-medium">Loading chats...</div>;
 
     if (conversations.length === 0) {
-        return <div className="p-8 text-center text-gray-400 font-medium">No conversations yet.</div>;
+        return <div className="p-8 text-center text-text-muted font-medium">No conversations yet.</div>;
     }
 
     console.log('ChatList Render:', { conversationsCount: conversations?.length, currentUserId, loading });
@@ -58,10 +58,10 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                     <div key={conv._id} className="group relative">
                         <button
                             onClick={() => onSelect(conv)}
-                            className={`w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-colors text-left border-b border-white/5 ${isSelected ? 'bg-white/10 border-l-4 border-l-primary' : ''}`}
+                            className={`w-full p-4 flex items-center gap-4 hover:bg-hover-bg transition-colors text-left border-b border-card-border ${isSelected ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}
                         >
                             <div className="relative shrink-0">
-                                <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden">
+                                <div className="w-12 h-12 rounded-full bg-background-section overflow-hidden">
                                     <img
                                         src={getAvatarUrl(otherParticipant)}
                                         alt={otherParticipant?.displayName}
@@ -69,18 +69,18 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                                     />
                                 </div>
                                 {otherParticipant?.isOnline && (
-                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
+                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-baseline mb-1">
-                                    <h3 className={`truncate ${isUnread ? 'font-bold text-white' : 'font-semibold text-white'} `}>
+                                    <h3 className={`truncate ${isUnread ? 'font-bold text-text-heading' : 'font-semibold text-text-heading'} `}>
                                         {otherParticipant?.displayName}
                                     </h3>
-                                    <span className="text-xs text-gray-500">{conv.updatedAt ? new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                    <span className="text-xs text-text-muted">{conv.updatedAt ? new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <p className={`text-sm truncate ${isUnread ? 'text-white font-medium' : 'text-gray-400'}`}>
+                                    <p className={`text-sm truncate ${isUnread ? 'text-text-body font-medium' : 'text-text-muted'}`}>
                                         {typingUsers[conv._id] ? (
                                             <span className="text-primary font-semibold animate-pulse">Typing...</span>
                                         ) : conv.lastMessage ? (
@@ -93,7 +93,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                                         )}
                                     </p>
                                     {conv.unreadCount > 0 && (
-                                        <div className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2">
+                                        <div className="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-2">
                                             {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                                         </div>
                                     )}
@@ -102,7 +102,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                         </button>
                         <button
                             onClick={(e) => handleDelete(e, conv._id)}
-                            className="absolute right-2 bottom-2 p-2 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full"
+                            className="absolute right-2 bottom-2 p-2 text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-card/80 rounded-full backdrop-blur-sm shadow-md"
                             title="Delete Conversation"
                         >
                             <Trash2 className="w-4 h-4" />
@@ -110,7 +110,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                     </div>
                 );
             })}
-        </div>
+        </div >
     );
 };
 

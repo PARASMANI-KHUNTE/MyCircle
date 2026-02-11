@@ -27,7 +27,7 @@ const Notifications = () => {
             case 'approval': return <CheckCircle className="w-5 h-5 text-green-400" />;
             case 'like': return <Heart className="w-5 h-5 text-pink-500" />;
             case 'info': return <Info className="w-5 h-5 text-purple-400" />;
-            default: return <Bell className="w-5 h-5 text-gray-400" />;
+            default: return <Bell className="w-5 h-5 text-text-muted" />;
         }
     };
 
@@ -36,12 +36,12 @@ const Notifications = () => {
             <div className="flex items-center justify-end mb-8">
                 <div className="flex gap-2">
                     {notifications.some(n => !n.read) && (
-                        <Button variant="ghost" className="text-gray-400 text-sm hover:text-white" onClick={markAllRead}>
+                        <Button variant="ghost" className="text-text-muted text-sm hover:text-text-heading" onClick={markAllRead}>
                             Mark all as read
                         </Button>
                     )}
                     {notifications.length > 0 && (
-                        <Button variant="ghost" className="text-red-400 text-sm hover:text-red-500 hover:bg-red-500/10" onClick={clearAll}>
+                        <Button variant="ghost" className="text-red-500 text-sm hover:text-red-600 hover:bg-red-500/10" onClick={clearAll}>
                             Clear all
                         </Button>
                     )}
@@ -50,14 +50,14 @@ const Notifications = () => {
 
             <div className="space-y-4">
                 {loading ? (
-                    <div className="text-white text-center py-20 flex flex-col items-center">
+                    <div className="text-text-heading text-center py-20 flex flex-col items-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mb-4"></div>
                         Loading...
                     </div>
                 ) : notifications.length === 0 ? (
-                    <div className="glass p-12 rounded-3xl text-center">
-                        <Bell className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                        <p className="text-gray-400">All caught up! No new notifications.</p>
+                    <div className="glass-panel p-12 text-center shadow-card">
+                        <Bell className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-20" />
+                        <p className="text-text-muted">All caught up! No new notifications.</p>
                     </div>
                 ) : (
                     <AnimatePresence>
@@ -68,27 +68,29 @@ const Notifications = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 onClick={() => handleNotificationClick(n)}
-                                className={`glass p-6 rounded-2xl relative border-l-4 transition-all cursor-pointer hover:scale-[1.02] ${n.read ? 'border-transparent opacity-70 bg-white/5' : 'border-primary shadow-lg shadow-primary/5 bg-white/10'}`}
+                                className={`glass-panel p-6 relative border-l-4 transition-all cursor-pointer hover:scale-[1.02] ${n.read ? 'border-transparent opacity-70 bg-card/40' : 'border-primary shadow-lg shadow-primary/5 bg-card'}`}
                             >
                                 <div className="flex gap-4">
                                     <div className="flex-shrink-0 relative">
-                                        <img
-                                            src={getAvatarUrl(n.sender)}
-                                            alt=""
-                                            className="w-12 h-12 rounded-full border border-white/10 object-cover"
-                                        />
-                                        <div className="absolute -bottom-1 -right-1 p-1 bg-dark rounded-full">
+                                        <div className="w-12 h-12 rounded-full border border-card-border overflow-hidden bg-background">
+                                            <img
+                                                src={getAvatarUrl(n.sender)}
+                                                alt=""
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <div className="absolute -bottom-1 -right-1 p-1 bg-background rounded-full shadow-sm border border-card-border">
                                             {getIcon(n.type)}
                                         </div>
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">
-                                            <h3 className={`font-bold ${n.read ? 'text-gray-400' : 'text-white'}`}>{n.title}</h3>
-                                            <span className="text-xs text-gray-500">
+                                            <h3 className={`font-bold ${n.read ? 'text-text-muted' : 'text-text-heading'}`}>{n.title}</h3>
+                                            <span className="text-xs text-text-lightMuted">
                                                 {new Date(n.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                                             </span>
                                         </div>
-                                        <p className="text-gray-400 text-sm mt-1">{n.message}</p>
+                                        <p className="text-text-body text-sm mt-1">{n.message}</p>
 
                                         <div className="flex gap-3 mt-4">
                                             {!n.read && (
@@ -101,7 +103,7 @@ const Notifications = () => {
                                                 </Button>
                                             )}
                                             <button
-                                                className="p-2 text-gray-600 hover:text-red-400 transition-colors ml-auto"
+                                                className="p-2 text-text-lightMuted hover:text-red-500 transition-colors ml-auto"
                                                 onClick={(e) => { e.stopPropagation(); handleDelete(n._id); }}
                                                 title="Delete"
                                             >

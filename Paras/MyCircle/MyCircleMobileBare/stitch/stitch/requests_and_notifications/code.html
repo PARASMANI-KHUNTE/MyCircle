@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Requests &amp; Notifications</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f4258c",
+                        "background-light": "#f8f5f7",
+                        "background-dark": "#0f080c",
+                        "zinc-glass": "#18181b",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(244, 37, 140, 0.3);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-zinc-900 dark:text-zinc-100 min-h-screen">
+<!-- Status Bar Spacer (iOS Style) -->
+<div class="h-12 w-full"></div>
+<main class="max-w-md mx-auto px-5 pb-32">
+<!-- Header & Segmented Control -->
+<header class="mb-8">
+<div class="flex items-center justify-between mb-6">
+<h1 class="text-3xl font-bold tracking-tight">Activity</h1>
+<button class="w-10 h-10 rounded-full glass-panel flex items-center justify-center">
+<span class="material-icons text-xl">settings</span>
+</button>
+</div>
+<!-- Custom Segmented Control -->
+<div class="glass-panel p-1 rounded-full flex relative">
+<button class="relative z-10 flex-1 py-2.5 text-sm font-semibold text-white bg-primary rounded-full transition-all duration-300">
+                    Requests
+                </button>
+<button class="relative z-10 flex-1 py-2.5 text-sm font-semibold text-zinc-400 hover:text-white transition-all duration-300">
+                    Notifications
+                </button>
+<!-- Active Indicator Background (Visual only for Requests) -->
+</div>
+</header>
+<!-- Content Section: Requests Tab Active -->
+<div class="space-y-6">
+<!-- Section Label -->
+<div class="flex items-center justify-between px-1">
+<h2 class="text-xs font-bold uppercase tracking-widest text-primary">Pending Requests (3)</h2>
+<span class="text-xs text-zinc-500">View All</span>
+</div>
+<!-- Request Cards -->
+<div class="space-y-4">
+<!-- Card 1 -->
+<div class="glass-card p-4 rounded-xl flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="relative">
+<img alt="Profile" class="w-14 h-14 rounded-full object-cover border-2 border-primary/30" data-alt="Young professional woman portrait avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqnZQe0P4v8dlpACnlkiVB22KP_QNOAHY6N86F1v8JwSkkXKCgYELWLrueX_zA80SjHH_XyyZjmn27cdybvkAF5z43x51zWNIU0LzxHNzsnQuul2CeM4pgez-Y7HM6Ia1R-0jLdv955EsOEUpsbAdUbp6RPnEZKO3pSORwHYMaKiWEAYo72VgOGW3_5rqYs28w_KvakdxgYSG3kWyhFhTGpNcEv7LWY6PNO1v4RBm1tYkxvQ17oSQzJZR5xwQh-Lp1sRF0jRE60bfu"/>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-background-dark rounded-full"></div>
+</div>
+<div class="flex-1">
+<h3 class="font-bold text-lg leading-tight text-white">Elena Vance</h3>
+<p class="text-sm text-zinc-400">Digital Creator • 12 Mutual</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 py-2.5 rounded-full bg-primary/10 border border-primary text-primary font-bold text-sm transition-all active:scale-95 neon-glow">
+                            Approve
+                        </button>
+<button class="flex-1 py-2.5 rounded-full glass-panel text-zinc-400 font-bold text-sm transition-all active:scale-95">
+                            Reject
+                        </button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="glass-card p-4 rounded-xl flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="relative">
+<img alt="Profile" class="w-14 h-14 rounded-full object-cover border-2 border-white/10" data-alt="Modern man portrait avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEeGsnr3xOGozsqBE0_5Qzxu2yjRWRgKL4p5cF4JEqs4eL0Puy0-cMib6OFHRBwShvXuddZ8hVSYOmcZ7lX5SqxUHGTWTJRwMm_NpYmqrcrpr12Feg3TzVVTuUmLjyvBdU9Hph19wX1oCa52ql_nchCZiyZN_EZ9-ycosyn7OhNr2_2w1JfTu_Z4qxf1dSEzErfZUwSMOpM1J6ZVZDXeOYilAngWiTaBvEwY84iqbxM_aVzKeSsEplbZFcFjDHXwacxpNzurdJVJol"/>
+</div>
+<div class="flex-1">
+<h3 class="font-bold text-lg leading-tight text-white">Marcus Thorne</h3>
+<p class="text-sm text-zinc-400">Tech Entrepreneur • 5 Mutual</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 py-2.5 rounded-full bg-primary/10 border border-primary text-primary font-bold text-sm transition-all active:scale-95 neon-glow">
+                            Approve
+                        </button>
+<button class="flex-1 py-2.5 rounded-full glass-panel text-zinc-400 font-bold text-sm transition-all active:scale-95">
+                            Reject
+                        </button>
+</div>
+</div>
+</div>
+<!-- Notifications Section Group: Today -->
+<div class="pt-4 space-y-4">
+<div class="px-1">
+<h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Today</h2>
+</div>
+<!-- Notification Item 1 (New) -->
+<div class="relative overflow-hidden group">
+<div class="glass-card p-4 rounded-xl flex items-start gap-4 transition-transform active:translate-x-[-20px]">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+<span class="material-icons text-primary text-xl">favorite</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-zinc-200">
+<span class="font-bold text-white">Sasha Gray</span> liked your listing "Limited Edition Neon Print".
+                            </p>
+<p class="text-xs text-zinc-500 mt-1">2 hours ago</p>
+</div>
+<div class="w-2 h-2 rounded-full bg-primary neon-glow mt-1.5"></div>
+</div>
+</div>
+<!-- Notification Item 2 -->
+<div class="relative overflow-hidden group">
+<div class="glass-card p-4 rounded-xl flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+<span class="material-icons text-blue-400 text-xl">shopping_bag</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-zinc-200">
+                                Your offer for <span class="font-bold text-white">Cyberpunk Deck</span> was accepted.
+                            </p>
+<p class="text-xs text-zinc-500 mt-1">5 hours ago</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Notifications Section Group: Yesterday -->
+<div class="pt-4 space-y-4">
+<div class="px-1">
+<h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Yesterday</h2>
+</div>
+<!-- Notification Item 3 -->
+<div class="glass-card p-4 rounded-xl flex items-start gap-4 opacity-70">
+<div class="w-10 h-10 rounded-full bg-zinc-700/50 flex items-center justify-center shrink-0">
+<span class="material-icons text-zinc-400 text-xl">chat_bubble</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-zinc-200">
+<span class="font-bold text-white">Julian Noir</span> sent you a direct message.
+                        </p>
+<p class="text-xs text-zinc-500 mt-1">1 day ago</p>
+</div>
+</div>
+<!-- Notification Item 4 -->
+<div class="glass-card p-4 rounded-xl flex items-start gap-4 opacity-70">
+<div class="w-10 h-10 rounded-full bg-zinc-700/50 flex items-center justify-center shrink-0">
+<span class="material-icons text-zinc-400 text-xl">group_add</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-zinc-200">
+<span class="font-bold text-white">Alex Rivera</span> and 4 others followed you.
+                        </p>
+<p class="text-xs text-zinc-500 mt-1">1 day ago</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Navigation Bar -->
+<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[360px] h-20 glass-panel rounded-full flex items-center justify-around px-4 shadow-2xl z-50">
+<button class="w-12 h-12 rounded-full flex items-center justify-center text-zinc-500 hover:text-white transition-colors">
+<span class="material-icons text-2xl">home</span>
+</button>
+<button class="w-12 h-12 rounded-full flex items-center justify-center text-zinc-500 hover:text-white transition-colors">
+<span class="material-icons text-2xl">explore</span>
+</button>
+<!-- Center Action Button -->
+<button class="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white neon-glow -mt-10 border-4 border-background-dark">
+<span class="material-icons text-3xl font-bold">add</span>
+</button>
+<button class="w-12 h-12 rounded-full flex items-center justify-center text-primary transition-colors">
+<span class="material-icons text-2xl">notifications</span>
+</button>
+<button class="w-12 h-12 rounded-full flex items-center justify-center text-zinc-500 hover:text-white transition-colors overflow-hidden">
+<img alt="User" class="w-8 h-8 rounded-full object-cover" data-alt="User profile mini thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBE4Dy_4dt-Y2gOUahVIIDxOaWt0NRWvUHZs2V6zNo_2WWLLs-RNwabrZl1WGgf_QjEnh59z9xZP7YdFIt2v7tzbWEqoe_JpK35cjwNpUZLJ9pGCyT1hHqqxoFbIfLzD2TvtL9be9JPT0YK9c-hGbuEEofBgRCFUprvYToDrP2RO8Q-Os8bK4ACxI_U6xpeGi0BZJa2zCke2SQ_5nJOU5_xN5aUq9Xokalwbok3JMeW_T7uY-6yXL9XKoCA1a7TeL7FtLpSjUMP_zNa"/>
+</button>
+</nav>
+<!-- Background Decorative Elements -->
+<div class="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
+<div class="fixed bottom-[-5%] right-[-5%] w-[40%] h-[40%] bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10"></div>
+</body></html>

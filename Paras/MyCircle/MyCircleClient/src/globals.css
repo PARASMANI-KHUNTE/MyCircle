@@ -1,73 +1,57 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-    /* Dark Mode (Default) - Deep Slate & Violet Theme */
-    --background: #0f172a;
-    --foreground: #f8fafc;
-
-    --primary: 59 130 246;
-    /* Blue 500 */
+    --background: 255 251 242;
+    --background-section: 255 247 230;
+    --foreground: 17 24 39;
+    --primary: 245 158 11;
+    --primary-hover: 217 119 6;
     --primary-foreground: 255 255 255;
-    --primary-hover: 37 99 235;
-    /* Blue 600 */
-
-    --secondary: 30 41 59;
-    --secondary-foreground: 226 232 240;
-    --secondary-hover: 51 65 85;
-
-    --accent: 34 197 94;
-    /* Green 500 */
-    --accent-foreground: 255 255 255;
-
-    --muted: 30 41 59;
-    --muted-foreground: 148 163 184;
-
-    --card: 30 41 59;
-    --card-foreground: 248 250 252;
-    --card-border: 255 255 255;
-    /* White (opacity handled in utility) */
-
-    --glass-bg: 15 23 42;
-    /* Matching card/slate base */
-    --glass-opacity: 0.6;
-    /* Higher opacity for better readability on deep bg */
-    --glass-border-opacity: 0.05;
-    /* Extremely subtle */
-}
-
-[data-theme='light'] {
-    /* Light Mode - Crisp Slate & Violet */
-    --background: #f8fafc;
-    --foreground: #0f172a;
-
-    --primary: 37 99 235;
-    /* Blue 600 */
-    --primary-foreground: 255 255 255;
-    --primary-hover: 29 78 216;
-
-    --secondary: 241 245 249;
-    --secondary-foreground: 30 41 59;
-    --secondary-hover: 226 232 240;
-
-    --accent: 22 163 74;
-    /* Green 600 */
-    --accent-foreground: 255 255 255;
-
-    --muted: 241 245 249;
-    --muted-foreground: 100 116 139;
-
+    --secondary: 31 41 55;
+    --secondary-hover: 17 24 39;
+    --secondary-foreground: 249 250 251;
+    --text-heading: 17 24 39;
+    --text-body: 75 85 99;
+    --text-muted: 107 114 128;
+    --text-light-muted: 156 163 175;
     --card: 255 255 255;
-    --card-foreground: 15 23 42;
+    --card-foreground: 17 24 39;
+    --card-border-rgb: 229 231 235;
+    --hover-bg: 0 0 0 / 0.05;
+
     --card-border: 148 163 184;
     /* Slate 400 */
-
     --glass-bg: 255 255 255;
     --glass-opacity: 0.7;
     --glass-border-opacity: 0.1;
+}
+
+[data-theme='dark'] {
+    --background: 10 10 10;
+    --background-section: 20 20 20;
+    --foreground: 249 250 251;
+    --primary: 245 158 11;
+    --primary-hover: 251 191 36;
+    --secondary: 249 250 251;
+    --secondary-hover: 255 255 255;
+    --secondary-foreground: 17 24 39;
+    --text-heading: 249 250 251;
+    --text-body: 209 213 219;
+    --text-muted: 156 163 175;
+    --text-light-muted: 107 114 128;
+    --card: 23 23 23;
+    --card-foreground: 249 250 251;
+    --card-border-rgb: 63 63 70;
+    --hover-bg: 255 255 255 / 0.05;
+
+    --card-border: 63 63 70;
+    --glass-bg: 15 23 42;
+    --glass-opacity: 0.5;
+    --glass-border-opacity: 0.2;
 }
 
 @layer base {
@@ -84,7 +68,7 @@
         }
 
         &::-webkit-scrollbar-thumb {
-            @apply bg-secondary-hover rounded-full hover:bg-muted-foreground/50 transition-colors;
+            @apply bg-card-border rounded-full hover:bg-text-muted transition-colors;
         }
     }
 
@@ -102,14 +86,15 @@
 
     /* Premium Borderless Glass */
     .glass {
-        background: rgba(var(--glass-bg), var(--glass-opacity));
-        border: 1px solid rgba(var(--card-border), var(--glass-border-opacity));
+        background: rgb(var(--glass-bg) / var(--glass-opacity));
+        border: 1px solid rgb(var(--card-border) / var(--glass-border-opacity));
         @apply backdrop-blur-xl shadow-xl transition-all duration-300;
     }
 
-    /* Darker/Lighter panel for contrast within glass */
     .glass-panel {
-        @apply bg-secondary/30 backdrop-blur-md border border-white/5 rounded-2xl;
+        background: rgb(var(--glass-bg) / 0.85);
+        backdrop-filter: blur(24px);
+        @apply border border-card-border/30 rounded-[2.5rem] shadow-glass-panel ring-1 ring-black/[0.02];
     }
 
     .glass-hover {

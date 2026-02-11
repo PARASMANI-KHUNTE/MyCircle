@@ -70,9 +70,14 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 4,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
         marginBottom: 24,
         width: '100%',
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
     stepWrapper: {
         flexDirection: 'row',
@@ -80,26 +85,28 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     circle: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         borderWidth: 2,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 4,
+        marginRight: 8,
     },
     stepNum: {
-        fontSize: 10,
-        fontWeight: 'bold',
+        fontSize: 12,
+        fontWeight: '900',
     },
     label: {
-        fontSize: 11,
-        marginRight: 4,
+        fontSize: 12,
+        marginRight: 8,
+        letterSpacing: 0.5,
     },
     line: {
         height: 2,
         flex: 1,
-        marginHorizontal: 4,
+        marginHorizontal: 8,
+        borderRadius: 1,
     }
 });
 

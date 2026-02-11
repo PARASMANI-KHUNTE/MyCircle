@@ -43,12 +43,12 @@ const DialogUI = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="glass rounded-2xl w-full max-w-md p-6 relative border border-white/10"
+                            className="glass-panel w-full max-w-md p-10 relative shadow-2xl"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <button
                                 onClick={handleCancel}
-                                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                                className="absolute top-6 right-6 text-text-muted hover:text-text-heading transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -57,14 +57,14 @@ const DialogUI = () => {
                                     {getIcon()}
                                 </div>
                             )}
-                            <h2 className="text-xl font-bold text-white text-center mb-3">{title}</h2>
-                            <p className="text-gray-300 text-center mb-6">{message}</p>
+                            <h2 className="text-2xl font-black text-text-heading text-center mb-3 uppercase tracking-tight">{title}</h2>
+                            <p className="text-text-body text-center mb-8 font-medium leading-relaxed">{message}</p>
                             {type === 'prompt' && (
                                 <input
                                     type="text"
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white mb-6 focus:outline-none focus:border-primary/50"
+                                    className="w-full bg-card/10 border border-card-border rounded-xl px-4 py-3 text-text-heading mb-8 focus:outline-none focus:border-primary/50 shadow-inner"
                                     autoFocus
                                     onKeyPress={(e) => {
                                         if (e.key === 'Enter') handleConfirm();

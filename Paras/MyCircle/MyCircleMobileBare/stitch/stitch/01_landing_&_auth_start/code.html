@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MyCircle | High-Performance Community</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#8c25f4",
+                        "accent-cyan": "#00f5ff",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#09090b",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #09090b;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow-violet {
+            filter: blur(80px);
+            background: radial-gradient(circle, rgba(140, 37, 244, 0.4) 0%, rgba(140, 37, 244, 0) 70%);
+        }
+        .neon-glow-cyan {
+            filter: blur(80px);
+            background: radial-gradient(circle, rgba(0, 245, 255, 0.2) 0%, rgba(0, 245, 255, 0) 70%);
+        }
+        .ios-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 430px;
+            margin: 0 auto;
+            position: relative;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-100 font-display">
+<!-- Background Elements -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="absolute -top-20 -left-20 w-96 h-96 neon-glow-violet rounded-full opacity-60"></div>
+<div class="absolute top-1/2 -right-20 w-[400px] h-[400px] neon-glow-cyan rounded-full opacity-40"></div>
+<div class="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[500px] h-[500px] neon-glow-violet rounded-full opacity-30"></div>
+</div>
+<!-- Main Screen Container (Mobile Viewport) -->
+<div class="ios-container flex flex-col justify-between p-8 relative z-10">
+<!-- Top Status Area Placeholder (iOS Style) -->
+<div class="flex justify-between items-center w-full px-2 pt-2">
+<span class="text-sm font-semibold">9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-icons text-[14px]">signal_cellular_alt</span>
+<span class="material-icons text-[14px]">wifi</span>
+<span class="material-icons text-[18px]">battery_full</span>
+</div>
+</div>
+<!-- Brand Hero Section -->
+<div class="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+<div class="relative group">
+<!-- Logo Backdrop Glow -->
+<div class="absolute inset-0 bg-primary/30 blur-2xl rounded-full scale-125"></div>
+<div class="relative w-24 h-24 rounded-full bg-gradient-to-tr from-primary to-accent-cyan p-[2px]">
+<div class="w-full h-full rounded-full bg-background-dark flex items-center justify-center">
+<span class="material-icons text-5xl text-white">group_work</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<h1 class="text-4xl font-extrabold tracking-tight text-white">
+                    MyCircle<span class="text-primary">.</span>
+</h1>
+<p class="text-slate-400 text-lg max-w-[260px] mx-auto leading-relaxed">
+                    Where high-performance communities thrive.
+                </p>
+</div>
+</div>
+<!-- Action Container -->
+<div class="space-y-4 pb-12">
+<!-- Google Auth Button -->
+<button class="w-full flex items-center justify-center gap-3 py-4 glass-card rounded-full text-white font-semibold transition-all hover:bg-white/10 active:scale-[0.98]">
+<img alt="Google Logo" class="w-6 h-6" data-alt="Official Google logo icon colorized" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8NBewcYWokuu1dzgrPat4ilS3vDtsJyS1dhM6Rx9hlMtt7PBO0wGsovSkjr2Jo1QyT_GQi9ZD7kdQqbTVYtyOaNqGBTad2kuDgnROINRp9sdEpHzUMS_TwlIGjlyiHQjRp8O-NgT6adSvvkpZ9lLGm2XrZMZtRHqWTgl5OonJPir7NqzhFgxIlFaC2ZtD3cZMoP-mU4pOpgR19E3jYjDV1YTW_hdvUq1rw-8CGDmf6rz79hMdBw0GbsXUiH8-O03lI6yl96kDdkt8"/>
+                Continue with Google
+            </button>
+<!-- Login Secondary -->
+<div class="space-y-3">
+<button class="w-full py-4 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98]">
+                    Get Started
+                </button>
+<div class="flex items-center justify-center gap-2 pt-2">
+<span class="text-slate-500 text-sm">Already a member?</span>
+<button class="text-primary font-semibold text-sm hover:underline">Log in</button>
+</div>
+</div>
+<!-- Footer Compliance -->
+<div class="pt-8 text-center">
+<p class="text-[10px] text-slate-500 uppercase tracking-widest leading-relaxed px-6">
+                    By continuing, you agree to our <br/>
+<a class="underline" href="#">Terms of Service</a> and <a class="underline" href="#">Privacy Policy</a>
+</p>
+</div>
+</div>
+<!-- iOS Home Indicator -->
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full"></div>
+</div>
+<!-- Decorative Image Layer (Abstract) -->
+<div class="fixed top-1/4 -right-1/4 w-[600px] h-[600px] opacity-10 pointer-events-none">
+<img alt="Abstract Gradient Background" class="w-full h-full object-cover rounded-full mix-blend-screen" data-alt="Abstract vibrant violet and cyan gradient flowing shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVD4dk6-k295JYG3o9LE5sKQjzMbIkodf-SGM8BmWRWhX4K2aTiAJKOOQ_yH2OkqHaCV6gQWy3bua7qo7fi8zugSMxt_E4uvXBiivpVYjgoyEqyI7q32F35e9mylk2yNWRGhGKdz9XlHlrfuHTrtYPzaUxhtOZu5gJLtHoi-BPbAGpXua-sgpqCAzXZSWGJZeDira9q4BORdtW-D12wDa5XBW6LYPG9s0whSB3dUwYSl3rHWVy7k6IuUXjV7aemgCYcNkMUhLl5MdY"/>
+</div>
+</body></html>

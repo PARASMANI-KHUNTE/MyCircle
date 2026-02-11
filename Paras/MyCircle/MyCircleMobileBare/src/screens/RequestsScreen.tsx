@@ -2,12 +2,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import api from '../services/api';
-import { X, Check, MessageCircle, Trash2 } from 'lucide-react-native';
+import { X, Check, MessageCircle, Trash2, ArrowLeft } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { useNotifications } from '../context/NotificationContext';
+import GlassView from '../components/ui/GlassView';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const RequestsScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
@@ -139,173 +141,179 @@ const RequestsScreen = ({ navigation }: any) => {
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const renderReceivedItem = ({ item }: any) => {
-        if (!item.post) return null; // Skip if post is deleted (cascade delete handles new ones, this hides old orphans)
-
-        return (
-            <View style={[styles.requestCard, themeStyles.card]}>
-                <View style={styles.cardHeader}>
-                    {item.post.images && item.post.images[0] ? (
-                        <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
-                    ) : (
-                        <View style={[styles.postThumbnail, styles.placeholderThumbnail]}>
-                            <Image source={require('../assets/logo.png')} style={{ width: 24, height: 24, opacity: 0.5 }} />
-                        </View>
-                    )}
-                    <View style={styles.headerText}>
-                        <TouchableOpacity onPress={() => navigation.navigate('PostDetails', { id: item.post._id })}>
-                            <Text style={[styles.postTitle, themeStyles.text]} numberOfLines={1}>{item.post.title}</Text>
-                        </TouchableOpacity>
-                        <View style={styles.metaRow}>
-                            <Text style={[styles.postType, themeStyles.textSecondary]}>{item.post.type}</Text>
-                            <Text style={[styles.dateText, themeStyles.textSecondary]}>• {formatDate(item.createdAt)}</Text>
-                        </View>
-                    </View>
-                    <TouchableOpacity
-                        onPress={() => handleDelete(item._id, 'clear')}
-                        style={styles.deleteIcon}
-                    >
-                        <Trash2 size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={[styles.divider, themeStyles.divider]} />
-
-                <View style={styles.requesterSection}>
-                    <Image
-                        source={{ uri: getAvatarUrl(item.requester) }}
-                        style={[styles.avatar, themeStyles.avatarBg]}
-                    />
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                        <Text style={[styles.userName, themeStyles.text]}>{item.requester?.displayName}</Text>
-                        <Text style={[styles.requestContext, themeStyles.textSecondary]}>wants to contact you</Text>
-                    </View>
-                </View>
-
-                {item.status === 'pending' ? (
-                    <View style={styles.buttonRow}>
-                        <TouchableOpacity
-                            onPress={() => handleAction(item._id, 'rejected')}
-                            style={[styles.actionButton, styles.rejectButton]}
-                        >
-                            <X size={16} color="#ef4444" />
-                            <Text style={styles.rejectText}>Reject</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => handleAction(item._id, 'approved')}
-                            style={[styles.actionButton, styles.approveButton]}
-                        >
-                            <Check size={16} color="#22c55e" />
-                            <Text style={styles.approveText}>Approve</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <View>
-                        <View style={[
-                            styles.statusBadge,
-                            item.status === 'approved' ? styles.approvedBadge : styles.rejectedBadge,
-                            { marginTop: 12 }
-                        ]}>
-                            <Text style={[
-                                styles.statusText,
-                                item.status === 'approved' ? styles.approvedText : styles.rejectedText
-                            ]}>Request {item.status}</Text>
-                        </View>
-                        {item.status === 'approved' && (
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('ChatWindow', { recipient: item.requester })}
-                                style={[styles.chatButton, { backgroundColor: colors.primary }]}
-                            >
-                                <MessageCircle size={18} color="white" />
-                                <Text style={styles.chatButtonText}>Chat</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                )}
-            </View>
-        );
-    };
-
-    const renderSentItem = ({ item }: any) => {
+    const renderReceivedItem = ({ item, index }: any) => {
         if (!item.post) return null;
 
         return (
-            <View style={[styles.requestCard, themeStyles.card]}>
-                <View style={styles.cardHeader}>
-                    {item.post.images && item.post.images[0] ? (
-                        <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
-                    ) : (
-                        <View style={[styles.postThumbnail, styles.placeholderThumbnail]}>
-                            <Image source={require('../assets/logo.png')} style={{ width: 24, height: 24, opacity: 0.5 }} />
+            <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                <GlassView intensity={5} borderRadius={24} style={styles.requestCard}>
+                    <View style={styles.cardHeader}>
+                        {item.post.images && item.post.images[0] ? (
+                            <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
+                        ) : (
+                            <View style={[styles.postThumbnail, styles.placeholderThumbnail]}>
+                                <Image source={require('../assets/logo.png')} style={{ width: 24, height: 24, opacity: 0.5 }} />
+                            </View>
+                        )}
+                        <View style={styles.headerText}>
+                            <TouchableOpacity onPress={() => navigation.navigate('PostDetails', { id: item.post._id })}>
+                                <Text style={styles.postTitle} numberOfLines={1}>{item.post.title}</Text>
+                            </TouchableOpacity>
+                            <View style={styles.metaRow}>
+                                <Text style={styles.postType}>{item.post.type}</Text>
+                                <Text style={styles.dateText}>• {formatDate(item.createdAt)}</Text>
+                            </View>
                         </View>
-                    )}
-                    <View style={styles.headerText}>
-                        <Text style={[styles.postTitleLarge, themeStyles.text]} numberOfLines={1}>{item.post?.title}</Text>
-                        <View style={styles.metaRow}>
-                            <Text style={[styles.sentToText, themeStyles.textSecondary]}>To: <Text style={{ fontWeight: 'bold', color: colors.text }}>{item.recipient?.displayName}</Text></Text>
-                            <Text style={[styles.dateText, themeStyles.textSecondary]}>• {formatDate(item.createdAt)}</Text>
-                        </View>
+                        <TouchableOpacity
+                            onPress={() => handleDelete(item._id, 'clear')}
+                            style={styles.deleteIcon}
+                        >
+                            <Trash2 size={18} color="rgba(255,255,255,0.4)" />
+                        </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                        onPress={() => handleDelete(item._id, 'withdraw')}
-                        style={styles.deleteIcon}
-                    >
-                        <Trash2 size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                </View>
 
-                <View style={[styles.divider, themeStyles.divider]} />
+                    <View style={styles.divider} />
 
-                <View style={styles.footerRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={[styles.statusLabel, themeStyles.textSecondary, { marginRight: 8 }]}>Status:</Text>
-                        <View style={[
-                            styles.statusChip,
-                            item.status === 'approved' ? styles.approvedBadge :
-                                item.status === 'rejected' ? styles.rejectedBadge : styles.pendingBadge
-                        ]}>
-                            <Text style={[
-                                styles.statusText,
-                                item.status === 'approved' ? styles.approvedText :
-                                    item.status === 'rejected' ? styles.rejectedText : styles.pendingText,
-                                { fontSize: 12 }
-                            ]}>{item.status}</Text>
+                    <View style={styles.requesterSection}>
+                        <Image
+                            source={{ uri: getAvatarUrl(item.requester) }}
+                            style={styles.avatar}
+                        />
+                        <View style={{ marginLeft: 12, flex: 1 }}>
+                            <Text style={styles.userName}>{item.requester?.displayName}</Text>
+                            <Text style={styles.requestContext}>wants to contact you</Text>
                         </View>
                     </View>
 
-                    {item.status === 'approved' && (
-                        <View style={styles.contactActions}>
+                    {item.status === 'pending' ? (
+                        <View style={styles.buttonRow}>
                             <TouchableOpacity
-                                onPress={() => navigation.navigate('ChatWindow', { recipient: item.recipient })}
-                                style={[styles.iconButton, { backgroundColor: colors.primary }]}
+                                onPress={() => handleAction(item._id, 'rejected')}
+                                style={[styles.actionButton, styles.rejectButton]}
                             >
-                                <MessageCircle size={18} color="white" />
+                                <X size={16} color="#ef4444" />
+                                <Text style={styles.rejectText}>Reject</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => handleAction(item._id, 'approved')}
+                                style={[styles.actionButton, styles.approveButton]}
+                            >
+                                <Check size={16} color="#10b981" />
+                                <Text style={styles.approveText}>Approve</Text>
                             </TouchableOpacity>
                         </View>
+                    ) : (
+                        <View>
+                            <View style={[
+                                styles.statusBadge,
+                                item.status === 'approved' ? styles.approvedBadge : styles.rejectedBadge,
+                                { marginTop: 12 }
+                            ]}>
+                                <Text style={[
+                                    styles.statusText,
+                                    item.status === 'approved' ? styles.approvedText : styles.rejectedText
+                                ]}>Request {item.status}</Text>
+                            </View>
+                            {item.status === 'approved' && (
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('ChatWindow', { recipient: item.requester })}
+                                    style={styles.chatButtonNeon}
+                                >
+                                    <MessageCircle size={18} color="white" />
+                                    <Text style={styles.chatButtonText}>START CHAT</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     )}
-                </View>
-            </View>
+                </GlassView>
+            </Animated.View>
+        );
+    };
+
+    const renderSentItem = ({ item, index }: any) => {
+        if (!item.post) return null;
+
+        return (
+            <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                <GlassView intensity={5} borderRadius={24} style={styles.requestCard}>
+                    <View style={styles.cardHeader}>
+                        {item.post.images && item.post.images[0] ? (
+                            <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
+                        ) : (
+                            <View style={[styles.postThumbnail, styles.placeholderThumbnail]}>
+                                <Image source={require('../assets/logo.png')} style={{ width: 24, height: 24, opacity: 0.5 }} />
+                            </View>
+                        )}
+                        <View style={styles.headerText}>
+                            <Text style={styles.postTitleLarge} numberOfLines={1}>{item.post?.title}</Text>
+                            <View style={styles.metaRow}>
+                                <Text style={styles.sentToText}>To: <Text style={{ fontWeight: 'bold', color: '#fff' }}>{item.recipient?.displayName}</Text></Text>
+                                <Text style={styles.dateText}>• {formatDate(item.createdAt)}</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => handleDelete(item._id, 'withdraw')}
+                            style={styles.deleteIcon}
+                        >
+                            <Trash2 size={18} color="rgba(255,255,255,0.4)" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.footerRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={[styles.statusLabel, { marginRight: 8 }]}>Status:</Text>
+                            <View style={[
+                                styles.statusChip,
+                                item.status === 'approved' ? styles.approvedBadge :
+                                    item.status === 'rejected' ? styles.rejectedBadge : styles.pendingBadge
+                            ]}>
+                                <Text style={[
+                                    styles.statusText,
+                                    item.status === 'approved' ? styles.approvedText :
+                                        item.status === 'rejected' ? styles.rejectedText : styles.pendingText,
+                                    { fontSize: 12 }
+                                ]}>{item.status}</Text>
+                            </View>
+                        </View>
+
+                        {item.status === 'approved' && (
+                            <View style={styles.contactActions}>
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('ChatWindow', { recipient: item.recipient })}
+                                    style={styles.iconButtonNeon}
+                                >
+                                    <MessageCircle size={18} color="white" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </GlassView>
+            </Animated.View>
         );
     };
 
     return (
         <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
             <View style={styles.innerContainer}>
-                <Text style={[styles.headerTitle, themeStyles.text]}>Requests</Text>
+                <Text style={styles.headerTitle}>Requests</Text>
 
-                <View style={[styles.tabsContainer, themeStyles.inactiveTab, themeStyles.border]}>
-                    <TouchableOpacity
-                        onPress={() => setActiveTab('received')}
-                        style={[styles.tab, activeTab === 'received' ? themeStyles.activeTab : null]}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'received' ? { color: colors.text } : themeStyles.textSecondary]}>Received</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setActiveTab('sent')}
-                        style={[styles.tab, activeTab === 'sent' ? themeStyles.activeTab : null]}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'sent' ? { color: colors.text } : themeStyles.textSecondary]}>Sent</Text>
-                    </TouchableOpacity>
+                <View style={styles.tabsWrapper}>
+                    <GlassView intensity={10} borderRadius={16} style={styles.tabsContainer}>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('received')}
+                            style={[styles.tab, activeTab === 'received' && styles.activeTab]}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'received' && styles.activeTabText]}>Received</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('sent')}
+                            style={[styles.tab, activeTab === 'sent' && styles.activeTab]}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'sent' && styles.activeTabText]}>Sent</Text>
+                        </TouchableOpacity>
+                    </GlassView>
                 </View>
 
                 {loading ? (
@@ -356,12 +364,14 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         marginBottom: 16,
     },
+    tabsWrapper: {
+        marginBottom: 16,
+    },
     tabsContainer: {
         flexDirection: 'row',
         padding: 4,
-        borderRadius: 12,
-        marginBottom: 16,
         borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
     tab: {
         flex: 1,
@@ -621,6 +631,34 @@ const styles = StyleSheet.create({
     chatButtonText: {
         color: '#ffffff',
         fontWeight: 'bold',
+    },
+    chatButtonNeon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginTop: 12,
+        gap: 8,
+        backgroundColor: '#af25f4',
+        shadowColor: '#af25f4',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    iconButtonNeon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#af25f4',
+        shadowColor: '#af25f4',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 5,
     },
 });
 

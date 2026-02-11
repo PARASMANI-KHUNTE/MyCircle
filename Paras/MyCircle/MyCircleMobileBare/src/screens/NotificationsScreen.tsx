@@ -1,11 +1,61 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, Alert } from 'react-native';
+import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, Alert, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { Bell, MessageSquare, CheckCircle, Heart, Info, Trash2, X, CheckSquare, Square } from 'lucide-react-native';
 import api from '../services/api';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import GlassView from '../components/ui/GlassView';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
+    const translationY = useSharedValue(0);
+    const translationX = useSharedValue(0);
+
+    React.useEffect(() => {
+        translationY.value = withRepeat(
+            withSequence(
+                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
+                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+        translationX.value = withRepeat(
+            withSequence(
+                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
+                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
+    }));
+
+    return (
+        <Animated.View
+            style={[
+                styles.floatingShape,
+                {
+                    width: size,
+                    height: size,
+                    borderRadius: size / 2,
+                    backgroundColor: color,
+                    top,
+                    left,
+                },
+                animatedStyle,
+            ]}
+        />
+    );
+};
 
 const NotificationsScreen = ({ navigation }: any) => {
     const { notifications, loading, refresh, markAllRead, handleNotificationClick } = useNotifications();
@@ -135,59 +185,71 @@ const NotificationsScreen = ({ navigation }: any) => {
         );
     };
 
-    const renderItem = useCallback(({ item }: { item: any }) => {
+    const renderItem = useCallback(({ item, index }: { item: any, index: number }) => {
         const isSelected = selectedItems.has(item._id);
 
         const Content = (
-            <TouchableOpacity
-                onPress={() => {
-                    if (isSelectionMode) {
-                        toggleSelection(item._id);
-                    } else {
-                        handleNotificationClick(item, navigation);
-                    }
-                }}
-                onLongPress={() => enterSelectionMode(item._id)}
-                delayLongPress={300}
-                style={[
-                    styles.notificationCard,
-                    themeStyles.border,
-                    item.read ? themeStyles.readCard : themeStyles.unreadCard,
-                    isSelected && themeStyles.selectedCard
-                ]}
-                activeOpacity={0.7}
-            >
-                <View style={styles.cardInner}>
-                    {isSelectionMode && (
-                        <View style={styles.checkboxContainer}>
-                            {isSelected ? (
-                                <CheckSquare size={20} color={colors.primary} />
-                            ) : (
-                                <Square size={20} color={colors.textSecondary} />
+            <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                <TouchableOpacity
+                    onPress={() => {
+                        if (isSelectionMode) {
+                            toggleSelection(item._id);
+                        } else {
+                            handleNotificationClick(item, navigation);
+                        }
+                    }}
+                    onLongPress={() => enterSelectionMode(item._id)}
+                    delayLongPress={300}
+                    activeOpacity={0.7}
+                    style={{ marginBottom: 1 }}
+                >
+                    <GlassView
+                        intensity={isSelected ? 30 : (item.read ? 5 : 12)}
+                        style={[
+                            styles.notificationCard,
+                            { borderBottomWidth: 0 },
+                            !item.read ? { borderColor: 'rgba(139, 92, 246, 0.3)', borderLeftWidth: 3, borderLeftColor: colors.primary } : {},
+                            isSelected ? { backgroundColor: colors.primary + '20', borderColor: colors.primary, borderWidth: 1 } : {}
+                        ]}
+                    >
+                        <View style={styles.cardInner}>
+                            {isSelectionMode && (
+                                <View style={styles.checkboxContainer}>
+                                    {isSelected ? (
+                                        <CheckSquare size={20} color={colors.primary} />
+                                    ) : (
+                                        <Square size={20} color={colors.textSecondary} />
+                                    )}
+                                </View>
                             )}
-                        </View>
-                    )}
 
-                    <View style={[styles.iconContainer, { backgroundColor: colors.input }]}>
-                        {getIcon(item.type)}
-                    </View>
+                            <View style={[styles.iconContainer, { backgroundColor: isSelected ? colors.primary + '40' : 'rgba(255,255,255,0.05)' }]}>
+                                {getIcon(item.type)}
+                            </View>
 
-                    <View style={styles.textContainer}>
-                        <View style={styles.titleRow}>
-                            <Text style={[
-                                styles.notificationTitle,
-                                item.read ? themeStyles.textSecondary : { color: colors.text }
-                            ]} numberOfLines={1}>
-                                {item.title}
-                            </Text>
-                            <Text style={[styles.timeText, themeStyles.textSecondary]}>
-                                {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </Text>
+                            <View style={styles.textContainer}>
+                                <View style={styles.titleRow}>
+                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={[
+                                            styles.notificationTitle,
+                                            { color: item.read ? 'rgba(255,255,255,0.4)' : '#fff' }
+                                        ]} numberOfLines={1}>
+                                            {item.title}
+                                        </Text>
+                                        {!item.read && <View style={styles.unreadDot} />}
+                                    </View>
+                                    <Text style={[styles.timeText, { color: 'rgba(255,255,255,0.3)' }]}>
+                                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.messageText, { color: item.read ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)' }]} numberOfLines={2}>
+                                    {item.message}
+                                </Text>
+                            </View>
                         </View>
-                        <Text style={[styles.messageText, themeStyles.textSecondary]} numberOfLines={2}>{item.message}</Text>
-                    </View>
-                </View>
-            </TouchableOpacity>
+                    </GlassView>
+                </TouchableOpacity>
+            </Animated.View>
         );
 
         if (isSelectionMode) {
@@ -199,39 +261,46 @@ const NotificationsScreen = ({ navigation }: any) => {
                 {Content}
             </Swipeable>
         );
-    }, [isSelectionMode, selectedItems, handleNotificationClick, navigation, toggleSelection, enterSelectionMode]);
+    }, [isSelectionMode, selectedItems, handleNotificationClick, navigation, colors.primary]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
-                <View style={[styles.header, themeStyles.border, { backgroundColor: colors.background }]}>
-                    {isSelectionMode ? (
-                        <View style={styles.selectionHeader}>
-                            <TouchableOpacity onPress={() => {
-                                setIsSelectionMode(false);
-                                setSelectedItems(new Set());
-                            }}>
-                                <X size={24} color={colors.text} />
-                            </TouchableOpacity>
-                            <Text style={[styles.selectionTitle, themeStyles.text]}>{selectedItems.size} Selected</Text>
-                            <TouchableOpacity onPress={handleBulkDelete}>
-                                <Trash2 size={24} color={colors.danger} />
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <View style={styles.defaultHeader}>
-                            <View>
-                                <Text style={[styles.headerTitle, themeStyles.text]}>Notifications</Text>
-                                <Text style={[styles.headerSubtitle, themeStyles.textSecondary]}>Updates and alerts</Text>
-                            </View>
-                            {notifications.some(n => !n.read) && (
-                                <TouchableOpacity onPress={markAllRead}>
-                                    <Text style={[styles.clearAllText, { color: colors.primary }]}>Mark all read</Text>
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <FloatingShape color="rgba(139, 92, 246, 0.2)" size={400} top={-150} left={-100} delay={0} />
+                <FloatingShape color="rgba(37, 181, 244, 0.1)" size={300} top={SCREEN_HEIGHT * 0.6} left={SCREEN_WIDTH * 0.5} delay={2000} />
+
+                <GlassView intensity={20} borderRadius={0} style={styles.headerGlass}>
+                    <View style={styles.headerContent}>
+                        {isSelectionMode ? (
+                            <View style={styles.selectionHeader}>
+                                <TouchableOpacity onPress={() => {
+                                    setIsSelectionMode(false);
+                                    setSelectedItems(new Set());
+                                }}>
+                                    <X size={24} color="#fff" />
                                 </TouchableOpacity>
-                            )}
-                        </View>
-                    )}
-                </View>
+                                <Text style={styles.selectionTitle}>{selectedItems.size} Selected</Text>
+                                <TouchableOpacity onPress={handleBulkDelete}>
+                                    <Trash2 size={24} color="#ef4444" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.defaultHeader}>
+                                <View>
+                                    <Text style={styles.headerTitle}>Notifications</Text>
+                                    <Text style={styles.headerSubtitle}>Updates and alerts</Text>
+                                </View>
+                                {notifications.some(n => !n.read) && (
+                                    <TouchableOpacity onPress={markAllRead}>
+                                        <GlassView intensity={30} borderRadius={15} style={styles.markReadBtn}>
+                                            <Text style={styles.clearAllText}>Mark all read</Text>
+                                        </GlassView>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+                    </View>
+                </GlassView>
 
                 {loading && notifications.length === 0 ? (
                     <View style={styles.loadingContainer}>
@@ -243,8 +312,8 @@ const NotificationsScreen = ({ navigation }: any) => {
                         keyExtractor={item => item._id}
                         renderItem={renderItem}
                         renderSectionHeader={({ section: { title } }) => (
-                            <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
-                                <Text style={[styles.sectionHeaderText, themeStyles.textSecondary]}>{title}</Text>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionHeaderText}>{title}</Text>
                             </View>
                         )}
                         refreshControl={
@@ -252,8 +321,8 @@ const NotificationsScreen = ({ navigation }: any) => {
                         }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Bell size={48} color={colors.textSecondary} />
-                                <Text style={[styles.emptyText, themeStyles.textSecondary]}>
+                                <Bell size={48} color="rgba(255,255,255,0.1)" />
+                                <Text style={styles.emptyText}>
                                     All caught up! No new notifications.
                                 </Text>
                             </View>
@@ -269,15 +338,15 @@ const NotificationsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
+        backgroundColor: '#09090b',
     },
-    header: {
-        paddingHorizontal: 16,
-        paddingVertical: 16,
+    headerGlass: {
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-        backgroundColor: '#000000',
-        zIndex: 10,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    headerContent: {
+        paddingHorizontal: 24,
+        paddingVertical: 20,
     },
     defaultHeader: {
         flexDirection: 'row',
@@ -288,25 +357,33 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 4,
     },
     selectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: '900',
         color: '#ffffff',
     },
     headerTitle: {
-        fontSize: 30,
-        fontWeight: 'bold',
+        fontSize: 28,
+        fontWeight: '900',
         color: '#ffffff',
+        letterSpacing: -0.5,
     },
     headerSubtitle: {
-        color: '#a1a1aa',
+        color: 'rgba(255,255,255,0.4)',
         fontSize: 14,
+        marginTop: 2,
+    },
+    markReadBtn: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(139, 92, 246, 0.3)',
     },
     clearAllText: {
-        color: '#8b5cf6',
-        fontWeight: '500',
+        color: '#af25f4',
+        fontWeight: 'bold',
+        fontSize: 12,
     },
     loadingContainer: {
         flex: 1,
@@ -314,48 +391,40 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContent: {
-        paddingBottom: 20,
+        paddingTop: 12,
+        paddingBottom: 40,
     },
     sectionHeader: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: '#000000',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        marginTop: 8,
     },
     sectionHeaderText: {
-        color: '#71717a',
-        fontSize: 13,
-        fontWeight: 'bold',
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 12,
+        fontWeight: '900',
         textTransform: 'uppercase',
-        letterSpacing: 1,
+        letterSpacing: 1.5,
     },
     notificationCard: {
-        backgroundColor: '#18181b',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-    },
-    unreadCard: {
-        backgroundColor: '#18181b', // Default dark background
-    },
-    readCard: {
-        backgroundColor: '#000000', // Matches background for cleaner look? Or darker zinc
-    },
-    selectedCard: {
-        backgroundColor: 'rgba(139, 92, 246, 0.15)', // Light violet tint
+        padding: 20,
+        marginHorizontal: 16,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
     cardInner: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     checkboxContainer: {
-        marginRight: 12,
+        marginRight: 16,
     },
     iconContainer: {
         marginRight: 16,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -369,39 +438,40 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     notificationTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        flex: 1,
-        paddingRight: 8,
+        fontSize: 16,
+        fontWeight: '700',
     },
-    unreadText: {
-        color: '#ffffff', // Brighter for unread
-    },
-    readText: {
-        color: '#a1a1aa', // Dimmer for read
-        fontWeight: '400',
+    unreadDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#af25f4',
+        marginLeft: 8,
     },
     timeText: {
         fontSize: 11,
-        color: '#52525b',
+        fontWeight: '600',
     },
     messageText: {
-        color: '#71717a',
-        fontSize: 13,
-        lineHeight: 18,
+        fontSize: 14,
+        lineHeight: 20,
     },
     deleteAction: {
         backgroundColor: '#ef4444',
         justifyContent: 'center',
         alignItems: 'center',
         width: 80,
-        height: '100%',
+        height: '80%',
+        marginTop: 10,
+        borderRadius: 20,
+        marginRight: 16,
     },
     deleteActionText: {
         color: '#ffffff',
-        fontSize: 12,
-        fontWeight: 'bold',
+        fontSize: 10,
+        fontWeight: '900',
         marginTop: 4,
+        textTransform: 'uppercase',
     },
     emptyContainer: {
         flex: 1,
@@ -410,9 +480,14 @@ const styles = StyleSheet.create({
         paddingTop: 100,
     },
     emptyText: {
-        color: '#71717a',
+        color: 'rgba(255,255,255,0.3)',
         marginTop: 16,
         fontSize: 16,
+        fontWeight: '500',
+    },
+    floatingShape: {
+        position: 'absolute',
+        opacity: 0.5,
     },
 });
 

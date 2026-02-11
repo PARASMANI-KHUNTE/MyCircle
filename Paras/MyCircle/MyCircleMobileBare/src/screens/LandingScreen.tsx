@@ -18,24 +18,21 @@ import GlassView from '../components/ui/GlassView';
 
 const { width, height } = Dimensions.get('window');
 
-const FloatingShape = ({ delay = 0, size = 200, color = '#8b5cf6', top = 0, left = 0 }: any) => {
+const FloatingShape = ({ delay = 0, size = 300, color = '#af25f4', top = 0, left = 0, opacity = 0.4 }: any) => {
     const translationY = useSharedValue(0);
-    const rotation = useSharedValue(0);
     const scale = useSharedValue(1);
 
     useEffect(() => {
-        translationY.value = withDelay(delay, withRepeat(withTiming(20, { duration: 3000 }), -1, true));
-        rotation.value = withDelay(delay, withRepeat(withTiming(360, { duration: 10000 }), -1, false));
-        scale.value = withDelay(delay, withRepeat(withTiming(1.2, { duration: 5000 }), -1, true));
+        translationY.value = withDelay(delay, withRepeat(withTiming(30, { duration: 5000 }), -1, true));
+        scale.value = withDelay(delay, withRepeat(withTiming(1.3, { duration: 7000 }), -1, true));
     }, []);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [
             { translateY: translationY.value },
-            { rotate: `${rotation.value}deg` },
             { scale: scale.value }
         ],
-        opacity: 0.15,
+        opacity: opacity,
     }));
 
     return (
@@ -48,7 +45,9 @@ const FloatingShape = ({ delay = 0, size = 200, color = '#8b5cf6', top = 0, left
                     backgroundColor: color,
                     top,
                     left,
-                    borderRadius: size / 2.5
+                    borderRadius: size / 2,
+                    // @ts-ignore
+                    filter: 'blur(80px)', // Neon glow effect
                 },
                 animatedStyle
             ]}
@@ -56,9 +55,8 @@ const FloatingShape = ({ delay = 0, size = 200, color = '#8b5cf6', top = 0, left
     );
 };
 
-const LandingScreen = () => {
+const LandingScreen = ({ navigation }: any) => {
     const { login, isLoading: authLoading } = useAuth();
-    const { colors } = useTheme();
 
     useEffect(() => {
         GoogleSignin.configure({
@@ -68,7 +66,6 @@ const LandingScreen = () => {
     }, []);
 
     const handleGoogleLogin = async () => {
-        // ... same logic ...
         try {
             await GoogleSignin.hasPlayServices();
             try {
@@ -99,164 +96,120 @@ const LandingScreen = () => {
 
     if (authLoading) {
         return (
-            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
+            <View className="flex-1 items-center justify-center bg-background-dark">
+                <ActivityIndicator size="large" color="#af25f4" />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView className="flex-1 bg-background-dark">
             <StatusBar barStyle="light-content" />
 
-            {/* Background Decorations */}
+            {/* Background Decorations (Neon Glows) */}
             <View style={StyleSheet.absoluteFill}>
-                <FloatingShape size={350} color={colors.primary} top={-100} left={-100} delay={0} />
-                <FloatingShape size={300} color={colors.accent} top={height * 0.5} left={width * 0.7} delay={1500} />
-                <FloatingShape size={200} color={colors.primary} top={height * 0.8} left={-50} delay={3000} />
+                <FloatingShape size={400} color="#af25f4" top={-100} left={-100} delay={0} opacity={0.6} />
+                <FloatingShape size={400} color="#00f5ff" top={height * 0.4} left={width * 0.5} delay={2000} opacity={0.4} />
+                <FloatingShape size={500} color="#af25f4" top={height * 0.7} left={-100} delay={4000} opacity={0.3} />
             </View>
 
-            <View style={styles.content}>
-                <View style={styles.header}>
+            <View className="flex-1 px-8 pt-20 pb-10 relative z-10 justify-between">
+                {/* Brand Hero Section */}
+                <View className="items-center mt-10">
                     <Animated.View
                         entering={FadeInDown.delay(200).springify()}
-                        style={styles.logoWrapper}
+                        className="relative"
                     >
-                        <Image
-                            source={require('../assets/logo.png')}
-                            style={styles.logo}
-                            resizeMode="contain"
-                        />
+                        {/* Logo Backdrop Glow */}
+                        <View className="absolute inset-0 bg-primary/30 blur-3xl scale-125" />
+                        <View className="w-24 h-24 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+                            <Image
+                                source={require('../assets/logo.png')}
+                                className="w-16 h-16"
+                                resizeMode="contain"
+                            />
+                        </View>
                     </Animated.View>
-                    <Animated.Text
-                        entering={FadeInDown.delay(400).springify()}
-                        style={[styles.brandName, { color: colors.text }]}
-                    >
-                        My<Text style={{ color: colors.accent }}>Circle</Text>
-                    </Animated.Text>
 
-                    <View style={styles.introContainer}>
-                        <Animated.Text
-                            entering={FadeInDown.delay(600).springify()}
-                            style={[styles.headline, { color: colors.text }]}
-                        >
-                            Connect, Exchange,{'\n'}
-                            <Text style={{ color: colors.primary }}>Thrive Locally.</Text>
-                        </Animated.Text>
-                        <Animated.Text
-                            entering={FadeInDown.delay(800).springify()}
-                            style={[styles.description, { color: colors.textSecondary }]}
-                        >
-                            The modern way to find tasks, offer services, and trade items in your neighborhood. Secure, fast, and beautiful.
-                        </Animated.Text>
-                    </View>
+                    <Animated.View
+                        entering={FadeInDown.delay(400).springify()}
+                        className="mt-8 space-y-2 items-center"
+                    >
+                        <Text className="text-5xl font-extrabold tracking-tight text-white font-display">
+                            MyCircle<Text className="text-primary">.</Text>
+                        </Text>
+                        <Text className="text-slate-400 text-lg text-center max-w-[280px] leading-relaxed">
+                            Where high-performance communities thrive.
+                        </Text>
+                    </Animated.View>
                 </View>
 
+                {/* Action Container */}
                 <Animated.View
-                    entering={FadeInDown.delay(1000).springify()}
-                    style={styles.actions}
+                    entering={FadeInDown.delay(800).springify()}
+                    className="space-y-4 mb-10"
                 >
+                    {/* Google Auth Button */}
                     <TouchableOpacity
                         onPress={handleGoogleLogin}
-                        activeOpacity={0.8}
+                        activeOpacity={0.85}
                     >
-                        <GlassView intensity={20} borderRadius={24} style={styles.glassButton}>
+                        <GlassView intensity={5} borderRadius={99} style={styles.actionButton}>
                             <Image
-                                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
-                                style={styles.googleIcon}
+                                source={{ uri: 'https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7Lx2rjqD02G6DRtLU-q333L-RyXVw_Z_9_ls6Y9.png' }} // Better quality google logo
+                                className="w-6 h-6 mr-3"
+                                resizeMode="contain"
+                                defaultSource={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
                             />
-                            <Text style={[styles.googleButtonText, { color: colors.text }]}>Continue with Google</Text>
+                            <Text className="text-white font-bold text-lg">Continue with Google</Text>
                         </GlassView>
                     </TouchableOpacity>
 
-                    <Text style={[styles.terms, { color: colors.textSecondary }]}>
-                        By continuing, you agree to our{' '}
-                        <Text style={{ color: colors.primary }}>Terms</Text> and{' '}
-                        <Text style={{ color: colors.primary }}>Privacy</Text>
-                    </Text>
+                    {/* Secondary Login Option */}
+                    <View className="space-y-3">
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Login')}
+                            activeOpacity={0.8}
+                            className="w-full bg-primary py-5 rounded-full shadow-lg shadow-primary/20 items-center"
+                        >
+                            <Text className="text-white font-bold text-lg">Get Started</Text>
+                        </TouchableOpacity>
+
+                        <View className="flex-row items-center justify-center space-x-2 pt-2">
+                            <Text className="text-slate-500 text-sm">Already a member?</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                                <Text className="text-primary font-bold text-sm">Log in</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Footer Compliance */}
+                    <View className="pt-8 text-center px-4">
+                        <Text className="text-[10px] text-slate-500 uppercase tracking-widest leading-relaxed text-center">
+                            By continuing, you agree to our {'\n'}
+                            <Text className="underline">Terms of Service</Text> and <Text className="underline">Privacy Policy</Text>
+                        </Text>
+                    </View>
                 </Animated.View>
             </View>
+
+            {/* iOS Home Indicator Simulation */}
+            <View className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full" />
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     floatingShape: {
         position: 'absolute',
     },
-    content: {
-        flex: 1,
-        justifyContent: 'space-between',
-        paddingHorizontal: 32,
-        paddingTop: 80,
-        paddingBottom: 40,
-    },
-    header: {
-        alignItems: 'flex-start',
-    },
-    logoWrapper: {
-        width: 80,
-        height: 80,
-        marginBottom: 16,
-    },
-    logo: {
-        width: '100%',
-        height: '100%',
-    },
-    brandName: {
-        fontSize: 32,
-        fontWeight: '900',
-        marginBottom: 40,
-        letterSpacing: -0.5,
-    },
-    introContainer: {
-        maxWidth: '100%',
-    },
-    headline: {
-        fontSize: 52,
-        fontWeight: '800',
-        lineHeight: 60,
-        letterSpacing: -1.5,
-    },
-    description: {
-        fontSize: 18,
-        marginTop: 24,
-        lineHeight: 28,
-        fontWeight: '500',
-    },
-    actions: {
-        width: '100%',
-    },
-    glassButton: {
+    actionButton: {
         width: '100%',
         flexDirection: 'row',
         paddingVertical: 18,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    googleIcon: {
-        width: 24,
-        height: 24,
-        marginRight: 12,
-    },
-    googleButtonText: {
-        fontWeight: '700',
-        fontSize: 18,
-    },
-    terms: {
-        marginTop: 30,
-        fontSize: 13,
-        textAlign: 'center',
-        lineHeight: 20,
-    },
+    }
 });
 
 export default LandingScreen;

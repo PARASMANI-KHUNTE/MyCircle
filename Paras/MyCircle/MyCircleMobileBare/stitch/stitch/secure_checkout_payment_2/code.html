@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Secure Checkout Payment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#7f0df2",
+                "accent-cyan": "#00f2ff",
+                "background-light": "#f7f5f8",
+                "background-dark": "#0a060e",
+                "glass-white": "rgba(255, 255, 255, 0.05)",
+                "glass-border": "rgba(255, 255, 255, 0.12)",
+              },
+              fontFamily: {
+                "display": ["Plus Jakarta Sans"]
+              },
+              borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .glass-effect {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .neon-glow-primary {
+            box-shadow: 0 0 20px rgba(127, 13, 242, 0.4);
+        }
+        .neon-glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+        .neon-border-cyan {
+            border: 1px solid rgba(0, 242, 255, 0.5);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen flex justify-center items-center">
+<div class="relative w-full max-w-[400px] h-[844px] bg-background-light dark:bg-background-dark overflow-hidden shadow-2xl flex flex-col border border-white/5">
+<header class="pt-12 pb-6 px-6 flex items-center justify-between z-10">
+<button class="w-10 h-10 rounded-full glass-effect flex items-center justify-center">
+<span class="material-icons text-white text-xl">chevron_left</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Checkout</h1>
+<div class="w-10 h-10 rounded-full glass-effect flex items-center justify-center">
+<span class="material-icons text-white text-xl">more_horiz</span>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto px-6 hide-scrollbar z-10">
+<div class="glass-effect rounded-lg p-6 mt-2 relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="text-xs uppercase tracking-widest text-primary font-extrabold mb-1 block">Selected Service</span>
+<h2 class="text-xl font-bold">Premium Listing Boost</h2>
+</div>
+<div class="bg-primary/20 text-primary border border-primary/30 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 neon-glow-primary">
+<span class="material-icons text-[12px]">bolt</span> URGENT
+                </div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-sm text-white/60">
+<span>Duration</span>
+<span class="text-white font-medium">7 Days</span>
+</div>
+<div class="flex justify-between text-sm text-white/60">
+<span>Visibility Rate</span>
+<span class="text-white font-medium">+450% reach</span>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-white/10 flex justify-between items-end">
+<span class="text-sm text-white/60">Total Amount</span>
+<span class="text-2xl font-extrabold text-white">$49.99</span>
+</div>
+</div>
+<div class="mt-8">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-sm font-bold tracking-wider text-white/70 uppercase">Quick Pay</h3>
+<span class="text-[10px] text-accent-cyan font-bold tracking-tighter">FASTEST</span>
+</div>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar -mx-6 px-6 py-1">
+<button class="flex-shrink-0 w-16 h-16 glass-effect rounded-2xl flex flex-col items-center justify-center gap-1 neon-border-cyan transition-transform active:scale-95">
+<div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-accent-cyan text-xl">account_balance</span>
+</div>
+<span class="text-[9px] font-bold text-white/60">G-Pay</span>
+</button>
+<button class="flex-shrink-0 w-16 h-16 glass-effect rounded-2xl flex flex-col items-center justify-center gap-1 border-white/10 transition-transform active:scale-95">
+<div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-white/80 text-xl">payments</span>
+</div>
+<span class="text-[9px] font-bold text-white/60">PhonePe</span>
+</button>
+<button class="flex-shrink-0 w-16 h-16 glass-effect rounded-2xl flex flex-col items-center justify-center gap-1 border-white/10 transition-transform active:scale-95">
+<div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-white/80 text-xl">qr_code_2</span>
+</div>
+<span class="text-[9px] font-bold text-white/60">UPI ID</span>
+</button>
+<button class="flex-shrink-0 w-16 h-16 glass-effect border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center gap-1 transition-transform active:scale-95">
+<span class="material-icons text-white/40 text-lg">add</span>
+<span class="text-[9px] font-bold text-white/40">Other</span>
+</button>
+</div>
+</div>
+<div class="mt-8 mb-4">
+<div class="flex gap-4 border-b border-white/5 pb-0">
+<button class="text-sm font-bold pb-2 border-b-2 border-primary text-white">Cards</button>
+<button class="text-sm font-bold pb-2 border-b-2 border-transparent text-white/40">UPI ID</button>
+<button class="text-sm font-bold pb-2 border-b-2 border-transparent text-white/40">Net Banking</button>
+</div>
+</div>
+<div class="">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-xs font-bold tracking-tight text-white/50 uppercase">Saved Methods</h3>
+<button class="text-xs font-semibold text-primary">Manage</button>
+</div>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar -mx-6 px-6 py-2">
+<div class="min-w-[280px] h-[160px] glass-effect rounded-lg p-5 flex flex-col justify-between border-primary/50 ring-1 ring-primary/50 relative overflow-hidden">
+<div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl"></div>
+<div class="flex justify-between items-start">
+<span class="material-icons text-3xl opacity-80">credit_card</span>
+<span class="font-bold italic text-xl">VISA</span>
+</div>
+<div>
+<p class="text-xs text-white/40 mb-1 tracking-widest">CARD NUMBER</p>
+<p class="text-lg font-medium tracking-widest">•••• •••• •••• 8842</p>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<p class="text-[10px] text-white/40 mb-0.5 tracking-widest uppercase">Holder</p>
+<p class="text-xs font-semibold uppercase">Alex Sterling</p>
+</div>
+<p class="text-xs font-semibold">12/26</p>
+</div>
+</div>
+<div class="min-w-[280px] h-[160px] glass-effect rounded-lg p-5 flex flex-col justify-between opacity-50">
+<div class="flex justify-between items-start">
+<span class="material-icons text-3xl opacity-80">account_balance_wallet</span>
+<div class="flex -space-x-3">
+<div class="w-6 h-6 rounded-full bg-red-500/80"></div>
+<div class="w-6 h-6 rounded-full bg-yellow-500/80"></div>
+</div>
+</div>
+<div>
+<p class="text-xs text-white/40 mb-1 tracking-widest">CARD NUMBER</p>
+<p class="text-lg font-medium tracking-widest">•••• •••• •••• 4410</p>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<p class="text-[10px] text-white/40 mb-0.5 tracking-widest uppercase">Holder</p>
+<p class="text-xs font-semibold uppercase">Alex Sterling</p>
+</div>
+<p class="text-xs font-semibold">05/25</p>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 flex justify-center">
+<div class="glass-effect rounded-full px-5 py-2.5 flex items-center gap-3 border-accent-cyan/30 neon-glow-cyan">
+<div class="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"></div>
+<span class="material-icons text-accent-cyan text-sm">verified_user</span>
+<span class="text-[11px] font-bold tracking-wider text-accent-cyan uppercase">Secure Encrypted Transaction</span>
+</div>
+</div>
+<div class="mt-8 mb-40">
+<div class="space-y-3 px-2">
+<div class="flex justify-between text-sm">
+<span class="text-white/50">Subtotal</span>
+<span class="text-white font-medium">$45.00</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-white/50">Service Fee</span>
+<span class="text-white font-medium">$4.99</span>
+</div>
+<div class="flex justify-between text-lg font-bold pt-3 border-t border-white/5">
+<span>Total Pay</span>
+<span class="text-white">$49.99</span>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent z-20">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-extrabold py-5 rounded-full flex items-center justify-center gap-3 neon-glow-primary transition-all active:scale-95">
+<span class="material-icons">lock</span>
+            Pay $49.99 Now
+        </button>
+<p class="text-center text-[10px] text-white/30 mt-4 px-8">
+            By clicking "Pay Now" you agree to our Terms of Service and Privacy Policy.
+        </p>
+</div>
+<div class="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="absolute bottom-[20%] right-[-10%] w-[40%] h-[20%] bg-accent-cyan/5 rounded-full blur-[80px] pointer-events-none"></div>
+</div>
+
+</body></html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Your Account | Neon-Dark Platform</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f0df2",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#0a0a0c", // Deep Slate/Zinc variant
+                        "accent-pink": "#f472b6",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(127, 13, 242, 0.4);
+        }
+        .pulse-blob {
+            filter: blur(80px);
+            z-index: 0;
+        }
+        .ios-notch {
+            height: 44px;
+        }
+        .input-glow:focus-within {
+            box-shadow: 0 0 15px rgba(127, 13, 242, 0.2);
+            border-color: #7f0df2;
+        }
+        .shimmer {
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            background-size: 200% 100%;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex items-center justify-center font-display">
+<!-- Dynamic Background Blobs -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="pulse-blob absolute -top-24 -left-24 w-96 h-96 bg-primary/30 rounded-full"></div>
+<div class="pulse-blob absolute top-1/2 -right-24 w-80 h-80 bg-accent-pink/20 rounded-full"></div>
+<div class="pulse-blob absolute -bottom-24 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full"></div>
+</div>
+<!-- Phone Container (iOS Simulation) -->
+<div class="relative w-full max-w-[400px] h-[844px] bg-black rounded-[3.5rem] overflow-hidden shadow-2xl border-[8px] border-zinc-900 flex flex-col">
+<!-- Status Bar -->
+<div class="ios-notch w-full flex justify-between items-center px-8 z-20">
+<span class="text-xs font-semibold">9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-icons-round text-[14px]">signal_cellular_alt</span>
+<span class="material-icons-round text-[14px]">wifi</span>
+<span class="material-icons-round text-[14px]">battery_full</span>
+</div>
+</div>
+<!-- Registration Content -->
+<div class="relative flex-1 px-6 pt-12 pb-8 flex flex-col z-10">
+<!-- Back Button -->
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white mb-8 hover:bg-white/20 transition-all">
+<span class="material-icons-round">chevron_left</span>
+</button>
+<!-- Header -->
+<div class="mb-10">
+<h1 class="text-4xl font-bold tracking-tight mb-2">Create Your Account</h1>
+<p class="text-primary/80 font-medium">Join the elite community.</p>
+</div>
+<!-- Glass Form Panel -->
+<div class="glass-panel p-6 rounded-xl flex-1 flex flex-col">
+<div class="space-y-6 flex-1">
+<!-- Email Field -->
+<div class="relative group">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
+<div class="relative flex items-center input-glow transition-all duration-300 rounded-full bg-white/5 border border-white/10 group-focus-within:border-primary">
+<span class="material-icons-round ml-4 text-slate-400 group-focus-within:text-primary">mail</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-white placeholder:text-slate-600 px-4 py-4 text-sm font-medium" placeholder="name@example.com" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="relative group">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
+<div class="relative flex items-center input-glow transition-all duration-300 rounded-full bg-white/5 border border-white/10 group-focus-within:border-primary">
+<span class="material-icons-round ml-4 text-slate-400 group-focus-within:text-primary">lock</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-white placeholder:text-slate-600 px-4 py-4 text-sm font-medium" placeholder="••••••••" type="password"/>
+<button class="mr-4 text-slate-500 hover:text-white">
+<span class="material-icons-round text-[20px]">visibility</span>
+</button>
+</div>
+</div>
+<!-- Confirm Password Field -->
+<div class="relative group">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Confirm Password</label>
+<div class="relative flex items-center input-glow transition-all duration-300 rounded-full bg-white/5 border border-white/10 group-focus-within:border-primary">
+<span class="material-icons-round ml-4 text-slate-400 group-focus-within:text-primary">verified_user</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-white placeholder:text-slate-600 px-4 py-4 text-sm font-medium" placeholder="••••••••" type="password"/>
+</div>
+</div>
+</div>
+<!-- Action Button -->
+<div class="mt-8">
+<button class="w-full bg-gradient-to-r from-primary to-[#a855f7] py-5 rounded-full font-bold text-white neon-glow transition-transform active:scale-[0.98] relative overflow-hidden flex items-center justify-center">
+<span class="relative z-10">Create Account</span>
+<div class="shimmer absolute inset-0"></div>
+</button>
+</div>
+</div>
+<!-- Footer -->
+<div class="mt-8 text-center">
+<p class="text-sm text-slate-400 mb-6 px-4">
+                    By continuing, you agree to our <a class="text-primary font-semibold" href="#">Terms of Service</a> and <a class="text-primary font-semibold" href="#">Privacy Policy</a>.
+                </p>
+<div class="pt-6 border-t border-white/5">
+<p class="text-slate-300 font-medium">
+                        Already have an account? 
+                        <a class="text-primary font-bold ml-1 hover:underline" href="#">Log in</a>
+</p>
+</div>
+</div>
+<!-- Home Indicator -->
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-white/20 rounded-full"></div>
+</div>
+<!-- Decorative UI Element (Abstract Background Image) -->
+<div class="absolute -z-10 bottom-0 left-0 right-0 h-1/2 opacity-30 pointer-events-none">
+<img alt="Abstract neon gradient waves" class="w-full h-full object-cover" data-alt="Abstract neon violet and pink waves" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCK_pMXsDmziNFxzRbptKpsE-mRm0aF0UyqzXi1YzZ_duz9a12oDuao5FzIY_r8Zer0ufxH1MlS2QIR-MT1Sj194Eg5Hx_dNCIqyMGRBj0MugXxnisbNjGu5JyIXxYsi5hkgnuisuGSRcqSbGRu-EKsVPuYA7unXmhFIW9flWOGTWq5x95pJ5dnRq8WWmF8Y_GkNmYSVujcoQ5F5IvQLV7GypLirqqhA-ZaLgpY4Oq7afLyTY2BSHcVZYPGbhX9IzdWTetXbsxhc-xE"/>
+</div>
+</div>
+</body></html>

@@ -1,27 +1,37 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 import Button from './Button';
 import api from '../../utils/api';
+import { cn } from '../../utils/cn';
 import { getAvatarUrl } from '../../utils/avatar';
 import { getPostInsights, getPostExplanation } from '../../services/aiService';
 import {
-    Sparkles, X, Edit2, Trash2, MoreVertical,
+    Sparkles, X, Edit2, Trash2, Eye,
     Heart, Share2, MessageCircle, MapPin,
     Clock, Repeat, ChevronDown, ChevronUp, BarChart2
 } from 'lucide-react';
 
 const typeColors = {
-    job: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    service: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-    sell: 'bg-green-500/10 text-green-400 border-green-500/20',
-    rent: 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+    job: 'bg-blue-50 text-blue-600 border-blue-100',
+    service: 'bg-purple-50 text-purple-600 border-purple-100',
+    sell: 'bg-green-50 text-green-600 border-green-100',
+    rent: 'bg-primary/5 text-primary border-primary/10'
 };
 
-const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnPost, onStatusChange, onDelete, onEdit }) => {
+const PostCard = ({
+    post,
+    onRequestContact = (postId, e) => { },
+    currentUserId = null,
+    isOwnPost: propIsOwnPost = false,
+    onStatusChange = () => { },
+    onDelete = () => { },
+    onEdit = () => { }
+}) => {
     const { title, description, type, location, price, user, createdAt, images, acceptsBarter, likes: initialLikes, shares: initialShares, isActive, status } = post;
     const { success } = useToast();
+    const navigate = useNavigate();
     const [likes, setLikes] = useState(initialLikes || []);
     const [shares, setShares] = useState(initialShares || 0);
     const [expanded, setExpanded] = useState(false);
@@ -70,7 +80,7 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
     const handleLike = async (e) => {
         e.stopPropagation();
         try {
-            const res = await api.post(`/posts/${post._id}/like`);
+            await api.post(`/posts/${post._id}/like`);
             if (isLiked) {
                 setLikes(likes.filter(id => id !== currentUserId));
             } else {
@@ -96,7 +106,8 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [analyticsData, setAnalyticsData] = useState(null);
 
-    const handleShowAnalytics = async () => {
+    const handleShowAnalytics = async (e) => {
+        e?.stopPropagation();
         if (!showAnalytics && !analyticsData) {
             try {
                 const res = await api.get(`/posts/${post._id}/analytics`);
@@ -110,305 +121,240 @@ const PostCard = ({ post, onRequestContact, currentUserId, isOwnPost: propIsOwnP
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -5, transition: { duration: 0.2 } }}
-            className={`group relative glass rounded-[3rem] p-6 
-                shadow-xl hover:shadow-primary/5 
-                transition-all duration-300 flex flex-col h-full 
-                ${!isActive ? 'opacity-75 grayscale' : ''}`}
+            whileHover={{ y: -4 }}
+            className={`group relative bg-card rounded-card p-5 border border-card-border shadow-card hover:shadow-lg transition-all flex flex-col h-full ${!isActive ? 'opacity-75 grayscale' : ''}`}
         >
-            {/* Background Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem] pointer-events-none" />
-
             {/* Analytics Overlay */}
-            {showAnalytics && analyticsData && (
-                <div className="absolute inset-0 bg-card/95 backdrop-blur-2xl z-30 rounded-[3rem] p-8 flex flex-col justify-center items-center animate-in fade-in zoom-in duration-300">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                        <BarChart2 className="w-8 h-8 text-primary" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-foreground mb-8">Performance</h3>
-                    <div className="grid grid-cols-2 gap-4 w-full mb-8">
-                        <div className="p-4 rounded-2xl glass-panel text-center">
-                            <div className="text-2xl font-bold text-foreground">{analyticsData.views}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">Views</div>
+            <AnimatePresence>
+                {showAnalytics && analyticsData && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="absolute inset-x-2 inset-y-2 bg-card/95 backdrop-blur-md z-30 rounded-card p-6 flex flex-col shadow-2xl"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-bold text-text-heading">Post Insights</h3>
+                            <button onClick={handleShowAnalytics} className="p-1 hover:bg-hover-bg rounded-full">
+                                <X className="w-5 h-5 text-text-muted" />
+                            </button>
                         </div>
-                        <div className="p-4 rounded-2xl glass-panel text-center">
-                            <div className="text-2xl font-bold text-pink-500">{analyticsData.likes}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">Likes</div>
-                        </div>
-                        <div className="p-4 rounded-2xl glass-panel text-center">
-                            <div className="text-2xl font-bold text-blue-500">{analyticsData.shares}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">Shares</div>
-                        </div>
-                        <div className="p-4 rounded-2xl glass-panel text-center">
-                            <div className="text-2xl font-bold text-yellow-500">{analyticsData.daysActive}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">Days</div>
-                        </div>
-                    </div>
-                    <Button variant="outline" onClick={() => setShowAnalytics(false)} className="w-full justify-center rounded-xl py-4 hover:bg-card/20 transition-all text-foreground">
-                        Back to Post
-                    </Button>
-                </div>
-            )}
 
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            {[
+                                { label: 'Views', value: analyticsData.views, icon: Eye, color: 'text-primary' },
+                                { label: 'Likes', value: analyticsData.likes, icon: Heart, color: 'text-pink-500' },
+                                { label: 'Shares', value: analyticsData.shares, icon: Share2, color: 'text-blue-500' },
+                                { label: 'Days', value: analyticsData.daysActive, icon: Clock, color: 'text-text-muted' }
+                            ].map((stat, i) => (
+                                <div key={i} className="p-3 rounded-xl bg-background-section border border-card-border">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <stat.icon className={`w-3 h-3 ${stat.color}`} />
+                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{stat.label}</span>
+                                    </div>
+                                    <div className="text-lg font-bold text-text-heading">{stat.value}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <Button variant="outline" size="sm" onClick={handleShowAnalytics} className="mt-auto">
+                            Close Analytics
+                        </Button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Media Section */}
             <div className="relative mb-4">
-                {images && images.length > 0 && (
-                    <div className="rounded-[2.5rem] overflow-hidden aspect-video bg-card/10 shrink-0 relative group/img cursor-pointer shadow-inner" onClick={() => navigate(`/post/${post._id}`)}>
+                {images && images.length > 0 ? (
+                    <div
+                        className="rounded-xl overflow-hidden aspect-[4/3] bg-background-section relative group/img cursor-pointer"
+                        onClick={() => navigate(`/post/${post._id}`)}
+                    >
                         <img
                             src={images[0]}
-                            alt="Post"
-                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-700"
+                            alt={title}
+                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-100 transition-opacity duration-300" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    </div>
+                ) : (
+                    <div className="rounded-xl aspect-[4/3] bg-background-section flex items-center justify-center border border-card-border border-dashed">
+                        <Sparkles className="w-8 h-8 text-primary/20" />
                     </div>
                 )}
 
-                <div className="absolute top-3 left-3 flex gap-2 z-20">
-                    <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${typeColors[type] || typeColors.job}`}>
+                <div className="absolute top-2 left-2 flex gap-1.5 z-20">
+                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${typeColors[type] || typeColors.job}`}>
                         {type}
                     </span>
                     {acceptsBarter && (
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold border bg-pink-500/10 text-pink-500 border-pink-500/20 flex items-center gap-1 shadow-sm">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold border bg-primary/5 text-primary border-primary/10 flex items-center gap-1 shadow-sm">
                             <Repeat className="w-2.5 h-2.5" /> BARTER
                         </span>
                     )}
                 </div>
 
                 {status && status !== 'active' && (
-                    <div className="absolute top-3 right-3 bg-card text-foreground text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg shadow-xl z-20">
+                    <div className="absolute bottom-2 right-2 bg-text-heading text-white text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded shadow-lg z-20">
                         {status}
                     </div>
                 )}
             </div>
 
-            <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors block">
-                <h3 className="font-bold text-foreground leading-tight line-clamp-2 text-base hover:tracking-tight transition-all">{title}</h3>
-            </Link>
-
-            <div className="flex items-center gap-3 mt-3 mb-4">
-                <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-all active:scale-95 shrink-0">
-                    <img
-                        src={getAvatarUrl(user)}
-                        alt={user?.displayName}
-                        className="w-9 h-9 rounded-full bg-card/20 object-cover hover:border-primary transition-colors shadow-lg"
-                    />
+            {/* Content Section */}
+            <div className="flex-grow">
+                <Link to={`/post/${post._id}`} className="hover:text-primary transition-colors block">
+                    <h3 className="font-bold text-text-heading leading-snug line-clamp-2 text-[15px] mb-2">{title}</h3>
                 </Link>
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors truncate">
+
+                <div className="flex items-center gap-2 mb-3">
+                    <Link to={`/profile?userId=${user?._id}`} className="shrink-0">
+                        <img
+                            src={getAvatarUrl(user)}
+                            alt={user?.displayName}
+                            className="w-6 h-6 rounded-full bg-background-section object-cover border border-card-border"
+                        />
+                    </Link>
+                    <div className="flex items-center gap-1 text-[11px] text-text-muted font-medium">
+                        <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors font-bold">
                             {user?.displayName || 'Anonymous'}
                         </Link>
                         <span>•</span>
-                        <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {new Date(createdAt).toLocaleDateString()}
-                        </span>
+                        <span>{new Date(createdAt).toLocaleDateString()}</span>
                     </div>
                 </div>
-            </div>
 
-            <div className="relative">
-                <p className={`text-muted-foreground text-sm mb-2 transition-all duration-300 ${expanded ? '' : 'line-clamp-2'}`}>
+                <p className={`text-text-body text-sm mb-3 ${expanded ? '' : 'line-clamp-2'} leading-relaxed`}>
                     {description}
                 </p>
-                {description && description.length > 100 && (
+                {description && description.length > 80 && (
                     <button
-                        onClick={() => setExpanded(!expanded)}
-                        className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-0.5 mb-2"
+                        onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                        className="text-[11px] text-primary hover:underline font-bold mb-3"
                     >
-                        {expanded ? (
-                            <><ChevronUp className="w-3 h-3" /> Show Less</>
-                        ) : (
-                            <><ChevronDown className="w-3 h-3" /> Read More</>
-                        )}
+                        {expanded ? 'Show Less' : 'Read More'}
                     </button>
                 )}
             </div>
 
-            {/* AI Insights Section (Inline) */}
-            {(isGeneratingAI || aiResult) && (
-                <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className={`ai-insights ${aiResult?.type === 'owner' ? 'ai-insights-owner' : 'ai-insights-viewer font-medium'} mb-4`}
-                >
-                    {isGeneratingAI ? (
-                        <div className="flex flex-col items-center py-4">
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                            >
-                                <Sparkles className="w-6 h-6 text-primary" />
-                            </motion.div>
-                            <span className="text-sm mt-2 text-primary">Generating AI Summary...</span>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className={`w-4 h-4 ${aiResult.type === 'owner' ? 'text-green-500' : 'text-primary'}`} />
-                                    <span className="text-xs font-bold uppercase tracking-wider">
-                                        {aiResult.type === 'owner' ? 'Post Analysis' : 'AI Explanation'}
-                                    </span>
-                                </div>
-                                <button onClick={() => setAiResult(null)}>
-                                    <X className="w-4 h-4 opacity-50 hover:opacity-100" />
-                                </button>
+            {/* AI Result Section */}
+            <AnimatePresence>
+                {(isGeneratingAI || aiResult) && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className={`p-4 rounded-xl mb-4 border text-[13px] ${aiResult?.type === 'owner' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-primary/10 border-primary/20 text-text-body'}`}
+                    >
+                        {isGeneratingAI ? (
+                            <div className="flex items-center gap-3">
+                                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                                <span className="text-xs font-medium">AI is thinking...</span>
                             </div>
-                            <h4 className="text-sm font-bold mb-1">{aiResult.summary}</h4>
-                            <p className="text-xs opacity-80 mb-3 leading-relaxed">{aiResult.details}</p>
-                            <div className="space-y-1.5">
-                                {aiResult.listItems?.map((item, idx) => (
-                                    <div key={idx} className="flex gap-2 text-[11px] leading-tight">
-                                        <span className={aiResult.type === 'owner' ? 'text-green-500' : 'text-primary'}>•</span>
-                                        <span className="opacity-90">{item}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </motion.div>
-            )}
-
-            <div className="flex items-center justify-between mt-auto pt-4">
-                <div className="flex flex-col">
-                    <span className="text-[11px] font-bold text-muted-foreground tracking-wider flex items-center gap-1.5 mb-1">
-                        <MapPin className="w-3 h-3 text-primary" /> {location.toUpperCase()}
-                    </span>
-                    {price && (
-                        <div className="flex items-baseline gap-0.5">
-                            <span className="text-xl font-black text-foreground">₹{price}</span>
-                            <span className="text-[10px] text-muted-foreground font-bold ml-1 uppercase letter-spacing-widest">Only</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Social Actions - Compact & Refined */}
-                <div className="flex items-center gap-1.5">
-                    <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={handleGetAIInsights}
-                        className={`p-2.5 rounded-xl transition-all ${aiResult ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-card/10 text-muted-foreground hover:text-foreground hover:bg-card/20'}`}
-                        title="AI Analysis"
-                    >
-                        <Sparkles className={`w-4 h-4 ${isGeneratingAI ? 'animate-spin' : ''}`} />
-                    </motion.button>
-
-                    <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={handleLike}
-                        className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 ${isLiked ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-card/10 text-muted-foreground hover:text-foreground hover:bg-card/20'}`}
-                    >
-                        <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                        <span className="text-xs font-bold">{likes.length}</span>
-                    </motion.button>
-
-                    <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={handleShare}
-                        className="p-2.5 rounded-xl bg-card/10 text-muted-foreground hover:text-foreground hover:bg-card/20 transition-all"
-                    >
-                        <Share2 className="w-4 h-4" />
-                    </motion.button>
-
-                    {isOwnPost && (type === 'job' || type === 'service') && post.applicationCount > 0 && (
-                        <Link
-                            to="/requests"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 text-[10px] font-black bg-red-500 text-white px-3 py-1 rounded-xl shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95"
-                        >
-                            <MessageCircle className="w-3 h-3 fill-white" />
-                            {post.applicationCount}
-                        </Link>
-                    )}
-                </div>
-            </div>
-
-            <div className="pt-2 flex justify-end gap-2">
-                {!isOwnPost && onRequestContact && (
-                    <Button
-                        variant="primary"
-                        className="text-sm px-4 py-2 w-full justify-center"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onRequestContact(post._id, e);
-                        }}
-                    >
-                        <MessageCircle className="w-4 h-4" /> Contact
-                    </Button>
-                )}
-
-                {isOwnPost && (
-                    <div className="flex w-full gap-2">
-                        <Button
-                            variant="outline"
-                            className="bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20"
-                            onClick={handleShowAnalytics}
-                        >
-                            <BarChart2 className="w-4 h-4" />
-                        </Button>
-
-                        {onEdit && (
-                            <Button
-                                variant="outline"
-                                className="text-sm text-primary border-primary/20 hover:bg-primary/10"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEdit();
-                                }}
-                            >
-                                <Edit2 className="w-4 h-4" /> Edit
-                            </Button>
-                        )}
-
-                        {onStatusChange && (
+                        ) : (
                             <>
-                                {status === 'active' ? (
-                                    <>
-                                        <Button
-                                            variant="outline"
-                                            className="text-sm text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/10"
-                                            onClick={() => onStatusChange('inactive')}
-                                        >
-                                            Disable
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            className="text-sm text-blue-400 border-blue-400/20 hover:bg-blue-400/10"
-                                            onClick={() => onStatusChange('sold')}
-                                        >
-                                            Sold
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <Button
-                                        variant="outline"
-                                        className="flex-1 text-sm text-green-400 border-green-400/20 hover:bg-green-400/10"
-                                        onClick={() => onStatusChange('active')}
-                                    >
-                                        {status === 'sold' ? 'Relist' : 'Enable'}
-                                    </Button>
-                                )}
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="w-3.5 h-3.5 text-primary" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">AI Insights</span>
+                                    </div>
+                                    <button onClick={() => setAiResult(null)}>
+                                        <X className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
+                                    </button>
+                                </div>
+                                <p className="font-bold mb-1 leading-tight">{aiResult.summary}</p>
+                                <p className="text-[11px] opacity-80 leading-relaxed">{aiResult.details}</p>
                             </>
                         )}
-                        {onDelete && (
-                            <Button
-                                variant="outline"
-                                className="text-sm text-red-400 border-red-400/20 hover:bg-red-500/10"
-                                onClick={onDelete}
-                            >
-                                Delete
-                            </Button>
-                        )}
-                        {!onStatusChange && !onDelete && (
-                            <div className="w-full text-center py-2 text-xs text-primary bg-primary/10 rounded-xl border border-primary/20">
-                                Your Post
-                            </div>
-                        )}
-                    </div>
+                    </motion.div>
                 )}
+            </AnimatePresence>
+
+            {/* Footer / Actions Section */}
+            <div className="pt-4 border-t border-card-border flex items-end justify-between">
+                <div>
+                    <div className="flex items-center gap-1 text-text-muted text-[10px] font-bold uppercase tracking-widest mb-1">
+                        <MapPin className="w-2.5 h-2.5 text-primary" />
+                        {location}
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-lg font-bold text-text-heading">{price ? `₹${price}` : 'Trade'}</span>
+                        {price && <span className="text-[10px] text-text-muted font-medium uppercase tracking-tighter">Total</span>}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                    <button
+                        onClick={handleGetAIInsights}
+                        className={cn(
+                            "p-2 rounded-lg transition-all",
+                            aiResult ? "bg-primary text-white shadow-button" : "text-text-muted hover:bg-hover-bg"
+                        )}
+                        title="AI Analysis"
+                    >
+                        <Sparkles className={cn("w-4 h-4", isGeneratingAI && "animate-spin")} />
+                    </button>
+
+                    <button
+                        onClick={handleLike}
+                        className={cn(
+                            "p-2 rounded-lg transition-all flex items-center gap-1.5",
+                            isLiked ? "bg-pink-500/10 text-pink-500 border border-pink-500/20" : "text-text-muted hover:bg-hover-bg"
+                        )}
+                    >
+                        <Heart className={cn("w-4 h-4", isLiked && "fill-current")} />
+                        <span className="text-xs font-bold">{likes.length}</span>
+                    </button>
+
+                    {isOwnPost ? (
+                        <div className="relative group/actions">
+                            <button
+                                className="p-2 text-text-muted hover:bg-hover-bg rounded-lg"
+                                onClick={(e) => { e.stopPropagation(); setShowAnalytics(!showAnalytics); }}
+                            >
+                                <BarChart2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            className=""
+                            onClick={(e) => { e.stopPropagation(); onRequestContact(post._id, e); }}
+                        >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>Contact</span>
+                        </Button>
+                    )}
+                </div>
             </div>
+
+            {/* Management Actions for Owner */}
+            {isOwnPost && !showAnalytics && (
+                <div className="mt-4 pt-3 border-t border-card-border grid grid-cols-2 gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                        className="py-1.5 border-card-border text-text-body hover:bg-primary/5"
+                    >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                        className="py-1.5 border-card-border text-red-500 hover:bg-red-50"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                    </Button>
+                </div>
+            )}
         </motion.div>
     );
 };

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Post Wizard: Exchange Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#27abf1",
+                        "accent-pink": "#ff2d55",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0a0f12",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .neon-glow-primary {
+            box-shadow: 0 0 15px rgba(39, 171, 241, 0.4);
+        }
+        .neon-glow-pink {
+            box-shadow: 0 0 15px rgba(255, 45, 85, 0.4);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white min-h-screen antialiased overflow-hidden">
+<!-- Screen Container (iOS Phone Frame Emulation) -->
+<div class="relative max-w-[430px] mx-auto min-h-screen bg-background-dark flex flex-col p-6 pb-32">
+<!-- Top Status Bar Mock (iOS) -->
+<div class="flex justify-between items-center mb-8 px-2">
+<span class="text-sm font-semibold">9:41</span>
+<div class="flex space-x-2">
+<span class="material-icons text-xs">signal_cellular_alt</span>
+<span class="material-icons text-xs">wifi</span>
+<span class="material-icons text-xs rotate-90">battery_full</span>
+</div>
+</div>
+<!-- Header -->
+<header class="flex justify-between items-center mb-8">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10">
+<span class="material-icons text-white">chevron_left</span>
+</button>
+<div class="text-center">
+<p class="text-[10px] uppercase tracking-[0.2em] text-primary/80 font-bold mb-1">Post Wizard</p>
+<h1 class="text-lg font-bold">Exchange Details</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10">
+<span class="material-icons text-white text-sm">close</span>
+</button>
+</header>
+<!-- Progress Steps -->
+<div class="flex justify-center space-x-2 mb-10">
+<div class="h-1 w-8 rounded-full bg-primary neon-glow-primary"></div>
+<div class="h-1 w-12 rounded-full bg-primary neon-glow-primary"></div>
+<div class="h-1 w-8 rounded-full bg-white/20"></div>
+<div class="h-1 w-8 rounded-full bg-white/20"></div>
+</div>
+<!-- Main Pricing Glass Card -->
+<div class="glass-panel rounded-lg p-8 mb-6 relative overflow-hidden">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+<label class="text-xs uppercase tracking-widest text-white/40 font-bold mb-4 block text-center">Listing Price</label>
+<div class="flex items-center justify-center space-x-2">
+<span class="text-4xl font-light text-primary">$</span>
+<input class="bg-transparent border-none text-6xl font-extrabold focus:ring-0 w-full text-center outline-none" type="text" value="1,250"/>
+</div>
+<p class="text-center text-white/30 text-sm mt-4">Suggested price based on market value</p>
+</div>
+<!-- Options Container -->
+<div class="space-y-4">
+<!-- Barter Toggle -->
+<div class="glass-panel rounded-lg p-5 flex justify-between items-center">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary">swap_horiz</span>
+</div>
+<div>
+<h3 class="font-bold text-sm">Accept Barter</h3>
+<p class="text-xs text-white/40">Open to item exchanges</p>
+</div>
+</div>
+<!-- Neon Toggle Switch -->
+<div class="relative inline-flex items-center cursor-pointer">
+<div class="w-12 h-6 bg-primary/30 rounded-full neon-glow-primary border border-primary/50 relative">
+<div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-lg"></div>
+</div>
+</div>
+</div>
+<!-- Urgent Boost Section -->
+<div class="glass-panel rounded-lg p-5 relative overflow-hidden">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-bold text-sm mb-1">Visibility Boost</h3>
+<p class="text-xs text-white/40 text-pretty max-w-[200px]">Get 10x more views with priority placement</p>
+</div>
+<div class="bg-accent-pink px-3 py-1 rounded-full neon-glow-pink flex items-center space-x-1">
+<span class="material-icons text-[10px]">bolt</span>
+<span class="text-[10px] font-black uppercase tracking-tighter">Urgent</span>
+</div>
+</div>
+<!-- Featured Badge Selection -->
+<div class="flex space-x-3 overflow-x-auto hide-scrollbar -mx-2 px-2">
+<div class="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-accent-pink bg-accent-pink/5 flex flex-col items-center justify-center text-center p-2 relative">
+<div class="absolute -top-1 -right-1">
+<span class="material-icons text-accent-pink text-lg bg-background-dark rounded-full">check_circle</span>
+</div>
+<span class="text-[10px] font-bold text-white/60 mb-1">24 HOURS</span>
+<span class="text-lg font-black">$4.99</span>
+</div>
+<div class="flex-shrink-0 w-24 h-24 rounded-xl border border-white/10 bg-white/5 flex flex-col items-center justify-center text-center p-2">
+<span class="text-[10px] font-bold text-white/60 mb-1">3 DAYS</span>
+<span class="text-lg font-black text-white/60">$9.99</span>
+</div>
+<div class="flex-shrink-0 w-24 h-24 rounded-xl border border-white/10 bg-white/5 flex flex-col items-center justify-center text-center p-2">
+<span class="text-[10px] font-bold text-white/60 mb-1">7 DAYS</span>
+<span class="text-lg font-black text-white/60">$19.99</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Navigation Bar -->
+<nav class="fixed bottom-8 left-6 right-6 h-20 glass-panel rounded-full flex items-center justify-between px-4 z-50 border border-white/20 shadow-2xl">
+<div class="flex space-x-6 px-4">
+<button class="flex flex-col items-center justify-center text-white/40">
+<span class="material-icons text-2xl">dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-white/40">
+<span class="material-icons text-2xl">chat_bubble_outline</span>
+</button>
+</div>
+<button class="bg-primary px-8 py-3 rounded-full flex items-center space-x-2 neon-glow-primary active:scale-95 transition-transform">
+<span class="font-bold text-sm tracking-wide">NEXT STEP</span>
+<span class="material-icons text-sm">arrow_forward</span>
+</button>
+<div class="flex space-x-6 px-4">
+<button class="flex flex-col items-center justify-center text-white/40">
+<span class="material-icons text-2xl">favorite_border</span>
+</button>
+<button class="flex flex-col items-center justify-center text-white/40">
+<span class="material-icons text-2xl">person_outline</span>
+</button>
+</div>
+</nav>
+<!-- Dynamic Background Elements -->
+<div class="fixed top-1/4 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="fixed bottom-1/3 -right-20 w-64 h-64 bg-accent-pink/5 rounded-full blur-[100px] pointer-events-none"></div>
+</div>
+</body></html>

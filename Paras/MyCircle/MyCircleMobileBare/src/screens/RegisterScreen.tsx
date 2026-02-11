@@ -1,9 +1,46 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet, Dimensions, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import GlassView from '../components/ui/GlassView';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
+import { ArrowLeft } from 'lucide-react-native';
+
+const { width, height } = Dimensions.get('window');
+
+const FloatingShape = ({ delay = 0, size = 300, color = '#af25f4', top = 0, left = 0, opacity = 0.4 }: any) => {
+    const translationY = useSharedValue(0);
+    const scale = useSharedValue(1);
+
+    useEffect(() => {
+        translationY.value = withDelay(delay, withRepeat(withTiming(30, { duration: 5000 }), -1, true));
+        scale.value = withDelay(delay, withRepeat(withTiming(1.3, { duration: 7000 }), -1, true));
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translationY.value }, { scale: scale.value }],
+        opacity: opacity,
+    }));
+
+    return (
+        <Animated.View
+            style={[
+                styles.floatingShape,
+                {
+                    width: size,
+                    height: size,
+                    backgroundColor: color,
+                    top,
+                    left,
+                    borderRadius: size / 2,
+                    filter: 'blur(80px)',
+                },
+                animatedStyle
+            ]}
+        />
+    );
+};
 
 const RegisterScreen = ({ navigation }: any) => {
     const [displayName, setDisplayName] = useState('');
@@ -20,19 +57,13 @@ const RegisterScreen = ({ navigation }: any) => {
 
         setLoading(true);
         try {
-            const res = await api.post('/auth/register', {
-                displayName,
-                email,
-                password
-            });
-
+            const res = await api.post('/auth/register', { displayName, email, password });
             if (res.data.token) {
                 await auth.login(res.data.token);
             } else {
                 Alert.alert('Registration Failed', 'No token received');
             }
         } catch (error: any) {
-            console.error(error);
             Alert.alert('Registration Failed', error.response?.data?.msg || 'Something went wrong');
         } finally {
             setLoading(false);
@@ -40,167 +71,125 @@ const RegisterScreen = ({ navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
-                <View style={styles.header}>
-                    <Text style={styles.logo}>MyCircle</Text>
-                    <Text style={styles.subtitle}>Create your account</Text>
-                </View>
+        <SafeAreaView className="flex-1 bg-background-dark">
+            <StatusBar barStyle="light-content" />
 
-                <View style={styles.form}>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Display Name</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Your Name"
-                            placeholderTextColor="#71717a"
-                            value={displayName}
-                            onChangeText={setDisplayName}
-                        />
-                    </View>
+            {/* Background Neon glows */}
+            <View style={StyleSheet.absoluteFill}>
+                <FloatingShape size={350} color="#af25f4" top={-50} left={-100} delay={0} opacity={0.5} />
+                <FloatingShape size={300} color="#00f5ff" top={height * 0.7} left={width * 0.6} delay={2000} opacity={0.3} />
+            </View>
 
-                    <View style={[styles.inputGroup, styles.mt16]}>
-                        <Text style={styles.label}>Email</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Enter your email"
-                            placeholderTextColor="#71717a"
-                            value={email}
-                            onChangeText={setEmail}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                        />
-                    </View>
-
-                    <View style={[styles.inputGroup, styles.mt16]}>
-                        <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Create a password"
-                            placeholderTextColor="#71717a"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry
-                        />
-                    </View>
-
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                className="flex-1"
+            >
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="flex-1 px-6">
+                    {/* Header */}
                     <TouchableOpacity
-                        style={[styles.button, loading ? styles.buttonDisabled : null]}
-                        onPress={handleRegister}
-                        disabled={loading}
+                        onPress={() => navigation.goBack()}
+                        className="mt-4 mb-8 w-10 h-10 items-center justify-center rounded-full bg-white/5 border border-white/10"
                     >
-                        <Text style={styles.buttonText}>
-                            {loading ? 'Creating Account...' : 'Sign Up'}
+                        <ArrowLeft size={20} color="#fff" />
+                    </TouchableOpacity>
+
+                    <Animated.View
+                        entering={FadeInDown.delay(200).springify()}
+                        className="mb-10"
+                    >
+                        <Text className="text-4xl font-extrabold text-white font-display">
+                            Join Circle<Text className="text-primary">.</Text>
                         </Text>
-                    </TouchableOpacity>
+                        <Text className="text-slate-400 mt-2 text-lg">Create your professional profile</Text>
+                    </Animated.View>
 
-                    <View style={styles.footerRow}>
-                        <Text style={styles.footerText}>Already have an account? </Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                            <Text style={styles.linkText}>Sign In</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {/* Form Panel */}
+                    <Animated.View entering={FadeInDown.delay(400).springify()}>
+                        <GlassView intensity={5} borderRadius={32} style={styles.formPanel}>
+                            <View className="space-y-6">
+                                <View>
+                                    <Text className="text-slate-400 mb-2 font-semibold ml-1">Display Name</Text>
+                                    <TextInput
+                                        className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white"
+                                        placeholder="Your Name"
+                                        placeholderTextColor="#71717a"
+                                        value={displayName}
+                                        onChangeText={setDisplayName}
+                                    />
+                                </View>
 
-                    <TouchableOpacity
-                        style={styles.secondaryButton}
-                        onPress={() => navigation.navigate('Landing')}
+                                <View>
+                                    <Text className="text-slate-400 mb-2 font-semibold ml-1">Email Address</Text>
+                                    <TextInput
+                                        className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white"
+                                        placeholder="Enter your email"
+                                        placeholderTextColor="#71717a"
+                                        value={email}
+                                        onChangeText={setEmail}
+                                        autoCapitalize="none"
+                                        keyboardType="email-address"
+                                    />
+                                </View>
+
+                                <View>
+                                    <Text className="text-slate-400 mb-2 font-semibold ml-1">Password</Text>
+                                    <TextInput
+                                        className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white"
+                                        placeholder="Create a password"
+                                        placeholderTextColor="#71717a"
+                                        value={password}
+                                        onChangeText={setPassword}
+                                        secureTextEntry
+                                    />
+                                </View>
+
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={handleRegister}
+                                    disabled={loading}
+                                    className={`w-full bg-primary py-5 rounded-full items-center shadow-lg shadow-primary/30 mt-4 ${loading ? 'opacity-70' : ''}`}
+                                >
+                                    <Text className="text-white font-bold text-lg">
+                                        {loading ? 'Creating...' : 'Sign Up'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </GlassView>
+                    </Animated.View>
+
+                    {/* Footer */}
+                    <Animated.View
+                        entering={FadeInDown.delay(600).springify()}
+                        className="mt-8 mb-10"
                     >
-                        <Text style={styles.secondaryButtonText}>Back to Google Sign In</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
+                        <View className="flex-row justify-center items-center space-x-2">
+                            <Text className="text-slate-500">Already have an account?</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                                <Text className="text-primary font-bold">Sign In</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Landing')}
+                            className="mt-8 items-center"
+                        >
+                            <Text className="text-slate-600 text-sm">Or use Google Sign In</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#09090b', // zinc-950
+    floatingShape: {
+        position: 'absolute',
     },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    logo: {
-        fontSize: 40,
-        fontWeight: 'bold',
-        color: '#ffffff',
-        marginBottom: 8,
-    },
-    subtitle: {
-        color: '#a1a1aa', // zinc-400
-    },
-    form: {
-        gap: 16,
-    },
-    inputGroup: {
+    formPanel: {
+        padding: 24,
         width: '100%',
-    },
-    mt16: {
-        marginTop: 16,
-    },
-    label: {
-        color: '#a1a1aa', // zinc-400
-        marginBottom: 8,
-        marginLeft: 4,
-    },
-    input: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        color: '#ffffff',
-    },
-    button: {
-        backgroundColor: '#2563eb', // blue-600
-        paddingVertical: 16,
-        borderRadius: 12,
-        marginTop: 32,
-    },
-    buttonDisabled: {
-        opacity: 0.7,
-    },
-    buttonText: {
-        color: '#ffffff',
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-    footerRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 24,
-    },
-    footerText: {
-        color: '#a1a1aa', // zinc-400
-    },
-    linkText: {
-        color: '#3b82f6', // blue-500
-        fontWeight: 'bold',
-    },
-    secondaryButton: {
-        marginTop: 24,
-        borderWidth: 1,
-        borderColor: '#27272a', // zinc-800
-        paddingVertical: 12,
-        borderRadius: 12,
-    },
-    secondaryButtonText: {
-        color: '#71717a', // zinc-500
-        textAlign: 'center',
-        fontSize: 14,
-    },
+    }
 });
 
 export default RegisterScreen;

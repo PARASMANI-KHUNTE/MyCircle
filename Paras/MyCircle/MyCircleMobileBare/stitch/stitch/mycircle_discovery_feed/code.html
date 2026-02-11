@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MyCircle Discovery Feed</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a855f7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#09090b", // Custom deep zinc per instructions
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+        .neon-text-glow {
+            text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 right-0 z-50 px-6 pt-6 pb-2 bg-gradient-to-b from-background-dark to-transparent">
+<div class="flex items-center justify-between mb-6">
+<h1 class="text-2xl font-extrabold tracking-tight">My<span class="text-primary">Circle</span></h1>
+<div class="flex items-center gap-3">
+<button class="p-2 glass-container rounded-full">
+<span class="material-icons text-xl">notifications_none</span>
+</button>
+<div class="w-10 h-10 rounded-full border-2 border-primary/50 overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="User profile portrait close up" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqT23UCNoQVY6Rx4hcyYuCj_yKsuBG50e3745lrKfAGQhIp3Swtbnkj8Fc_nfQiMcT5VdtwjpW4z-srr_xthYMmZ5931q4bvQx2XRPdzhT29wzpByWxhgRBKKyR4CIWaOw-XatJVCvClesEbHl414aqmb9atqe3w-WR9gNTJbWR_zRgdMiJqE1FDpaSRYPHVMnIlu-uYOc4k36tLjZDxbyCOFuc7lmxnp-QSqD_yb3ZVH2uUlftwJaBy80mCTD1xlFD8zAnXSHKJQG"/>
+</div>
+</div>
+</div>
+<!-- Floating Orbit Search Interface -->
+<div class="space-y-4">
+<div class="glass-container rounded-full px-5 py-3 flex items-center gap-3 shadow-xl">
+<span class="material-icons text-slate-400">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder-slate-500" placeholder="Explore your circle..." type="text"/>
+<span class="material-icons text-primary">tune</span>
+</div>
+<!-- Translucent Category Chips -->
+<div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+<button class="px-6 py-2 bg-primary text-white rounded-full text-xs font-semibold whitespace-nowrap neon-glow">All</button>
+<button class="px-6 py-2 glass-container rounded-full text-xs font-semibold whitespace-nowrap">Jobs</button>
+<button class="px-6 py-2 glass-container rounded-full text-xs font-semibold whitespace-nowrap">Services</button>
+<button class="px-6 py-2 glass-container rounded-full text-xs font-semibold whitespace-nowrap">Renting</button>
+<button class="px-6 py-2 glass-container rounded-full text-xs font-semibold whitespace-nowrap">Events</button>
+</div>
+</div>
+</header>
+<!-- Main Feed -->
+<main class="pt-48 pb-32 px-4 space-y-6">
+<!-- Infinite Card 1 -->
+<div class="relative w-full rounded-lg overflow-hidden group">
+<!-- Background Image -->
+<img alt="Modern Workspace" class="w-full h-[450px] object-cover rounded-lg" data-alt="A modern minimalist penthouse office space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1a-dfvwjwTTXStRIgpqiceTaC4VxfekuJ8nR_vB4g39wV7DG1e9TJvJMU29jew5I4REpUkkFRo5VcD0cWurGm59MLbKZsYWKu9sco7y9TDsYwTXTvhrLe2gL0hXNQwHvowSyZJtHHh8m5r1z-jDvMruFmzK1noJF__7zPPVWuZ7kIAIW8DArwFQAVFvwjWkXynj8kMqje5We0sztJs20BUQ7DE66uWFnUoGs3XL0shViFLRPhQmNkK3PYYh-2tS9qHhKsjMDq65RH"/>
+<!-- Generative SVG Overlay -->
+<div class="absolute inset-0 pointer-events-none overflow-hidden rounded-lg opacity-40">
+<svg class="absolute top-0 right-0 w-full h-full" viewbox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<path d="M44.7,-76.4C58.1,-69.2,69.5,-57.4,76.5,-43.8C83.5,-30.2,86.1,-15.1,84.3,-0.9C82.5,13.3,76.3,26.5,68.2,38.1C60.1,49.7,50.1,59.6,38.3,67.4C26.5,75.2,13.3,80.9,-1,82.7C-15.3,84.4,-30.6,82.2,-43.8,75.3C-57,68.4,-68.2,56.7,-76.5,43.2C-84.8,29.7,-90.3,14.8,-88.9,0.8C-87.5,-13.2,-79.2,-26.4,-70.2,-38.7C-61.1,-51,-51.2,-62.4,-39.2,-70.5C-27.1,-78.6,-13.5,-83.4,0.8,-84.8C15.1,-86.2,31.3,-83.6,44.7,-76.4Z" fill="#a855f7" transform="translate(180 30) scale(0.4)"></path>
+</svg>
+</div>
+<!-- Gradient Overlay for Legibility -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+<!-- Gamified Trust Badge -->
+<div class="absolute top-4 left-4 flex items-center gap-2 glass-container px-3 py-1.5 rounded-full border border-primary/30">
+<div class="w-2 h-2 rounded-full bg-primary neon-glow animate-pulse"></div>
+<span class="text-[10px] font-bold tracking-widest uppercase">Elite Seller</span>
+</div>
+<!-- Floating Price Tag -->
+<div class="absolute top-4 right-4 bg-primary px-4 py-2 rounded-full shadow-lg neon-glow">
+<span class="text-white font-bold">$2,400/mo</span>
+</div>
+<!-- Card Content -->
+<div class="absolute bottom-0 left-0 right-0 p-6">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-icons text-primary text-sm">location_on</span>
+<span class="text-xs font-medium text-slate-300">San Francisco, CA</span>
+</div>
+<h3 class="text-2xl font-bold mb-4 leading-tight">Skyline Penthouse Loft <br/>&amp; Creative Studio</h3>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full border border-white/20 overflow-hidden">
+<img alt="Avatar" class="w-full h-full object-cover" data-alt="Portrait of a creative professional" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJg4smSN7fuf3SolsGomgIfTsC7MYkl6pBVqnGMlCYeIQRFvISoieyq3YaH2QKbFSpZv4sAvoB52_FyO_beA8GCc0cASMOdmJFlfpdqQqe2eUQtuSYfPScVz7bBb6Qqr0Fooq3wUP_TDoS-SnuqGLRO-F7oH812oIsFMyYCEULJQ6nEMPjF3oiEGN7IbhLd4LGPRV7w9uOnsZiBWzKUFT1y8a_iWPXPiDH7x-P6-lAg5cQeHzQzoRVws6nnGlp1KY7Gghh0nSSYqf_"/>
+</div>
+<span class="text-sm font-semibold">Julian V.</span>
+</div>
+<button class="glass-container px-4 py-2 rounded-full text-xs font-bold border border-white/10">View Details</button>
+</div>
+</div>
+</div>
+<!-- Infinite Card 2 -->
+<div class="relative w-full rounded-lg overflow-hidden group">
+<img alt="Tech Expert" class="w-full h-[450px] object-cover rounded-lg" data-alt="A tech consultant working on complex hardware" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUrxU8wUBe1yBHmKzxe1DYVNewkDVYbxeH_eMVeJWqsgQAagq_XiRKYjOPFFu5uj_S90jLTNVQomq2RCX_x5rnFvTiguUlBFRZa2HdUgPlQjDIbHmzDe_i0tILEgR7MLIOKlM15SQJ3X5cLZb7s3lKx_ooQxDw4ZFYadl_8MCMZPxlX6oLKAGtrFYwWhkEwrO8EsQmLmVE8wEzw4IoeTsNWjEfZ0M-vtMqctVa3iNJhQ_iin-CM61Z7S9KSccjhhjfHBLBxUJ3l89X"/>
+<!-- Generative SVG Overlay -->
+<div class="absolute inset-0 pointer-events-none overflow-hidden rounded-lg opacity-30">
+<svg class="absolute bottom-0 left-0 w-full h-full" viewbox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<path d="M42.2,-71.4C55.2,-64.1,66.7,-53.4,73.4,-40.5C80.1,-27.6,82,-12.4,80.3,2.4C78.6,17.2,73.2,31.6,64.8,44.4C56.3,57.1,44.8,68.2,31.2,74.5C17.6,80.8,1.9,82.3,-13.6,80.1C-29.2,77.9,-44.6,71.9,-57.6,62.2C-70.6,52.5,-81.1,39.1,-85.4,24C-89.7,8.9,-87.8,-7.8,-82.4,-23.4C-76.9,-38.9,-67.9,-53.4,-55.4,-61.2C-42.9,-69,-26.9,-70.2,-11.9,-70.6C3.1,-71,18.1,-70.7,42.2,-71.4Z" fill="#a855f7" transform="translate(20 180) scale(0.5)"></path>
+</svg>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+<div class="absolute top-4 left-4 flex items-center gap-2 glass-container px-3 py-1.5 rounded-full border border-primary/30">
+<div class="w-2 h-2 rounded-full bg-emerald-400 neon-glow animate-pulse"></div>
+<span class="text-[10px] font-bold tracking-widest uppercase">Verified Expert</span>
+</div>
+<div class="absolute top-4 right-4 bg-primary px-4 py-2 rounded-full shadow-lg neon-glow">
+<span class="text-white font-bold">$85/hr</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-6">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-icons text-primary text-sm">work_outline</span>
+<span class="text-xs font-medium text-slate-300">Technical Consulting</span>
+</div>
+<h3 class="text-2xl font-bold mb-4 leading-tight">Next-Gen Blockchain <br/>Architecture Audit</h3>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full border border-white/20 overflow-hidden">
+<img alt="Avatar" class="w-full h-full object-cover" data-alt="Portrait of a software engineer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFbsj_kUJLvLajH3patldEM5cgYnudX8GMs863gpkSDJcVz7if1R3UIWuseb8cufUv-X6ZOM8nkPQ7YaZHPv1bAiDyk6zvVM6_zKMvdlntMUsrHVzgs2-QygW7f-cGlj-M52ytuoqLgifOMJJkzb7S9rDsLFVDAoBG8JNw1QKmPnFVCEIk7JvSBOOCYcZsL3nNx0_aZ1EJ02GKl-0P6_LQbizK3up_Vl4ikujSHYcqQo1xPqLLc8-L0TT_aox-zfOiFLnIq9dEqpVs"/>
+</div>
+<span class="text-sm font-semibold">Marcus Chen</span>
+</div>
+<button class="glass-container px-4 py-2 rounded-full text-xs font-bold border border-white/10">Hire Now</button>
+</div>
+</div>
+</div>
+<!-- Infinite Card 3 (Map Focus) -->
+<div class="relative w-full rounded-lg overflow-hidden group h-[300px]">
+<div class="absolute inset-0 bg-slate-800" data-location="Manhattan, New York" style="">
+<img alt="Map View" class="w-full h-full object-cover opacity-50 grayscale contrast-125" data-alt="Stylized top down map of city streets" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArRgyjWMQLlovZWfuQEYYWR2WRjMiZI_LwNZPkvwRZnJgcNUTfjU0b3INxqq5PcLs12XT5J-m8p_79xc_J2akPvz2641qRlOVgdgeDg3u3Fp9GoCi9ZcWL3Q5MfBRFw8LhEcesSAY6WfN7d1laVUAmT7huzCVgW0lgqtIvB3UbSR8N0TswGKcQw5v3MOAiz409u7r8cOd99KhybwVZRyo2Huyx2A1M3ztqXf0DGynRIT3HzvOmmFbY0ChkzLezR7t4w0sFYQKZ7z_9"/>
+</div>
+<div class="absolute inset-0 bg-primary/10"></div>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+<div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4 border border-primary animate-pulse">
+<span class="material-icons text-primary text-3xl">near_me</span>
+</div>
+<h4 class="text-xl font-bold mb-2">Nearby Circles</h4>
+<p class="text-sm text-slate-400">Discover 42 active services in your immediate area</p>
+<button class="mt-6 px-8 py-3 bg-primary text-white rounded-full font-bold text-sm neon-glow">Open Map</button>
+</div>
+</div>
+</main>
+<!-- Floating Bottom Tab Bar -->
+<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
+<div class="glass-container rounded-full px-6 py-4 flex items-center justify-between shadow-2xl">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-icons">explore</span>
+<span class="text-[10px] font-bold uppercase">Discover</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-icons">search</span>
+<span class="text-[10px] font-bold uppercase">Search</span>
+</button>
+<!-- Prominent Neon Action Button -->
+<div class="relative -top-10">
+<button class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white shadow-[0_0_30px_rgba(168,85,247,0.6)] border-4 border-background-dark">
+<span class="material-icons text-3xl">add</span>
+</button>
+</div>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-icons">forum</span>
+<span class="text-[10px] font-bold uppercase">Circles</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-icons">person_outline</span>
+<span class="text-[10px] font-bold uppercase">Account</span>
+</button>
+</div>
+</nav>
+<!-- Background Decoration -->
+<div class="fixed top-0 left-0 w-full h-full -z-10 opacity-30 pointer-events-none">
+<div class="absolute top-1/4 -right-20 w-80 h-80 bg-primary/20 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-1/4 -left-20 w-96 h-96 bg-primary/10 blur-[150px] rounded-full"></div>
+</div>
+</body></html>

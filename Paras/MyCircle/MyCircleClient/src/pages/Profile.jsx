@@ -2,7 +2,10 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { MapPin, Mail, Phone, Calendar, Edit2, Star, Shield, LayoutGrid } from 'lucide-react';
+import {
+    MapPin, Mail, Phone, Calendar, Edit2, Star, Shield, LayoutGrid,
+    Award, Package
+} from 'lucide-react';
 import Button from '../components/ui/Button';
 import StatsCard from '../components/ui/StatsCard';
 import { getAvatarUrl } from '../utils/avatar';
@@ -43,7 +46,6 @@ const Profile = () => {
                     ...userData,
                     location: userData.location || 'Location not set',
                     joined: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : '',
-                    bio: userData.bio || '',
                     bio: userData.bio || '',
                     skills: userData.skills || [],
                     skillEndorsements: userData.skillEndorsements || [],
@@ -141,14 +143,14 @@ const Profile = () => {
 
     if (!authUser && !userId) {
         return (
-            <div className="min-h-screen flex items-center justify-center text-white">
+            <div className="min-h-screen flex items-center justify-center text-text-heading">
                 <p>Please sign in to view your profile.</p>
             </div>
         );
     }
 
     if (loading || !profile) {
-        return <div className="min-h-screen flex items-center justify-center text-white">Loading profile...</div>;
+        return <div className="min-h-screen flex items-center justify-center text-text-heading">Loading profile...</div>;
     }
 
     const stats = profile.stats || { rating: 0, totalPosts: 0, activePosts: 0 };
@@ -157,11 +159,11 @@ const Profile = () => {
         <div className="container mx-auto px-6 py-24 text-foreground">
             <div className="max-w-4xl mx-auto">
                 {/* Header Card */}
-                <div className="glass rounded-3xl p-8 mb-8 relative overflow-hidden">
+                <div className="glass-panel p-8 mb-8 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
 
                     <div className="relative flex flex-col md:flex-row items-end gap-6 pt-12">
-                        <div className="w-32 h-32 rounded-full ring-4 ring-background bg-background overflow-hidden shadow-2xl">
+                        <div className="w-32 h-32 rounded-full ring-4 ring-card bg-card overflow-hidden shadow-2xl">
                             <img
                                 src={getAvatarUrl(profile)}
                                 alt={profile.displayName}
@@ -170,8 +172,8 @@ const Profile = () => {
                         </div>
 
                         <div className="flex-1 mb-2">
-                            <h1 className="text-3xl font-bold font-display text-foreground">{profile.displayName}</h1>
-                            <div className="flex items-center gap-4 text-muted-foreground mt-2 text-sm">
+                            <h1 className="text-3xl font-bold font-display text-text-heading">{profile.displayName}</h1>
+                            <div className="flex items-center gap-4 text-text-muted mt-2 text-sm">
                                 <span className="flex items-center gap-1">
                                     <MapPin className="w-4 h-4" /> {profile.location}
                                 </span>
@@ -220,7 +222,7 @@ const Profile = () => {
                             const isEndorsedByMe = endorsement?.endorsedBy?.includes(authUser?._id);
 
                             return (
-                                <div key={index} className="flex items-center gap-1 bg-white/5 rounded-full px-3 py-1 border border-white/10 group hover:border-primary/50 transition-colors">
+                                <div key={index} className="flex items-center gap-1 bg-card/10 rounded-full px-3 py-1 border border-card-border group hover:border-primary/50 transition-colors">
                                     <span className="text-xs text-primary font-bold">{skill}</span>
                                     {count > 0 && (
                                         <span className="bg-primary/20 text-primary text-[10px] px-1.5 rounded-full">
@@ -231,7 +233,7 @@ const Profile = () => {
                                         <button
                                             onClick={() => handleEndorse(skill)}
                                             disabled={isEndorsedByMe}
-                                            className={`ml-1 hover:scale-110 transition-transform ${isEndorsedByMe ? 'text-yellow-400 opacity-50 cursor-default' : 'text-gray-400 hover:text-yellow-400'}`}
+                                            className={`ml-1 hover:scale-110 transition-transform ${isEndorsedByMe ? 'text-yellow-400 opacity-50 cursor-default' : 'text-text-muted hover:text-yellow-400'}`}
                                             title={isEndorsedByMe ? "You endorsed this" : "Endorse this skill"}
                                         >
                                             <Award className="w-3.5 h-3.5" />
@@ -262,7 +264,7 @@ const Profile = () => {
                 {postsLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {[1, 2].map(i => (
-                            <div key={i} className="glass h-64 rounded-2xl animate-pulse bg-white/5" />
+                            <div key={i} className="glass-panel h-64 rounded-2xl animate-pulse bg-hover-bg" />
                         ))}
                     </div>
                 ) : posts.length > 0 ? (
@@ -276,11 +278,12 @@ const Profile = () => {
                                 onStatusChange={(status) => handleStatusChange(post._id, status)}
                                 onEdit={() => setEditingPost(post)}
                                 currentUserId={authUser?._id}
+                                onRequestContact={() => navigate(`/post/${post._id}`)}
                             />
                         ))}
                     </div>
                 ) : (
-                    <div className="glass rounded-2xl p-12 text-center">
+                    <div className="glass-panel rounded-2xl p-12 text-center">
                         <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
                         <p className="text-muted-foreground">No posts found yet.</p>
                     </div>

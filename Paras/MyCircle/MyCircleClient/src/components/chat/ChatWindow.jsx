@@ -259,12 +259,12 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+            <div className="p-4 border-b border-card-border flex items-center justify-between bg-hover-bg/30">
                 <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="text-gray-400 hover:text-white mr-2">
+                    <button onClick={onBack} className="text-text-muted hover:text-text-heading mr-2">
                         <ArrowLeft className="w-6 h-6" />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-background-section overflow-hidden border border-card-border">
                         <img
                             src={getAvatarUrl(otherParticipant)}
                             alt={otherParticipant?.displayName}
@@ -272,40 +272,40 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                         />
                     </div>
                     <div>
-                        <h3 className="font-bold text-white">{otherParticipant?.displayName}</h3>
-                        {otherParticipant?.isOnline && <span className="text-xs text-green-400">Online</span>}
+                        <h3 className="font-bold text-text-heading">{otherParticipant?.displayName}</h3>
+                        {otherParticipant?.isOnline && <span className="text-xs text-green-600 font-medium">Online</span>}
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={handleBlock} className="p-2 text-gray-400 hover:text-red-500" title="Block User">
+                    <button onClick={handleBlock} className="p-2 text-text-muted hover:text-red-500 transition-colors" title="Block User">
                         <Shield className="w-5 h-5" />
                     </button>
-                    <button onClick={handleReport} className="p-2 text-gray-400 hover:text-yellow-500" title="Report User">
+                    <button onClick={handleReport} className="p-2 text-text-muted hover:text-yellow-600 transition-colors" title="Report User">
                         <Flag className="w-5 h-5" />
                     </button>
                 </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background-section/10">
                 {loading ? (
-                    <div className="text-center text-gray-400 mt-10 font-medium">Loading messages...</div>
+                    <div className="text-center text-text-muted mt-10 font-medium animate-pulse">Loading messages...</div>
                 ) : (
                     messages.map((msg, index) => {
                         const isOwn = msg.sender === (currentUser?._id || currentUser?.id);
                         return (
                             <div key={index} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${isOwn
-                                    ? 'bg-primary text-white rounded-br-none'
-                                    : 'bg-white/10 text-gray-200 rounded-bl-none'
+                                <div className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${isOwn
+                                    ? 'bg-primary text-primary-foreground rounded-br-none'
+                                    : 'bg-card border border-card-border text-text-body rounded-bl-none'
                                     }`}>
                                     <p>{msg.text}</p>
-                                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
+                                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-primary-foreground/80' : 'text-text-muted'}`}>
                                         <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         {isOwn && (
-                                            msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-blue-300" /> :
-                                                msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-white/70" /> :
-                                                    <Check className="w-3 h-3 text-white/50" />
+                                            msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-primary-foreground" /> :
+                                                msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-primary-foreground/70" /> :
+                                                    <Check className="w-3 h-3 text-primary-foreground/50" />
                                         )}
                                     </div>
                                 </div>
@@ -336,24 +336,24 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
 
             {/* Typing Indicator */}
             {isTyping && (
-                <div className="px-4 py-2 text-xs text-gray-400 italic animate-pulse">
+                <div className="px-4 py-2 text-xs text-text-muted italic animate-pulse">
                     {otherParticipant?.displayName} is typing...
                 </div>
             )}
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-4 bg-white/5 border-t border-white/10 flex gap-2">
+            <form onSubmit={handleSend} className="p-4 bg-hover-bg/20 border-t border-card-border flex gap-2">
                 <input
                     type="text"
                     value={newMessage}
                     onChange={handleInputChange}
                     placeholder="Type a message..."
-                    className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all"
+                    className="flex-1 bg-card border border-card-border rounded-xl px-4 py-3 text-text-heading placeholder:text-text-muted focus:outline-none focus:border-primary/50 transition-all shadow-inner"
                 />
                 <button
                     type="submit"
                     disabled={!newMessage.trim()}
-                    className="p-3 bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors"
+                    className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors shadow-button"
                 >
                     <Send className="w-5 h-5" />
                 </button>

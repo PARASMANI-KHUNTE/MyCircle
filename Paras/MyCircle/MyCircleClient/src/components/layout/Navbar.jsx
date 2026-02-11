@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, PlusCircle, MessageCircle, Sun, Moon } from 'lucide-react';
+import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
@@ -13,9 +13,8 @@ import api from '../../utils/api';
 import ChatDrawer from '../chat/ChatDrawer';
 
 const Navbar = () => {
-
-    const { user, login, isAuthenticated } = useAuth();
-    const { theme, toggleTheme, isDark } = useTheme();
+    const { user, isAuthenticated } = useAuth();
+    const { toggleTheme, isDark } = useTheme();
     const { unreadCount } = useNotifications();
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
     const { socket } = useSocket();
@@ -25,27 +24,21 @@ const Navbar = () => {
     const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
     const location = useLocation();
 
+    // @ts-ignore
     const isProduction = import.meta.env.PROD;
     const apiURL = isProduction
+        // @ts-ignore
         ? (import.meta.env.VITE_API_URL || '')
+        // @ts-ignore
         : (import.meta.env.VITE_API_URL_DEV || '');
 
-    if (isProduction && !apiURL) {
-        throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
-    }
-
-    if (!isProduction && !apiURL) {
-        throw new Error('VITE_API_URL_DEV is not set. Please configure it in your web .env file.');
-    }
-
-    // Google OAuth Login Handler
     const handleGoogleLogin = () => {
         window.location.href = `${apiURL}/auth/google`;
     };
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
+            setIsScrolled(window.scrollY > 10);
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
@@ -66,12 +59,6 @@ const Navbar = () => {
 
         const handleNewMessage = () => {
             fetchUnreadMsgCount();
-            try {
-                const audio = new Audio('/notification.mp3');
-                audio.play().catch(e => console.log('Audio play failed - user interaction needed first?', e));
-            } catch (error) {
-                console.error("Error playing sound:", error);
-            }
         };
 
         socket.on('receive_message', handleNewMessage);
@@ -94,106 +81,121 @@ const Navbar = () => {
         }
     };
 
-    // ... existing scroll effect ...
-
     const navLinks = [
         { name: 'Feed', path: '/feed', public: true },
         { name: 'My Posts', path: '/my-posts', public: false },
-        { name: 'My Requests', path: '/requests', public: false },
-        { name: 'Notifications', path: '/notifications', public: false },
+        { name: 'Requests', path: '/requests', public: false },
     ];
 
     const visibleLinks = navLinks.filter(link => link.public || !!user);
 
     return (
         <motion.nav
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
             className={cn(
-                'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-                isScrolled ? 'glass py-3' : 'bg-transparent py-5'
+                'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6',
+                isScrolled ? 'bg-card/80 backdrop-blur-md py-3 shadow-sm' : 'bg-transparent py-6'
             )}
         >
-            <div className="container mx-auto px-6 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 group">
-                    <img src="/logo.png" alt="MyCircle" className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" />
-                    <span className="text-2xl font-black tracking-tighter hover:tracking-normal transition-all duration-300 text-foreground">
-                        My<span className="text-primary italic">Circle</span>
+                    <span className="text-xl font-bold tracking-tight text-secondary">
+                        My<span className="text-primary">Circle</span>
                     </span>
                 </Link>
 
+                {/* Right Aligned Links & Actions */}
                 <div className="hidden md:flex items-center gap-8">
-                    {visibleLinks.map((link) => (
-                        <Link
-                            key={link.path}
-                            to={link.path}
-                            className={cn(
-                                'text-sm font-medium transition-colors hover:text-primary flex items-center gap-1.5',
-                                location.pathname === link.path ? 'text-primary font-semibold' : 'text-muted-foreground'
-                            )}
-                        >
-                            {link.name}
-                            {link.name === 'Notifications' && unreadCount > 0 && (
-                                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20">
-                                    {unreadCount}
-                                </span>
-                            )}
-                        </Link>
-                    ))}
-                </div>
-
-                {/* Desktop Actions */}
-                <div className="hidden md:flex items-center gap-4">
-                    {isAuthenticated ? (
-                        <>
-                            <button
-                                onClick={() => setIsChatDrawerOpen(true)}
-                                className="p-2 text-muted-foreground hover:text-foreground hover:bg-foreground/10 rounded-full transition-colors relative"
-                                title="Messages"
-                            >
-                                <MessageCircle className="w-5 h-5" />
-                                {unreadMsgCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20 border-2 border-background">
-                                        {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
-                                    </span>
+                    <div className="flex items-center gap-6 mr-4">
+                        {visibleLinks.map((link) => (
+                            <Link
+                                key={link.path}
+                                to={link.path}
+                                className={cn(
+                                    'text-[15px] font-medium transition-all relative py-1',
+                                    location.pathname === link.path ? 'text-secondary font-semibold' : 'text-text-muted hover:text-secondary'
                                 )}
-                            </button>
-
-                            <button
-                                onClick={toggleTheme}
-                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-                                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
                             >
-                                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                            </button>
-
-                            <Link to="/create-post">
-                                <Button variant="primary" className="pl-3 pr-4">
-                                    <PlusCircle className="w-4 h-4" />
-                                    <span>Post</span>
-                                </Button>
-                            </Link>
-                            <Link to="/profile">
-                                <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden border border-white/10 hover:border-primary transition-colors cursor-pointer">
-                                    <img
-                                        src={getAvatarUrl(user)}
-                                        alt={user.displayName}
-                                        className="w-full h-full object-cover"
+                                {link.name}
+                                {location.pathname === link.path && (
+                                    <motion.div
+                                        layoutId="nav-underline"
+                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
                                     />
-                                </div>
+                                )}
                             </Link>
-                        </>
-                    ) : (
-                        <Button variant="outline" className="text-sm" onClick={handleGoogleLogin}>
-                            Sign in with Google
-                        </Button>
-                    )}
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-3 border-l border-card-border pl-6">
+                        {isAuthenticated ? (
+                            <>
+                                <button
+                                    onClick={() => setIsChatDrawerOpen(true)}
+                                    className="p-2 text-text-muted hover:text-secondary hover:bg-hover-bg rounded-full transition-colors relative"
+                                >
+                                    <MessageCircle className="w-5 h-5" />
+                                    {unreadMsgCount > 0 && (
+                                        <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold px-1 rounded-full min-w-[16px] text-center border border-card">
+                                            {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                <Link to="/notifications" className="p-2 text-text-muted hover:text-secondary hover:bg-hover-bg rounded-full transition-colors relative">
+                                    <Bell className="w-5 h-5" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold px-1 rounded-full min-w-[16px] text-center border border-card">
+                                            {unreadCount}
+                                        </span>
+                                    )}
+                                </Link>
+
+                                <button
+                                    onClick={toggleTheme}
+                                    className="p-2 text-text-muted hover:text-secondary hover:bg-hover-bg rounded-full transition-colors"
+                                >
+                                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                                </button>
+
+                                <Link to="/profile">
+                                    <div className="w-9 h-9 rounded-full bg-background border border-card-border p-0.5 hover:border-primary transition-colors">
+                                        <img
+                                            src={getAvatarUrl(user)}
+                                            alt={user.displayName}
+                                            className="w-full h-full rounded-full object-cover"
+                                        />
+                                    </div>
+                                </Link>
+
+                                <Link to="/create-post">
+                                    <Button variant="primary" className="py-2.5 px-5">
+                                        <PlusCircle className="w-4 h-4" />
+                                        <span>Create Post</span>
+                                    </Button>
+                                </Link>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={toggleTheme}
+                                    className="p-2 text-text-muted hover:text-secondary hover:bg-hover-bg rounded-full transition-colors"
+                                >
+                                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                                </button>
+                                <Button variant="primary" className="text-[14px]" onClick={handleGoogleLogin}>
+                                    Sign in
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* Mobile Toggle */}
                 <button
-                    className="md:hidden text-white"
+                    className="md:hidden p-2 text-secondary"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 >
                     {isMobileMenuOpen ? <X /> : <Menu />}
@@ -204,10 +206,10 @@ const Navbar = () => {
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="md:hidden glass border-t border-white/5 overflow-hidden"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="md:hidden absolute top-full left-0 right-0 bg-card border-b border-card-border shadow-lg"
                     >
                         <div className="flex flex-col p-6 gap-4">
                             {visibleLinks.map((link) => (
@@ -215,27 +217,15 @@ const Navbar = () => {
                                     key={link.path}
                                     to={link.path}
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="text-gray-300 hover:text-white py-2"
+                                    className="text-text-body hover:text-primary font-medium transition-colors"
                                 >
                                     {link.name}
                                 </Link>
                             ))}
-                            {isAuthenticated && (
-                                <button
-                                    onClick={() => {
-                                        setIsMobileMenuOpen(false);
-                                        setIsChatDrawerOpen(true);
-                                    }}
-                                    className="text-muted-foreground hover:text-foreground py-2 flex items-center gap-2"
-                                >
-                                    Messages
-                                </button>
-                            )}
-                            <div className="h-px bg-white/10 my-2" />
                             {!isAuthenticated && (
                                 <Button
                                     variant="primary"
-                                    className="w-full justify-center"
+                                    className="w-full justify-center mt-2"
                                     onClick={handleGoogleLogin}
                                 >
                                     Sign in with Google

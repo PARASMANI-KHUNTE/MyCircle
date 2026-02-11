@@ -7,16 +7,16 @@ const NotFound = () => {
     return (
         <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-6">
             <div className="relative mb-8">
-                <div className="text-[12rem] font-bold text-white/5 select-none leading-none">404</div>
+                <div className="text-[12rem] font-bold text-text-heading/5 select-none leading-none">404</div>
                 <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center animate-bounce shadow-2xl shadow-primary/20">
-                        <Rocket className="text-white w-12 h-12" />
+                        <Rocket className="text-primary-foreground w-12 h-12" />
                     </div>
                 </div>
             </div>
 
-            <h1 className="text-4xl font-bold text-white mb-4 font-display">Lost in Space?</h1>
-            <p className="text-gray-400 max-w-md mx-auto mb-10 text-lg">
+            <h1 className="text-4xl font-black text-text-heading mb-4 font-display uppercase tracking-tight">Lost in Space?</h1>
+            <p className="text-text-muted max-w-md mx-auto mb-10 text-lg font-medium">
                 The page you are looking for has drifted away or never existed in this circle.
             </p>
 

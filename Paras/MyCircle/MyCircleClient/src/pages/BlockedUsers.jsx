@@ -46,7 +46,7 @@ const BlockedUsers = () => {
     return (
         <div className="container mx-auto px-6 py-24 min-h-screen">
             <div className="max-w-4xl mx-auto">
-                <Link to="/settings" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+                <Link to="/settings" className="inline-flex items-center gap-2 text-text-muted hover:text-text-heading mb-6 transition-colors font-medium">
                     <ArrowLeft className="w-4 h-4" />
                     Back to Settings
                 </Link>
@@ -56,8 +56,8 @@ const BlockedUsers = () => {
                         <UserX className="w-6 h-6" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-white">Blocked Users</h1>
-                        <p className="text-gray-400">Manage users you've blocked</p>
+                        <h1 className="text-3xl font-bold text-text-heading">Blocked Users</h1>
+                        <p className="text-text-muted">Manage users you've blocked</p>
                     </div>
                 </div>
 
@@ -66,26 +66,26 @@ const BlockedUsers = () => {
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                     </div>
                 ) : blockedUsers.length === 0 ? (
-                    <div className="glass rounded-2xl p-12 text-center">
-                        <UserX className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                        <h2 className="text-xl font-bold text-white mb-2">No Blocked Users</h2>
-                        <p className="text-gray-400">
+                    <div className="glass-panel p-12 text-center shadow-card">
+                        <UserX className="w-16 h-16 mx-auto mb-4 text-text-muted opacity-20" />
+                        <h2 className="text-xl font-bold text-text-heading mb-2">No Blocked Users</h2>
+                        <p className="text-text-muted">
                             Users you block will appear here. You can unblock them anytime.
                         </p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {blockedUsers.map(user => (
-                            <div key={user._id} className="glass rounded-2xl p-6 flex items-center justify-between">
+                            <div key={user._id} className="glass-panel p-6 flex items-center justify-between shadow-sm">
                                 <div className="flex items-center gap-4">
                                     <img
                                         src={getAvatarUrl(user)}
                                         alt={user.displayName}
-                                        className="w-12 h-12 rounded-full object-cover border border-white/10"
+                                        className="w-12 h-12 rounded-full object-cover border border-card-border"
                                     />
                                     <div>
-                                        <h3 className="text-white font-semibold">{user.displayName}</h3>
-                                        <p className="text-sm text-red-400">Blocked</p>
+                                        <h3 className="text-text-heading font-semibold">{user.displayName}</h3>
+                                        <p className="text-sm text-red-500 font-medium">Blocked</p>
                                     </div>
                                 </div>
                                 <Button

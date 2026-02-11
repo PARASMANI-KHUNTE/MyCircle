@@ -3,15 +3,63 @@ import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Sty
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Settings, LogOut, MessageCircle, Star, User, Edit3, Clock, Edit, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Settings, LogOut, MessageCircle, Star, User, Edit3, Clock, Edit, Trash2, Wallet } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
 import api from '../services/api';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
 import GlassView from '../components/ui/GlassView';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
+import { Dimensions, Platform } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
+    const translationY = useSharedValue(0);
+    const translationX = useSharedValue(0);
+
+    useEffect(() => {
+        translationY.value = withRepeat(
+            withSequence(
+                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
+                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+        translationX.value = withRepeat(
+            withSequence(
+                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
+                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
+    }));
+
+    return (
+        <Animated.View
+            style={[
+                styles.floatingShape,
+                {
+                    width: size,
+                    height: size,
+                    borderRadius: size / 2,
+                    backgroundColor: color,
+                    top,
+                    left,
+                },
+                animatedStyle,
+            ]}
+        />
+    );
+};
 
 
 const ProfileScreen = ({ navigation, route }: any) => {
@@ -275,83 +323,101 @@ const ProfileScreen = ({ navigation, route }: any) => {
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <ArrowLeft size={24} color={colors.text} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
-                <View style={styles.headerRight}>
-                    {isOwnProfile && (
-                        <>
-                            <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={[styles.iconButton, { marginRight: 15 }]}>
-                                <Edit size={22} color={colors.text} />
-                                <Text style={[styles.headerIconLabel, { color: colors.textSecondary }]}>Edit</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={[styles.iconButton, { marginRight: 15 }]}>
-                                <Settings size={22} color={colors.text} />
-                                <Text style={[styles.headerIconLabel, { color: colors.textSecondary }]}>Prefs</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
-                                <LogOut size={22} color="#ef4444" />
-                                <Text style={[styles.headerIconLabel, { color: '#ef4444' }]}>Exit</Text>
-                            </TouchableOpacity>
-                        </>
-                    )}
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <FloatingShape color="rgba(175, 37, 244, 0.2)" size={400} top={-200} left={-150} delay={0} />
+            <FloatingShape color="rgba(59, 130, 246, 0.15)" size={300} top={SCREEN_HEIGHT * 0.4} left={SCREEN_WIDTH - 150} delay={1000} />
+
+            <GlassView intensity={20} borderRadius={0} style={styles.headerGlass}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassCircleBtn}>
+                        <ArrowLeft size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitleMain}>Profile</Text>
+                    <View style={styles.headerRight}>
+                        {isOwnProfile && (
+                            <>
+                                <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.iconButtonGlass}>
+                                    <Edit size={20} color="#fff" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => navigation.navigate('Wallet')} style={[styles.iconButtonGlass, { marginLeft: 12 }]}>
+                                    <Wallet size={20} color="#fff" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={[styles.iconButtonGlass, { marginLeft: 12 }]}>
+                                    <Settings size={20} color="#fff" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleLogout} style={[styles.iconButtonGlass, { marginLeft: 12, borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+                                    <LogOut size={20} color="#ef4444" />
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
                 </View>
-            </View>
+            </GlassView>
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             >
-                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.profileHeader}>
-                    <Image
-                        source={{ uri: user.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${user.displayName}` }}
-                        style={styles.avatar}
-                    />
-                    <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
-                    <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
-                    <View style={{ marginTop: 8 }}>
-                        <TrustBadge
-                            score={user.reputation?.trustScore || 50}
-                            isVerified={user.reputation?.isVerified}
-                            showLabel
-                        />
-                    </View>
-                </Animated.View>
-
-                <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.statsRow}>
-                    <GlassView intensity={10} style={[styles.statCard, { borderColor: colors.primary, backgroundColor: colors.card + '40' }]}>
-                        <Text style={[styles.statValue, { color: colors.text }]}>{stats.posts}</Text>
-                        <Text style={[styles.statLabel, { color: colors.primary }]}>POSTS</Text>
-                    </GlassView>
-                    <GlassView intensity={10} style={[styles.statCard, { borderColor: colors.border, backgroundColor: colors.card + '40' }]}>
-                        <Text style={[styles.statValue, { color: colors.text }]}>{stats.requests}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>REQUESTS</Text>
-                    </GlassView>
-                    <GlassView intensity={10} style={[styles.statCard, { borderColor: colors.border, backgroundColor: colors.card + '40' }]}>
-                        <Text style={[styles.statValue, { color: '#22c55e' }]}>{stats.rating}</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>RATING</Text>
+                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.profileSection}>
+                    <GlassView intensity={15} style={styles.profileCard}>
+                        <View style={styles.avatarWrapper}>
+                            <Image
+                                source={{ uri: user.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${user.displayName}` }}
+                                style={styles.avatar}
+                            />
+                            <View style={styles.onlineBadge} />
+                        </View>
+                        <Text style={styles.name}>{user.displayName}</Text>
+                        <Text style={styles.email}>{user.email}</Text>
+                        <View style={{ marginTop: 16 }}>
+                            <TrustBadge
+                                score={user.reputation?.trustScore || 50}
+                                isVerified={user.reputation?.isVerified}
+                                showLabel
+                            />
+                        </View>
                     </GlassView>
                 </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Bio</Text>
-                    <Text style={[styles.sectionContent, { color: colors.text }]}>
-                        {user.bio || "No bio added yet."}
-                    </Text>
-                </Animated.View>
+                <View style={styles.statsLayout}>
+                    <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.statWrapper}>
+                        <GlassView intensity={10} style={[styles.statTile, { borderColor: 'rgba(175, 37, 244, 0.4)' }]}>
+                            <Text style={styles.statValue}>{stats.posts}</Text>
+                            <Text style={[styles.statLabel, { color: '#af25f4' }]}>POSTS</Text>
+                        </GlassView>
+                    </Animated.View>
+                    <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.statWrapper}>
+                        <GlassView intensity={10} style={[styles.statTile, { borderColor: 'rgba(59, 130, 246, 0.4)' }]}>
+                            <Text style={styles.statValue}>{stats.requests}</Text>
+                            <Text style={[styles.statLabel, { color: '#3b82f6' }]}>REQUESTS</Text>
+                        </GlassView>
+                    </Animated.View>
+                    <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.statWrapper}>
+                        <GlassView intensity={10} style={[styles.statTile, { borderColor: 'rgba(34, 197, 94, 0.4)' }]}>
+                            <Text style={[styles.statValue, { color: '#22c55e' }]}>{stats.rating}</Text>
+                            <Text style={[styles.statLabel, { color: '#22c55e' }]}>RATING</Text>
+                        </GlassView>
+                    </Animated.View>
+                </View>
 
-                <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Skills & Interests</Text>
-                    <Text style={[styles.sectionContent, { color: colors.text, fontStyle: user.skills?.length ? 'normal' : 'italic' }]}>
-                        {user.skills && user.skills.length > 0 ? user.skills.join(', ') : "No skills listed."}
-                    </Text>
+                <Animated.View entering={FadeInDown.delay(500).springify()} style={styles.bioSection}>
+                    <GlassView intensity={5} style={styles.bioCard}>
+                        <Text style={styles.sectionTitleSmall}>Bio</Text>
+                        <Text style={styles.sectionContent}>
+                            {user.bio || "No bio added yet."}
+                        </Text>
+
+                        <View style={styles.divider} />
+
+                        <Text style={styles.sectionTitleSmall}>Skills & Interests</Text>
+                        <Text style={[styles.sectionContent, { fontStyle: user.skills?.length ? 'normal' : 'italic' }]}>
+                            {user.skills && user.skills.length > 0 ? user.skills.join(', ') : "No skills listed."}
+                        </Text>
+                    </GlassView>
                 </Animated.View>
 
                 <View style={styles.sectionHeader}>
-                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>My Posts</Text>
+                    <Text style={styles.sectionTitleSmall}>My Posts</Text>
                     {isOwnProfile && (
                         <View style={styles.viewModeToggle}>
                             <TouchableOpacity onPress={() => setViewMode('list')} style={[styles.viewModeBtn, viewMode === 'list' && { backgroundColor: colors.primary }]}>
@@ -455,17 +521,19 @@ const ProfileScreen = ({ navigation, route }: any) => {
                     <View style={styles.buttonRow}>
                         <TouchableOpacity
                             onPress={() => navigation.navigate('ChatWindow', { recipient: user })}
-                            style={[styles.actionButtonMain, styles.messageButton]}
+                            style={styles.messageBtnNeon}
                         >
-                            <MessageCircle size={20} color="#fff" style={{ marginRight: 8 }} />
-                            <Text style={[styles.editButtonText, { color: '#ffffff' }]}>Message</Text>
+                            <GlassView intensity={30} style={styles.messageBtnInner}>
+                                <MessageCircle size={20} color="#fff" style={{ marginRight: 10 }} />
+                                <Text style={styles.btnTextNeon}>Message</Text>
+                            </GlassView>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             onPress={handleBlock}
-                            style={[styles.actionButtonMain, styles.blockButton, { backgroundColor: colors.card }]}
+                            style={styles.blockBtnGlass}
                         >
-                            <Text style={[styles.editButtonText, { color: '#ef4444' }]}>Block</Text>
+                            <Text style={styles.blockBtnText}>Block User</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -486,188 +554,203 @@ const ProfileScreen = ({ navigation, route }: any) => {
 };
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#09090b',
+    },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#09090b',
     },
-    container: {
-        flex: 1,
+    headerGlass: {
+        zIndex: 10,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
+        paddingHorizontal: 24,
+        paddingVertical: 16,
     },
-    headerTitle: {
+    glassCircleBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    headerTitleMain: {
         fontSize: 20,
-        fontWeight: 'bold',
-        marginLeft: 12,
+        fontWeight: '900',
+        color: '#fff',
+        letterSpacing: -0.5,
     },
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    headerIconLabel: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        marginTop: 2,
-    },
-    iconButton: {
+    iconButtonGlass: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     scrollContent: {
-        paddingBottom: 30,
+        paddingBottom: 40,
     },
-    profileHeader: {
-        alignItems: 'center',
+    profileSection: {
+        paddingHorizontal: 24,
         marginTop: 20,
-        marginBottom: 30,
+        marginBottom: 20,
+    },
+    profileCard: {
+        padding: 30,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    avatarWrapper: {
+        position: 'relative',
+        marginBottom: 20,
     },
     avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        marginBottom: 16,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 3,
+        borderColor: '#af25f4',
+    },
+    onlineBadge: {
+        position: 'absolute',
+        bottom: 5,
+        right: 5,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: '#22c55e',
+        borderWidth: 3,
+        borderColor: '#18181b',
     },
     name: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 28,
+        fontWeight: '900',
+        color: '#fff',
         marginBottom: 4,
+        letterSpacing: -1,
     },
     email: {
         fontSize: 14,
+        color: 'rgba(255,255,255,0.4)',
+        fontWeight: '600',
     },
-    statsRow: {
+    statsLayout: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        marginBottom: 30,
+        paddingHorizontal: 24,
+        gap: 12,
+        marginBottom: 24,
     },
-    statCard: {
+    statWrapper: {
         flex: 1,
-        borderRadius: 16,
-        padding: 16,
+    },
+    statTile: {
+        paddingVertical: 20,
         alignItems: 'center',
-        marginHorizontal: 6,
-        borderWidth: 1,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        borderWidth: 1.5,
     },
     statValue: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#fff',
         marginBottom: 4,
     },
     statLabel: {
         fontSize: 10,
-        fontWeight: 'bold',
-        letterSpacing: 1,
+        fontWeight: '900',
+        letterSpacing: 1.5,
     },
-    section: {
-        paddingHorizontal: 20,
-        marginBottom: 24,
+    bioSection: {
+        paddingHorizontal: 24,
+        marginBottom: 32,
     },
-    sectionTitle: {
+    bioCard: {
+        padding: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    sectionTitleSmall: {
         fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 8,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.4)',
+        textTransform: 'uppercase',
+        letterSpacing: 1.5,
+        marginBottom: 12,
     },
     sectionContent: {
         fontSize: 16,
+        color: '#fff',
         lineHeight: 24,
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        marginBottom: 30,
-        gap: 12,
-    },
-    actionButtonMain: {
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-    },
-    postsButton: {
-        borderWidth: 1,
-    },
-    editButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    messageButton: {
-        backgroundColor: '#8b5cf6',
-    },
-    blockButton: {
-        borderWidth: 1,
-        borderColor: '#ef4444',
-    },
-    logoutButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 10,
         marginBottom: 20,
-        padding: 15,
     },
-    logoutText: {
-        color: '#ef4444',
+    divider: {
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        marginBottom: 20,
+    },
+    emptyText: {
+        color: 'rgba(255,255,255,0.3)',
+        marginTop: 16,
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '500',
+        textAlign: 'center',
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        marginBottom: 12,
+        paddingHorizontal: 24,
+        marginBottom: 16,
     },
     viewModeToggle: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 8,
-        padding: 2,
+        gap: 6,
     },
     viewModeBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 6,
+        width: 44,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     gridContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        paddingHorizontal: 15,
-        gap: 10,
+        paddingHorizontal: 20,
+        gap: 12,
     },
     gridItem: {
         width: '48%',
     },
     gridCard: {
-        borderRadius: 16,
-        borderWidth: 1,
-        height: 140,
+        borderRadius: 20,
+        height: 160,
         overflow: 'hidden',
     },
     gridImage: {
         width: '100%',
         height: '100%',
         position: 'absolute',
-        resizeMode: 'cover',
-    },
-    gridImagePlaceholder: {
-        width: '100%',
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     gridOverlay: {
         position: 'absolute',
@@ -675,14 +758,14 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        padding: 10,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        padding: 12,
         justifyContent: 'flex-end',
     },
     gridTitle: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 'bold',
-        marginBottom: 4,
+        marginBottom: 6,
     },
     gridFooter: {
         flexDirection: 'row',
@@ -690,23 +773,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     gridActionBtn: {
-        padding: 4,
+        width: 28,
+        height: 28,
+        borderRadius: 8,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        borderRadius: 6,
-    },
-    listActionArea: {
-        flexDirection: 'row',
         alignItems: 'center',
-    },
-    listActionBtn: {
-        padding: 10,
+        justifyContent: 'center',
     },
     gridPrice: {
-        fontSize: 11,
-        fontWeight: 'bold',
+        fontSize: 12,
+        fontWeight: '900',
     },
     listContainer: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         gap: 12,
     },
     listItem: {
@@ -715,28 +794,33 @@ const styles = StyleSheet.create({
     listCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 8,
-        borderRadius: 16,
+        padding: 12,
+        borderRadius: 18,
         borderWidth: 1,
     },
     listImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 10,
-        resizeMode: 'cover',
+        width: 70,
+        height: 70,
+        borderRadius: 14,
     },
     listTitle: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: 'bold',
-        marginBottom: 2,
     },
-    emptyText: {
-        textAlign: 'center',
-        marginTop: 20,
-        fontStyle: 'italic',
+    listActionArea: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    listActionBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     expirationContainer: {
-        marginTop: 6,
+        marginTop: 8,
     },
     expirationHeader: {
         flexDirection: 'row',
@@ -745,35 +829,73 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     expirationText: {
-        fontSize: 10,
-        fontWeight: '600',
+        fontSize: 11,
+        fontWeight: '700',
     },
     progressBarBg: {
-        height: 4,
+        height: 3,
         borderRadius: 2,
-        overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
         borderRadius: 2,
     },
+    buttonRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 24,
+        marginTop: 20,
+        gap: 12,
+    },
+    messageBtnNeon: {
+        flex: 2,
+    },
+    messageBtnInner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        backgroundColor: '#af25f4',
+    },
+    btnTextNeon: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '900',
+    },
+    blockBtnGlass: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.4)',
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    blockBtnText: {
+        color: '#ef4444',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    floatingShape: {
+        position: 'absolute',
+        opacity: 0.5,
+    },
     typeTag: {
         position: 'absolute',
-        top: 8,
-        left: 8,
+        top: 10,
+        left: 10,
         paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 4,
+        paddingVertical: 4,
+        borderRadius: 6,
     },
     typeTagText: {
         color: '#fff',
-        fontSize: 8,
-        fontWeight: 'bold',
+        fontSize: 9,
+        fontWeight: '900',
     },
     typeLabel: {
         fontSize: 10,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
+        fontWeight: '900',
+        letterSpacing: 1,
+        marginBottom: 2,
     }
 });
 

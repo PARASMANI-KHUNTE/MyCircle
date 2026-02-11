@@ -88,29 +88,30 @@ const EditProfile = () => {
     };
 
     return (
-        <div className="container mx-auto px-6 py-24 text-white max-w-2xl">
-            <Button variant="ghost" className="mb-6 pl-0 text-gray-400 hover:text-white" onClick={() => navigate('/profile')}>
+        <div className="container mx-auto px-6 py-24 text-text-body max-w-2xl">
+            <Button variant="ghost" className="mb-6 pl-0 text-text-muted hover:text-text-heading" onClick={() => navigate('/profile')}>
                 <ArrowLeft className="w-5 h-5 mr-2" /> Back to Profile
             </Button>
 
-            <h1 className="text-3xl font-bold mb-8">Edit Profile</h1>
+            <h1 className="text-3xl font-bold mb-8 text-text-heading">Edit Profile</h1>
 
-            <div className="glass p-8 rounded-2xl">
+            <div className="glass-panel p-8 shadow-card">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                     <div className="flex items-center gap-6 mb-4">
-                        <div className="w-20 h-20 rounded-full bg-secondary overflow-hidden border border-white/10">
+                        <div className="w-20 h-20 rounded-full bg-background-section overflow-hidden border border-card-border">
                             <img
                                 src={avatarPreview || getAvatarUrl(user)}
-                                alt="User"
-                                className="w-full h-full object-cover"
+                                alt="Avatar"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = '/default-avatar.svg';
+                                    const target = e.target;
+                                    target.onerror = null;
+                                    target.src = '/default-avatar.png';
                                 }}
                             />
                         </div>
                         <label className="cursor-pointer">
-                            <div className="bg-white/5 border border-white/10 hover:bg-white/10 text-white px-4 py-2 rounded-xl text-sm transition-all">
+                            <div className="bg-hover-bg border border-card-border hover:opacity-80 text-text-heading px-4 py-2 rounded-xl text-sm transition-all font-bold uppercase tracking-widest">
                                 Change Avatar
                             </div>
                             <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
@@ -122,14 +123,16 @@ const EditProfile = () => {
                         name="displayName"
                         value={formData.displayName}
                         onChange={handleChange}
+                        className=""
+                        error={null}
                     />
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-gray-400 ml-1">Bio</label>
+                        <label className="text-sm font-black uppercase tracking-widest text-text-muted ml-1">Bio</label>
                         <textarea
                             name="bio"
                             rows="4"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+                            className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-body placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
                             value={formData.bio}
                             onChange={handleChange}
                         />
@@ -140,6 +143,8 @@ const EditProfile = () => {
                         name="location"
                         value={formData.location}
                         onChange={handleChange}
+                        className=""
+                        error={null}
                     />
 
                     <Input
@@ -155,6 +160,8 @@ const EditProfile = () => {
                             name="contactPhone"
                             value={formData.contactPhone}
                             onChange={handleChange}
+                            className=""
+                            error={null}
                         />
                         <Input
                             label="WhatsApp"

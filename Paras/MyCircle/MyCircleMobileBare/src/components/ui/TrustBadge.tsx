@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ShieldCheck, ShieldAlert, Star } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
+import GlassView from './GlassView';
 
 interface TrustBadgeProps {
     score: number;
@@ -43,12 +44,14 @@ const TrustBadge: React.FC<TrustBadgeProps> = ({
     const config = sizeConfig[size];
 
     return (
-        <View style={[styles.container, {
-            backgroundColor: isVerified ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0,0,0,0.05)',
-            padding: config.padding,
-            borderColor: isVerified ? '#10B981' : 'transparent',
-            borderWidth: isVerified ? 1 : 0
-        }]}>
+        <GlassView
+            intensity={isVerified ? 30 : 15}
+            style={[styles.container, {
+                padding: config.padding,
+                borderColor: isVerified ? '#10B981' : badgeColor + '40',
+                borderWidth: 1.5
+            }]}
+        >
             <BadgeIcon size={config.icon} color={isVerified ? '#10B981' : badgeColor} />
             <Text style={[styles.score, {
                 fontSize: config.text,
@@ -57,11 +60,11 @@ const TrustBadge: React.FC<TrustBadgeProps> = ({
                 {score}
             </Text>
             {showLabel && (
-                <Text style={[styles.label, { color: colors.textSecondary }]}>
+                <Text style={[styles.label, { color: 'rgba(255,255,255,0.4)' }]}>
                     Trust Score
                 </Text>
             )}
-        </View>
+        </GlassView>
     );
 };
 

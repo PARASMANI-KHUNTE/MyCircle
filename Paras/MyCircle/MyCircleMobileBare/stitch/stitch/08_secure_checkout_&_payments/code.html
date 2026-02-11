@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Secure Checkout &amp; Payments</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#af25f4",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#1c1022",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(175, 37, 244, 0.5);
+        }
+        .ios-scroll-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .card-gradient-1 {
+            background: linear-gradient(135deg, rgba(175, 37, 244, 0.4) 0%, rgba(28, 16, 34, 0.8) 100%);
+        }
+        .card-gradient-2 {
+            background: linear-gradient(135deg, rgba(50, 50, 255, 0.3) 0%, rgba(175, 37, 244, 0.3) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen">
+<!-- Mobile Screen Container -->
+<div class="max-w-[430px] mx-auto min-h-screen bg-background-light dark:bg-background-dark relative overflow-hidden flex flex-col">
+<!-- Status Bar Space (iOS Simulation) -->
+<div class="h-12 w-full flex justify-between items-center px-8">
+<span class="text-sm font-semibold">9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-icons text-sm">signal_cellular_alt</span>
+<span class="material-icons text-sm">wifi</span>
+<span class="material-icons text-sm">battery_full</span>
+</div>
+</div>
+<!-- Header -->
+<header class="px-6 py-4 flex items-center justify-between">
+<button class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-primary">
+<span class="material-icons">chevron_left</span>
+</button>
+<div class="flex flex-col items-center">
+<h1 class="text-lg font-bold">Secure Checkout</h1>
+<div class="flex items-center gap-1">
+<span class="material-icons text-[10px] text-green-400">lock</span>
+<span class="text-[10px] font-medium text-slate-400 uppercase tracking-widest">End-to-End Encrypted</span>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full glass-card flex items-center justify-center">
+<span class="material-icons text-slate-400">more_horiz</span>
+</button>
+</header>
+<!-- Main Content Scroll Area -->
+<div class="flex-1 overflow-y-auto ios-scroll-hide px-6 pb-40">
+<!-- Amount Section -->
+<section class="py-8 text-center">
+<p class="text-slate-400 text-sm mb-1 uppercase tracking-wider font-semibold">Total Payable</p>
+<h2 class="text-5xl font-extrabold tracking-tight">$1,249<span class="text-primary">.00</span></h2>
+</section>
+<!-- Card Carousel Section -->
+<section class="mb-8">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-lg">Saved Cards</h3>
+<button class="text-primary text-sm font-semibold">Add New</button>
+</div>
+<div class="flex overflow-x-auto gap-4 ios-scroll-hide -mx-6 px-6 py-2">
+<!-- Card 1 -->
+<div class="min-w-[280px] h-[180px] rounded-xl glass-card card-gradient-1 p-6 flex flex-col justify-between border-primary/40 border-2 relative overflow-hidden">
+<div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl"></div>
+<div class="flex justify-between items-start">
+<img alt="Visa Logo" class="h-4 w-auto brightness-200" data-alt="Visa payment network white logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC153FoGpajnR-XSMxgfZrdPAUmv7Snc4k50O3Xvdl1B0bBLTRNL6i2lJ26YmUJwKlLsf2RThrcDF7pCibrZCENzbMPzxV1BKVL6XdQ-nEcprxpphIRRxoDgGib4oTypMYhA6PKmhwB4O0u4Us-h_0kEhQ1TqONd6z9KJL9vbGSSKIs8n-KCHmx1ZzZN1c3mkfBPoDxXuA_2QFW9yyIthQK6PmlikcoFvKmoVk29Qa-pi6cO56XSMD4k5Nq9jVgxXDt4pXZQv_g3kvN"/>
+<span class="material-icons text-white/50">contactless</span>
+</div>
+<div class="space-y-4">
+<p class="text-xl tracking-[0.25em] font-medium text-white">•••• •••• •••• 4242</p>
+<div class="flex justify-between items-end">
+<div>
+<p class="text-[10px] uppercase text-white/50 mb-0.5">Card Holder</p>
+<p class="text-sm font-semibold text-white">ALEXANDER RIVAS</p>
+</div>
+<div>
+<p class="text-[10px] uppercase text-white/50 mb-0.5">Expires</p>
+<p class="text-sm font-semibold text-white">09/27</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="min-w-[280px] h-[180px] rounded-xl glass-card card-gradient-2 p-6 flex flex-col justify-between relative overflow-hidden">
+<div class="flex justify-between items-start">
+<img alt="Mastercard Logo" class="h-8 w-auto" data-alt="Mastercard payment network logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfqhiPuXgZ_6qA9_FOlaNWZLVq0XZatDuvQGtyppX3dfGMGOuJSinNa2cb5YfTSRIHQGu0lu1-FC0v-BEoQ8vTrEAww0Ld-EfSLviU2nvy1GT1UFj8f04MNSRSUxRSZN2U7lAvZjzwD50EGwDOMhz0SUNYzdUfMLWukkGkoTF77RtudQ1CoEocJNksfrwG3qYtZrn-zt6XUesIkhPiguNRYap3QPMoJEJPvsp3y1jQMnVYm3DwB9PYmHTmEiRQyO__xljOJV6_1sHC"/>
+<span class="material-icons text-white/50">contactless</span>
+</div>
+<div class="space-y-4">
+<p class="text-xl tracking-[0.25em] font-medium text-white/80">•••• •••• •••• 8812</p>
+<div class="flex justify-between items-end">
+<div>
+<p class="text-[10px] uppercase text-white/50 mb-0.5">Card Holder</p>
+<p class="text-sm font-semibold text-white/80">ALEXANDER RIVAS</p>
+</div>
+<div>
+<p class="text-[10px] uppercase text-white/50 mb-0.5">Expires</p>
+<p class="text-sm font-semibold text-white/80">12/25</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Quick Pay Section -->
+<section class="mb-8">
+<h3 class="font-bold text-lg mb-4">Quick Pay UPI</h3>
+<div class="glass-card rounded-xl p-5 grid grid-cols-4 gap-4">
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-12 h-12 rounded-full bg-white flex items-center justify-center p-2 group-active:scale-95 transition-transform overflow-hidden">
+<img alt="GPay" class="w-full h-auto object-contain" data-alt="Google Pay circular brand icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAY7qp9GFc-66_nCHuavQd8TzkNXhF6niheHZ7v2s8oql3GXzpSjRD2JYQjMDwKtcqj9bqoRDDmMf3ZWm6jy5_k2DDe3W0spES9MfcX3ChydC1kMgeB3EnMf1kYoqpzTjGPDoOkpuf_jITs-OrNiAYyl6PKrAemqKJLVy7sbXTb8M4smduUqvWZRdIs5ZhaGCd7BFfdx88l2_xFT-eZ1-WbEINGSYXX-Eh_iOyF2A0Dg_iOgVI2CUgkOuLjdjzDGpRleLQ_ejphRJsS"/>
+</div>
+<span class="text-[10px] font-semibold text-slate-400">GPay</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-12 h-12 rounded-full bg-[#5f259f] flex items-center justify-center p-2 group-active:scale-95 transition-transform overflow-hidden">
+<img alt="PhonePe" class="w-full h-auto object-contain brightness-0 invert" data-alt="PhonePe circular brand icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_B3RiNLynZ1SfuCXzhlbw4MOInQtGD_p578VwY-aBRsWdFgb239tq9LJAyZLnFU3C8tXmICWfJsJ-_hP85aI5m_XmUrJ5JRVxtnXISrUJ5EisOznWK_PlWNcxcghpEPXXBDiO7BLWX-vmo-bmdiMUT0YyjlA2JnHstJ7UnC_Cjvkw6L0qizOZh6GRDtRzXe24I6jFkI-mCaTGlzOOAF63z9TQE68DMmV0ANzyeaZJ3zxUg7Lnwh9YD970MHV24Op8gXi6xuBuoIRg"/>
+</div>
+<span class="text-[10px] font-semibold text-slate-400">PhonePe</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-12 h-12 rounded-full bg-[#00baf2] flex items-center justify-center p-2 group-active:scale-95 transition-transform overflow-hidden">
+<img alt="Paytm" class="w-full h-auto object-contain brightness-0 invert" data-alt="Paytm circular brand icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDEhBgLMbI6NdW4SCo66eHtVVoi93Lb5qOBXfoyuSVOr061R0KK7nx5bR0jkgO7oG0gKZR68FZV9WkJwJIdUvL2sw6kx8s4eMBos2aghqX9SV99FbVQK2aQDPAXq6xDA_ZUjaAehrcQFeZuDrsJ77IL27QpLCsMnXP29kSWwwoXNJS4oXQAQ38wiXnyYN91K9gD4q_gQK3akksfFVh3P9DVBOYYE9HiywhdXvRW3lrNwY-LzmihzhoyZh6XxFSQBzhzTcIVHGzNpMg"/>
+</div>
+<span class="text-[10px] font-semibold text-slate-400">Paytm</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-12 h-12 rounded-full glass-card flex items-center justify-center group-active:scale-95 transition-transform border-dashed border-primary/50">
+<span class="material-icons text-primary">add</span>
+</div>
+<span class="text-[10px] font-semibold text-slate-400">Other</span>
+</button>
+</div>
+</section>
+<!-- Order Summary Section -->
+<section>
+<h3 class="font-bold text-lg mb-4">Summary</h3>
+<div class="glass-card rounded-xl p-6 space-y-4">
+<div class="flex justify-between items-center text-sm">
+<span class="text-slate-400">Elite Subscription (Annual)</span>
+<span class="font-semibold">$1,199.00</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-slate-400">Processing Fee</span>
+<span class="font-semibold text-primary">Free</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-slate-400">Tax (GST 18%)</span>
+<span class="font-semibold">$50.00</span>
+</div>
+<div class="pt-4 border-t border-white/10 flex justify-between items-center">
+<span class="font-bold">Total Amount</span>
+<span class="text-xl font-extrabold text-primary">$1,249.00</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Sticky Bottom Action -->
+<div class="absolute bottom-0 left-0 right-0 p-6 pt-10 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent">
+<div class="flex flex-col gap-4">
+<button class="w-full h-16 bg-primary rounded-full neon-glow flex items-center justify-center gap-3 active:scale-[0.98] transition-all">
+<span class="text-white font-bold text-lg uppercase tracking-widest">Pay Now</span>
+<span class="material-icons text-white animate-pulse">arrow_forward</span>
+</button>
+<div class="flex items-center justify-center gap-2 text-slate-500">
+<span class="material-icons text-xs">verified_user</span>
+<span class="text-[10px] font-medium uppercase tracking-tight">100% Secure Transaction via SSL Encryption</span>
+</div>
+</div>
+<!-- iOS Home Indicator -->
+<div class="w-32 h-1 bg-white/20 rounded-full mx-auto mt-6"></div>
+</div>
+<!-- Abstract Background Orbs -->
+<div class="absolute -top-20 -left-20 w-64 h-64 bg-primary/10 rounded-full blur-[100px] -z-10"></div>
+<div class="absolute top-1/2 -right-20 w-72 h-72 bg-primary/5 rounded-full blur-[100px] -z-10"></div>
+</div>
+</body></html>

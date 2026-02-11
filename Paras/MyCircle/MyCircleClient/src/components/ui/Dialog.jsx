@@ -30,22 +30,22 @@ const Dialog = ({ isOpen, onClose, title, children, actions, size = 'md' }) => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className={`glass rounded-2xl w-full ${sizes[size]} p-6 relative`}
+                            className={`glass-panel w-full ${sizes[size]} p-6 relative shadow-2xl`}
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-bold text-white">{title}</h2>
+                                <h2 className="text-xl font-bold text-text-heading">{title}</h2>
                                 <button
                                     onClick={onClose}
-                                    className="text-gray-400 hover:text-white transition-colors"
+                                    className="text-text-muted hover:text-text-heading transition-colors"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
                             {/* Content */}
-                            <div className="text-gray-300 mb-6">
+                            <div className="text-text-body mb-6">
                                 {children}
                             </div>
 

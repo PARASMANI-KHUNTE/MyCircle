@@ -124,16 +124,16 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-background border-l border-white/10 z-[100] flex flex-col shadow-2xl"
+                        className="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-background border-l border-card-border z-[100] flex flex-col shadow-2xl"
                     >
                         {/* Drawer Header */}
-                        <div className="p-4 border-b border-white/10 flex items-center justify-between glass">
-                            <h2 className="text-xl font-bold text-white">
+                        <div className="p-4 border-b border-card-border flex items-center justify-between glass">
+                            <h2 className="text-xl font-bold text-text-heading">
                                 {selectedConversation ? 'Chat' : 'Messages'}
                             </h2>
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
+                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-text-muted hover:text-text-heading"
                             >
                                 <X className="w-5 h-5" />
                             </button>

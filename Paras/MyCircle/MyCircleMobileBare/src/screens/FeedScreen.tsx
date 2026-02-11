@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl, AppState } from 'react-native';
+import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl, AppState, StatusBar, Dimensions } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check, MessageCircle, Bell, Wrench } from 'lucide-react-native';
 import api from '../services/api';
+
+const { width, height } = Dimensions.get('window');
 
 const getCatColor = (catId: string, colors: any) => {
     return colors.primary; // Unified MyCircle Blue for all categories
@@ -19,7 +21,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
 import { useNotifications } from '../context/NotificationContext';
 import Sound from 'react-native-sound';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
 import GlassView from '../components/ui/GlassView';
 
 // Enable playback in silent mode
@@ -33,6 +35,39 @@ const CATEGORIES = [
 ];
 
 // Components like CategoryButton and AnimatedFilterChip have been integrated into the Floating Orbit UI for a more organic feel.
+
+const FloatingShape = ({ delay = 0, size = 300, color = '#af25f4', top = 0, left = 0, opacity = 0.4 }: any) => {
+    const translationY = useSharedValue(0);
+    const scale = useSharedValue(1);
+
+    useEffect(() => {
+        translationY.value = withDelay(delay, withRepeat(withTiming(30, { duration: 5000 }), -1, true));
+        scale.value = withDelay(delay, withRepeat(withTiming(1.3, { duration: 7000 }), -1, true));
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translationY.value }, { scale: scale.value }],
+        opacity: opacity,
+    }));
+
+    return (
+        <Animated.View
+            style={[
+                styles.floatingShape,
+                {
+                    width: size,
+                    height: size,
+                    backgroundColor: color,
+                    top,
+                    left,
+                    borderRadius: size / 2,
+                    filter: 'blur(80px)',
+                },
+                animatedStyle
+            ]}
+        />
+    );
+};
 
 const FeedScreen = ({ navigation, route }: any) => {
     const initialViewMode = route?.params?.viewMode || 'list';
@@ -645,54 +680,63 @@ const FeedScreen = ({ navigation, route }: any) => {
     };
 
     return (
-        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+        <SafeAreaView className="flex-1 bg-background-dark" edges={['top']}>
+            <StatusBar barStyle="light-content" />
+
+            {/* Background Neon glows */}
+            <View style={StyleSheet.absoluteFill}>
+                <FloatingShape size={300} color="#af25f4" top={-100} left={-50} delay={0} opacity={0.3} />
+                <FloatingShape size={250} color="#00f5ff" top={height * 0.4} left={width * 0.7} delay={1000} opacity={0.15} />
+            </View>
+
             <View style={styles.header}>
-                <View style={styles.topBar}>
-                    <Text style={[styles.title, themeStyles.text]}>Explore</Text>
+                <View style={[styles.topBar, { paddingHorizontal: 20 }]}>
+                    <Text className="text-3xl font-extrabold text-white font-display">
+                        Explore<Text className="text-primary">.</Text>
+                    </Text>
                     <View style={styles.headerIcons}>
                         <TouchableOpacity onPress={() => (navigation as any).navigate('Notifications')} style={styles.iconButton}>
-                            <Bell size={24} color={colors.text} />
+                            <Bell size={24} color="#fff" />
                             {unreadCount > 0 && (
-                                <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+                                <View style={[styles.badge, { backgroundColor: '#ef4444' }]}>
                                     <Text style={styles.badgeText}>{unreadCount}</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => (navigation as any).navigate('ChatList')} style={styles.iconButton}>
-                            <MessageCircle size={24} color={colors.text} />
+                            <MessageCircle size={24} color="#fff" />
                             {unreadMsgCount > 0 && (
-                                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                                <View style={[styles.badge, { backgroundColor: '#af25f4' }]}>
                                     <Text style={styles.badgeText}>{unreadMsgCount}</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
-
                     </View>
                 </View>
             </View>
 
             {/* Discovery Orbit UI - Search and Filters */}
             <View style={styles.floatingOrbitContainer}>
-                <GlassView intensity={10} style={styles.floatingOrbit}>
+                <GlassView intensity={5} borderRadius={24} style={styles.floatingOrbit}>
                     {/* Search Row */}
                     <View style={styles.orbitSearch}>
-                        <Search size={18} color={colors.textSecondary} />
+                        <Search size={18} color="#71717a" />
                         <TextInput
-                            style={[styles.orbitInput, { color: colors.text, paddingVertical: 0 }]}
-                            placeholder="Search your circle..."
-                            placeholderTextColor={colors.textSecondary}
+                            style={[styles.orbitInput, { color: '#fff', paddingVertical: 0 }]}
+                            placeholder="Find something..."
+                            placeholderTextColor="#71717a"
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
                         {searchQuery.length > 0 && (
                             <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <X size={18} color={colors.textSecondary} />
+                                <X size={18} color="#71717a" />
                             </TouchableOpacity>
                         )}
                     </View>
 
-                    {/* Categories and Distance Scroll - Context sensitive */}
+                    {/* Categories and Distance Scroll */}
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -700,7 +744,6 @@ const FeedScreen = ({ navigation, route }: any) => {
                     >
                         {viewMode === 'map' ? (
                             <>
-                                {/* Nearby / Distance Toggle for Map */}
                                 <TouchableOpacity
                                     style={[
                                         styles.orbitCatChip,
@@ -708,20 +751,17 @@ const FeedScreen = ({ navigation, route }: any) => {
                                     ]}
                                     onPress={handleNearbyToggle}
                                 >
-                                    <MapPin size={14} color={isNearby ? '#fff' : colors.textSecondary} />
+                                    <MapPin size={14} color={isNearby ? '#fff' : '#71717a'} />
                                     <Text style={[
                                         styles.orbitCatText,
-                                        { color: isNearby ? '#fff' : colors.textSecondary, marginLeft: 6 }
+                                        { color: isNearby ? '#fff' : '#71717a', marginLeft: 6 }
                                     ]}>
                                         {isNearby ? `${distanceRadius}km` : 'Nearby'}
                                     </Text>
                                 </TouchableOpacity>
 
-                                {isNearby && (
-                                    <View style={styles.orbitDivider} />
-                                )}
+                                {isNearby && <View style={styles.orbitDivider} />}
 
-                                {/* Distance Options for Map */}
                                 {isNearby && [5, 10, 25, 50, 100].map(radius => (
                                     <TouchableOpacity
                                         key={radius}
@@ -736,7 +776,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                                     >
                                         <Text style={[
                                             styles.orbitCatText,
-                                            { color: distanceRadius === radius ? '#fff' : colors.textSecondary }
+                                            { color: distanceRadius === radius ? '#fff' : '#71717a' }
                                         ]}>
                                             {radius}km
                                         </Text>
@@ -753,10 +793,10 @@ const FeedScreen = ({ navigation, route }: any) => {
                                     ]}
                                     onPress={() => setSelectedCategory(cat.id)}
                                 >
-                                    <cat.icon size={14} color={selectedCategory === cat.id ? '#fff' : colors.textSecondary} />
+                                    <cat.icon size={14} color={selectedCategory === cat.id ? '#fff' : '#71717a'} />
                                     <Text style={[
                                         styles.orbitCatText,
-                                        { color: selectedCategory === cat.id ? '#fff' : colors.textSecondary, marginLeft: 6 }
+                                        { color: selectedCategory === cat.id ? '#fff' : '#71717a', marginLeft: 6 }
                                     ]}>
                                         {cat.label}
                                     </Text>
@@ -846,6 +886,9 @@ const FeedScreen = ({ navigation, route }: any) => {
 };
 
 const styles = StyleSheet.create({
+    floatingShape: {
+        position: 'absolute',
+    },
     container: {
         flex: 1,
     },

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Profile &amp; Reputation - Neon Dark</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#af25f4",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#0a0a0a", // Overriding slightly for deeper 'Neon-Dark' aesthetic
+                        "glass-white": "rgba(255, 255, 255, 0.05)",
+                        "glass-border": "rgba(255, 255, 255, 0.1)",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow-primary {
+            box-shadow: 0 0 20px rgba(175, 37, 244, 0.4);
+        }
+        .neon-border-primary {
+            border: 2px solid #af25f4;
+            box-shadow: inset 0 0 10px rgba(175, 37, 244, 0.3), 0 0 15px rgba(175, 37, 244, 0.4);
+        }
+        .neon-text {
+            text-shadow: 0 0 8px rgba(175, 37, 244, 0.8);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex justify-center items-center p-4">
+<!-- Mobile Device Container -->
+<div class="w-full max-w-[430px] h-[932px] bg-background-dark rounded-xl relative overflow-hidden flex flex-col border-[8px] border-zinc-900 shadow-2xl">
+<!-- Top Status Bar (Mock) -->
+<div class="px-8 pt-4 pb-2 flex justify-between items-center text-xs font-semibold opacity-80">
+<span>9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-icons-round text-[14px]">signal_cellular_alt</span>
+<span class="material-icons-round text-[14px]">wifi</span>
+<span class="material-icons-round text-[14px]">battery_full</span>
+</div>
+</div>
+<!-- Navigation Header -->
+<header class="flex justify-between items-center px-6 py-4">
+<button class="w-10 h-10 glass-card rounded-full flex items-center justify-center">
+<span class="material-icons-round text-white">arrow_back_ios_new</span>
+</button>
+<h1 class="text-sm font-bold uppercase tracking-widest text-zinc-400">Profile</h1>
+<div class="flex gap-2">
+<button class="w-10 h-10 glass-card rounded-full flex items-center justify-center">
+<span class="material-icons-round text-white">ios_share</span>
+</button>
+<button class="w-10 h-10 glass-card rounded-full flex items-center justify-center">
+<span class="material-icons-round text-white">settings</span>
+</button>
+</div>
+</header>
+<!-- Main Content (Scrollable) -->
+<main class="flex-1 overflow-y-auto px-6 pb-24 hide-scrollbar">
+<!-- Hero Profile Section -->
+<section class="mt-4 flex flex-col items-center">
+<div class="relative">
+<!-- Trust Score Gauge Circle -->
+<svg class="w-40 h-40 transform -rotate-90">
+<circle class="text-zinc-800" cx="80" cy="80" fill="transparent" r="74" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary" cx="80" cy="80" fill="transparent" r="74" stroke="currentColor" stroke-dasharray="465" stroke-dashoffset="46.5" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<!-- Avatar -->
+<div class="absolute inset-0 flex items-center justify-center p-4">
+<div class="w-28 h-28 rounded-full overflow-hidden neon-border-primary">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="Portrait of a modern urban man wearing high-tech streetwear" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuIvPMJoZ1Y9i5YMzKDrCyYJoCCo5fdmUkS_tI6x18bfz4tIApfQU1T0qAjES3fgBnODwoo9jN7yEYMeKpUQS98LBRplGDTbEvQcqZPg35Za_K3m1saTcugqepwyRBzlFtV9Fy8Jn72qhuvVVZbignh1D4u83zThTlKvXIZtAYA_npbGs0LwKVr03kbX0FzXNxS9DpcgCHHw-OD4WUXw2BaxsmwrxVIVC46CNApA4Q10jKQ9EV3P5uS6zIQ6kYdYeU_ci0Z9VLjf8r"/>
+</div>
+</div>
+<!-- Score Badge -->
+<div class="absolute bottom-0 right-4 bg-primary text-white text-[10px] font-black px-3 py-1 rounded-full neon-glow-primary">
+                        ELITE 98
+                    </div>
+</div>
+<div class="text-center mt-6">
+<h2 class="text-2xl font-extrabold flex items-center justify-center gap-2">
+                        Alex Volkov
+                        <span class="material-icons-round text-primary text-xl">verified</span>
+</h2>
+<p class="text-zinc-500 font-medium text-sm mt-1">@volkov_tech_runner</p>
+<p class="text-zinc-300 text-xs mt-3 max-w-[280px] leading-relaxed">
+                        High-performance gear specialist. Trading rare neon aesthetics since 2077. Top 1% Trust Rating.
+                    </p>
+</div>
+</section>
+<!-- Stats Row -->
+<section class="grid grid-cols-3 gap-3 mt-8">
+<div class="glass-card p-4 rounded-xl flex flex-col items-center">
+<span class="text-2xl font-black text-white">124</span>
+<span class="text-[10px] uppercase font-bold text-zinc-500 mt-1 tracking-tighter">Posts</span>
+</div>
+<div class="glass-card p-4 rounded-xl flex flex-col items-center">
+<span class="text-2xl font-black text-white">48</span>
+<span class="text-[10px] uppercase font-bold text-zinc-500 mt-1 tracking-tighter">Requests</span>
+</div>
+<div class="glass-card p-4 rounded-xl flex flex-col items-center border-primary/20 bg-primary/5">
+<span class="text-2xl font-black text-primary neon-text">4.9</span>
+<span class="text-[10px] uppercase font-bold text-primary/70 mt-1 tracking-tighter">Rating</span>
+</div>
+</section>
+<!-- Tabs -->
+<div class="flex gap-6 mt-10 border-b border-zinc-800 pb-4">
+<button class="text-sm font-extrabold text-white border-b-2 border-primary pb-4 -mb-[18px]">ACTIVE POSTS</button>
+<button class="text-sm font-bold text-zinc-500">HISTORY</button>
+<button class="text-sm font-bold text-zinc-500">BADGES</button>
+</div>
+<!-- Active Posts Grid -->
+<section class="grid grid-cols-2 gap-4 mt-8">
+<!-- Post Card 1 -->
+<div class="glass-card rounded-lg overflow-hidden flex flex-col">
+<div class="h-32 w-full relative">
+<img class="w-full h-full object-cover opacity-80" data-alt="High-end gaming PC setup with violet neon lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1EPX6kfDcTao58fX3_VypXzaZCYis6ihX92aGA_BA6uv0eGeuZQuxI9B1BBwNBLhBq_Lmr94sdPjmn22m9vAGyClM9WnNqAsxWvSUDYxpCJsGmMYtxuZkyBEaTkjoPQxvydfU5d-XHrZx2AbgfdRRYcFHxzIAnU6EWiVcIz-y5__KpZV2fy7McC6i2pbhdSNUTW8dgMoWiDeJA7q8ntKzD-HhepsyRN1ycMMAze0C_Vv8pyMv_HWAZjK_vl9r4YD00KZQLJX9y_F-"/>
+<div class="absolute top-2 right-2 glass-card px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
+                            $1,200
+                        </div>
+</div>
+<div class="p-3 flex flex-col flex-1">
+<h3 class="text-xs font-bold truncate">Neural Link Pro V2</h3>
+<p class="text-[10px] text-zinc-400 mt-1">Hardware / Interface</p>
+<!-- Expiration Progress -->
+<div class="mt-4">
+<div class="flex justify-between text-[9px] font-bold mb-1">
+<span class="text-primary uppercase tracking-tighter">Time Left</span>
+<span>2h 14m</span>
+</div>
+<div class="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[70%] neon-glow-primary"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Post Card 2 -->
+<div class="glass-card rounded-lg overflow-hidden flex flex-col">
+<div class="h-32 w-full relative">
+<img class="w-full h-full object-cover opacity-80" data-alt="Cyberpunk style red glowing sneakers on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUQgXgs24VEmazGU8sUICsNxeoO9gCDYJ1WU3RJdg82qyI7TT4Lb95TY0kBWnHhioyz7yVtWMDdG1ASPNt8omOEXRt6vCVmgW-RETnp_w70HrGnpIjfAcylm-o-NxEx8nwVw4FGsmW61rkgyzLIY0SUuWd4U14tqXKQohmvtb9aTz7vHGSHrK7QVXOF-dGjPg3GdmcwBNuePi4hCCt_JxkvM5rExoMFoZYqSUtwS-KzeULGcO-5JEO4Fp1zwNqdJaKgBKPcO8ku0Wo"/>
+<div class="absolute top-2 right-2 glass-card px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
+                            $450
+                        </div>
+</div>
+<div class="p-3 flex flex-col flex-1">
+<h3 class="text-xs font-bold truncate">Photon Runners</h3>
+<p class="text-[10px] text-zinc-400 mt-1">Apparel / Techwear</p>
+<!-- Expiration Progress -->
+<div class="mt-4">
+<div class="flex justify-between text-[9px] font-bold mb-1">
+<span class="text-primary uppercase tracking-tighter">Time Left</span>
+<span>45m</span>
+</div>
+<div class="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[30%] neon-glow-primary"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Post Card 3 -->
+<div class="glass-card rounded-lg overflow-hidden flex flex-col">
+<div class="h-32 w-full relative">
+<img class="w-full h-full object-cover opacity-80" data-alt="Abstract violet and blue neon light trails" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn_xVJBw1xxV18HdyP7RNpAJIbeZhfykLOQNgwSvcSxNvSn1gHKTnzJovgcqQs8gw36ZF0rorZ0SChuqVye_EOfBk1ILLRJ79AHc9ign9mwN7a-zIma0IakjaiJsCVrNjLnKcq7CSyPAJ01yU6hoPM9qBOyfqLT6ad7zmiSNfuLTD7w4I4Yi0YAHViCgloQectcACsdAE15DTV3m5GwC5SpqG-bymEYngl_NA2a8cIBhuOLRrp9YYvWGFSVfYBHNNqgYz9H6LVE35f"/>
+<div class="absolute top-2 right-2 glass-card px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
+                            $85
+                        </div>
+</div>
+<div class="p-3 flex flex-col flex-1">
+<h3 class="text-xs font-bold truncate">Neon Soul Core</h3>
+<p class="text-[10px] text-zinc-400 mt-1">Digital / Asset</p>
+<!-- Expiration Progress -->
+<div class="mt-4">
+<div class="flex justify-between text-[9px] font-bold mb-1">
+<span class="text-primary uppercase tracking-tighter">Time Left</span>
+<span>18h 30m</span>
+</div>
+<div class="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[90%] neon-glow-primary"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Post Card 4 -->
+<div class="glass-card rounded-lg overflow-hidden flex flex-col">
+<div class="h-32 w-full relative">
+<img class="w-full h-full object-cover opacity-80" data-alt="Brutalist architecture building with neon signs" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxZyy7qgFoiq17XINwGNBnyxf2Et6AaoQ6oazJ2Z1vOAAWp5QU2LnsWSDOYrzxwAKH3YfVDkatepjolXXzFrto0hNZRCwNdcvuRKaVxPoNAXZY9ehSeiF04qw265eR4kxIWWERJz6yuUlnBHBEQyJqtcCfX_FYDBWczkeUJUGqWIxS2cgzoIgsB72GmXu1nTHXEfYQmyNkoe2BhPDAzIQEDGTEUwPUBsXY7LzuZ14ItutAvCV0bd4KkiAtmAUkI9KoZHi963UTDL3c"/>
+<div class="absolute top-2 right-2 glass-card px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
+                            $3,500
+                        </div>
+</div>
+<div class="p-3 flex flex-col flex-1">
+<h3 class="text-xs font-bold truncate">District 9 Access</h3>
+<p class="text-[10px] text-zinc-400 mt-1">Real Estate / Key</p>
+<!-- Expiration Progress -->
+<div class="mt-4">
+<div class="flex justify-between text-[9px] font-bold mb-1">
+<span class="text-primary uppercase tracking-tighter">Time Left</span>
+<span>Expired</span>
+</div>
+<div class="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+<div class="h-full bg-zinc-600 w-0"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Fixed Footer Actions -->
+<div class="absolute bottom-0 left-0 right-0 p-6 pt-10 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent flex gap-4 pointer-events-none">
+<button class="pointer-events-auto flex-1 h-14 bg-primary rounded-full font-extrabold text-white text-sm uppercase tracking-widest neon-glow-primary flex items-center justify-center gap-2">
+<span class="material-icons-round">edit</span>
+                Edit Profile
+            </button>
+<button class="pointer-events-auto w-14 h-14 glass-card rounded-full flex items-center justify-center border-primary/40 border">
+<span class="material-icons-round text-primary neon-text">chat_bubble</span>
+</button>
+</div>
+<!-- iOS Home Indicator -->
+<div class="h-1.5 w-32 bg-white/20 mx-auto mb-2 rounded-full absolute bottom-2 left-1/2 -translate-x-1/2"></div>
+</div>
+</body></html>

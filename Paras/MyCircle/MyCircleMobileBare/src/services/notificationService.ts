@@ -1,4 +1,4 @@
-import messaging from '@react-native-firebase/messaging';
+import messaging, { AuthorizationStatus } from '@react-native-firebase/messaging';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Alert } from 'react-native';
 
@@ -13,8 +13,8 @@ export const requestUserPermission = async () => {
 
     const authStatus = await messaging().requestPermission();
     const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL;
 
     if (enabled) {
         console.log('Authorization status:', authStatus);
@@ -35,9 +35,9 @@ export const getFCMToken = async () => {
 };
 
 export const notificationListener = () => {
-    // Assume a message-notification contains a "type" property in the data payload of the screen to open
+    // Assume a message-notification contains a "type" property in data payload of screen to open
 
-    messaging().onNotificationOpenedApp(remoteMessage => {
+    const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {
         console.log(
             'Notification caused app to open from background state:',
             remoteMessage.notification,
@@ -46,24 +46,38 @@ export const notificationListener = () => {
     });
 
     // Check whether an initial notification is available
-    messaging()
-        .getInitialNotification()
-        .then(remoteMessage => {
-            if (remoteMessage) {
-                console.log(
-                    'Notification caused app to open from quit state:',
-                    remoteMessage.notification,
-                );
-            }
-        });
+    messaging().getInitialNotification().then(remoteMessage => {
+        if (remoteMessage) {
+            console.log(
+                'Notification caused app to open from quit state:',
+                remoteMessage.notification,
+            );
+        }
+    });
 
     // Foreground messages
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
+    const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
         Alert.alert(
             remoteMessage.notification?.title || 'New Notification',
             remoteMessage.notification?.body || ''
         );
     });
 
-    return unsubscribe;
+    return () => {
+        unsubscribeOpened();
+        unsubscribeForeground();
+    };
+};
+const initialize = async () => {
+    const hasPermission = await requestUserPermission();
+    if (hasPermission) {
+        notificationListener();
+    }
+};
+
+export default {
+    requestUserPermission,
+    getFCMToken,
+    notificationListener,
+    initialize,
 };

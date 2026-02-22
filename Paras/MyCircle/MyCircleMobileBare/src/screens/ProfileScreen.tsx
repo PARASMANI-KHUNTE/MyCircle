@@ -1,65 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl, StatusBar, Dimensions } from 'react-native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Settings, LogOut, MessageCircle, Star, User, Edit3, Clock, Edit, Trash2, Wallet } from 'lucide-react-native';
+import { ArrowLeft, Settings, LogOut, MessageCircle, Clock, Edit, Trash2, Wallet } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
 import api from '../services/api';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
-import GlassView from '../components/ui/GlassView';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
-import { Dimensions, Platform } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
-    const translationY = useSharedValue(0);
-    const translationX = useSharedValue(0);
-
-    useEffect(() => {
-        translationY.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-        translationX.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color,
-                    top,
-                    left,
-                },
-                animatedStyle,
-            ]}
-        />
-    );
-};
 
 
 const ProfileScreen = ({ navigation, route }: any) => {
@@ -308,58 +260,85 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
     if (loading) {
         return (
-            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
+            <View style={[styles.loadingContainer, { backgroundColor: '#0a0a0a' }]}>
+                <ActivityIndicator size="large" color="#af25f4" />
             </View>
         );
     }
 
     if (!user) {
         return (
-            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-                <Text style={{ color: colors.text }}>User not found</Text>
+            <View style={[styles.loadingContainer, { backgroundColor: '#0a0a0a' }]}>
+                <Text style={{ color: '#fff' }}>User not found</Text>
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <FloatingShape color="rgba(175, 37, 244, 0.2)" size={400} top={-200} left={-150} delay={0} />
-            <FloatingShape color="rgba(59, 130, 246, 0.15)" size={300} top={SCREEN_HEIGHT * 0.4} left={SCREEN_WIDTH - 150} delay={1000} />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+            </View>
 
-            <GlassView intensity={20} borderRadius={0} style={styles.headerGlass}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassCircleBtn}>
-                        <ArrowLeft size={24} color="#fff" />
+            {/* Subtle Grid Pattern */}
+            <View style={styles.gridPattern}>
+                {[...Array(12)].map((_, i) => (
+                    <View
+                        key={i}
+                        style={[
+                            styles.gridLine,
+                            {
+                                left: (i % 4) * (SCREEN_WIDTH / 4),
+                                top: Math.floor(i / 4) * (SCREEN_HEIGHT / 3),
+                                width: 1,
+                                height: SCREEN_HEIGHT / 3,
+                            }
+                        ]}
+                    />
+                ))}
+            </View>
+
+            {/* Header */}
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
+                <View style={styles.headerContent}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ArrowLeft size={24} color="#ffffff" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitleMain}>Profile</Text>
+                    <Text style={styles.headerTitle}>Profile</Text>
                     <View style={styles.headerRight}>
                         {isOwnProfile && (
                             <>
-                                <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.iconButtonGlass}>
-                                    <Edit size={20} color="#fff" />
+                                <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.iconButton}>
+                                    <Edit size={20} color="#ffffff" />
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => navigation.navigate('Wallet')} style={[styles.iconButtonGlass, { marginLeft: 12 }]}>
-                                    <Wallet size={20} color="#fff" />
+                                <TouchableOpacity onPress={() => navigation.navigate('Wallet')} style={[styles.iconButton, { marginLeft: 8 }]}>
+                                    <Wallet size={20} color="#ffffff" />
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={[styles.iconButtonGlass, { marginLeft: 12 }]}>
-                                    <Settings size={20} color="#fff" />
+                                <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={[styles.iconButton, { marginLeft: 8 }]}>
+                                    <Settings size={20} color="#ffffff" />
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={handleLogout} style={[styles.iconButtonGlass, { marginLeft: 12, borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+                                <TouchableOpacity onPress={handleLogout} style={[styles.iconButton, { marginLeft: 8, borderColor: 'rgba(239, 68, 68, 0.5)' }]}>
                                     <LogOut size={20} color="#ef4444" />
                                 </TouchableOpacity>
                             </>
                         )}
                     </View>
                 </View>
-            </GlassView>
+            </Animated.View>
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#af25f4" />}
+                showsVerticalScrollIndicator={false}
             >
-                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.profileSection}>
-                    <GlassView intensity={15} style={styles.profileCard}>
+                {/* Profile Card */}
+                <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.profileSection}>
+                    <View style={styles.profileCard}>
                         <View style={styles.avatarWrapper}>
                             <Image
                                 source={{ uri: user.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${user.displayName}` }}
@@ -369,175 +348,159 @@ const ProfileScreen = ({ navigation, route }: any) => {
                         </View>
                         <Text style={styles.name}>{user.displayName}</Text>
                         <Text style={styles.email}>{user.email}</Text>
-                        <View style={{ marginTop: 16 }}>
+                        <View style={styles.trustBadgeContainer}>
                             <TrustBadge
                                 score={user.reputation?.trustScore || 50}
                                 isVerified={user.reputation?.isVerified}
                                 showLabel
                             />
                         </View>
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
-                <View style={styles.statsLayout}>
-                    <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.statWrapper}>
-                        <GlassView intensity={10} style={[styles.statTile, { borderColor: 'rgba(175, 37, 244, 0.4)' }]}>
+                {/* Stats Section */}
+                <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.statsSection}>
+                    <View style={styles.statsLayout}>
+                        <View style={styles.statTile}>
                             <Text style={styles.statValue}>{stats.posts}</Text>
                             <Text style={[styles.statLabel, { color: '#af25f4' }]}>POSTS</Text>
-                        </GlassView>
-                    </Animated.View>
-                    <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.statWrapper}>
-                        <GlassView intensity={10} style={[styles.statTile, { borderColor: 'rgba(59, 130, 246, 0.4)' }]}>
+                        </View>
+                        <View style={styles.statTile}>
                             <Text style={styles.statValue}>{stats.requests}</Text>
                             <Text style={[styles.statLabel, { color: '#3b82f6' }]}>REQUESTS</Text>
-                        </GlassView>
-                    </Animated.View>
-                    <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.statWrapper}>
-                        <GlassView intensity={10} style={[styles.statTile, { borderColor: 'rgba(34, 197, 94, 0.4)' }]}>
-                            <Text style={[styles.statValue, { color: '#22c55e' }]}>{stats.rating}</Text>
+                        </View>
+                        <View style={styles.statTile}>
+                            <Text style={[styles.statValue, { color: '#22c55e' }]}>{stats.rating.toFixed(1)}</Text>
                             <Text style={[styles.statLabel, { color: '#22c55e' }]}>RATING</Text>
-                        </GlassView>
-                    </Animated.View>
-                </View>
+                        </View>
+                    </View>
+                </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(500).springify()} style={styles.bioSection}>
-                    <GlassView intensity={5} style={styles.bioCard}>
-                        <Text style={styles.sectionTitleSmall}>Bio</Text>
+                {/* Bio Section */}
+                <Animated.View entering={FadeInDown.delay(400).duration(800).springify()} style={styles.bioSection}>
+                    <View style={styles.bioCard}>
+                        <Text style={styles.sectionTitle}>Bio</Text>
                         <Text style={styles.sectionContent}>
                             {user.bio || "No bio added yet."}
                         </Text>
 
                         <View style={styles.divider} />
 
-                        <Text style={styles.sectionTitleSmall}>Skills & Interests</Text>
-                        <Text style={[styles.sectionContent, { fontStyle: user.skills?.length ? 'normal' : 'italic' }]}>
+                        <Text style={styles.sectionTitle}>Skills & Interests</Text>
+                        <Text style={styles.sectionContent}>
                             {user.skills && user.skills.length > 0 ? user.skills.join(', ') : "No skills listed."}
                         </Text>
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitleSmall}>My Posts</Text>
-                    {isOwnProfile && (
-                        <View style={styles.viewModeToggle}>
-                            <TouchableOpacity onPress={() => setViewMode('list')} style={[styles.viewModeBtn, viewMode === 'list' && { backgroundColor: colors.primary }]}>
-                                <Text style={{ color: viewMode === 'list' ? '#fff' : colors.textSecondary, fontSize: 10 }}>LIST</Text>
+                {/* My Posts Section */}
+                <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.postsSection}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>My Posts</Text>
+                        {isOwnProfile && (
+                            <View style={styles.viewModeToggle}>
+                                <TouchableOpacity onPress={() => setViewMode('list')} style={[styles.viewModeBtn, viewMode === 'list' && { backgroundColor: '#af25f4' }]}>
+                                    <Text style={{ color: viewMode === 'list' ? '#fff' : '#94a3b8', fontSize: 10 }}>LIST</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setViewMode('grid')} style={[styles.viewModeBtn, viewMode === 'grid' && { backgroundColor: '#af25f4' }]}>
+                                    <Text style={{ color: viewMode === 'grid' ? '#fff' : '#94a3b8', fontSize: 10 }}>GRID</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+
+                    {isOwnProfile && myPosts.length > 0 ? (
+                        <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
+                            {myPosts.map((post, index) => (
+                                <TouchableOpacity
+                                    key={post._id}
+                                    style={viewMode === 'grid' ? styles.gridItem : styles.listItem}
+                                    onPress={() => navigation.navigate('PostDetails', { id: post._id })}
+                                >
+                                    {viewMode === 'grid' ? (
+                                        <View style={[styles.gridCard, { borderColor: getTypeColor(post.type) }]}>
+                                            {getPostImage(post) ? (
+                                                <Image
+                                                    source={{ uri: getPostImage(post)! }}
+                                                    style={styles.gridImage}
+                                                    defaultSource={require('../assets/logo.png')}
+                                                />
+                                            ) : (
+                                                <GenerativePlaceholder
+                                                    id={post._id}
+                                                    type={post.type}
+                                                    style={styles.gridImage}
+                                                    showIcon={false}
+                                                    title={post.title}
+                                                    description={post.description}
+                                                />
+                                            )}
+                                            <View style={styles.gridOverlay}>
+                                                <View style={[styles.typeTag, { backgroundColor: getTypeColor(post.type) }]}>
+                                                    <Text style={styles.typeTagText}>{post.type?.toUpperCase()}</Text>
+                                                </View>
+                                                <Text style={styles.gridTitle} numberOfLines={2}>{post.title}</Text>
+                                                <View style={styles.gridFooter}>
+                                                    <Text style={styles.gridPrice}>₹{post.price}</Text>
+                                                </View>
+                                                {renderExpirationBar(post)}
+                                            </View>
+                                        </View>
+                                    ) : (
+                                        <View style={[styles.listCard, { borderLeftColor: getTypeColor(post.type) }]}>
+                                            {getPostImage(post) ? (
+                                                <Image source={{ uri: getPostImage(post)! }} style={styles.listImage} />
+                                            ) : (
+                                                <GenerativePlaceholder
+                                                    id={post._id}
+                                                    type={post.type}
+                                                    style={styles.listImage}
+                                                    showIcon={false}
+                                                    title={post.title}
+                                                    description={post.description}
+                                                />
+                                            )}
+                                            <View style={styles.listContent}>
+                                                <Text style={[styles.typeLabel, { color: getTypeColor(post.type) }]}>{post.type.toUpperCase()}</Text>
+                                                <Text style={styles.listTitle} numberOfLines={1}>{post.title}</Text>
+                                                {renderExpirationBar(post)}
+                                            </View>
+                                            <View style={styles.listActionArea}>
+                                                <TouchableOpacity onPress={() => handleDeletePost(post._id)} style={styles.listActionBtn}>
+                                                    <Trash2 size={16} color="#ef4444" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    ) : isOwnProfile && (
+                        <Text style={styles.emptyText}>You haven't posted anything yet.</Text>
+                    )}
+                </Animated.View>
+
+                {/* Message & Block Buttons for Other Profiles */}
+                {!isOwnProfile && (
+                    <Animated.View entering={FadeInUp.delay(600).duration(800).springify()} style={styles.actionSection}>
+                        <View style={styles.buttonRow}>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('ChatWindow', { recipient: user })}
+                                style={styles.messageBtn}
+                            >
+                                <MessageCircle size={20} color="#ffffff" style={{ marginRight: 10 }} />
+                                <Text style={styles.btnText}>Message</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setViewMode('grid')} style={[styles.viewModeBtn, viewMode === 'grid' && { backgroundColor: colors.primary }]}>
-                                <Text style={{ color: viewMode === 'grid' ? '#fff' : colors.textSecondary, fontSize: 10 }}>GRID</Text>
+
+                            <TouchableOpacity
+                                onPress={handleBlock}
+                                style={styles.blockBtn}
+                            >
+                                <Text style={styles.blockBtnText}>Block User</Text>
                             </TouchableOpacity>
                         </View>
-                    )}
-                </View>
-
-                {isOwnProfile && myPosts.length > 0 ? (
-                    <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
-                        {myPosts.map((post) => (
-                            <TouchableOpacity
-                                key={post._id}
-                                style={viewMode === 'grid' ? styles.gridItem : styles.listItem}
-                                onPress={() => navigation.navigate('PostDetails', { id: post._id })}
-                            >
-                                {viewMode === 'grid' ? (
-                                    <View style={[styles.gridCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderWidth: 1.5 }]}>
-                                        {getPostImage(post) ? (
-                                            <Image
-                                                source={{ uri: getPostImage(post)! }}
-                                                style={styles.gridImage}
-                                                defaultSource={require('../assets/logo.png')}
-                                            />
-                                        ) : (
-                                            <GenerativePlaceholder
-                                                id={post._id}
-                                                type={post.type}
-                                                style={styles.gridImage}
-                                                showIcon={false}
-                                                title={post.title}
-                                                description={post.description}
-                                            />
-                                        )}
-
-
-                                        <View style={styles.gridOverlay}>
-                                            <View style={[styles.typeTag, { backgroundColor: getTypeColor(post.type) }]}>
-                                                <Text style={styles.typeTagText}>{post.type?.toUpperCase()}</Text>
-                                            </View>
-                                            <Text style={[styles.gridTitle, { color: '#fff' }]} numberOfLines={2}>{post.title}</Text>
-                                            <View style={styles.gridFooter}>
-                                                <View style={{ flexDirection: 'row', gap: 8 }}>
-                                                    <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.gridActionBtn}>
-                                                        <Edit3 size={12} color="#fff" />
-                                                    </TouchableOpacity>
-                                                    <TouchableOpacity onPress={() => handleDeletePost(post._id)} style={[styles.gridActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.6)' }]}>
-                                                        <Trash2 size={12} color="#fff" />
-                                                    </TouchableOpacity>
-                                                </View>
-                                                <Text style={[styles.gridPrice, { color: '#fff' }]}>₹{post.price}</Text>
-                                            </View>
-                                            {renderExpirationBar(post)}
-                                        </View>
-                                    </View>
-                                ) : (
-                                    <View style={[styles.listCard, { backgroundColor: colors.card, borderColor: getTypeColor(post.type), borderLeftWidth: 4 }]}>
-                                        {getPostImage(post) ? (
-                                            <Image source={{ uri: getPostImage(post)! }} style={styles.listImage} />
-                                        ) : (
-                                            <GenerativePlaceholder
-                                                id={post._id}
-                                                type={post.type}
-                                                style={styles.listImage}
-                                                showIcon={false}
-                                                title={post.title}
-                                                description={post.description}
-                                            />
-                                        )}
-
-
-                                        <View style={{ flex: 1, marginLeft: 12 }}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                                                <Text style={[styles.typeLabel, { color: getTypeColor(post.type) }]}>{post.type.toUpperCase()}</Text>
-                                                <Text style={[styles.listTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>{post.title}</Text>
-                                            </View>
-                                            {renderExpirationBar(post)}
-                                        </View>
-                                        <View style={styles.listActionArea}>
-                                            <TouchableOpacity onPress={() => navigation.navigate('EditPost', { post })} style={styles.listActionBtn}>
-                                                <Edit3 size={16} color={colors.primary} />
-                                            </TouchableOpacity>
-                                            <TouchableOpacity onPress={() => handleDeletePost(post._id)} style={styles.listActionBtn}>
-                                                <Trash2 size={16} color="#ef4444" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                ) : isOwnProfile && (
-                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>You haven't posted anything yet.</Text>
+                    </Animated.View>
                 )}
-
-                {!isOwnProfile && (
-                    <View style={styles.buttonRow}>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('ChatWindow', { recipient: user })}
-                            style={styles.messageBtnNeon}
-                        >
-                            <GlassView intensity={30} style={styles.messageBtnInner}>
-                                <MessageCircle size={20} color="#fff" style={{ marginRight: 10 }} />
-                                <Text style={styles.btnTextNeon}>Message</Text>
-                            </GlassView>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={handleBlock}
-                            style={styles.blockBtnGlass}
-                        >
-                            <Text style={styles.blockBtnText}>Block User</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
             </ScrollView>
 
             <ThemedAlert
@@ -556,67 +519,95 @@ const ProfileScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#09090b',
+        backgroundColor: '#0a0a0a',
+    },
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gridPattern: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0.1,
+    },
+    gridLine: {
+        position: 'absolute',
+        backgroundColor: '#af25f4',
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#09090b',
-    },
-    headerGlass: {
-        zIndex: 10,
     },
     header: {
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 16,
+        zIndex: 10,
+    },
+    headerContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
     },
-    glassCircleBtn: {
+    backButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
-    headerTitleMain: {
-        fontSize: 20,
-        fontWeight: '900',
-        color: '#fff',
+    headerTitle: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#ffffff',
         letterSpacing: -0.5,
     },
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    iconButtonGlass: {
+    iconButton: {
         width: 40,
         height: 40,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     scrollContent: {
         paddingBottom: 40,
     },
     profileSection: {
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         marginTop: 20,
         marginBottom: 20,
     },
     profileCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 24,
         padding: 30,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     avatarWrapper: {
         position: 'relative',
@@ -627,7 +618,7 @@ const styles = StyleSheet.create({
         height: 120,
         borderRadius: 60,
         borderWidth: 3,
-        borderColor: '#af25f4',
+        borderColor: '#18181b',
     },
     onlineBadge: {
         position: 'absolute',
@@ -642,81 +633,85 @@ const styles = StyleSheet.create({
     },
     name: {
         fontSize: 28,
-        fontWeight: '900',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#ffffff',
         marginBottom: 4,
         letterSpacing: -1,
     },
     email: {
         fontSize: 14,
-        color: 'rgba(255,255,255,0.4)',
+        color: '#94a3b8',
         fontWeight: '600',
+    },
+    trustBadgeContainer: {
+        marginTop: 16,
+    },
+    statsSection: {
+        paddingHorizontal: 20,
+        marginBottom: 24,
     },
     statsLayout: {
         flexDirection: 'row',
-        paddingHorizontal: 24,
         gap: 12,
-        marginBottom: 24,
-    },
-    statWrapper: {
-        flex: 1,
     },
     statTile: {
+        flex: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 16,
         paddingVertical: 20,
         alignItems: 'center',
-        borderWidth: 1.5,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     statValue: {
         fontSize: 24,
-        fontWeight: '900',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#ffffff',
         marginBottom: 4,
     },
     statLabel: {
         fontSize: 10,
-        fontWeight: '900',
+        fontWeight: '700',
         letterSpacing: 1.5,
+        color: '#94a3b8',
     },
     bioSection: {
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         marginBottom: 32,
     },
     bioCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 24,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
-    sectionTitleSmall: {
+    sectionTitle: {
         fontSize: 14,
-        fontWeight: '900',
-        color: 'rgba(255,255,255,0.4)',
+        fontWeight: '700',
+        color: '#94a3b8',
         textTransform: 'uppercase',
         letterSpacing: 1.5,
         marginBottom: 12,
     },
     sectionContent: {
         fontSize: 16,
-        color: '#fff',
+        color: '#ffffff',
         lineHeight: 24,
         marginBottom: 20,
     },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         marginBottom: 20,
     },
-    emptyText: {
-        color: 'rgba(255,255,255,0.3)',
-        marginTop: 16,
-        fontSize: 16,
-        fontWeight: '500',
-        textAlign: 'center',
+    postsSection: {
+        paddingHorizontal: 20,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 24,
         marginBottom: 16,
     },
     viewModeToggle: {
@@ -727,16 +722,22 @@ const styles = StyleSheet.create({
         width: 44,
         height: 32,
         borderRadius: 10,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    emptyText: {
+        color: '#94a3b8',
+        marginTop: 16,
+        fontSize: 16,
+        fontWeight: '500',
+        textAlign: 'center',
     },
     gridContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        paddingHorizontal: 20,
         gap: 12,
     },
     gridItem: {
@@ -746,6 +747,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         height: 160,
         overflow: 'hidden',
+        borderWidth: 2,
     },
     gridImage: {
         width: '100%',
@@ -762,9 +764,23 @@ const styles = StyleSheet.create({
         padding: 12,
         justifyContent: 'flex-end',
     },
+    typeTag: {
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    typeTagText: {
+        color: '#ffffff',
+        fontSize: 9,
+        fontWeight: '700',
+    },
     gridTitle: {
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '700',
+        color: '#ffffff',
         marginBottom: 6,
     },
     gridFooter: {
@@ -772,20 +788,12 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    gridActionBtn: {
-        width: 28,
-        height: 28,
-        borderRadius: 8,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     gridPrice: {
         fontSize: 12,
-        fontWeight: '900',
+        fontWeight: '700',
+        color: '#ffffff',
     },
     listContainer: {
-        paddingHorizontal: 24,
         gap: 12,
     },
     listItem: {
@@ -796,16 +804,29 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 12,
         borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderWidth: 1,
+        borderLeftWidth: 4,
     },
     listImage: {
         width: 70,
         height: 70,
         borderRadius: 14,
     },
+    listContent: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    typeLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 2,
+    },
     listTitle: {
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '700',
+        color: '#ffffff',
     },
     listActionArea: {
         flexDirection: 'row',
@@ -815,7 +836,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -840,63 +861,48 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 2,
     },
+    actionSection: {
+        paddingHorizontal: 20,
+        marginTop: 20,
+    },
     buttonRow: {
         flexDirection: 'row',
-        paddingHorizontal: 24,
-        marginTop: 20,
         gap: 12,
     },
-    messageBtnNeon: {
+    messageBtn: {
         flex: 2,
-    },
-    messageBtnInner: {
+        backgroundColor: '#af25f4',
+        borderRadius: 16,
+        paddingVertical: 16,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 16,
-        backgroundColor: '#af25f4',
+        shadowColor: '#af25f4',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
     },
-    btnTextNeon: {
-        color: '#fff',
+    btnText: {
+        color: '#ffffff',
         fontSize: 16,
-        fontWeight: '900',
+        fontWeight: '700',
     },
-    blockBtnGlass: {
+    blockBtn: {
         flex: 1,
+        backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: 'rgba(239, 68, 68, 0.4)',
-        borderRadius: 20,
+        borderColor: '#ef4444',
+        borderRadius: 16,
+        paddingVertical: 16,
         alignItems: 'center',
         justifyContent: 'center',
     },
     blockBtnText: {
         color: '#ef4444',
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
-    floatingShape: {
-        position: 'absolute',
-        opacity: 0.5,
-    },
-    typeTag: {
-        position: 'absolute',
-        top: 10,
-        left: 10,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    typeTagText: {
-        color: '#fff',
-        fontSize: 9,
-        fontWeight: '900',
-    },
-    typeLabel: {
-        fontSize: 10,
-        fontWeight: '900',
-        letterSpacing: 1,
-        marginBottom: 2,
-    }
 });
 
 export default ProfileScreen;

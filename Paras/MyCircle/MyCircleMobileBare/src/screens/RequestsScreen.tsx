@@ -8,7 +8,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { useNotifications } from '../context/NotificationContext';
-import GlassView from '../components/ui/GlassView';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const RequestsScreen = ({ navigation }: any) => {
@@ -146,7 +145,7 @@ const RequestsScreen = ({ navigation }: any) => {
 
         return (
             <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
-                <GlassView intensity={5} borderRadius={24} style={styles.requestCard}>
+                <View style={styles.requestCard}>
                     <View style={styles.cardHeader}>
                         {item.post.images && item.post.images[0] ? (
                             <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
@@ -225,7 +224,7 @@ const RequestsScreen = ({ navigation }: any) => {
                             )}
                         </View>
                     )}
-                </GlassView>
+                </View>
             </Animated.View>
         );
     };
@@ -235,7 +234,7 @@ const RequestsScreen = ({ navigation }: any) => {
 
         return (
             <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
-                <GlassView intensity={5} borderRadius={24} style={styles.requestCard}>
+                <View style={styles.requestCard}>
                     <View style={styles.cardHeader}>
                         {item.post.images && item.post.images[0] ? (
                             <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
@@ -289,7 +288,7 @@ const RequestsScreen = ({ navigation }: any) => {
                             </View>
                         )}
                     </View>
-                </GlassView>
+                </View>
             </Animated.View>
         );
     };
@@ -300,7 +299,7 @@ const RequestsScreen = ({ navigation }: any) => {
                 <Text style={styles.headerTitle}>Requests</Text>
 
                 <View style={styles.tabsWrapper}>
-                    <GlassView intensity={10} borderRadius={16} style={styles.tabsContainer}>
+                    <View style={styles.tabsContainer}>
                         <TouchableOpacity
                             onPress={() => setActiveTab('received')}
                             style={[styles.tab, activeTab === 'received' && styles.activeTab]}
@@ -313,7 +312,7 @@ const RequestsScreen = ({ navigation }: any) => {
                         >
                             <Text style={[styles.tabText, activeTab === 'sent' && styles.activeTabText]}>Sent</Text>
                         </TouchableOpacity>
-                    </GlassView>
+                    </View>
                 </View>
 
                 {loading ? (

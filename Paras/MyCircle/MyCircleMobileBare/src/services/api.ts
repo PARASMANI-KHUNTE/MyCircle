@@ -12,8 +12,8 @@ export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null) => {
     unauthorizedHandler = handler;
 };
 
-// Prioritizing Production API for release
-export const BASE_URL = API_URL || DEV_API_URL;
+// Force Production API - using correct Render URL
+export const BASE_URL = API_URL || 'https://mycircle-71hh.onrender.com/api';
 
 const api = axios.create({
     baseURL: BASE_URL,

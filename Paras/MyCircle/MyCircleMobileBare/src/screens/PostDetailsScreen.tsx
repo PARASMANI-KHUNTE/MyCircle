@@ -12,7 +12,6 @@ import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 import ImagePreviewModal from '../components/ui/ImagePreviewModal';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
-import GlassView from '../components/ui/GlassView';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import CheckoutModal from '../components/ui/CheckoutModal';
 
@@ -218,8 +217,8 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <SafeAreaView className="flex-1 bg-background-dark" edges={['top']}>
-                <StatusBar barStyle="light-content" />
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0a0a' }} edges={['top']}>
+                <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
 
                 {/* Header */}
                 <View className="px-5 py-4 flex-row justify-between items-center border-b border-white/5">
@@ -275,15 +274,15 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
                         {/* Type Badge Floating */}
                         <View className="absolute top-6 left-6">
-                            <GlassView intensity={30} borderRadius={12} style={styles.detailsTypeBadge}>
+                            <View style={styles.detailsTypeBadge}>
                                 <Text className="text-white font-bold text-xs uppercase tracking-widest">{post.type}</Text>
-                            </GlassView>
+                            </View>
                         </View>
                     </View>
 
                     <View className="px-6 -mt-8">
                         {/* Main Info Card */}
-                        <GlassView intensity={5} borderRadius={32} style={styles.mainInfoPanel}>
+                        <View style={styles.mainInfoPanel}>
                             <View className="flex-row justify-between items-start mb-4">
                                 <View className="flex-1 mr-4">
                                     <Text className="text-white text-3xl font-extrabold font-display leading-tight">{post.title}</Text>
@@ -340,13 +339,13 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                     <Text className="text-slate-500 italic">Tap to generate professional AI analysis of this post...</Text>
                                 )}
                             </TouchableOpacity>
-                        </GlassView>
+                        </View>
 
                         {/* Comments Section */}
                         <View className="mt-10 mb-10">
                             <Text className="text-white text-2xl font-bold mb-6">Interaction ({comments.length})</Text>
                             {comments.map((comment: any, index: number) => (
-                                <GlassView key={index} intensity={3} borderRadius={24} style={styles.commentGlassCard}>
+                                <View key={index} style={styles.commentCard}>
                                     <View className="flex-row">
                                         <Image source={{ uri: getAvatarUrl(comment.user) }} className="w-10 h-10 rounded-full" />
                                         <View className="flex-1 ml-4">
@@ -357,7 +356,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                             </TouchableOpacity>
                                         </View>
                                     </View>
-                                </GlassView>
+                                </View>
                             ))}
                         </View>
                     </View>
@@ -365,7 +364,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
                 {/* Neon Action Bar */}
                 <View className="absolute bottom-6 left-6 right-6">
-                    <GlassView intensity={20} borderRadius={99} style={styles.neonActionBar}>
+                    <View style={styles.neonActionBar}>
                         <View className="flex-row items-center justify-between px-2">
                             <TouchableOpacity
                                 onPress={handleLike}
@@ -404,7 +403,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                 <MessageCircle size={24} color="#fff" />
                             </TouchableOpacity>
                         </View>
-                    </GlassView>
+                    </View>
                 </View>
 
                 <CheckoutModal
@@ -441,7 +440,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        backgroundColor: '#09090b',
+        backgroundColor: '#0a0a0a',
     },
     scrollView: {
         flex: 1,
@@ -457,11 +456,16 @@ const styles = StyleSheet.create({
     detailsTypeBadge: {
         paddingHorizontal: 16,
         paddingVertical: 8,
+        backgroundColor: 'rgba(175, 37, 244, 0.3)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(175, 37, 244, 0.5)',
     },
     mainInfoPanel: {
         padding: 24,
         paddingTop: 32,
         backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 32,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.08)',
     },
@@ -476,6 +480,15 @@ const styles = StyleSheet.create({
         padding: 20,
         marginBottom: 16,
         backgroundColor: 'rgba(255,255,255,0.02)',
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    commentCard: {
+        padding: 20,
+        marginBottom: 16,
+        backgroundColor: 'rgba(255,255,255,0.02)',
+        borderRadius: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
     },

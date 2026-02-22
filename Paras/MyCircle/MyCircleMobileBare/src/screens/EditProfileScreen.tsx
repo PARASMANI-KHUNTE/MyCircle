@@ -1,61 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Alert, StyleSheet, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Loader, Check } from 'lucide-react-native';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
-import GlassView from '../components/ui/GlassView';
-import { Dimensions, Platform } from 'react-native';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
-    const translationY = useSharedValue(0);
-    const translationX = useSharedValue(0);
-
-    useEffect(() => {
-        translationY.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-        translationX.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color,
-                    top,
-                    left,
-                },
-                animatedStyle,
-            ]}
-        />
-    );
-};
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const EditProfileScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
@@ -188,46 +139,51 @@ const EditProfileScreen = ({ navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <FloatingShape color="rgba(175, 37, 244, 0.2)" size={400} top={-200} left={-150} delay={0} />
-            <FloatingShape color="rgba(59, 130, 246, 0.15)" size={300} top={SCREEN_HEIGHT * 0.4} left={SCREEN_WIDTH - 150} delay={1000} />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+            </View>
 
-            <GlassView intensity={20} borderRadius={0} style={styles.headerGlass}>
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassCircleBtn}>
-                            <ArrowLeft size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitleMain}>Edit Profile</Text>
-                    </View>
-                    <TouchableOpacity
-                        onPress={handleSave}
-                        disabled={saving}
-                        style={styles.saveBtnGlass}
-                    >
-                        {saving ? (
-                            <ActivityIndicator size="small" color="#af25f4" />
-                        ) : (
-                            <View style={styles.saveBtnInner}>
-                                <Check size={20} color="#fff" />
-                                <Text style={styles.saveText}>Save</Text>
-                            </View>
-                        )}
+            {/* Header */}
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ArrowLeft size={24} color="#ffffff" />
                     </TouchableOpacity>
+                    <Text style={styles.headerTitleMain}>Edit Profile</Text>
                 </View>
-            </GlassView>
+                <TouchableOpacity
+                    onPress={handleSave}
+                    disabled={saving}
+                    style={styles.saveButton}
+                >
+                    {saving ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                        <View style={styles.saveBtnInner}>
+                            <Check size={20} color="#ffffff" />
+                            <Text style={styles.saveText}>Save</Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
+            </Animated.View>
 
             <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 60 }}>
                 <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.avatarSection}>
                     <View style={styles.avatarWrapper}>
-                        <GlassView intensity={30} style={styles.avatarContainerGlass}>
+                        <View style={styles.avatarContainer}>
                             <Image
                                 source={{ uri: avatar?.uri || auth?.user?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${auth?.user?.displayName}` }}
                                 style={styles.avatarImage}
                             />
-                        </GlassView>
-                        <TouchableOpacity style={styles.cameraBtnNeon} onPress={pickImage}>
-                            <Camera size={20} color="white" />
+                        </View>
+                        <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+                            <Camera size={20} color="#ffffff" />
                         </TouchableOpacity>
                     </View>
                     <Text style={styles.changePictureText}>TAP TO CHANGE IMAGE</Text>
@@ -235,17 +191,17 @@ const EditProfileScreen = ({ navigation }: any) => {
 
                 <View style={styles.formContainer}>
                     <Animated.View entering={FadeInDown.delay(200).springify()}>
-                        <GlassView intensity={10} style={styles.formSection}>
+                        <View style={styles.formSection}>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>DISPLAY NAME</Text>
-                                <View style={styles.inputWrapperGlass}>
-                                    <User size={20} color="rgba(255,255,255,0.4)" />
+                                <View style={styles.inputWrapper}>
+                                    <User size={20} color="#64748b" />
                                     <TextInput
                                         style={styles.input}
                                         value={formData.displayName}
                                         onChangeText={(text) => setFormData(prev => ({ ...prev, displayName: text }))}
                                         placeholder="Display Name"
-                                        placeholderTextColor="rgba(255,255,255,0.2)"
+                                        placeholderTextColor="#64748b"
                                     />
                                 </View>
                             </View>
@@ -253,75 +209,75 @@ const EditProfileScreen = ({ navigation }: any) => {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>PHONE NUMBER</Text>
                                 <View style={styles.phoneContainer}>
-                                    <View style={styles.countryCodeGlass}>
+                                    <View style={styles.countryCode}>
                                         <Text style={styles.countryCodeText}>{formData.countryCode}</Text>
                                     </View>
-                                    <View style={[styles.inputWrapperGlass, { flex: 1 }]}>
-                                        <Phone size={20} color="rgba(255,255,255,0.4)" />
+                                    <View style={[styles.inputWrapper, { flex: 1 }]}>
+                                        <Phone size={20} color="#64748b" />
                                         <TextInput
                                             style={styles.input}
                                             value={formData.phone}
                                             onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text.replace(/[^0-9]/g, '') }))}
                                             placeholder="Phone Number"
-                                            placeholderTextColor="rgba(255,255,255,0.2)"
+                                            placeholderTextColor="#64748b"
                                             keyboardType="phone-pad"
                                         />
                                     </View>
                                 </View>
                             </View>
-                        </GlassView>
+                        </View>
                     </Animated.View>
 
                     <Animated.View entering={FadeInDown.delay(300).springify()}>
-                        <GlassView intensity={10} style={styles.formSection}>
+                        <View style={styles.formSection}>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>BIO</Text>
-                                <View style={[styles.inputWrapperGlass, styles.textAreaWrapperGlass]}>
+                                <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
                                     <TextInput
                                         style={[styles.input, styles.textArea]}
                                         value={formData.bio}
                                         onChangeText={(text) => setFormData(prev => ({ ...prev, bio: text }))}
                                         placeholder="Tell us about yourself..."
-                                        placeholderTextColor="rgba(255,255,255,0.2)"
+                                        placeholderTextColor="#64748b"
                                         multiline
                                         numberOfLines={4}
                                         textAlignVertical="top"
                                     />
                                 </View>
                             </View>
-                        </GlassView>
+                        </View>
                     </Animated.View>
 
                     <Animated.View entering={FadeInDown.delay(400).springify()}>
-                        <GlassView intensity={10} style={styles.formSection}>
+                        <View style={styles.formSection}>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>LOCATION</Text>
-                                <View style={styles.inputWrapperGlass}>
-                                    <MapPin size={20} color="rgba(255,255,255,0.4)" />
+                                <View style={styles.inputWrapper}>
+                                    <MapPin size={20} color="#64748b" />
                                     <TextInput
                                         style={styles.input}
                                         value={formData.location}
                                         onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
                                         placeholder="City, Country"
-                                        placeholderTextColor="rgba(255,255,255,0.2)"
+                                        placeholderTextColor="#64748b"
                                     />
                                 </View>
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>SKILLS</Text>
-                                <View style={styles.inputWrapperGlass}>
-                                    <Briefcase size={20} color="rgba(255,255,255,0.4)" />
+                                <View style={styles.inputWrapper}>
+                                    <Briefcase size={20} color="#64748b" />
                                     <TextInput
                                         style={styles.input}
                                         value={formData.skills}
                                         onChangeText={(text) => setFormData(prev => ({ ...prev, skills: text }))}
                                         placeholder="Design, React, Painting"
-                                        placeholderTextColor="rgba(255,255,255,0.2)"
+                                        placeholderTextColor="#64748b"
                                     />
                                 </View>
                             </View>
-                        </GlassView>
+                        </View>
                     </Animated.View>
                 </View>
             </ScrollView>
@@ -332,46 +288,58 @@ const EditProfileScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#18181b',
+        backgroundColor: '#0a0a0a',
+    },
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#18181b',
-    },
-    headerGlass: {
-        zIndex: 10,
+        backgroundColor: '#0a0a0a',
     },
     header: {
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         paddingVertical: 16,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        zIndex: 10,
     },
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    glassCircleBtn: {
+    backButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255,255,255,0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255,255,255,0.2)',
         marginRight: 16,
     },
     headerTitleMain: {
         fontSize: 20,
-        fontWeight: '900',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#ffffff',
         letterSpacing: -0.5,
     },
-    saveBtnGlass: {
+    saveButton: {
         backgroundColor: '#af25f4',
         paddingHorizontal: 16,
         paddingVertical: 10,
@@ -385,15 +353,15 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     saveText: {
-        color: '#fff',
-        fontWeight: '900',
+        color: '#ffffff',
+        fontWeight: '700',
         fontSize: 14,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     scrollView: {
         flex: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
     },
     avatarSection: {
         alignItems: 'center',
@@ -402,10 +370,11 @@ const styles = StyleSheet.create({
     avatarWrapper: {
         position: 'relative',
     },
-    avatarContainerGlass: {
+    avatarContainer: {
         width: 140,
         height: 140,
         borderRadius: 70,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.1)',
         padding: 4,
@@ -415,7 +384,7 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 66,
     },
-    cameraBtnNeon: {
+    cameraButton: {
         position: 'absolute',
         bottom: 5,
         right: 5,
@@ -426,14 +395,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 3,
-        borderColor: '#18181b',
-        elevation: 5,
+        borderColor: '#0a0a0a',
     },
     changePictureText: {
         marginTop: 16,
         fontSize: 10,
-        fontWeight: '900',
-        color: 'rgba(255,255,255,0.4)',
+        fontWeight: '700',
+        color: '#94a3b8',
         letterSpacing: 2,
     },
     formContainer: {
@@ -441,31 +409,33 @@ const styles = StyleSheet.create({
     },
     formSection: {
         padding: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     inputGroup: {
         marginBottom: 20,
     },
     label: {
         fontSize: 11,
-        fontWeight: '900',
-        color: 'rgba(255,255,255,0.4)',
+        fontWeight: '700',
+        color: '#94a3b8',
         letterSpacing: 1.5,
         marginBottom: 10,
         marginLeft: 4,
     },
-    inputWrapperGlass: {
+    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 16,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
         paddingHorizontal: 16,
         height: 56,
     },
-    textAreaWrapperGlass: {
+    textAreaWrapper: {
         height: 120,
         paddingVertical: 12,
     },
@@ -473,7 +443,7 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 12,
         fontSize: 16,
-        color: '#fff',
+        color: '#ffffff',
         fontWeight: '500',
     },
     textArea: {
@@ -484,24 +454,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 12,
     },
-    countryCodeGlass: {
+    countryCode: {
         width: 70,
         height: 56,
         borderRadius: 16,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.08)',
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     countryCodeText: {
-        fontWeight: '900',
+        fontWeight: '700',
         fontSize: 16,
-        color: '#fff',
-    },
-    floatingShape: {
-        position: 'absolute',
-        opacity: 0.5,
+        color: '#ffffff',
     },
 });
 

@@ -1,66 +1,18 @@
 // Core chat window component for individual conversations
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, StyleSheet, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ChevronRight, MoreVertical } from 'lucide-react-native';
+import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, MoreVertical } from 'lucide-react-native';
 import { getSmartSuggestions } from '../utils/smartSuggestions';
 import { getAvatarUrl } from '../utils/avatar';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
-import GlassView from '../components/ui/GlassView';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
-    const translationY = useSharedValue(0);
-    const translationX = useSharedValue(0);
-
-    useEffect(() => {
-        translationY.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-        translationX.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color,
-                    top,
-                    left,
-                },
-                animatedStyle,
-            ]}
-        />
-    );
-};
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
-    const { conversation } = route.params;
+    const { conversation } = route.params || {};
     const { socket } = useSocket();
     const { user } = useAuth();
     const { colors } = useTheme();
@@ -71,6 +23,26 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const [isTyping, setIsTyping] = useState(false);
     const flatListRef = useRef<FlatList>(null);
     const typingTimeoutRef = useRef<any>(null);
+
+    // Handle missing conversation parameter
+    if (!conversation) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <View style={styles.backgroundGradient}>
+                    <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                </View>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Unable to load conversation</Text>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ArrowLeft size={24} color="#ffffff" />
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     const otherParticipant = conversation.participants?.find((p: any) => p._id !== user?._id) || conversation.participants?.[0];
 
@@ -265,12 +237,10 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     marginVertical: 4,
                     maxWidth: '85%',
                 }}>
-                    <GlassView
-                        intensity={isOwn ? 20 : 10}
-                        borderRadius={20}
+                    <View
                         style={[
-                            styles.messageGlass,
-                            isOwn ? styles.ownMessageGlass : styles.receivedMessageGlass,
+                            styles.messageBubble,
+                            isOwn ? styles.ownMessageBubble : styles.receivedMessageBubble,
                             {
                                 borderBottomRightRadius: isOwn ? 4 : 20,
                                 borderBottomLeftRadius: isOwn ? 20 : 4,
@@ -284,11 +254,11 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                             </Text>
                             {isOwn && (
                                 item.status === 'read' ? <CheckCheck size={12} color="#af25f4" /> :
-                                    item.status === 'delivered' ? <CheckCheck size={12} color="rgba(255,255,255,0.6)" /> :
-                                        <Check size={12} color="rgba(255,255,255,0.4)" />
+                                    item.status === 'delivered' ? <CheckCheck size={12} color="#94a3b8" /> :
+                                        <Check size={12} color="#64748b" />
                             )}
                         </View>
-                    </GlassView>
+                    </View>
                 </View>
             </Animated.View>
         );
@@ -296,14 +266,20 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <FloatingShape color="rgba(175, 37, 244, 0.15)" size={250} top={-50} left={-50} delay={0} />
-            <FloatingShape color="rgba(37, 181, 244, 0.1)" size={200} top={SCREEN_HEIGHT * 0.7} left={SCREEN_WIDTH * 0.7} delay={1500} />
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+            </View>
 
-            {/* Glass Header */}
-            <GlassView intensity={30} borderRadius={0} style={styles.headerGlass}>
+            {/* Header */}
+            <View style={styles.header}>
                 <View style={styles.headerContent}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#fff" />
+                        <ArrowLeft size={24} color="#ffffff" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -324,15 +300,15 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     </TouchableOpacity>
 
                     <View style={styles.headerActions}>
-                        <TouchableOpacity onPress={handleBlock} className="p-2">
-                            <Shield size={20} color="rgba(255,255,255,0.5)" />
+                        <TouchableOpacity onPress={handleBlock} style={styles.actionBtn}>
+                            <Shield size={20} color="#94a3b8" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={handleReport} className="p-2">
-                            <MoreVertical size={20} color="rgba(255,255,255,0.5)" />
+                        <TouchableOpacity onPress={handleReport} style={styles.actionBtn}>
+                            <MoreVertical size={20} color="#94a3b8" />
                         </TouchableOpacity>
                     </View>
                 </View>
-            </GlassView>
+            </View>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -383,12 +359,12 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                         </View>
                     )}
 
-                    <GlassView intensity={30} borderRadius={32} style={styles.inputGlass}>
+                    <View style={styles.inputContainer}>
                         <View style={styles.inputInner}>
                             <TextInput
                                 style={styles.textInput}
                                 placeholder="Type a message..."
-                                placeholderTextColor="rgba(255,255,255,0.4)"
+                                placeholderTextColor="#64748b"
                                 value={newMessage}
                                 onChangeText={handleInputChange}
                                 multiline
@@ -399,11 +375,11 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                                 style={[styles.sendButton, !newMessage.trim() && { opacity: 0.5 }]}
                             >
                                 <View style={styles.sendIconWrapper}>
-                                    <Send size={20} color="white" />
+                                    <Send size={20} color="#ffffff" />
                                 </View>
                             </TouchableOpacity>
                         </View>
-                    </GlassView>
+                    </View>
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -411,14 +387,40 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorText: {
+        color: '#94a3b8',
+        fontSize: 18,
+        marginBottom: 24,
+    },
     container: {
         flex: 1,
-        backgroundColor: '#09090b',
+        backgroundColor: '#0a0a0a',
     },
-    headerGlass: {
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    header: {
         paddingTop: Platform.OS === 'android' ? 10 : 0,
         borderBottomWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(10, 10, 10, 0.8)',
+        zIndex: 10,
     },
     headerContent: {
         flexDirection: 'row',
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255,255,255,0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
@@ -458,15 +460,15 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         backgroundColor: '#10b981',
         borderWidth: 2,
-        borderColor: '#09090b',
+        borderColor: '#0a0a0a',
     },
     userNameContainer: {
         marginLeft: 12,
     },
     headerUserName: {
-        color: '#fff',
+        color: '#ffffff',
         fontSize: 17,
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
     statusText: {
         color: '#10b981',
@@ -478,24 +480,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 4,
     },
+    actionBtn: {
+        padding: 8,
+    },
     listContent: {
         padding: 20,
         paddingBottom: 100,
     },
-    messageGlass: {
+    messageBubble: {
         padding: 14,
+        borderRadius: 20,
         borderWidth: 1,
     },
-    ownMessageGlass: {
-        backgroundColor: 'rgba(175, 37, 244, 0.15)',
+    ownMessageBubble: {
+        backgroundColor: 'rgba(175, 37, 244, 0.2)',
         borderColor: 'rgba(175, 37, 244, 0.3)',
     },
-    receivedMessageGlass: {
+    receivedMessageBubble: {
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderColor: 'rgba(255,255,255,0.1)',
     },
     messageText: {
-        color: '#fff',
+        color: '#ffffff',
         fontSize: 16,
         lineHeight: 22,
     },
@@ -507,7 +513,7 @@ const styles = StyleSheet.create({
     },
     messageTime: {
         fontSize: 10,
-        color: 'rgba(255,255,255,0.4)',
+        color: '#64748b',
         marginRight: 6,
     },
     typingIndicator: {
@@ -521,8 +527,9 @@ const styles = StyleSheet.create({
         padding: 16,
         paddingBottom: Platform.OS === 'ios' ? 0 : 20,
     },
-    inputGlass: {
+    inputContainer: {
         backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 32,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
@@ -535,7 +542,7 @@ const styles = StyleSheet.create({
     textInput: {
         flex: 1,
         fontSize: 16,
-        color: '#fff',
+        color: '#ffffff',
         maxHeight: 100,
         paddingVertical: 12,
     },
@@ -553,10 +560,6 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-    },
-    floatingShape: {
-        position: 'absolute',
-        opacity: 0.5,
     },
 });
 

@@ -1,65 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, History, Wallet, ArrowUpRight, ArrowDownLeft, TrendingUp, CreditCard } from 'lucide-react-native';
-import GlassView from '../components/ui/GlassView';
-import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
-    const translationY = useSharedValue(0);
-    const translationX = useSharedValue(0);
-
-    useEffect(() => {
-        translationY.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-        translationX.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color,
-                    top,
-                    left,
-                },
-                animatedStyle,
-            ]}
-        />
-    );
-};
 
 const TransactionItem = ({ type, title, date, amount, index }: any) => {
     const isCredit = type === 'credit';
 
     return (
         <Animated.View entering={FadeInDown.delay(400 + index * 50).springify()}>
-            <GlassView intensity={5} borderRadius={20} style={styles.transactionCard}>
+            <View style={styles.transactionCard}>
                 <View style={[styles.transactionIcon, { backgroundColor: isCredit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderColor: isCredit ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }]}>
                     {isCredit ? <ArrowDownLeft size={20} color="#10b981" /> : <ArrowUpRight size={20} color="#ef4444" />}
                 </View>
@@ -70,7 +22,7 @@ const TransactionItem = ({ type, title, date, amount, index }: any) => {
                 <Text style={[styles.transactionAmount, { color: isCredit ? '#10b981' : '#fff' }]}>
                     {isCredit ? '+' : '-'}₹{amount}
                 </Text>
-            </GlassView>
+            </View>
         </Animated.View>
     );
 };
@@ -91,27 +43,33 @@ const WalletScreen = ({ navigation }: any) => {
     ];
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <FloatingShape color="rgba(175, 37, 244, 0.15)" size={350} top={-150} left={-100} delay={0} />
-            <FloatingShape color="rgba(6, 182, 212, 0.1)" size={250} top={SCREEN_HEIGHT * 0.5} left={SCREEN_WIDTH - 150} delay={1000} />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+            </View>
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ArrowLeft size={24} color="#fff" />
+                    <ArrowLeft size={24} color="#ffffff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>My Wallet</Text>
                 <TouchableOpacity style={styles.moreBtn}>
-                    <CreditCard size={22} color="#fff" />
+                    <CreditCard size={22} color="#ffffff" />
                 </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Balance Card */}
                 <Animated.View entering={FadeInUp.springify()}>
-                    <GlassView intensity={30} borderRadius={32} style={styles.balanceCard}>
+                    <View style={styles.balanceCard}>
                         <View style={styles.balanceHeader}>
                             <View style={styles.walletIcon}>
-                                <Wallet size={20} color="#fff" />
+                                <Wallet size={20} color="#ffffff" />
                             </View>
                             <Text style={styles.balanceLabel}>Total Balance</Text>
                         </View>
@@ -123,7 +81,7 @@ const WalletScreen = ({ navigation }: any) => {
 
                         <View style={styles.cardActions}>
                             <TouchableOpacity style={styles.topUpBtn}>
-                                <Plus size={20} color="#fff" style={{ marginRight: 8 }} />
+                                <Plus size={20} color="#ffffff" style={{ marginRight: 8 }} />
                                 <Text style={styles.topUpText}>TOP UP</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.withdrawBtn}>
@@ -137,25 +95,25 @@ const WalletScreen = ({ navigation }: any) => {
                                 <Text style={styles.statText}>+12.4% this month</Text>
                             </View>
                         </View>
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
                 {/* Quick Actions */}
                 <View style={styles.quickActions}>
                     <Animated.View entering={FadeInDown.delay(200).springify()} style={{ flex: 1 }}>
                         <TouchableOpacity style={styles.actionItem}>
-                            <GlassView intensity={10} borderRadius={20} style={styles.actionInner}>
+                            <View style={styles.actionInner}>
                                 <Plus size={24} color="#af25f4" />
                                 <Text style={styles.actionLabel}>Add Funds</Text>
-                            </GlassView>
+                            </View>
                         </TouchableOpacity>
                     </Animated.View>
                     <Animated.View entering={FadeInDown.delay(300).springify()} style={{ flex: 1 }}>
                         <TouchableOpacity style={styles.actionItem}>
-                            <GlassView intensity={10} borderRadius={20} style={styles.actionInner}>
+                            <View style={styles.actionInner}>
                                 <History size={24} color="#06b6d4" />
                                 <Text style={styles.actionLabel}>Analytics</Text>
-                            </GlassView>
+                            </View>
                         </TouchableOpacity>
                     </Animated.View>
                 </View>
@@ -188,11 +146,21 @@ const WalletScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#09090b',
+        backgroundColor: '#0a0a0a',
     },
-    floatingShape: {
+    backgroundGradient: {
         position: 'absolute',
-        zIndex: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     header: {
         flexDirection: 'row',

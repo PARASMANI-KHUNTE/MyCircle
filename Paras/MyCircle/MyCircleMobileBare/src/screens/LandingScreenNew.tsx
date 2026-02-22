@@ -15,6 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowRight, Sparkles, Users, Zap } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -61,35 +62,36 @@ const LandingScreen = ({ navigation }: any) => {
 
     if (authLoading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View className="flex-1 items-center justify-center bg-background-dark">
                 <ActivityIndicator size="large" color="#af25f4" />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" />
+        <SafeAreaView className="flex-1 bg-background-dark">
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
             {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
-            </View>
+            <LinearGradient
+                colors={['#0a0a0a', '#1a1a2e', '#16213e']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
 
             {/* Subtle Grid Pattern */}
             <View style={styles.gridPattern}>
-                {[...Array(15)].map((_, i) => (
+                {[...Array(20)].map((_, i) => (
                     <View
                         key={i}
                         style={[
                             styles.gridLine,
                             {
                                 left: (i % 5) * (width / 5),
-                                top: Math.floor(i / 5) * (height / 3),
+                                top: Math.floor(i / 5) * (height / 4),
                                 width: 1,
-                                height: height / 3,
+                                height: height / 4,
                             }
                         ]}
                     />
@@ -191,10 +193,15 @@ const LandingScreen = ({ navigation }: any) => {
                         activeOpacity={0.9}
                         style={styles.primaryButton}
                     >
-                        <View style={styles.buttonGradient}>
+                        <LinearGradient
+                            colors={['#af25f4', '#8c25f4']}
+                            style={styles.buttonGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
                             <Text style={styles.primaryButtonText}>Get Started</Text>
                             <ArrowRight size={20} color="#fff" style={styles.buttonIcon} />
-                        </View>
+                        </LinearGradient>
                     </TouchableOpacity>
 
                     {/* Secondary Action */}
@@ -236,30 +243,6 @@ const LandingScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0a0a0a',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#0a0a0a',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gradientLayer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
     gridPattern: {
         position: 'absolute',
         top: 0,
@@ -386,7 +369,6 @@ const styles = StyleSheet.create({
         paddingVertical: 18,
         paddingHorizontal: 32,
         borderRadius: 16,
-        backgroundColor: '#af25f4',
     },
     primaryButtonText: {
         fontSize: 18,

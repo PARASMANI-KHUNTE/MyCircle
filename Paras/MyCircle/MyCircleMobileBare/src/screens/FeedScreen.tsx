@@ -7,6 +7,20 @@ import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check, MessageCircle, Bell, Wrench } from 'lucide-react-native';
 import api from '../services/api';
+import Animated, {
+    FadeInDown,
+    FadeInUp,
+} from 'react-native-reanimated';
+import { useTheme } from '../context/ThemeContext';
+import { getCurrentLocation } from '../utils/location';
+import { useNotifications } from '../context/NotificationContext';
+import Sound from 'react-native-sound';
+import PostCard from '../components/ui/PostCard';
+import { useSocket } from '../context/SocketContext';
+import { useToast } from '../components/ui/Toast';
+
+// Enable playback in silent mode
+Sound.setCategory('Playback');
 
 const { width, height } = Dimensions.get('window');
 
@@ -14,60 +28,13 @@ const getCatColor = (catId: string, colors: any) => {
     return colors.primary; // Unified MyCircle Blue for all categories
 };
 
-import PostCard from '../components/ui/PostCard';
-import { useSocket } from '../context/SocketContext';
-import { useToast } from '../components/ui/Toast';
-import { useTheme } from '../context/ThemeContext';
-import { getCurrentLocation } from '../utils/location';
-import { useNotifications } from '../context/NotificationContext';
-import Sound from 'react-native-sound';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay } from 'react-native-reanimated';
-import GlassView from '../components/ui/GlassView';
-
-// Enable playback in silent mode
-Sound.setCategory('Playback');
-
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: Zap },
     { id: 'job', label: 'Jobs', icon: Briefcase },
     { id: 'service', label: 'Services', icon: Zap },
     { id: 'sell', label: 'Sell or Rent', icon: ShoppingCart },
+    { id: 'barter', label: 'Barter', icon: ArrowUpDown },
 ];
-
-// Components like CategoryButton and AnimatedFilterChip have been integrated into the Floating Orbit UI for a more organic feel.
-
-const FloatingShape = ({ delay = 0, size = 300, color = '#af25f4', top = 0, left = 0, opacity = 0.4 }: any) => {
-    const translationY = useSharedValue(0);
-    const scale = useSharedValue(1);
-
-    useEffect(() => {
-        translationY.value = withDelay(delay, withRepeat(withTiming(30, { duration: 5000 }), -1, true));
-        scale.value = withDelay(delay, withRepeat(withTiming(1.3, { duration: 7000 }), -1, true));
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { scale: scale.value }],
-        opacity: opacity,
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    backgroundColor: color,
-                    top,
-                    left,
-                    borderRadius: size / 2,
-                    filter: 'blur(80px)',
-                },
-                animatedStyle
-            ]}
-        />
-    );
-};
 
 const FeedScreen = ({ navigation, route }: any) => {
     const initialViewMode = route?.params?.viewMode || 'list';
@@ -669,10 +636,29 @@ const FeedScreen = ({ navigation, route }: any) => {
                 )}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>Nothing here yet...</Text>
-                        <TouchableOpacity onPress={() => { setSearchQuery(''); setSelectedCategory('all'); setLocationFilter('All'); setSelectedDate(null); }}>
-                            <Text style={styles.clearFilterText}>Reset Discovery</Text>
-                        </TouchableOpacity>
+                        <View style={styles.emptyIconContainer}>
+                            <Search size={48} color="#af25f4" />
+                        </View>
+                        <Text style={styles.emptyTitle}>No posts found</Text>
+                        <Text style={styles.emptySubtitle}>
+                            {searchQuery || selectedCategory !== 'all' || locationFilter !== 'All' 
+                                ? "Try adjusting your filters to see more results" 
+                                : "Be the first to create a post in your area!"}
+                        </Text>
+                        {(searchQuery || selectedCategory !== 'all' || locationFilter !== 'All') && (
+                            <TouchableOpacity 
+                                style={styles.resetButton}
+                                onPress={() => { 
+                                    setSearchQuery(''); 
+                                    setSelectedCategory('all'); 
+                                    setLocationFilter('All'); 
+                                    setSelectedDate(null);
+                                    setIsNearby(false);
+                                }}
+                            >
+                                <Text style={styles.resetButtonText}>Reset Filters</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 }
             />
@@ -680,23 +666,49 @@ const FeedScreen = ({ navigation, route }: any) => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-background-dark" edges={['top']}>
-            <StatusBar barStyle="light-content" />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-            {/* Background Neon glows */}
-            <View style={StyleSheet.absoluteFill}>
-                <FloatingShape size={300} color="#af25f4" top={-100} left={-50} delay={0} opacity={0.3} />
-                <FloatingShape size={250} color="#00f5ff" top={height * 0.4} left={width * 0.7} delay={1000} opacity={0.15} />
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
             </View>
 
-            <View style={styles.header}>
-                <View style={[styles.topBar, { paddingHorizontal: 20 }]}>
-                    <Text className="text-3xl font-extrabold text-white font-display">
-                        Explore<Text className="text-primary">.</Text>
+            {/* Subtle Grid Pattern */}
+            <View style={styles.gridPattern}>
+                {[...Array(15)].map((_, i) => (
+                    <View
+                        key={i}
+                        style={[
+                            styles.gridLine,
+                            {
+                                left: (i % 5) * (width / 5),
+                                top: Math.floor(i / 5) * (height / 3),
+                                width: 1,
+                                height: height / 3,
+                            }
+                        ]}
+                    />
+                ))}
+            </View>
+
+            <Animated.View
+                entering={FadeInDown.delay(200).duration(600).springify()}
+                style={styles.headerSection}
+            >
+                <View style={styles.topBar}>
+                    <Text style={styles.headerTitle}>
+                        Explore<Text style={styles.titleDot}>.</Text>
                     </Text>
                     <View style={styles.headerIcons}>
-                        <TouchableOpacity onPress={() => (navigation as any).navigate('Notifications')} style={styles.iconButton}>
-                            <Bell size={24} color="#fff" />
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('Notifications')} 
+                            style={styles.iconButton}
+                            activeOpacity={0.8}
+                        >
+                            <Bell size={24} color="#ffffff" />
                             {unreadCount > 0 && (
                                 <View style={[styles.badge, { backgroundColor: '#ef4444' }]}>
                                     <Text style={styles.badgeText}>{unreadCount}</Text>
@@ -704,8 +716,12 @@ const FeedScreen = ({ navigation, route }: any) => {
                             )}
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => (navigation as any).navigate('ChatList')} style={styles.iconButton}>
-                            <MessageCircle size={24} color="#fff" />
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('ChatList')} 
+                            style={styles.iconButton}
+                            activeOpacity={0.8}
+                        >
+                            <MessageCircle size={24} color="#ffffff" />
                             {unreadMsgCount > 0 && (
                                 <View style={[styles.badge, { backgroundColor: '#af25f4' }]}>
                                     <Text style={styles.badgeText}>{unreadMsgCount}</Text>
@@ -714,98 +730,101 @@ const FeedScreen = ({ navigation, route }: any) => {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </View>
+            </Animated.View>
 
-            {/* Discovery Orbit UI - Search and Filters */}
-            <View style={styles.floatingOrbitContainer}>
-                <GlassView intensity={5} borderRadius={24} style={styles.floatingOrbit}>
-                    {/* Search Row */}
-                    <View style={styles.orbitSearch}>
-                        <Search size={18} color="#71717a" />
-                        <TextInput
-                            style={[styles.orbitInput, { color: '#fff', paddingVertical: 0 }]}
-                            placeholder="Find something..."
-                            placeholderTextColor="#71717a"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                        {searchQuery.length > 0 && (
-                            <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <X size={18} color="#71717a" />
+            {/* Modern Search and Filters */}
+            <Animated.View
+                entering={FadeInDown.delay(400).duration(800).springify()}
+                style={styles.searchSection}
+            >
+                <View style={styles.searchContainer}>
+                    <Search size={20} color="#94a3b8" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Find something..."
+                        placeholderTextColor="#94a3b8"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity 
+                            onPress={() => setSearchQuery('')} 
+                            style={styles.clearButton}
+                        >
+                            <X size={18} color="#94a3b8" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {/* Categories and Filters */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterContainer}
+                >
+                    {viewMode === 'map' ? (
+                        <>
+                            <TouchableOpacity
+                                style={[
+                                    styles.filterChip,
+                                    isNearby && styles.filterChipActive
+                                ]}
+                                onPress={handleNearbyToggle}
+                            >
+                                <MapPin size={16} color={isNearby ? '#ffffff' : '#94a3b8'} />
+                                <Text style={[
+                                    styles.filterText,
+                                    { color: isNearby ? '#ffffff' : '#94a3b8', marginLeft: 8 }
+                                ]}>
+                                    {isNearby ? `${distanceRadius}km` : 'Nearby'}
+                                </Text>
                             </TouchableOpacity>
-                        )}
-                    </View>
 
-                    {/* Categories and Distance Scroll */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.orbitCategories}
-                    >
-                        {viewMode === 'map' ? (
-                            <>
+                            {isNearby && <View style={styles.filterDivider} />}
+
+                            {isNearby && [5, 10, 25, 50, 100].map(radius => (
                                 <TouchableOpacity
+                                    key={radius}
                                     style={[
-                                        styles.orbitCatChip,
-                                        isNearby && styles.filterChipActive
+                                        styles.filterChip,
+                                        distanceRadius === radius && styles.filterChipActive
                                     ]}
-                                    onPress={handleNearbyToggle}
+                                    onPress={() => {
+                                        setDistanceRadius(radius);
+                                        handleDistanceChange(radius);
+                                    }}
                                 >
-                                    <MapPin size={14} color={isNearby ? '#fff' : '#71717a'} />
                                     <Text style={[
-                                        styles.orbitCatText,
-                                        { color: isNearby ? '#fff' : '#71717a', marginLeft: 6 }
+                                        styles.filterText,
+                                        { color: distanceRadius === radius ? '#ffffff' : '#94a3b8' }
                                     ]}>
-                                        {isNearby ? `${distanceRadius}km` : 'Nearby'}
+                                        {radius}km
                                     </Text>
                                 </TouchableOpacity>
-
-                                {isNearby && <View style={styles.orbitDivider} />}
-
-                                {isNearby && [5, 10, 25, 50, 100].map(radius => (
-                                    <TouchableOpacity
-                                        key={radius}
-                                        style={[
-                                            styles.orbitCatChip,
-                                            distanceRadius === radius && styles.filterChipActive
-                                        ]}
-                                        onPress={() => {
-                                            setDistanceRadius(radius);
-                                            handleDistanceChange(radius);
-                                        }}
-                                    >
-                                        <Text style={[
-                                            styles.orbitCatText,
-                                            { color: distanceRadius === radius ? '#fff' : '#71717a' }
-                                        ]}>
-                                            {radius}km
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </>
-                        ) : (
-                            CATEGORIES.map((cat) => (
-                                <TouchableOpacity
-                                    key={cat.id}
-                                    style={[
-                                        styles.orbitCatChip,
-                                        selectedCategory === cat.id && styles.filterChipActive
-                                    ]}
-                                    onPress={() => setSelectedCategory(cat.id)}
-                                >
-                                    <cat.icon size={14} color={selectedCategory === cat.id ? '#fff' : '#71717a'} />
-                                    <Text style={[
-                                        styles.orbitCatText,
-                                        { color: selectedCategory === cat.id ? '#fff' : '#71717a', marginLeft: 6 }
-                                    ]}>
-                                        {cat.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))
-                        )}
-                    </ScrollView>
-                </GlassView>
-            </View>
+                            ))}
+                        </>
+                    ) : (
+                        CATEGORIES.map((cat) => (
+                            <TouchableOpacity
+                                key={cat.id}
+                                style={[
+                                    styles.filterChip,
+                                    selectedCategory === cat.id && styles.filterChipActive
+                                ]}
+                                onPress={() => setSelectedCategory(cat.id)}
+                            >
+                                <cat.icon size={16} color={selectedCategory === cat.id ? '#ffffff' : '#94a3b8'} />
+                                <Text style={[
+                                    styles.filterText,
+                                    { color: selectedCategory === cat.id ? '#ffffff' : '#94a3b8', marginLeft: 8 }
+                                ]}>
+                                    {cat.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))
+                    )}
+                </ScrollView>
+            </Animated.View>
 
             {viewMode === 'list' ? (
                 renderListContent()
@@ -886,16 +905,50 @@ const FeedScreen = ({ navigation, route }: any) => {
 };
 
 const styles = StyleSheet.create({
-    floatingShape: {
-        position: 'absolute',
-    },
     container: {
         flex: 1,
+        backgroundColor: '#0a0a0a',
     },
-    header: {
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gridPattern: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0.1,
+    },
+    gridLine: {
+        position: 'absolute',
+        backgroundColor: '#af25f4',
+    },
+    headerSection: {
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 8,
+    },
+    headerTitle: {
+        fontSize: 32,
+        fontWeight: '800',
+        color: '#ffffff',
+        fontFamily: 'System',
+        letterSpacing: -0.5,
+    },
+    titleDot: {
+        color: '#af25f4',
     },
     topBar: {
         flexDirection: 'row',
@@ -928,57 +981,59 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         fontWeight: 'bold',
     },
-    title: {
-        fontSize: 28,
-        fontWeight: '800',
-        letterSpacing: -0.5,
+    searchSection: {
+        paddingHorizontal: 20,
+        marginBottom: 20,
     },
-    floatingOrbit: {
-        borderRadius: 24,
-        marginVertical: 12,
-        padding: 8,
-        flexDirection: 'column',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-    },
-    orbitSearch: {
+    searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        height: 44,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
-    orbitInput: {
+    searchIcon: {
+        marginRight: 12,
+    },
+    searchInput: {
         flex: 1,
-        marginLeft: 10,
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 16,
+        color: '#ffffff',
     },
-    orbitCategories: {
+    clearButton: {
+        marginLeft: 12,
+    },
+    filterContainer: {
         paddingHorizontal: 4,
         gap: 8,
     },
-    orbitCatChip: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+    filterChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 20,
     },
     filterChipActive: {
-        backgroundColor: '#2e1065', // violet-950
-        borderColor: '#8b5cf6',
+        backgroundColor: '#af25f4',
+        borderColor: '#af25f4',
     },
-
-    filterTextActive: {
-        color: '#ffffff',
+    filterText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#94a3b8',
+    },
+    filterDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        marginHorizontal: 8,
     },
     loadingContainer: {
         flex: 1,
@@ -989,10 +1044,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingTop: 8,
     },
-    gridColumnWrapper: {
-        justifyContent: 'space-between',
-        gap: 12,
-    },
     gridItemWrapper: {
         flex: 1,
     },
@@ -1001,66 +1052,47 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingTop: 80,
+        paddingHorizontal: 20,
     },
-    emptyText: {
-        color: '#71717a',
-        fontSize: 18,
-    },
-    clearFilterText: {
-        color: '#8b5cf6',
-        marginTop: 8,
-        fontWeight: 'bold',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(175, 37, 244, 0.1)',
+        alignItems: 'center',
         justifyContent: 'center',
-        alignItems: 'center',
+        marginBottom: 20,
     },
-    modalContent: {
-        width: '80%',
-        backgroundColor: '#18181b',
-        borderRadius: 24,
-        padding: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    orbitCatText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    orbitDivider: {
-        width: 1,
-        height: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        marginHorizontal: 8,
-        alignSelf: 'center',
-    },
-    modalTitle: {
+    emptyTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: 'white',
-        marginBottom: 16,
+        fontWeight: '700',
+        color: '#ffffff',
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 14,
+        color: '#94a3b8',
         textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 20,
     },
-    modalItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+    resetButton: {
+        backgroundColor: '#af25f4',
+        paddingHorizontal: 24,
         paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 12,
     },
-    modalItemText: {
-        color: '#d4d4d8',
-        fontSize: 16,
+    resetButtonText: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '600',
     },
     bottomSheet: {
         position: 'absolute',
         bottom: 20,
         left: 16,
         right: 16,
-        backgroundColor: '#18181b', // zinc-900
+        backgroundColor: '#18181b',
         borderRadius: 24,
         padding: 16,
         shadowColor: "#000",
@@ -1092,7 +1124,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     sheetPrice: {
-        color: '#4ade80', // green-400
+        color: '#4ade80',
         fontSize: 16,
         fontWeight: 'bold',
         marginBottom: 16,
@@ -1127,54 +1159,38 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    floatingOrbitContainer: {
-        paddingHorizontal: 20,
-        marginBottom: 20,
-        zIndex: 10,
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 50,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        marginBottom: 16,
-    },
-    searchInput: {
+    modalOverlay: {
         flex: 1,
-        height: '100%',
-        paddingHorizontal: 12,
-        fontSize: 16,
-    },
-    filterScrollContainer: {
-        flexDirection: 'row',
-    },
-    filterDataContainer: {
-        alignItems: 'center',
-        paddingRight: 20,
-        gap: 8,
-    },
-    filterChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: '80%',
+        backgroundColor: '#18181b',
+        borderRadius: 24,
+        padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-        minHeight: 40,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
-    filterText: {
-        fontSize: 14,
-        fontWeight: '600',
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: 'white',
+        marginBottom: 16,
+        textAlign: 'center',
     },
-    filterDivider: {
-        width: 1,
-        height: 24,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        marginHorizontal: 8,
+    modalItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    modalItemText: {
+        color: '#d4d4d8',
+        fontSize: 16,
     },
 });
 

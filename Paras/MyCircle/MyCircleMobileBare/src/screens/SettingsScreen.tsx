@@ -1,60 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Bell, Lock, Eye, Trash2, ChevronRight, UserX, Moon, Sun, Info } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
-import GlassView from '../components/ui/GlassView';
-import { Dimensions, Platform } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
-    const translationY = useSharedValue(0);
-    const translationX = useSharedValue(0);
-
-    React.useEffect(() => {
-        translationY.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-        translationX.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color,
-                    top,
-                    left,
-                },
-                animatedStyle,
-            ]}
-        />
-    );
-};
 
 const SettingsScreen = ({ navigation }: any) => {
     const { logout } = useAuth() as any;
@@ -140,53 +93,58 @@ const SettingsScreen = ({ navigation }: any) => {
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <FloatingShape color="rgba(139, 92, 246, 0.15)" size={400} top={-200} left={-150} delay={0} />
-            <FloatingShape color="rgba(236, 72, 153, 0.1)" size={300} top={SCREEN_HEIGHT * 0.5} left={SCREEN_WIDTH - 150} delay={1000} />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+            </View>
 
-            <GlassView intensity={20} borderRadius={0} style={styles.headerGlass}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassCircleBtn}>
-                        <ArrowLeft size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitleMain}>Settings</Text>
-                </View>
-            </GlassView>
+            {/* Header */}
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ArrowLeft size={24} color="#ffffff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Settings</Text>
+            </Animated.View>
 
-            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }}>
-                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.sectionHeader}>
+            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+                <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Appearance</Text>
                 </Animated.View>
-                <Animated.View entering={FadeInDown.delay(150).springify()}>
-                    <GlassView intensity={10} style={styles.settingsGroup}>
+                <Animated.View entering={FadeInDown.delay(250).duration(800).springify()}>
+                    <View style={styles.settingsGroup}>
                         <SettingItem
                             icon={theme === 'dark' ? Moon : Sun}
                             label="Dark Mode"
                             value={theme === 'dark'}
                             onValueChange={toggleTheme}
                         />
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.sectionHeader}>
+                <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Notifications</Text>
                 </Animated.View>
-                <Animated.View entering={FadeInDown.delay(250).springify()}>
-                    <GlassView intensity={10} style={styles.settingsGroup}>
+                <Animated.View entering={FadeInDown.delay(350).duration(800).springify()}>
+                    <View style={styles.settingsGroup}>
                         <SettingItem
                             icon={Bell}
                             label="Push Notifications"
                             value={notifications.push}
                             onValueChange={(val: boolean) => setNotifications(prev => ({ ...prev, push: val }))}
                         />
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.sectionHeader}>
+                <Animated.View entering={FadeInDown.delay(400).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Privacy</Text>
                 </Animated.View>
-                <Animated.View entering={FadeInDown.delay(350).springify()}>
-                    <GlassView intensity={10} style={styles.settingsGroup}>
+                <Animated.View entering={FadeInDown.delay(450).duration(800).springify()}>
+                    <View style={styles.settingsGroup}>
                         <TouchableOpacity
                             style={[styles.settingItem, { borderBottomWidth: 0 }]}
                             onPress={() => navigation.navigate('BlockedUsers')}
@@ -197,16 +155,16 @@ const SettingsScreen = ({ navigation }: any) => {
                                 </View>
                                 <Text style={styles.settingLabel}>Blocked Users</Text>
                             </View>
-                            <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
+                            <ChevronRight size={20} color="#94a3b8" />
                         </TouchableOpacity>
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.sectionHeader}>
+                <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Danger Zone</Text>
                 </Animated.View>
-                <Animated.View entering={FadeInDown.delay(450).springify()}>
-                    <GlassView intensity={5} style={[styles.settingsGroup, { borderColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                <Animated.View entering={FadeInDown.delay(550).duration(800).springify()}>
+                    <View style={[styles.settingsGroup, { borderColor: 'rgba(239, 68, 68, 0.2)' }]}>
                         <TouchableOpacity
                             onPress={handleDeleteAccount}
                             style={styles.deleteRow}
@@ -217,12 +175,12 @@ const SettingsScreen = ({ navigation }: any) => {
                                 </View>
                                 <Text style={styles.deleteText}>Delete Account</Text>
                             </View>
-                            <ChevronRight size={20} color="#ef4444" opacity={0.5} />
+                            <ChevronRight size={20} color="#ef4444" />
                         </TouchableOpacity>
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(500).springify()} style={styles.footer}>
+                <Animated.View entering={FadeInDown.delay(600).duration(800).springify()} style={styles.footer}>
                     <Text style={styles.versionText}>MyCircle v1.0.0</Text>
                     <Text style={styles.copyrightText}>© 2026 Antigravity Technologies</Text>
                 </Animated.View>
@@ -244,32 +202,45 @@ const SettingsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#09090b',
+        backgroundColor: '#0a0a0a',
     },
-    headerGlass: {
-        zIndex: 10,
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 16,
+        zIndex: 10,
     },
-    glassCircleBtn: {
+    backButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
         marginRight: 16,
     },
-    headerTitleMain: {
+    headerTitle: {
         fontSize: 24,
-        fontWeight: '900',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#ffffff',
         letterSpacing: -0.5,
     },
     scrollView: {
@@ -282,15 +253,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     sectionTitle: {
-        color: 'rgba(255,255,255,0.4)',
-        fontWeight: '900',
+        color: '#94a3b8',
+        fontWeight: '700',
         textTransform: 'uppercase',
         fontSize: 12,
         letterSpacing: 2,
     },
     settingsGroup: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
         overflow: 'hidden',
     },
     settingItem: {
@@ -307,12 +280,12 @@ const styles = StyleSheet.create({
     iconContainer: {
         width: 42,
         height: 42,
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     settingLabel: {
         color: '#ffffff',
@@ -349,18 +322,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     versionText: {
-        color: 'rgba(255,255,255,0.3)',
+        color: '#94a3b8',
         fontSize: 13,
         fontWeight: '600',
     },
     copyrightText: {
-        color: 'rgba(255,255,255,0.2)',
+        color: '#64748b',
         fontSize: 11,
         marginTop: 6,
-    },
-    floatingShape: {
-        position: 'absolute',
-        opacity: 0.5,
     },
 });
 

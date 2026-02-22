@@ -1,61 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, Alert, Dimensions } from 'react-native';
+import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, Alert, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Bell, MessageSquare, CheckCircle, Heart, Info, Trash2, X, CheckSquare, Square } from 'lucide-react-native';
+import { Bell, MessageSquare, CheckCircle, Heart, Info, Trash2, X, CheckSquare, Square, ArrowLeft } from 'lucide-react-native';
 import api from '../services/api';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
-
-import GlassView from '../components/ui/GlassView';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
-    const translationY = useSharedValue(0);
-    const translationX = useSharedValue(0);
-
-    React.useEffect(() => {
-        translationY.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-        translationX.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color,
-                    top,
-                    left,
-                },
-                animatedStyle,
-            ]}
-        />
-    );
-};
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const NotificationsScreen = ({ navigation }: any) => {
     const { notifications, loading, refresh, markAllRead, handleNotificationClick } = useNotifications();
@@ -203,8 +154,7 @@ const NotificationsScreen = ({ navigation }: any) => {
                     activeOpacity={0.7}
                     style={{ marginBottom: 1 }}
                 >
-                    <GlassView
-                        intensity={isSelected ? 30 : (item.read ? 5 : 12)}
+                    <View
                         style={[
                             styles.notificationCard,
                             { borderBottomWidth: 0 },
@@ -232,22 +182,22 @@ const NotificationsScreen = ({ navigation }: any) => {
                                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                                         <Text style={[
                                             styles.notificationTitle,
-                                            { color: item.read ? 'rgba(255,255,255,0.4)' : '#fff' }
+                                            { color: item.read ? '#94a3b8' : '#ffffff' }
                                         ]} numberOfLines={1}>
                                             {item.title}
                                         </Text>
                                         {!item.read && <View style={styles.unreadDot} />}
                                     </View>
-                                    <Text style={[styles.timeText, { color: 'rgba(255,255,255,0.3)' }]}>
+                                    <Text style={[styles.timeText, { color: '#64748b' }]}>
                                         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </Text>
                                 </View>
-                                <Text style={[styles.messageText, { color: item.read ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)' }]} numberOfLines={2}>
+                                <Text style={[styles.messageText, { color: item.read ? '#64748b' : '#94a3b8' }]} numberOfLines={2}>
                                     {item.message}
                                 </Text>
                             </View>
                         </View>
-                    </GlassView>
+                    </View>
                 </TouchableOpacity>
             </Animated.View>
         );
@@ -265,42 +215,48 @@ const NotificationsScreen = ({ navigation }: any) => {
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={styles.container} edges={['top']}>
-                <FloatingShape color="rgba(139, 92, 246, 0.2)" size={400} top={-150} left={-100} delay={0} />
-                <FloatingShape color="rgba(37, 181, 244, 0.1)" size={300} top={SCREEN_HEIGHT * 0.6} left={SCREEN_WIDTH * 0.5} delay={2000} />
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                
+                {/* Modern Gradient Background */}
+                <View style={styles.backgroundGradient}>
+                    <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                </View>
 
-                <GlassView intensity={20} borderRadius={0} style={styles.headerGlass}>
-                    <View style={styles.headerContent}>
-                        {isSelectionMode ? (
-                            <View style={styles.selectionHeader}>
-                                <TouchableOpacity onPress={() => {
-                                    setIsSelectionMode(false);
-                                    setSelectedItems(new Set());
-                                }}>
-                                    <X size={24} color="#fff" />
-                                </TouchableOpacity>
-                                <Text style={styles.selectionTitle}>{selectedItems.size} Selected</Text>
-                                <TouchableOpacity onPress={handleBulkDelete}>
-                                    <Trash2 size={24} color="#ef4444" />
-                                </TouchableOpacity>
+                {/* Header */}
+                <View style={styles.headerContent}>
+                    {isSelectionMode ? (
+                        <View style={styles.selectionHeader}>
+                            <TouchableOpacity onPress={() => {
+                                setIsSelectionMode(false);
+                                setSelectedItems(new Set());
+                            }}>
+                                <X size={24} color="#ffffff" />
+                            </TouchableOpacity>
+                            <Text style={styles.selectionTitle}>{selectedItems.size} Selected</Text>
+                            <TouchableOpacity onPress={handleBulkDelete}>
+                                <Trash2 size={24} color="#ef4444" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View style={styles.defaultHeader}>
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                                <ArrowLeft size={24} color="#ffffff" />
+                            </TouchableOpacity>
+                            <View>
+                                <Text style={styles.headerTitle}>Notifications</Text>
+                                <Text style={styles.headerSubtitle}>Updates and alerts</Text>
                             </View>
-                        ) : (
-                            <View style={styles.defaultHeader}>
-                                <View>
-                                    <Text style={styles.headerTitle}>Notifications</Text>
-                                    <Text style={styles.headerSubtitle}>Updates and alerts</Text>
-                                </View>
-                                {notifications.some(n => !n.read) && (
-                                    <TouchableOpacity onPress={markAllRead}>
-                                        <GlassView intensity={30} borderRadius={15} style={styles.markReadBtn}>
-                                            <Text style={styles.clearAllText}>Mark all read</Text>
-                                        </GlassView>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        )}
-                    </View>
-                </GlassView>
+                            {notifications.some(n => !n.read) && (
+                                <TouchableOpacity onPress={markAllRead} style={styles.markReadBtn}>
+                                    <Text style={styles.clearAllText}>Mark all read</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    )}
+                </View>
 
                 {loading && notifications.length === 0 ? (
                     <View style={styles.loadingContainer}>
@@ -321,7 +277,9 @@ const NotificationsScreen = ({ navigation }: any) => {
                         }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Bell size={48} color="rgba(255,255,255,0.1)" />
+                                <View style={styles.emptyIconContainer}>
+                                    <Bell size={48} color="#af25f4" />
+                                </View>
                                 <Text style={styles.emptyText}>
                                     All caught up! No new notifications.
                                 </Text>
@@ -338,20 +296,42 @@ const NotificationsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#09090b',
+        backgroundColor: '#0a0a0a',
     },
-    headerGlass: {
-        borderBottomWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     headerContent: {
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         paddingVertical: 20,
+        zIndex: 10,
     },
     defaultHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    backButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        marginRight: 16,
     },
     selectionHeader: {
         flexDirection: 'row',
@@ -360,29 +340,31 @@ const styles = StyleSheet.create({
     },
     selectionTitle: {
         fontSize: 18,
-        fontWeight: '900',
+        fontWeight: '800',
         color: '#ffffff',
     },
     headerTitle: {
         fontSize: 28,
-        fontWeight: '900',
+        fontWeight: '800',
         color: '#ffffff',
         letterSpacing: -0.5,
     },
     headerSubtitle: {
-        color: 'rgba(255,255,255,0.4)',
+        color: '#94a3b8',
         fontSize: 14,
         marginTop: 2,
     },
     markReadBtn: {
         paddingHorizontal: 16,
         paddingVertical: 8,
+        borderRadius: 12,
+        backgroundColor: 'rgba(175, 37, 244, 0.2)',
         borderWidth: 1,
-        borderColor: 'rgba(139, 92, 246, 0.3)',
+        borderColor: 'rgba(175, 37, 244, 0.4)',
     },
     clearAllText: {
         color: '#af25f4',
-        fontWeight: 'bold',
+        fontWeight: '700',
         fontSize: 12,
     },
     loadingContainer: {
@@ -400,9 +382,9 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     sectionHeaderText: {
-        color: 'rgba(255,255,255,0.4)',
+        color: '#94a3b8',
         fontSize: 12,
-        fontWeight: '900',
+        fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 1.5,
     },
@@ -411,7 +393,9 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         marginBottom: 8,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
     },
     cardInner: {
         flexDirection: 'row',
@@ -469,7 +453,7 @@ const styles = StyleSheet.create({
     deleteActionText: {
         color: '#ffffff',
         fontSize: 10,
-        fontWeight: '900',
+        fontWeight: '700',
         marginTop: 4,
         textTransform: 'uppercase',
     },
@@ -479,15 +463,20 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingTop: 100,
     },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(175, 37, 244, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+    },
     emptyText: {
-        color: 'rgba(255,255,255,0.3)',
+        color: '#94a3b8',
         marginTop: 16,
         fontSize: 16,
         fontWeight: '500',
-    },
-    floatingShape: {
-        position: 'absolute',
-        opacity: 0.5,
     },
 });
 

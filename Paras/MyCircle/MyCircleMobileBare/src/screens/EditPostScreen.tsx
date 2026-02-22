@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, Dimensions, StatusBar } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,7 +7,6 @@ import { useTheme } from '../context/ThemeContext';
 import { MapPin, Check, X, Camera, Briefcase, Wrench, ShoppingBag, Package, Handshake, Save, ArrowLeft } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import ThemedAlert from '../components/ui/ThemedAlert';
-import GlassView from '../components/ui/GlassView';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -144,16 +143,34 @@ const EditPostScreen = ({ navigation, route }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <GlassView intensity={20} style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtnGlass}>
-                    <ArrowLeft size={24} color="#fff" />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+            </View>
+
+            {/* Header */}
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ArrowLeft size={24} color="#ffffff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Edit Post</Text>
-                <TouchableOpacity onPress={handleUpdate} disabled={loading} style={styles.saveBtnNeon}>
-                    {loading ? <ActivityIndicator size="small" color="#fff" /> : <Save size={20} color="#fff" />}
+                <TouchableOpacity 
+                    onPress={handleUpdate} 
+                    disabled={loading}
+                    style={[styles.saveButton, loading && styles.disabledButton]}
+                >
+                    {loading ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                        <Save size={20} color="#ffffff" />
+                    )}
                 </TouchableOpacity>
-            </GlassView>
+            </Animated.View>
 
             <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
                 <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.inputGroup}>
@@ -167,17 +184,15 @@ const EditPostScreen = ({ navigation, route }: any) => {
                                     key={cat.id}
                                     onPress={() => setType(cat.id)}
                                 >
-                                    <GlassView
-                                        intensity={isSelected ? 40 : 5}
-                                        borderRadius={20}
+                                <View
                                         style={[
-                                            styles.categoryCardGlass,
-                                            isSelected ? { borderColor: '#af25f4', borderWidth: 1.5 } : {}
+                                            styles.categoryCard,
+                                            isSelected ? { borderColor: '#af25f4', backgroundColor: 'rgba(175, 37, 244, 0.1)' } : {}
                                         ]}
                                     >
-                                        <Icon size={20} color={isSelected ? '#af25f4' : 'rgba(255,255,255,0.4)'} />
-                                        <Text style={[styles.categoryLabel, { color: isSelected ? '#fff' : 'rgba(255,255,255,0.6)' }]}>{cat.label}</Text>
-                                    </GlassView>
+                                        <Icon size={20} color={isSelected ? '#af25f4' : '#94a3b8'} />
+                                        <Text style={[styles.categoryLabel, { color: isSelected ? '#ffffff' : '#94a3b8' }]}>{cat.label}</Text>
+                                    </View>
                                 </TouchableOpacity>
                             );
                         })}
@@ -186,43 +201,43 @@ const EditPostScreen = ({ navigation, route }: any) => {
 
                 <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.inputGroup}>
                     <Text style={styles.label}>Title</Text>
-                    <GlassView intensity={5} borderRadius={16} style={styles.inputWrapperGlass}>
+                    <View style={styles.inputWrapper}>
                         <TextInput
-                            style={styles.inputGlass}
+                            style={styles.input}
                             value={title}
                             onChangeText={setTitle}
                             placeholder="Post title"
-                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            placeholderTextColor="#64748b"
                         />
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.inputGroup}>
                     <Text style={styles.label}>Description</Text>
-                    <GlassView intensity={5} borderRadius={16} style={[styles.inputWrapperGlass, { height: 120, alignItems: 'flex-start', paddingTop: 12 }]}>
+                    <View style={[styles.inputWrapper, { height: 120, alignItems: 'flex-start', paddingTop: 12 }]}>
                         <TextInput
-                            style={[styles.inputGlass, { height: 100, textAlignVertical: 'top' }]}
+                            style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
                             value={description}
                             onChangeText={setDescription}
                             multiline
                             placeholder="Describe your post..."
-                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            placeholderTextColor="#64748b"
                         />
-                    </GlassView>
+                    </View>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.inputGroup}>
                     <Text style={styles.label}>Price / Budget</Text>
-                    <GlassView intensity={5} borderRadius={16} style={styles.inputWrapperGlass}>
+                    <View style={styles.inputWrapper}>
                         <TextInput
-                            style={styles.inputGlass}
+                            style={styles.input}
                             value={price}
                             onChangeText={setPrice}
                             keyboardType="numeric"
                             placeholder="0"
-                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            placeholderTextColor="#64748b"
                         />
-                    </GlassView>
+                    </View>
                     <TouchableOpacity
                         style={styles.barterRowGlass}
                         onPress={() => setAcceptsBarter(!acceptsBarter)}
@@ -241,14 +256,10 @@ const EditPostScreen = ({ navigation, route }: any) => {
                         {durations.map((d) => {
                             const isSelected = duration === d.value;
                             return (
-                                <TouchableOpacity key={d.value} onPress={() => setDuration(d.value)}>
-                                    <GlassView
-                                        intensity={isSelected ? 40 : 5}
-                                        borderRadius={20}
-                                        style={[styles.durationChip, isSelected ? { borderColor: '#af25f4', borderWidth: 1 } : {}]}
-                                    >
-                                        <Text style={{ color: isSelected ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: '700' }}>{d.label}</Text>
-                                    </GlassView>
+                    <TouchableOpacity key={d.value} onPress={() => setDuration(d.value)}>
+                                    <View style={[styles.durationChip, isSelected ? { borderColor: '#af25f4', backgroundColor: 'rgba(175, 37, 244, 0.1)' } : {}]}>
+                                        <Text style={{ color: isSelected ? '#ffffff' : '#94a3b8', fontWeight: '700' }}>{d.label}</Text>
+                                    </View>
                                 </TouchableOpacity>
                             );
                         })}
@@ -258,19 +269,19 @@ const EditPostScreen = ({ navigation, route }: any) => {
                 <Animated.View entering={FadeInDown.delay(600).springify()} style={styles.inputGroup}>
                     <Text style={styles.label}>Location</Text>
                     <View style={styles.locationRow}>
-                        <GlassView intensity={5} borderRadius={16} style={[styles.inputWrapperGlass, { flex: 1 }]}>
+                        <View style={[styles.inputWrapper, { flex: 1 }]}>
                             <TextInput
-                                style={styles.inputGlass}
+                                style={styles.input}
                                 value={location}
                                 onChangeText={setLocation}
                                 placeholder="City / Area"
-                                placeholderTextColor="rgba(255,255,255,0.3)"
+                                placeholderTextColor="#64748b"
                             />
-                        </GlassView>
+                        </View>
                         <TouchableOpacity onPress={() => setShowMapModal(true)}>
-                            <GlassView intensity={20} borderRadius={16} style={styles.mapBtnGlass}>
+                            <View style={styles.mapBtn}>
                                 <MapPin size={22} color="#af25f4" />
-                            </GlassView>
+                            </View>
                         </TouchableOpacity>
                     </View>
                 </Animated.View>
@@ -279,9 +290,9 @@ const EditPostScreen = ({ navigation, route }: any) => {
                     <Text style={styles.label}>Images</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesScroll}>
                         <TouchableOpacity onPress={pickImage}>
-                            <GlassView intensity={5} borderRadius={20} style={styles.addImageBtnGlass}>
-                                <Camera size={24} color="rgba(255,255,255,0.4)" />
-                            </GlassView>
+                            <View style={styles.addImageBtn}>
+                                <Camera size={24} color="#64748b" />
+                            </View>
                         </TouchableOpacity>
                         {[...images, ...newImages].map((img, i) => (
                             <View key={i} style={styles.imageWrapper}>
@@ -299,12 +310,12 @@ const EditPostScreen = ({ navigation, route }: any) => {
             <Modal visible={showMapModal} animationType="slide" transparent>
                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}>
                     <SafeAreaView style={{ flex: 1 }}>
-                        <GlassView intensity={20} style={styles.header}>
+                        <View style={styles.header}>
                             <Text style={styles.headerTitle}>Pin Location</Text>
-                            <TouchableOpacity onPress={() => setShowMapModal(false)} style={styles.backBtnGlass}>
-                                <X size={24} color="#fff" />
+                            <TouchableOpacity onPress={() => setShowMapModal(false)} style={styles.backBtn}>
+                                <X size={24} color="#ffffff" />
                             </TouchableOpacity>
-                        </GlassView>
+                        </View>
                         <WebView
                             originWhitelist={['*']}
                             source={{
@@ -344,7 +355,21 @@ const EditPostScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#09090b',
+        backgroundColor: '#0a0a0a',
+    },
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     header: {
         flexDirection: 'row',
@@ -353,36 +378,41 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
+        borderBottomColor: 'rgba(255,255,255,0.1)',
     },
-    backBtnGlass: {
+    backButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255,255,255,0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.2)',
     },
-    saveBtnNeon: {
+    backBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    saveButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
         backgroundColor: '#af25f4',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#af25f4',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 5,
+    },
+    disabledButton: {
+        opacity: 0.5,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '900',
-        color: '#fff',
-        letterSpacing: -0.5,
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#ffffff',
     },
     scrollContainer: { flex: 1 },
     scrollContent: { padding: 24, paddingBottom: 100 },
@@ -390,23 +420,25 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 13,
         fontWeight: '700',
-        color: 'rgba(255,255,255,0.4)',
+        color: '#94a3b8',
         marginBottom: 12,
         marginLeft: 4,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
-    inputWrapperGlass: {
+    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
         paddingHorizontal: 16,
         height: 56,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
-    inputGlass: {
+    input: {
         flex: 1,
-        color: '#fff',
+        color: '#ffffff',
         fontSize: 16,
         fontWeight: '600',
     },
@@ -415,14 +447,16 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: 12,
     },
-    categoryCardGlass: {
+    categoryCard: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
         paddingHorizontal: 16,
         paddingVertical: 12,
         gap: 8,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     categoryLabel: {
         fontSize: 14,
@@ -445,32 +479,37 @@ const styles = StyleSheet.create({
     durationChip: {
         paddingHorizontal: 20,
         paddingVertical: 12,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
     },
     locationRow: {
         flexDirection: 'row',
         gap: 12,
     },
-    mapBtnGlass: {
+    mapBtn: {
         width: 56,
         height: 56,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(175, 37, 244, 0.1)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(175, 37, 244, 0.3)',
     },
     imagesScroll: { flexDirection: 'row' },
-    addImageBtnGlass: {
+    addImageBtn: {
         width: 100,
         height: 100,
         borderRadius: 20,
-        borderWidth: 1.5,
+        borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.1)',
         borderStyle: 'dashed',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
     },
     imageWrapper: { width: 100, height: 100, marginRight: 12, position: 'relative' },
     image: { width: '100%', height: '100%', borderRadius: 20 },
@@ -485,7 +524,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: '#09090b',
+        borderColor: '#0a0a0a',
     },
     newBadge: {
         position: 'absolute',
@@ -496,7 +535,7 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
         borderRadius: 6,
     },
-    newBadgeText: { color: '#fff', fontSize: 9, fontWeight: '900' }
+    newBadgeText: { color: '#ffffff', fontSize: 9, fontWeight: '700' }
 });
 
 export default EditPostScreen;

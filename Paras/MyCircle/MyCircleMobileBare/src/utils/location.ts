@@ -1,7 +1,6 @@
-import { PermissionsAndroid, Platform, Alert } from 'react-native';
+import { PermissionsAndroid, Platform, Alert, Linking } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import { promptForEnableLocationIfNeeded } from 'react-native-android-location-enabler';
-
 
 export interface LocationObject {
     address: string;
@@ -32,69 +31,75 @@ export const getCurrentLocation = async (): Promise<LocationObject | null> => {
         }
     }
 
-    return new Promise((resolve, reject) => {
-        Geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
-                let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    return new Promise((resolve) => {
+        // Primary attempt - fast low accuracy
+        const attemptLocation = (attempt: number = 1) => {
+            const options = {
+                enableHighAccuracy: false,
+                timeout: 10000, // 10 seconds max
+                maximumAge: 300000 // Allow cached location up to 5 minutes
+            };
 
-                try {
-                    const response = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
-                        {
-                            headers: {
-                                'User-Agent': 'MyCircleApp/1.0'
+            Geolocation.getCurrentPosition(
+                async (position) => {
+                    try {
+                        const { latitude, longitude } = position.coords;
+                        let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+                        // Quick geocoding attempt
+                        try {
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), 3000);
+                            
+                            const response = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+                                {
+                                    headers: { 'User-Agent': 'MyCircleApp/1.0' },
+                                    signal: controller.signal
+                                }
+                            );
+                            clearTimeout(timeoutId);
+                            
+                            const data = await response.json();
+                            if (data && data.address) {
+                                const suburb = data.address.suburb || data.address.neighbourhood || data.address.residential;
+                                const city = data.address.city || data.address.town || data.address.village || data.address.state_district;
+                                const state = data.address.state;
+
+                                let parts = [];
+                                if (suburb) parts.push(suburb);
+                                if (city) parts.push(city);
+                                if (state && state !== city) parts.push(state);
+
+                                address = parts.join(', ') || address;
                             }
+                        } catch (error) {
+                            console.log('Geocoding failed, using coordinates');
                         }
-                    );
-                    const data = await response.json();
 
-                    if (data && data.address) {
-                        const suburb = data.address.suburb || data.address.neighbourhood || data.address.residential;
-                        const city = data.address.city || data.address.town || data.address.village || data.address.state_district;
-                        const state = data.address.state;
-
-                        let parts = [];
-                        if (suburb) parts.push(suburb);
-                        if (city) parts.push(city);
-                        if (state && state !== city) parts.push(state);
-
-                        // "Mangla, Bilaspur, CG" format logic
-                        address = parts.join(', ');
+                        resolve({ address, latitude, longitude });
+                    } catch (error) {
+                        console.error('Location processing error:', error);
+                        resolve({ address: "Current Location", latitude: position.coords.latitude, longitude: position.coords.longitude });
                     }
-                } catch (error) {
-                    console.error('Reverse geocoding error:', error);
-                }
-
-                resolve({ address, latitude, longitude });
-            },
-            (error) => {
-                console.error('Location error:', error);
-                if (error.code === 2 && Platform.OS === 'android') {
-                    // Provider unavailable - try to enable
-                    promptForEnableLocationIfNeeded({
-                        interval: 10000,
-                    }).then(() => {
-                        // Retry once if user enabled it
-                        Geolocation.getCurrentPosition(
-                            (pos) => resolve({ address: "Current Location", latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-                            () => resolve(null),
-                            { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
-                        );
-                    }).catch((err) => {
-                        console.warn("User declined or failed to enable location", err);
-                        // Only alert if this wasn't a manual "Locate Me" tap (handling that in UI)
+                },
+                (error) => {
+                    console.warn(`Location attempt ${attempt} failed:`, error.code, error.message);
+                    
+                    // Retry once with very relaxed settings
+                    if (attempt === 1) {
+                        console.log('Retrying location with relaxed settings...');
+                        setTimeout(() => attemptLocation(2), 500);
+                    } else {
+                        // Silent fail - return null without alerts
+                        console.log('Location failed after retries, returning null');
                         resolve(null);
-                    });
-                } else if (error.code === 2) {
-                    Alert.alert('Location Services Disabled', 'Please turn on GPS/Location services on your device.');
-                    resolve(null);
-                } else {
-                    Alert.alert('Error', 'Failed to get current location.');
-                    resolve(null);
-                }
-            },
-            { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
-        );
+                    }
+                },
+                options
+            );
+        };
+
+        attemptLocation(1);
     });
 };

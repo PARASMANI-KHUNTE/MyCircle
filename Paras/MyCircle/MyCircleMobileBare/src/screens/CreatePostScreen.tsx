@@ -1,64 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, KeyboardAvoidingView, Platform, Dimensions, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera, Briefcase, Wrench, ShoppingBag, Package, ArrowRight, ArrowLeft, Handshake, Clock, User, Zap, MessageCircle, ShoppingCart, Key, Info, Send } from 'lucide-react-native';
-import Animated, { FadeInDown, FadeInRight, FadeOutLeft, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withDelay, Easing } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
 import api from '../services/api';
 import { getCurrentLocation } from '../utils/location';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Stepper from '../components/ui/Stepper';
-import GlassView from '../components/ui/GlassView';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const FloatingShape = ({ delay = 0, color, size, top, left }: any) => {
-    const translationY = useSharedValue(0);
-    const translationX = useSharedValue(0);
-
-    useEffect(() => {
-        translationY.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(20, { duration: 3000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(-20, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-        translationX.value = withRepeat(
-            withSequence(
-                withDelay(delay, withTiming(-15, { duration: 4000, easing: Easing.inOut(Easing.sin) })),
-                withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translationY.value }, { translateX: translationX.value }],
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color,
-                    top,
-                    left,
-                },
-                animatedStyle,
-            ]}
-        />
-    );
-};
 
 const CreatePostScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
@@ -209,13 +161,13 @@ const CreatePostScreen = ({ navigation }: any) => {
             <View style={styles.grid}>
                 {categories.map((cat) => (
                     <TouchableOpacity key={cat.id} onPress={() => { setType(cat.id); setSubType(''); }} style={styles.cardWrapper}>
-                        <GlassView intensity={type === cat.id ? 25 : 8} borderRadius={24} style={[styles.categoryCard, type === cat.id && styles.activeCard]}>
+                        <View style={[styles.categoryCard, type === cat.id && styles.activeCard]}>
                             <View style={[styles.iconCircle, { backgroundColor: type === cat.id ? '#af25f4' : 'rgba(255,255,255,0.05)' }]}>
-                                <cat.icon size={24} color={type === cat.id ? '#fff' : 'rgba(255,255,255,0.5)'} />
+                                <cat.icon size={24} color={type === cat.id ? '#ffffff' : '#94a3b8'} />
                             </View>
                             <Text style={[styles.cardTitle, type === cat.id && styles.activeCardText]}>{cat.label}</Text>
                             <Text style={styles.cardSub}>{cat.sub}</Text>
-                        </GlassView>
+                        </View>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -234,13 +186,13 @@ const CreatePostScreen = ({ navigation }: any) => {
     const renderStep2 = () => (
         <Animated.View entering={FadeInRight} exiting={FadeOutLeft} style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Post Details</Text>
-            <GlassView intensity={10} borderRadius={24} style={styles.inputCard}>
+            <View style={styles.inputCard}>
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Title</Text>
                     <TextInput
                         style={styles.glassInput}
                         placeholder="What are you offering?"
-                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        placeholderTextColor="#64748b"
                         value={title}
                         onChangeText={setTitle}
                     />
@@ -250,13 +202,13 @@ const CreatePostScreen = ({ navigation }: any) => {
                     <TextInput
                         style={[styles.glassInput, styles.textArea]}
                         placeholder="Describe your post..."
-                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        placeholderTextColor="#64748b"
                         value={description}
                         multiline
                         onChangeText={setDescription}
                     />
                 </View>
-            </GlassView>
+            </View>
 
             <View style={styles.imageSection}>
                 <Text style={styles.stepTitleSmall}>Photos</Text>
@@ -289,13 +241,13 @@ const CreatePostScreen = ({ navigation }: any) => {
                 ))}
             </View>
 
-            <GlassView intensity={10} borderRadius={24} style={styles.inputCard}>
+            <View style={styles.inputCard}>
                 {locationMethod === 'search' && (
                     <View>
                         <TextInput
                             style={styles.glassInput}
                             placeholder="Search area..."
-                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            placeholderTextColor="#64748b"
                             value={location}
                             onChangeText={async (text) => {
                                 setLocation(text);
@@ -335,25 +287,25 @@ const CreatePostScreen = ({ navigation }: any) => {
                 )}
                 {locationMethod === 'pin' && (
                     <TouchableOpacity onPress={() => setShowMapModal(true)} style={styles.detectBtn}>
-                        <MapIcon size={20} color="#af25f4" />
+                        <Map size={20} color="#af25f4" />
                         <Text style={styles.detectBtnText}>{coordinates ? 'Change Pin' : 'Pin on Map'}</Text>
                     </TouchableOpacity>
                 )}
                 {location ? <Text style={styles.locationConfirmation}><Check size={14} color="#10b981" /> {location}</Text> : null}
-            </GlassView>
+            </View>
         </Animated.View>
     );
 
     const renderStep4 = () => (
         <Animated.View entering={FadeInRight} style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Exchange</Text>
-            <GlassView intensity={10} borderRadius={24} style={styles.inputCard}>
+            <View style={styles.inputCard}>
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Price / Budget (₹)</Text>
-                    <TextInput style={styles.glassInput} keyboardType="numeric" value={price} onChangeText={setPrice} placeholder="0" placeholderTextColor="rgba(255,255,255,0.2)" />
+                    <TextInput style={styles.glassInput} keyboardType="numeric" value={price} onChangeText={setPrice} placeholder="0" placeholderTextColor="#64748b" />
                 </View>
                 <TouchableOpacity onPress={() => setAcceptsBarter(!acceptsBarter)} style={styles.checkboxRow}>
-                    <View style={[styles.checkbox, acceptsBarter && styles.checkboxActive]}>{acceptsBarter && <Check size={12} color="#fff" />}</View>
+                    <View style={[styles.checkbox, acceptsBarter && styles.checkboxActive]}>{acceptsBarter && <Check size={12} color="#ffffff" />}</View>
                     <Text style={styles.checkboxLabel}>Open to Barter / Favour</Text>
                 </TouchableOpacity>
 
@@ -367,14 +319,14 @@ const CreatePostScreen = ({ navigation }: any) => {
                         ))}
                     </View>
                 </View>
-            </GlassView>
+            </View>
         </Animated.View>
     );
 
     const renderStep5 = () => (
         <Animated.View entering={FadeInRight} style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Review</Text>
-            <GlassView intensity={15} borderRadius={24} style={styles.previewCard}>
+            <View style={styles.previewCard}>
                 <View style={styles.previewHeader}>
                     <View style={styles.typeBadge}><Text style={styles.typeBadgeText}>{(subType || type).toUpperCase()}</Text></View>
                     {isUrgent && <View style={styles.urgentBadge}><Text style={styles.urgentBadgeText}>URGENT</Text></View>}
@@ -383,10 +335,10 @@ const CreatePostScreen = ({ navigation }: any) => {
                 <Text style={styles.previewTitle}>{title}</Text>
                 <Text style={styles.previewDesc} numberOfLines={4}>{description}</Text>
                 <View style={styles.previewFooter}>
-                    <View style={styles.footerInfo}><MapPin size={12} color="rgba(255,255,255,0.5)" /><Text style={styles.footerInfoText}>{location}</Text></View>
-                    <View style={styles.footerInfo}><Clock size={12} color="rgba(255,255,255,0.5)" /><Text style={styles.footerInfoText}>{durations.find(d => d.value === duration)?.label}</Text></View>
+                    <View style={styles.footerInfo}><MapPin size={12} color="#94a3b8" /><Text style={styles.footerInfoText}>{location}</Text></View>
+                    <View style={styles.footerInfo}><Clock size={12} color="#94a3b8" /><Text style={styles.footerInfoText}>{durations.find(d => d.value === duration)?.label}</Text></View>
                 </View>
-            </GlassView>
+            </View>
         </Animated.View>
     );
 
@@ -404,15 +356,26 @@ const CreatePostScreen = ({ navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.mainContainer} edges={['top']}>
-            <FloatingShape color="rgba(175, 37, 244, 0.15)" size={400} top={-100} left={-150} delay={0} />
-            <FloatingShape color="rgba(37, 181, 244, 0.1)" size={300} top={SCREEN_HEIGHT * 0.5} left={SCREEN_WIDTH * 0.6} delay={2000} />
+        <SafeAreaView style={styles.mainContainer}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}><ArrowLeft size={24} color="#fff" /></TouchableOpacity>
-                <Text style={styles.headerTitleMain}>Create Post</Text>
-                <TouchableOpacity style={styles.helpButton}><Info size={20} color="rgba(255,255,255,0.3)" /></TouchableOpacity>
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
             </View>
+
+            {/* Header */}
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
+                <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.headerBackButton}>
+                    <ArrowLeft size={20} color="#ffffff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitleMain}>New Post</Text>
+                <TouchableOpacity onPress={() => { }} style={styles.helpButton}>
+                    <Info size={20} color="#94a3b8" />
+                </TouchableOpacity>
+            </Animated.View>
 
             <Stepper currentStep={step} steps={steps} />
 
@@ -426,21 +389,28 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            <GlassView intensity={40} borderRadius={0} style={styles.footerGlass}>
+            <View style={styles.footerGlass}>
                 <View style={styles.footerContent}>
-                    <TouchableOpacity onPress={goBack} style={styles.footerBackButton}><Text style={styles.footerBackText}>{step === 1 ? 'Cancel' : 'Back'}</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={goBack} style={styles.footerBackButton}>
+                        <Text style={styles.footerBackText}>{step === 1 ? 'Cancel' : 'Back'}</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={goNext} style={styles.nextButtonNeon}>
-                        <GlassView intensity={60} borderRadius={30} style={styles.nextButtonInner}>
+                        <View style={styles.nextButtonInner}>
                             {loading ? <ActivityIndicator color="#fff" /> : <><Text style={styles.nextButtonText}>{step === 5 ? 'Launch' : 'Next'}</Text>{step === 5 ? <Send size={18} color="#fff" style={{ marginLeft: 8 }} /> : <ArrowRight size={18} color="#fff" style={{ marginLeft: 8 }} />}</>}
-                        </GlassView>
+                        </View>
                     </TouchableOpacity>
                 </View>
-            </GlassView>
+            </View>
 
             {/* Modals */}
             <Modal visible={showMapModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowMapModal(false)}>
                 <View style={{ flex: 1, backgroundColor: '#09090b' }}>
-                    <View style={styles.modalHeader}><Text style={styles.modalTitle}>Pin Location</Text><TouchableOpacity onPress={() => setShowMapModal(false)}><X size={24} color="#fff" /></TouchableOpacity></View>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Pin Location</Text>
+                        <TouchableOpacity onPress={() => setShowMapModal(false)}>
+                            <X size={24} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
                     <WebView
                         originWhitelist={['*']}
                         source={{
@@ -469,93 +439,450 @@ const CreatePostScreen = ({ navigation }: any) => {
                             }
                         }}
                     />
-                    <TouchableOpacity onPress={() => setShowMapModal(false)} style={styles.confirmModalBtn}><Text style={styles.confirmModalBtnText}>Confirm Pin</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => setShowMapModal(false)} style={styles.confirmModalBtn}>
+                        <Text style={styles.confirmModalBtnText}>Confirm Pin</Text>
+                    </TouchableOpacity>
                 </View>
             </Modal>
 
-            <ThemedAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} confirmText={alertConfig.confirmText} onConfirm={alertConfig.onConfirm} />
+            <ThemedAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} confirmText={alertConfig.confirmText} onCancel={() => setAlertConfig({ ...alertConfig, visible: false })} onConfirm={alertConfig.onConfirm} />
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    mainContainer: { flex: 1, backgroundColor: '#09090b' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 16 },
-    headerBackButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
-    headerTitleMain: { fontSize: 20, fontWeight: '900', color: '#fff' },
-    helpButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-    scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
-    stepContainer: { paddingTop: 8 },
-    stepTitle: { fontSize: 28, fontWeight: '900', color: '#fff', marginBottom: 24 },
-    stepTitleSmall: { fontSize: 18, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    cardWrapper: { width: '48%', marginBottom: 16 },
-    categoryCard: { padding: 20, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    activeCard: { borderColor: '#af25f4', backgroundColor: 'rgba(175, 37, 244, 0.05)' },
-    iconCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-    cardTitle: { fontSize: 16, fontWeight: 'bold', color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
-    activeCardText: { color: '#fff' },
-    cardSub: { fontSize: 12, color: 'rgba(255,255,255,0.4)', textAlign: 'center' },
-    subTypeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    subTypePill: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.02)' },
-    activePill: { borderColor: '#af25f4', backgroundColor: '#af25f4' },
-    pillText: { color: 'rgba(255,255,255,0.6)', fontWeight: 'bold' },
-    activePillText: { color: '#fff' },
-    inputCard: { padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 24 },
-    inputGroup: { marginBottom: 24 },
-    label: { fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 10, fontWeight: '600' },
-    glassInput: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 16, color: '#fff', fontSize: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-    textArea: { height: 120, textAlignVertical: 'top' },
-    imageSection: { marginTop: 8 },
-    photoScrollContent: { gap: 12 },
-    addPhotoButtonGlass: { width: 100, height: 100, borderRadius: 20, borderWidth: 2, borderColor: '#af25f4', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(175, 37, 244, 0.05)' },
-    addPhotoText: { fontSize: 11, color: '#af25f4', marginTop: 6, fontWeight: 'bold' },
-    imageWrapper: { width: 100, height: 100, borderRadius: 20, overflow: 'hidden' },
-    imagePreview: { width: '100%', height: '100%' },
-    removeImageButton: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(255,0,0,0.8)', width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    footerGlass: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-    footerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 20 },
-    footerBackButton: { padding: 12 },
-    footerBackText: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '600' },
-    nextButtonNeon: { minWidth: 160 },
-    nextButtonInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, backgroundColor: '#af25f4' },
-    nextButtonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
-    floatingShape: { position: 'absolute', opacity: 0.5 },
-    methodTabs: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-    methodTab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    activeMethodTab: { borderColor: '#af25f4', backgroundColor: 'rgba(175, 37, 244, 0.1)' },
-    methodTabText: { color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', fontSize: 12 },
-    activeMethodTabText: { color: '#af25f4' },
-    suggestionItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-    suggestionText: { color: '#fff', fontSize: 14 },
-    detectBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10, backgroundColor: 'rgba(175, 37, 244, 0.05)', borderRadius: 16, borderWidth: 1, borderColor: '#af25f4' },
-    detectBtnText: { color: '#af25f4', fontWeight: 'bold' },
-    locationConfirmation: { marginTop: 16, color: '#10b981', fontWeight: '600', fontSize: 13, textAlign: 'center' },
-    checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-    checkboxActive: { borderColor: '#af25f4', backgroundColor: '#af25f4' },
-    checkboxLabel: { color: '#fff', fontSize: 16 },
-    prefGrid: { flexDirection: 'row', gap: 8 },
-    prefBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center' },
-    activePrefBtn: { borderColor: '#af25f4', backgroundColor: '#af25f4' },
-    prefBtnText: { color: 'rgba(255,255,255,0.5)', fontWeight: 'bold', fontSize: 10 },
-    activePrefBtnText: { color: '#fff' },
-    previewCard: { padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    previewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    typeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, backgroundColor: '#af25f4' },
-    typeBadgeText: { color: '#fff', fontSize: 10, fontWeight: '900' },
-    urgentBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: '#ef4444' },
-    urgentBadgeText: { color: '#fff', fontSize: 10, fontWeight: '900' },
-    previewPrice: { fontSize: 24, fontWeight: '900', color: '#fff' },
-    previewTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-    previewDesc: { fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 20, marginBottom: 20 },
-    previewFooter: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 16 },
-    footerInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    footerInfoText: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-    modalTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-    confirmModalBtn: { backgroundColor: '#af25f4', padding: 20, alignItems: 'center' },
-    confirmModalBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+    mainContainer: {
+        flex: 1,
+        backgroundColor: '#0a0a0a'
+    },
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+    },
+    headerBackButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)'
+    },
+    headerTitleMain: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#ffffff'
+    },
+    helpButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    scrollContent: {
+        paddingHorizontal: 24,
+        paddingBottom: 120
+    },
+    stepContainer: {
+        paddingTop: 8
+    },
+    stepTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#ffffff',
+        marginBottom: 24
+    },
+    stepTitleSmall: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#ffffff',
+        marginBottom: 16
+    },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between'
+    },
+    cardWrapper: {
+        width: '48%',
+        marginBottom: 16
+    },
+    categoryCard: {
+        padding: 20,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)'
+    },
+    activeCard: {
+        borderColor: '#af25f4',
+        backgroundColor: 'rgba(175, 37, 244, 0.05)'
+    },
+    iconCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#94a3b8',
+        marginBottom: 4
+    },
+    activeCardText: {
+        color: '#ffffff'
+    },
+    cardSub: {
+        fontSize: 12,
+        color: '#64748b',
+        textAlign: 'center'
+    },
+    subTypeGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12
+    },
+    subTypePill: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 30,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.02)'
+    },
+    activePill: {
+        borderColor: '#af25f4',
+        backgroundColor: '#af25f4'
+    },
+    pillText: {
+        color: '#94a3b8',
+        fontWeight: '700'
+    },
+    activePillText: {
+        color: '#ffffff'
+    },
+    inputCard: {
+        padding: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        marginBottom: 24
+    },
+    inputGroup: {
+        marginBottom: 24
+    },
+    label: {
+        fontSize: 14,
+        color: '#94a3b8',
+        marginBottom: 10,
+        fontWeight: '600'
+    },
+    glassInput: {
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
+        padding: 16,
+        color: '#ffffff',
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
+    },
+    textArea: {
+        height: 120,
+        textAlignVertical: 'top'
+    },
+    imageSection: {
+        marginTop: 8
+    },
+    photoScrollContent: {
+        gap: 12
+    },
+    addPhotoButtonGlass: {
+        width: 100,
+        height: 100,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#af25f4',
+        borderStyle: 'dashed',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(175, 37, 244, 0.05)'
+    },
+    addPhotoText: {
+        fontSize: 11,
+        color: '#af25f4',
+        marginTop: 6,
+        fontWeight: '700'
+    },
+    imageWrapper: {
+        width: 100,
+        height: 100,
+        borderRadius: 20,
+        overflow: 'hidden'
+    },
+    imagePreview: {
+        width: '100%',
+        height: '100%'
+    },
+    removeImageButton: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        backgroundColor: 'rgba(255,0,0,0.8)',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    footerGlass: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        borderTopWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)'
+    },
+    footerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingVertical: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20
+    },
+    footerBackButton: {
+        padding: 12
+    },
+    footerBackText: {
+        color: '#94a3b8',
+        fontSize: 16,
+        fontWeight: '600'
+    },
+    nextButtonNeon: {
+        minWidth: 160
+    },
+    nextButtonInner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        backgroundColor: '#af25f4'
+    },
+    nextButtonText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontWeight: '700'
+    },
+    methodTabs: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 20
+    },
+    methodTab: {
+        flex: 1,
+        paddingVertical: 12,
+        alignItems: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
+    },
+    activeMethodTab: {
+        borderColor: '#af25f4',
+        backgroundColor: 'rgba(175, 37, 244, 0.1)'
+    },
+    methodTabText: {
+        color: '#64748b',
+        fontWeight: '700',
+        fontSize: 12
+    },
+    activeMethodTabText: {
+        color: '#af25f4'
+    },
+    suggestionItem: {
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)'
+    },
+    suggestionText: {
+        color: '#ffffff',
+        fontSize: 14
+    },
+    detectBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        gap: 10,
+        backgroundColor: 'rgba(175, 37, 244, 0.05)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#af25f4'
+    },
+    detectBtnText: {
+        color: '#af25f4',
+        fontWeight: 'bold'
+    },
+    locationConfirmation: {
+        marginTop: 16,
+        color: '#10b981',
+        fontWeight: '600',
+        fontSize: 13,
+        textAlign: 'center'
+    },
+    checkboxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    checkboxActive: {
+        borderColor: '#af25f4',
+        backgroundColor: '#af25f4'
+    },
+    checkboxLabel: {
+        color: '#ffffff',
+        fontSize: 16
+    },
+    prefGrid: {
+        flexDirection: 'row',
+        gap: 8
+    },
+    prefBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center'
+    },
+    activePrefBtn: {
+        borderColor: '#af25f4',
+        backgroundColor: '#af25f4'
+    },
+    prefBtnText: {
+        color: '#94a3b8',
+        fontWeight: '700',
+        fontSize: 10
+    },
+    activePrefBtnText: {
+        color: '#ffffff'
+    },
+    previewCard: {
+        padding: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
+    },
+    previewHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16
+    },
+    typeBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 20,
+        backgroundColor: '#af25f4'
+    },
+    typeBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '900'
+    },
+    urgentBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 20,
+        backgroundColor: '#ef4444'
+    },
+    urgentBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '900'
+    },
+    previewPrice: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#ffffff'
+    },
+    previewTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#ffffff',
+        marginBottom: 8
+    },
+    previewDesc: {
+        fontSize: 14,
+        color: '#94a3b8',
+        lineHeight: 20,
+        marginBottom: 20
+    },
+    previewFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+        paddingTop: 16
+    },
+    footerInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6
+    },
+    footerInfoText: {
+        color: '#64748b',
+        fontSize: 12
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)'
+    },
+    modalTitle: {
+        color: '#ffffff',
+        fontSize: 18,
+        fontWeight: '700'
+    },
+    confirmModalBtn: {
+        backgroundColor: '#af25f4',
+        padding: 20,
+        alignItems: 'center'
+    },
+    confirmModalBtnText: {
+        color: '#ffffff',
+        fontWeight: '700',
+        fontSize: 16
+    },
 });
 
 export default CreatePostScreen;

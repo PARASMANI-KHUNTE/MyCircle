@@ -1,6 +1,6 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
-const { checkContentSafety } = require('../config/gemini');
+const { checkContentSafety } = require('../config/groq');
 const { createNotification } = require('./notificationController');
 const Conversation = require('../models/Conversation');
 const { db } = require('../config/firebase');

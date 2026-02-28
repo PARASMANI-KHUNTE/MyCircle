@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Image, Dimensions, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Image, Dimensions, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -10,55 +10,18 @@ import Animated, {
     withRepeat,
     withTiming,
     withDelay,
-    FadeInDown
+    FadeInDown,
+    FadeInUp
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import GlassView from '../components/ui/GlassView';
+import { ArrowRight, Sparkles, Users, Zap } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
-const FloatingShape = ({ delay = 0, size = 200, color = '#8b5cf6', top = 0, left = 0 }: any) => {
-    const translationY = useSharedValue(0);
-    const rotation = useSharedValue(0);
-    const scale = useSharedValue(1);
-
-    useEffect(() => {
-        translationY.value = withDelay(delay, withRepeat(withTiming(20, { duration: 3000 }), -1, true));
-        rotation.value = withDelay(delay, withRepeat(withTiming(360, { duration: 10000 }), -1, false));
-        scale.value = withDelay(delay, withRepeat(withTiming(1.2, { duration: 5000 }), -1, true));
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [
-            { translateY: translationY.value },
-            { rotate: `${rotation.value}deg` },
-            { scale: scale.value }
-        ],
-        opacity: 0.15,
-    }));
-
-    return (
-        <Animated.View
-            style={[
-                styles.floatingShape,
-                {
-                    width: size,
-                    height: size,
-                    backgroundColor: color,
-                    top,
-                    left,
-                    borderRadius: size / 2.5
-                },
-                animatedStyle
-            ]}
-        />
-    );
-};
-
-const LandingScreen = () => {
+const LandingScreen = ({ navigation }: any) => {
     const { login, isLoading: authLoading } = useAuth();
-    const { colors } = useTheme();
+    const scrollY = useSharedValue(0);
 
     useEffect(() => {
         GoogleSignin.configure({
@@ -68,7 +31,6 @@ const LandingScreen = () => {
     }, []);
 
     const handleGoogleLogin = async () => {
-        // ... same logic ...
         try {
             await GoogleSignin.hasPlayServices();
             try {
@@ -99,83 +61,176 @@ const LandingScreen = () => {
 
     if (authLoading) {
         return (
-            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#af25f4" />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <StatusBar barStyle="light-content" />
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" />
 
-            {/* Background Decorations */}
-            <View style={StyleSheet.absoluteFill}>
-                <FloatingShape size={350} color={colors.primary} top={-100} left={-100} delay={0} />
-                <FloatingShape size={300} color={colors.accent} top={height * 0.5} left={width * 0.7} delay={1500} />
-                <FloatingShape size={200} color={colors.primary} top={height * 0.8} left={-50} delay={3000} />
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
             </View>
 
-            <View style={styles.content}>
-                <View style={styles.header}>
-                    <Animated.View
-                        entering={FadeInDown.delay(200).springify()}
-                        style={styles.logoWrapper}
-                    >
-                        <Image
-                            source={require('../assets/logo.png')}
-                            style={styles.logo}
-                            resizeMode="contain"
-                        />
-                    </Animated.View>
-                    <Animated.Text
-                        entering={FadeInDown.delay(400).springify()}
-                        style={[styles.brandName, { color: colors.text }]}
-                    >
-                        My<Text style={{ color: colors.accent }}>Circle</Text>
-                    </Animated.Text>
+            {/* Subtle Grid Pattern */}
+            <View style={styles.gridPattern}>
+                {[...Array(15)].map((_, i) => (
+                    <View
+                        key={i}
+                        style={[
+                            styles.gridLine,
+                            {
+                                left: (i % 5) * (width / 5),
+                                top: Math.floor(i / 5) * (height / 3),
+                                width: 1,
+                                height: height / 3,
+                            }
+                        ]}
+                    />
+                ))}
+            </View>
 
-                    <View style={styles.introContainer}>
-                        <Animated.Text
-                            entering={FadeInDown.delay(600).springify()}
-                            style={[styles.headline, { color: colors.text }]}
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                onScroll={(event) => {
+                    scrollY.value = event.nativeEvent.contentOffset.y;
+                }}
+                scrollEventThrottle={16}
+            >
+                {/* Hero Section */}
+                <View style={styles.heroSection}>
+                    <Animated.View
+                        entering={FadeInDown.delay(200).duration(800).springify()}
+                        style={styles.logoContainer}
+                    >
+                        <View style={styles.logoGlow}>
+                            <View style={styles.logoCircle}>
+                                <Image
+                                    source={require('../assets/logo.png')}
+                                    style={styles.logoImage}
+                                    resizeMode="contain"
+                                />
+                            </View>
+                        </View>
+                        
+                        {/* Floating Icons */}
+                        <Animated.View
+                            entering={FadeInDown.delay(600).duration(600).springify()}
+                            style={[styles.floatingIcon, { top: -20, right: -30 }]}
                         >
-                            Connect, Exchange,{'\n'}
-                            <Text style={{ color: colors.primary }}>Thrive Locally.</Text>
-                        </Animated.Text>
-                        <Animated.Text
-                            entering={FadeInDown.delay(800).springify()}
-                            style={[styles.description, { color: colors.textSecondary }]}
+                            <Sparkles size={24} color="#af25f4" />
+                        </Animated.View>
+                        
+                        <Animated.View
+                            entering={FadeInDown.delay(800).duration(600).springify()}
+                            style={[styles.floatingIcon, { top: 20, right: -50 }]}
                         >
-                            The modern way to find tasks, offer services, and trade items in your neighborhood. Secure, fast, and beautiful.
-                        </Animated.Text>
-                    </View>
+                            <Zap size={20} color="#00f5ff" />
+                        </Animated.View>
+                    </Animated.View>
+
+                    <Animated.View
+                        entering={FadeInUp.delay(400).duration(800).springify()}
+                        style={styles.titleContainer}
+                    >
+                        <Text style={styles.mainTitle}>
+                            MyCircle<Text style={styles.titleDot}>.</Text>
+                        </Text>
+                        <Text style={styles.subtitle}>
+                            Where high-performance communities thrive
+                        </Text>
+                    </Animated.View>
                 </View>
 
+                {/* Features Section */}
                 <Animated.View
-                    entering={FadeInDown.delay(1000).springify()}
-                    style={styles.actions}
+                    entering={FadeInUp.delay(600).duration(800).springify()}
+                    style={styles.featuresSection}
                 >
+                    <View style={styles.featureCard}>
+                        <Users size={32} color="#af25f4" style={styles.featureIcon} />
+                        <Text style={styles.featureTitle}>Connect</Text>
+                        <Text style={styles.featureDescription}>
+                            Join exclusive communities of like-minded professionals
+                        </Text>
+                    </View>
+
+                    <View style={styles.featureCard}>
+                        <Sparkles size={32} color="#00f5ff" style={styles.featureIcon} />
+                        <Text style={styles.featureTitle}>Create</Text>
+                        <Text style={styles.featureDescription}>
+                            Share your ideas and build your personal brand
+                        </Text>
+                    </View>
+
+                    <View style={styles.featureCard}>
+                        <Zap size={32} color="#af25f4" style={styles.featureIcon} />
+                        <Text style={styles.featureTitle}>Thrive</Text>
+                        <Text style={styles.featureDescription}>
+                            Grow your network and unlock new opportunities
+                        </Text>
+                    </View>
+                </Animated.View>
+
+                {/* Action Section */}
+                <Animated.View
+                    entering={FadeInUp.delay(800).duration(800).springify()}
+                    style={styles.actionSection}
+                >
+                    {/* Primary Action */}
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Login')}
+                        activeOpacity={0.9}
+                        style={styles.primaryButton}
+                    >
+                        <View style={styles.buttonGradient}>
+                            <Text style={styles.primaryButtonText}>Get Started</Text>
+                            <ArrowRight size={20} color="#fff" style={styles.buttonIcon} />
+                        </View>
+                    </TouchableOpacity>
+
+                    {/* Secondary Action */}
                     <TouchableOpacity
                         onPress={handleGoogleLogin}
                         activeOpacity={0.8}
+                        style={styles.secondaryButton}
                     >
-                        <GlassView intensity={20} borderRadius={24} style={styles.glassButton}>
+                        <View style={styles.googleIconContainer}>
                             <Image
-                                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
+                                source={{ uri: 'https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7Lx2rjqD02G6DRtLU-q333L-RyXVw_Z_9_ls6Y9.png' }}
                                 style={styles.googleIcon}
+                                resizeMode="contain"
                             />
-                            <Text style={[styles.googleButtonText, { color: colors.text }]}>Continue with Google</Text>
-                        </GlassView>
+                        </View>
+                        <Text style={styles.secondaryButtonText}>Continue with Google</Text>
                     </TouchableOpacity>
 
-                    <Text style={[styles.terms, { color: colors.textSecondary }]}>
-                        By continuing, you agree to our{' '}
-                        <Text style={{ color: colors.primary }}>Terms</Text> and{' '}
-                        <Text style={{ color: colors.primary }}>Privacy</Text>
-                    </Text>
+                    {/* Login Link */}
+                    <View style={styles.loginLinkContainer}>
+                        <Text style={styles.loginText}>Already have an account?</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                            <Text style={styles.loginLink}>Sign In</Text>
+                        </TouchableOpacity>
+                    </View>
                 </Animated.View>
-            </View>
+
+                {/* Footer */}
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>
+                        By continuing, you agree to our{'\n'}
+                        <Text style={styles.footerLink}>Terms of Service</Text> and{' '}
+                        <Text style={styles.footerLink}>Privacy Policy</Text>
+                    </Text>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -183,79 +238,221 @@ const LandingScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#0a0a0a',
     },
     loadingContainer: {
         flex: 1,
-        alignItems: 'center',
         justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#0a0a0a',
     },
-    floatingShape: {
+    backgroundGradient: {
         position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
-    content: {
-        flex: 1,
-        justifyContent: 'space-between',
-        paddingHorizontal: 32,
-        paddingTop: 80,
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gridPattern: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0.1,
+    },
+    gridLine: {
+        position: 'absolute',
+        backgroundColor: '#af25f4',
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 24,
+        paddingTop: 60,
         paddingBottom: 40,
     },
-    header: {
-        alignItems: 'flex-start',
+    heroSection: {
+        alignItems: 'center',
+        marginBottom: 60,
     },
-    logoWrapper: {
+    logoContainer: {
+        position: 'relative',
+        marginBottom: 32,
+    },
+    logoGlow: {
+        shadowColor: '#af25f4',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    logoCircle: {
         width: 80,
         height: 80,
+        borderRadius: 40,
+        backgroundColor: '#af25f4',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: 'rgba(175, 37, 244, 0.3)',
+    },
+    logoImage: {
+        width: 50,
+        height: 50,
+    },
+    floatingIcon: {
+        position: 'absolute',
+        backgroundColor: 'rgba(10, 10, 11, 0.8)',
+        borderRadius: 20,
+        padding: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    titleContainer: {
+        alignItems: 'center',
+    },
+    mainTitle: {
+        fontSize: 42,
+        fontWeight: '800',
+        color: '#ffffff',
+        fontFamily: 'System',
+        letterSpacing: -1,
+        textAlign: 'center',
+    },
+    titleDot: {
+        color: '#af25f4',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#94a3b8',
+        textAlign: 'center',
+        marginTop: 12,
+        lineHeight: 24,
+        maxWidth: 280,
+    },
+    featuresSection: {
+        marginBottom: 60,
+    },
+    featureCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 20,
+        padding: 24,
+        marginBottom: 16,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    featureIcon: {
         marginBottom: 16,
     },
-    logo: {
-        width: '100%',
-        height: '100%',
+    featureTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#ffffff',
+        marginBottom: 8,
     },
-    brandName: {
-        fontSize: 32,
-        fontWeight: '900',
+    featureDescription: {
+        fontSize: 14,
+        color: '#94a3b8',
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    actionSection: {
         marginBottom: 40,
-        letterSpacing: -0.5,
     },
-    introContainer: {
-        maxWidth: '100%',
+    primaryButton: {
+        borderRadius: 16,
+        marginBottom: 16,
+        shadowColor: '#af25f4',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
     },
-    headline: {
-        fontSize: 52,
-        fontWeight: '800',
-        lineHeight: 60,
-        letterSpacing: -1.5,
-    },
-    description: {
-        fontSize: 18,
-        marginTop: 24,
-        lineHeight: 28,
-        fontWeight: '500',
-    },
-    actions: {
-        width: '100%',
-    },
-    glassButton: {
-        width: '100%',
+    buttonGradient: {
         flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         paddingVertical: 18,
+        paddingHorizontal: 32,
+        borderRadius: 16,
+        backgroundColor: '#af25f4',
+    },
+    primaryButtonText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#ffffff',
+        marginRight: 8,
+    },
+    buttonIcon: {
+        marginLeft: 8,
+    },
+    secondaryButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    googleIconContainer: {
+        width: 24,
+        height: 24,
+        marginRight: 12,
         alignItems: 'center',
         justifyContent: 'center',
     },
     googleIcon: {
-        width: 24,
-        height: 24,
-        marginRight: 12,
+        width: 20,
+        height: 20,
     },
-    googleButtonText: {
-        fontWeight: '700',
-        fontSize: 18,
+    secondaryButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#ffffff',
     },
-    terms: {
-        marginTop: 30,
-        fontSize: 13,
+    loginLinkContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 24,
+    },
+    loginText: {
+        fontSize: 14,
+        color: '#64748b',
+        marginRight: 6,
+    },
+    loginLink: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#af25f4',
+    },
+    footer: {
+        alignItems: 'center',
+        paddingTop: 20,
+    },
+    footerText: {
+        fontSize: 12,
+        color: '#64748b',
         textAlign: 'center',
-        lineHeight: 20,
+        lineHeight: 18,
+    },
+    footerLink: {
+        color: '#af25f4',
+        textDecorationLine: 'underline',
     },
 });
 

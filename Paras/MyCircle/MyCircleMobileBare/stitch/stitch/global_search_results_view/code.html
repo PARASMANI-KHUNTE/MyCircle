@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global Search Results View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f0df2",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#09090b", // Custom deep zinc per instructions
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem", // 32px
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-header {
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            background: rgba(9, 9, 11, 0.85);
+            border-bottom: 1px solid rgba(127, 13, 242, 0.1);
+        }
+        .glass-card {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(127, 13, 242, 0.15);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(127, 13, 242, 0.4);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display selection:bg-primary/30">
+<!-- iOS Status Bar Spacer -->
+<div class="fixed top-0 w-full h-12 bg-background-dark z-[100]"></div>
+<!-- Floating Search Header -->
+<header class="fixed top-12 left-0 right-0 z-50 glass-header px-4 pt-4 pb-6">
+<div class="max-w-md mx-auto space-y-4">
+<!-- Search Bar Container -->
+<div class="relative flex items-center">
+<div class="absolute left-4 text-slate-400">
+<span class="material-icons-round text-xl">search</span>
+</div>
+<input class="w-full bg-white/5 border border-white/10 rounded-full py-4 pl-12 pr-12 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-slate-500" placeholder="Search the orbit..." type="text" value="Product Designer"/>
+<div class="absolute right-4 flex items-center gap-2">
+<button class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+<span class="material-icons-round text-xs">close</span>
+</button>
+</div>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4">
+<button class="whitespace-nowrap px-5 py-2 rounded-full bg-primary text-white text-sm font-semibold neon-glow transition-all">
+                    All Results
+                </button>
+<button class="whitespace-nowrap px-5 py-2 rounded-full bg-white/5 border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/10 transition-all">
+<span class="flex items-center gap-1.5">
+<span class="material-icons-round text-sm">work_outline</span> Jobs
+                    </span>
+</button>
+<button class="whitespace-nowrap px-5 py-2 rounded-full bg-white/5 border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/10 transition-all">
+<span class="flex items-center gap-1.5">
+<span class="material-icons-round text-sm">near_me</span> Near Me
+                    </span>
+</button>
+<button class="whitespace-nowrap px-5 py-2 rounded-full bg-white/5 border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/10 transition-all">
+<span class="flex items-center gap-1.5">
+<span class="material-icons-round text-sm">groups</span> Communities
+                    </span>
+</button>
+<button class="whitespace-nowrap px-5 py-2 rounded-full bg-white/5 border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/10 transition-all">
+<span class="flex items-center gap-1.5">
+<span class="material-icons-round text-sm">person_outline</span> People
+                    </span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="pt-48 pb-32 px-4 max-w-md mx-auto">
+<!-- Results Summary -->
+<div class="flex justify-between items-center mb-6 px-2">
+<span class="text-xs font-bold uppercase tracking-widest text-slate-500">124 Results found</span>
+<div class="flex items-center gap-2 text-xs font-semibold text-primary">
+<span>Recent</span>
+<span class="material-icons-round text-sm">expand_more</span>
+</div>
+</div>
+<!-- Result Cards List (FlashList Feel) -->
+<div class="space-y-4">
+<!-- Card 1: Job Post -->
+<div class="glass-card rounded-lg p-5 group transition-all duration-300 hover:scale-[1.01] active:scale-[0.98]">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-2xl overflow-hidden bg-primary/20 flex items-center justify-center border border-primary/30">
+<img class="w-full h-full object-cover" data-alt="Corporate tech company logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCL_Vbt6_fC-rjcL55H_J1Od263E20imEUGZZ9CDBPyBFislCm4JHVwXP0aPHmmWY4Gv3nlbvwI13Zj-IUZlkr_MnDk7ChBwbDDOMZwzn1L3dOICIyNcIxBMQIhOzold9Pn7zOcmPhAxept8nKKUeyxpuRPQTeRF8MIQAORr9OA5tR9b8FWZYIfO2co7_5TNCDXskpIFI1N9Gx5m3TEK0IN-91mdpwgAV9pDjlRxFgNZpEYDXsptLzE0YJ2VU2ZVClIh7DxpW59_KT-"/>
+</div>
+<div>
+<h3 class="font-bold text-base leading-tight">Senior Product Designer</h3>
+<p class="text-xs text-slate-400 mt-1">Stellar Systems • Remote</p>
+</div>
+</div>
+<button class="text-slate-500 hover:text-primary transition-colors">
+<span class="material-icons-round">bookmark_border</span>
+</button>
+</div>
+<p class="text-sm text-slate-300 line-clamp-2 leading-relaxed mb-4">
+                    Looking for a visionary designer to lead our next-generation spatial computing interface. Must have experience with Figma and Three.js...
+                </p>
+<div class="flex items-center justify-between pt-4 border-t border-white/5">
+<div class="flex gap-2">
+<span class="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">Full-time</span>
+<span class="px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 text-[10px] font-bold uppercase tracking-wider">$140k - $180k</span>
+</div>
+<span class="text-[10px] text-slate-500 font-medium">2h ago</span>
+</div>
+</div>
+<!-- Card 2: Community Post with Image -->
+<div class="glass-card rounded-lg overflow-hidden group transition-all duration-300 hover:scale-[1.01] active:scale-[0.98]">
+<div class="p-5 pb-3">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-10 h-10 rounded-full border-2 border-primary/50 p-0.5">
+<img class="w-full h-full rounded-full object-cover" data-alt="User profile avatar male" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOdcjDwJHzofeobmkixzKj4gHkTNoY30vF7mhmfaTeI0ghltIjPx4LQeax5THosPO3U1jQf6ceP-dHIRnRJF-cxqwvsyrXHRUwmceE6sHKhAW9qcTzbNBei3QRqjvJIvTI4nQofJCreolSvb60EUXGLBfcZIIvYxiHoMQSCJgo7t4qj5Y5wFVrbTX81rznF_oWK-t83Dukw3InHN8ZpL0GNr2pMmNqpcuhwcMyuiteEUxykwwIz4SyK1OtJEB7hX8sj7jDP6mPKp6X"/>
+</div>
+<div>
+<h3 class="font-bold text-sm">Alex Rivera</h3>
+<p class="text-[11px] text-primary font-semibold">@design_orbit</p>
+</div>
+</div>
+<p class="text-sm text-slate-200 mb-3">
+                        Just finished the initial wireframes for the "Floating Orbit" UI kit. What do you all think about the glassmorphic depth? 🌌
+                    </p>
+</div>
+<div class="px-4 pb-4">
+<div class="relative aspect-video rounded-xl overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="Abstract purple 3D digital shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBI7tmryE-vrXiudnyCGzGZw2s9do2vf6EOlEW3ij0df9uvKRwZiU6x7WsFQWGz9y0t6qW9BC7K_qotARJxHjIVnAdbCZcKQmNs03l3vt3uxpzxpaX1SMYOTinMi4zJ9ZWxQe2ZmoEyLXWzh8BcgNWA7T-Rxjs28I73ZIjvuoR-sHTCHZYNNpQg49sDaAwra-qlYxzHDunzRISYKQ5bMcR71aMdlVVkzcjHP398gvu57irJSS75MXLSe1D2c_tvjMVsGgwepbD15UQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+</div>
+</div>
+<div class="px-5 py-3 bg-white/5 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-1.5 text-slate-400 hover:text-red-400 transition-colors">
+<span class="material-icons-round text-lg">favorite_border</span>
+<span class="text-xs font-semibold">1.2k</span>
+</button>
+<button class="flex items-center gap-1.5 text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-round text-lg">chat_bubble_outline</span>
+<span class="text-xs font-semibold">84</span>
+</button>
+</div>
+<button class="text-slate-400">
+<span class="material-icons-round text-lg">share</span>
+</button>
+</div>
+</div>
+<!-- Card 3: Location Result -->
+<div class="glass-card rounded-lg p-5 flex items-center gap-4 group transition-all duration-300 hover:scale-[1.01] active:scale-[0.98]">
+<div class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center shrink-0 border border-white/5 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Modern office building architecture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWmUCEddt6XPliLhLx4EYHI7Nwinskm2Blo0UD0tx8Ex-u3rhh_EQg1KnEcmtFWyIyR2FIgBSs8QuwO9VAre-uv4URDzAI8cO-YlvQMertgmoJ23actHHbZVzTaaHWrDSt2zlS1qr7I7BOgRoswtGFqMyJsfESzn28Um9Lk_ybSo_tRQSPR-7WDXpuXo3nHEqN1rCOV3prkf40JhGovPUnrWPUbzAKyLfYSTS1QyDE_XZtQ3NdB5eb5Ax0xHqFh98P-ysPg-Yl6e8f"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1 mb-0.5">
+<span class="material-icons-round text-primary text-xs">verified</span>
+<h3 class="font-bold text-sm truncate">Design Hub Co-working</h3>
+</div>
+<p class="text-xs text-slate-400 mb-2 truncate">Brooklyn, NY • 0.8 miles away</p>
+<div class="flex items-center gap-1">
+<div class="flex text-yellow-500">
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star_half</span>
+</div>
+<span class="text-[10px] text-slate-500 font-bold">(248 reviews)</span>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-icons-round">directions</span>
+</button>
+</div>
+<!-- Card 4: Person Result -->
+<div class="glass-card rounded-lg p-5 flex items-center gap-4 group transition-all duration-300 hover:scale-[1.01] active:scale-[0.98]">
+<div class="relative">
+<img class="w-14 h-14 rounded-full object-cover border-2 border-primary/30" data-alt="Smiling professional female portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxU-8deyJPzuHO6bG_MADgA33XpRPzl-8Da9Xy446hpDcfCIxQGsnmngXdBObJXcT17cj_pUAGibfey2D0DR3l_Igd71Kqcn2Ixv4niRNpjFiE4VOHECVP66lma87hZUB8tJOWfV4NlBHZJnGb2xnkK8kLr9FXVjh6TYWxzXHw7VVF5OX9ZObbvFtIH90m1lS2Ihg8-VLcTnfvq6zrm8_0VaIX717k7VvhP-nvD-z4VpXiWklo8Yzi12Rq8uWOAohEGzqBqgn5qPlT"/>
+<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-4 border-background-dark rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-sm">Elena Vance</h3>
+<p class="text-xs text-slate-400 mb-1 truncate">Lead UI/UX • Meta</p>
+<p class="text-[10px] text-primary font-bold uppercase tracking-tighter">Mutually following</p>
+</div>
+<button class="px-4 py-2 rounded-full bg-white text-black text-[11px] font-extrabold transition-transform active:scale-95">
+                    Connect
+                </button>
+</div>
+<!-- Loading Indicator for "Debounce" effect simulation -->
+<div class="flex justify-center py-8">
+<div class="relative w-8 h-8">
+<div class="absolute inset-0 border-2 border-primary/20 rounded-full"></div>
+<div class="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Bottom Navigation -->
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass-header rounded-full py-3 px-8 flex items-center justify-between neon-glow z-[60] border border-white/10">
+<button class="text-slate-400 hover:text-primary transition-colors flex flex-col items-center">
+<span class="material-icons-round">home</span>
+</button>
+<button class="text-primary flex flex-col items-center relative">
+<span class="material-icons-round">search</span>
+<div class="absolute -bottom-1.5 w-1 h-1 bg-primary rounded-full"></div>
+</button>
+<div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center -mt-10 neon-glow border-4 border-background-dark">
+<span class="material-icons-round text-white text-2xl">add</span>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors flex flex-col items-center">
+<span class="material-icons-round">notifications_none</span>
+</button>
+<button class="text-slate-400 hover:text-primary transition-colors flex flex-col items-center">
+<span class="material-icons-round">person_outline</span>
+</button>
+</nav>
+<!-- iOS Home Indicator -->
+<div class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full z-[70]"></div>
+</body></html>

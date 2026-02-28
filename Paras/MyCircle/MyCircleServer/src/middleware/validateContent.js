@@ -1,4 +1,4 @@
-const { checkContentSafety, checkImageSafety } = require('../config/gemini');
+const { checkContentSafety, checkImageSafety } = require('../config/groq');
 const { containsProfanity } = require('../utils/profanityFilter');
 const fs = require('fs').promises;
 

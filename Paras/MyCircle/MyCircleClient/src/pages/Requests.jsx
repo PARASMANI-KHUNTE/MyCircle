@@ -80,17 +80,17 @@ const Requests = () => {
             <div className="mb-4" />
 
             {/* Tabs */}
-            <div className="flex gap-1 glass p-1 rounded-2xl mb-8 w-fit relative">
+            <div className="flex gap-1 glass-panel p-1 rounded-2xl mb-8 w-fit relative bg-card/50 backdrop-blur-md">
                 <button
                     onClick={() => setActiveTab('received')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${activeTab === 'received'
-                        ? 'bg-primary text-white shadow-lg'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/10'
+                        ? 'bg-primary text-primary-foreground shadow-lg'
+                        : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
                         }`}
                 >
                     Received
                     {receivedRequests.filter(r => r.status === 'pending').length > 0 && (
-                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20">
+                        <span className="bg-red-500 text-primary-foreground text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg shadow-red-500/20">
                             {receivedRequests.filter(r => r.status === 'pending').length}
                         </span>
                     )}
@@ -98,8 +98,8 @@ const Requests = () => {
                 <button
                     onClick={() => setActiveTab('sent')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${activeTab === 'sent'
-                        ? 'bg-primary text-white shadow-lg'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/10'
+                        ? 'bg-primary text-primary-foreground shadow-lg'
+                        : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
                         }`}
                 >
                     Sent
@@ -115,9 +115,9 @@ const Requests = () => {
                     </div>
                 ) : activeTab === 'received' ? (
                     receivedRequests.length === 0 ? (
-                        <div className="text-center py-20 glass rounded-3xl border border-dashed border-white/10">
-                            <Layers className="w-12 h-12 text-gray-600 mx-auto mb-4 opacity-20" />
-                            <p className="text-gray-500">No requests received yet.</p>
+                        <div className="text-center py-20 glass-panel rounded-3xl border border-dashed border-card-border">
+                            <Layers className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-20" />
+                            <p className="text-text-muted">No requests received yet.</p>
                         </div>
                     ) : (
                         receivedRequests.map((req) => (
@@ -125,7 +125,7 @@ const Requests = () => {
                                 key={req._id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="glass p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/5 transition-colors group"
+                                className="glass-panel p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-hover-bg transition-colors group"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
@@ -134,14 +134,14 @@ const Requests = () => {
                                             alt={req.requester?.displayName}
                                             className="w-14 h-14 rounded-full bg-secondary ring-1 ring-white/10 object-cover"
                                         />
-                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center border-2 border-background">
-                                            <User className="w-3 h-3 text-white" />
+                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center border-2 border-background shadow-md">
+                                            <User className="w-3 h-3 text-primary-foreground" />
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-foreground text-lg group-hover:text-primary transition-colors flex items-center gap-2">
+                                        <h3 className="font-bold text-text-heading text-lg group-hover:text-primary transition-colors flex items-center gap-2">
                                             {req.requester?.displayName || 'Unknown User'}
-                                            <span className="text-xs font-medium text-muted-foreground px-2 py-0.5 rounded-full bg-card/10 border border-card-border">Requester</span>
+                                            <span className="text-xs font-medium text-text-muted px-2 py-0.5 rounded-full bg-card/10 border border-card-border">Requester</span>
                                         </h3>
 
                                         {/* Enriched Post Preview */}
@@ -154,8 +154,8 @@ const Requests = () => {
                                                 </div>
                                             )}
                                             <div className="min-w-0 flex-1 flex flex-col justify-center">
-                                                <Link to={`/post/${req.post?._id}`} className="font-bold text-base text-foreground group-hover/post:text-primary transition-colors line-clamp-1 block">
-                                                    {req.post?.title || <span className="text-muted-foreground italic">Post Unavailable</span>}
+                                                <Link to={`/post/${req.post?._id}`} className="font-bold text-base text-text-heading group-hover/post:text-primary transition-colors line-clamp-1 block">
+                                                    {req.post?.title || <span className="text-text-muted italic">Post Unavailable</span>}
                                                 </Link>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-bold uppercase tracking-wider border border-card-border">{req.post?.type || 'N/A'}</span>
@@ -227,9 +227,9 @@ const Requests = () => {
                     )
                 ) : (
                     sentRequests.length === 0 ? (
-                        <div className="text-center py-20 glass rounded-3xl border border-dashed border-white/10">
-                            <ArrowRight className="w-12 h-12 text-gray-600 mx-auto mb-4 opacity-20" />
-                            <p className="text-gray-500">You haven't sent any requests yet.</p>
+                        <div className="text-center py-20 glass-panel rounded-3xl border border-dashed border-card-border">
+                            <ArrowRight className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-20" />
+                            <p className="text-text-muted">You haven't sent any requests yet.</p>
                             <Button
                                 variant="outline"
                                 className="mt-4 border-primary/20 text-primary hover:bg-primary/10"
@@ -244,7 +244,7 @@ const Requests = () => {
                                 key={req._id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="glass p-6 rounded-2xl flex flex-col gap-4 hover:bg-white/5 transition-colors"
+                                className="glass-panel p-6 rounded-2xl flex flex-col gap-4 hover:bg-hover-bg transition-colors"
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
@@ -264,13 +264,13 @@ const Requests = () => {
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <h3 className="font-bold text-foreground text-lg leading-tight">
+                                                    <h3 className="font-bold text-text-heading text-lg leading-tight">
                                                         <Link to={`/post/${req.post?._id}`} className="hover:text-primary transition-colors">
                                                             {req.post?.title || 'Unknown Post'}
                                                         </Link>
                                                     </h3>
                                                     <div className="flex items-center gap-2 mt-1 text-xs">
-                                                        <span className="text-muted-foreground">To: <span className="font-semibold text-foreground">{req.recipient?.displayName}</span></span>
+                                                        <span className="text-text-muted">To: <span className="font-semibold text-text-heading">{req.recipient?.displayName}</span></span>
                                                         {req.post?.price && (
                                                             <>
                                                                 <span className="w-1 h-1 rounded-full bg-card-border" />

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Blocked Users Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0db9f2",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#09090b", // Deep Slate-Zinc as requested
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #09090b;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-nav {
+            background: rgba(16, 30, 34, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(13, 185, 242, 0.2);
+        }
+        .neon-border {
+            border: 1.5px solid #0db9f2;
+            box-shadow: 0 0 10px rgba(13, 185, 242, 0.2);
+        }
+        .neon-glow {
+            text-shadow: 0 0 8px rgba(13, 185, 242, 0.5);
+        }
+        .status-bar-ios {
+            height: 44px;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark text-white font-display min-h-screen selection:bg-primary/30">
+<!-- iOS Status Bar Placeholder -->
+<div class="status-bar-ios w-full flex justify-between items-center px-8 text-xs font-semibold">
+<span>9:41</span>
+<div class="flex items-center gap-1.5">
+<span class="material-icons text-[14px]">signal_cellular_alt</span>
+<span class="material-icons text-[14px]">wifi</span>
+<span class="material-icons text-[14px] rotate-90">battery_full</span>
+</div>
+</div>
+<!-- Main Content Container -->
+<main class="px-5 pt-4 pb-32">
+<!-- Header -->
+<header class="flex justify-between items-end mb-8">
+<div>
+<h1 class="text-3xl font-bold tracking-tight">Blocked Users</h1>
+<p class="text-white/40 text-sm mt-1">12 accounts managed</p>
+</div>
+<button class="text-primary text-sm font-semibold hover:opacity-80 transition-opacity">
+                Unblock All
+            </button>
+</header>
+<!-- Search Bar -->
+<div class="relative mb-8">
+<span class="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-xl">search</span>
+<input class="w-full bg-white/5 border border-white/10 rounded-full py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-white/20" placeholder="Search blocked users..." type="text"/>
+</div>
+<!-- User List -->
+<div class="space-y-3">
+<!-- User Card 1 -->
+<div class="glass-card rounded-lg p-4 flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full object-cover border border-white/10" data-alt="Modern professional male headshot avatar circular" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbHxbz08b32DcOFulxAnRcQaYg0WZpiJSSKY20kI0VPzXtxZ7JoPZe5nj09TqhahlPYsQW867K6TAN1Cdiq4NXEfRl_CJuaMtxcwPf4szdKIlls3kOp-YiLdOpnVVclKsMpxLfj1O2aBMVik9GWqrc6lUE15crrxJCg0ymcr7CwCQV7qtpIGVgo2GPwlBvmhHeGvc3mOc_HgZ6WH7kMfoCuYH1T9DelRuVrsEPglFtRWXxgo6cdsuc9NP1EqVqzcR6SX4uegEFz0uL"/>
+<div class="absolute -bottom-1 -right-1 bg-background-dark rounded-full p-0.5">
+<span class="material-icons text-[10px] text-red-500">block</span>
+</div>
+</div>
+<div>
+<h3 class="font-semibold text-sm">Alex Rivera</h3>
+<p class="text-[11px] text-white/40">Blocked Jan 12, 2024</p>
+</div>
+</div>
+<button class="neon-border rounded-full px-5 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all">
+                    UNBLOCK
+                </button>
+</div>
+<!-- User Card 2 -->
+<div class="glass-card rounded-lg p-4 flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full object-cover border border-white/10" data-alt="Young female smiling in minimalist portrait avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfz_8Z82ch43ea0MBvNWy23svj5RZHYvA8k3WdJLC_OpsiMAtUYnWSi1J2iVgidcOtIn2eS-mFA51Wg670g2tRBzqA8CHvvxQmxuS0rxko1VA43ILhunDSsa7B7KOTkORUHyuRRWss9L8MyUSE8TPo0Yu3uP1EIwYu0OKINb7eklr3OIvu8ukrfUg910uIgmU1RvHwyDZx4XOzo0EC1AHpKzdcXO83Wbsnjk9OLvYa-8FVseEB1MbibpEj3SCwZLnMZJa48n4tHRq-"/>
+<div class="absolute -bottom-1 -right-1 bg-background-dark rounded-full p-0.5">
+<span class="material-icons text-[10px] text-red-500">block</span>
+</div>
+</div>
+<div>
+<h3 class="font-semibold text-sm">Sarah Chen</h3>
+<p class="text-[11px] text-white/40">Blocked Dec 28, 2023</p>
+</div>
+</div>
+<button class="neon-border rounded-full px-5 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all">
+                    UNBLOCK
+                </button>
+</div>
+<!-- User Card 3 -->
+<div class="glass-card rounded-lg p-4 flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full object-cover border border-white/10" data-alt="Cool male avatar with glasses and hat" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7XEVuQErbJAuMdwx-eIbS9URyQJUps5WDpQTb-hAf1fT6r6-xdbrNk8baVjNXyHlHztu8E1v4m5QKKpREynnxnT3SUR-RscUPh_dnDRWczCRN4lJnc3b5VQzAWUmHZzO5_01mbmrgs6RLs1Rle--nKkWOHCu6_F5j5fPbPLrkfFU7xneHN-oawZhF37Qi0SCGOfBCbzpYGGJVi0fEsjO3VsFcZW09IF1y-3EZrwoHU_133GTk0ov9hAixeye_F-UWAFdydakCnyBz"/>
+<div class="absolute -bottom-1 -right-1 bg-background-dark rounded-full p-0.5">
+<span class="material-icons text-[10px] text-red-500">block</span>
+</div>
+</div>
+<div>
+<h3 class="font-semibold text-sm">Marcus Volkov</h3>
+<p class="text-[11px] text-white/40">Blocked Nov 15, 2023</p>
+</div>
+</div>
+<button class="neon-border rounded-full px-5 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all">
+                    UNBLOCK
+                </button>
+</div>
+<!-- User Card 4 -->
+<div class="glass-card rounded-lg p-4 flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full object-cover border border-white/10" data-alt="Professional female corporate avatar headshot profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4OKd4kaLOURMgM_5fsvaGLQm10hVd-vZvJ57MU07kK6HMC4NjX5OaOmcLdomS_2NFLGnZXzmZc7AmMsbx-ip8W0yvYPQLce7QaecvFo5qvEdAovIcfGoMsT0Pk1YSYAMNQ-dkX4iwICFyiVVbsZ6spjUkP0mID5cyHSwNpTvgAE9o3WxLtM-GNqFb3BzSSuZXnzdA3a5_HEF-TEXF6IZnWxYRcXfqlEV6ZQA8D9hlo2h9n7wf94mplfZVH5YQ-qkFEObpj4_WexPr"/>
+<div class="absolute -bottom-1 -right-1 bg-background-dark rounded-full p-0.5">
+<span class="material-icons text-[10px] text-red-500">block</span>
+</div>
+</div>
+<div>
+<h3 class="font-semibold text-sm">Elena Rodriguez</h3>
+<p class="text-[11px] text-white/40">Blocked Oct 04, 2023</p>
+</div>
+</div>
+<button class="neon-border rounded-full px-5 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all">
+                    UNBLOCK
+                </button>
+</div>
+<!-- User Card 5 -->
+<div class="glass-card rounded-lg p-4 flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full object-cover border border-white/10" data-alt="Friendly male face circular profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0gbaFRLTsbBqIe3n0rE19km-JMIcsUy-ZI0uVasBqvz3ga2QPctloxoejIqNZ5IYTeaGUiWqbx7so4rRlsQGcKioEeiPxwcPUcX7p8gbBxPx-Gu4TSMY0tDwqzS_AOHaPT5bixWpLUl63CNOdVjiBlart2FLACI82S70DCOKYJv9n65tZfz9evpszwFdfQCt3WYvaZhsvrLvePIXztD-D50t9yYoneq73fFCA2KwpPWMz1LgL6x5bYJXKCDETj-mv8Rwd3gzsdbnl"/>
+<div class="absolute -bottom-1 -right-1 bg-background-dark rounded-full p-0.5">
+<span class="material-icons text-[10px] text-red-500">block</span>
+</div>
+</div>
+<div>
+<h3 class="font-semibold text-sm">Jordan Smith</h3>
+<p class="text-[11px] text-white/40">Blocked Sep 21, 2023</p>
+</div>
+</div>
+<button class="neon-border rounded-full px-5 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all">
+                    UNBLOCK
+                </button>
+</div>
+</div>
+<!-- Hint Section -->
+<div class="mt-10 px-4 text-center">
+<p class="text-white/20 text-xs leading-relaxed">
+                Unblocking users allows them to see your profile, posts, and message you directly. They will not be notified that you unblocked them.
+            </p>
+</div>
+</main>
+<!-- Floating Navigation Bar -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] z-50">
+<nav class="glass-nav rounded-full px-6 py-4 flex items-center justify-between shadow-2xl">
+<a class="text-white/40 hover:text-primary transition-colors" href="#">
+<span class="material-icons">home</span>
+</a>
+<a class="text-white/40 hover:text-primary transition-colors" href="#">
+<span class="material-icons">chat_bubble</span>
+</a>
+<a class="text-white/40 hover:text-primary transition-colors" href="#">
+<span class="material-icons">search</span>
+</a>
+<div class="relative flex flex-col items-center">
+<a class="text-primary neon-glow" href="#">
+<span class="material-icons">settings</span>
+</a>
+<div class="absolute -bottom-2 w-1 h-1 bg-primary rounded-full"></div>
+</div>
+<a class="text-white/40 hover:text-primary transition-colors" href="#">
+<span class="material-icons">person</span>
+</a>
+</nav>
+</div>
+<!-- Home Indicator (iOS) -->
+<div class="fixed bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full"></div>
+</body></html>

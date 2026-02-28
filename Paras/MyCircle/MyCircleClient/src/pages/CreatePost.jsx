@@ -4,8 +4,10 @@ import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { AlertCircle, CheckCircle, Upload, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Upload, X, PlusCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { cn } from '../utils/cn';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const CreatePost = () => {
     const navigate = useNavigate();
@@ -112,27 +114,42 @@ const CreatePost = () => {
     };
 
     return (
-        <div className="max-w-2xl mx-auto pb-20">
-            <h1 className="text-3xl font-bold text-foreground mb-8">Create New Post</h1>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto pb-20 pt-10 px-4"
+        >
+            <div className="flex flex-col gap-2 mb-10">
+                <h1 className="text-5xl font-black text-text-heading tracking-tight leading-none">
+                    Create <span className="text-primary italic">Circle</span>
+                </h1>
+                <p className="text-text-muted font-medium">Post your request, service, or items to your local community.</p>
+            </div>
 
-            <div className="glass p-8 rounded-2xl">
+            <div className="glass-panel p-10 shadow-2xl">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
                     {/* Category Selection */}
-                    <div className="grid grid-cols-5 gap-2">
-                        {['job', 'service', 'sell', 'rent', 'barter'].map(type => (
-                            <button
-                                key={type}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, type })}
-                                className={`py-3 rounded-xl font-medium transition-all ${formData.type === type
-                                    ? 'bg-primary text-white ring-2 ring-primary/50'
-                                    : 'bg-card/10 text-muted-foreground hover:bg-card/20 border border-card-border'
-                                    }`}
-                            >
-                                {type.toUpperCase()}
-                            </button>
-                        ))}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black tracking-widest text-text-muted uppercase px-1">Select Category</label>
+                        <div className="flex flex-wrap gap-2">
+                            {['job', 'service', 'sell', 'rent', 'barter'].map(type => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, type })}
+                                    className={cn(
+                                        "flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black whitespace-nowrap transition-all duration-300 uppercase tracking-widest group",
+                                        formData.type === type
+                                            ? "bg-primary text-primary-foreground shadow-button scale-105"
+                                            : "bg-background-section text-text-muted hover:text-text-heading hover:bg-hover-bg border border-card-border"
+                                    )}
+                                >
+                                    <span className={cn("w-2 h-2 rounded-full", formData.type === type ? "bg-primary-foreground" : "bg-text-muted group-hover:bg-primary")} />
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <Input
@@ -142,14 +159,16 @@ const CreatePost = () => {
                         value={formData.title}
                         onChange={handleChange}
                         required
+                        className=""
+                        error={null}
                     />
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-muted-foreground ml-1">Description</label>
+                        <label className="text-sm font-medium text-text-muted ml-1">Description</label>
                         <textarea
                             name="description"
-                            rows="4"
-                            className="w-full bg-card/10 border border-card-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                            rows={4}
+                            className="w-full bg-card/10 border border-card-border rounded-xl px-4 py-3 text-text-body placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
                             placeholder="Describe the task or item in detail..."
                             value={formData.description}
                             onChange={handleChange}
@@ -161,7 +180,7 @@ const CreatePost = () => {
                     <div className="flex flex-col gap-3">
                         <label className="flex items-center gap-2 cursor-pointer group w-fit">
                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.acceptsBarter ? 'bg-primary border-primary' : 'border-card-border group-hover:border-primary'}`}>
-                                {formData.acceptsBarter && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                                {formData.acceptsBarter && <CheckCircle className="w-3.5 h-3.5 text-primary-foreground" />}
                             </div>
                             <input
                                 type="checkbox"
@@ -170,7 +189,7 @@ const CreatePost = () => {
                                 onChange={handleChange}
                                 className="hidden"
                             />
-                            <span className="text-muted-foreground group-hover:text-foreground transition-colors">Accept Barter / Exchange</span>
+                            <span className="text-text-muted group-hover:text-text-heading transition-colors">Accept Barter / Exchange</span>
                         </label>
 
                         {/* Barter Preferences with simple conditional rendering */}
@@ -182,6 +201,8 @@ const CreatePost = () => {
                                     placeholder="What are you looking for in exchange? (e.g. Graphic Design, Books)"
                                     value={formData.barterPreferences}
                                     onChange={handleChange}
+                                    className=""
+                                    error={null}
                                 />
                             </div>
                         )}
@@ -197,6 +218,8 @@ const CreatePost = () => {
                                 value={formData.price}
                                 onChange={handleChange}
                                 disabled={formData.acceptsBarter}
+                                className=""
+                                error={null}
                             />
                         </div>
                         <Input
@@ -206,29 +229,41 @@ const CreatePost = () => {
                             value={formData.location}
                             onChange={handleChange}
                             required
+                            className=""
+                            error={null}
                         />
                     </div>
 
                     {/* Image Upload */}
-                    <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium text-muted-foreground ml-1">Images (Optional, Max 5)</label>
+                    <div className="flex flex-col gap-3">
+                        <label className="text-[10px] font-black tracking-widest text-text-muted uppercase px-1">Visuals (Max 5)</label>
                         <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                            {previews.map((preview, index) => (
-                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border border-card-border">
-                                    <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeImage(index)}
-                                        className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            <AnimatePresence>
+                                {previews.map((preview, index) => (
+                                    <motion.div
+                                        key={preview}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        className="relative aspect-square rounded-xl overflow-hidden group border border-card-border shadow-md"
                                     >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
+                                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(index)}
+                                            className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <div className="bg-red-500 p-2 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                                                <X className="w-4 h-4 text-primary-foreground" />
+                                            </div>
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
                             {images.length < 5 && (
-                                <label className="aspect-square rounded-xl border-2 border-dashed border-card-border hover:border-primary/50 hover:bg-card/10 transition-all flex flex-col items-center justify-center cursor-pointer group">
-                                    <Upload className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                                    <span className="text-[10px] text-muted-foreground mt-1 group-hover:text-primary transition-colors">Add Photo</span>
+                                <label className="aspect-square rounded-xl border-2 border-dashed border-card-border hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center cursor-pointer group shadow-sm">
+                                    <Upload className="w-8 h-8 text-text-muted group-hover:text-primary transition-all group-hover:-translate-y-1" />
+                                    <span className="text-[10px] text-text-muted mt-2 font-black uppercase tracking-widest group-hover:text-primary">Add Photo</span>
                                     <input
                                         type="file"
                                         className="hidden"
@@ -246,18 +281,28 @@ const CreatePost = () => {
                         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3 animate-in fade-in duration-200">
                             <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                             <div>
-                                <h4 className="text-red-400 font-semibold">{error.message}</h4>
-                                {error.reason && <p className="text-red-400/80 text-sm mt-1">Reason: {error.reason}</p>}
+                                <h4 className="text-red-500 font-semibold">{error.message}</h4>
+                                {error.reason && <p className="text-red-500/80 text-sm mt-1">Reason: {error.reason}</p>}
                             </div>
                         </div>
                     )}
 
-                    <Button variant="primary" type="submit" disabled={loading} className="mt-4">
-                        {loading ? 'Analyzing Content...' : 'Publish Post'}
+                    <Button variant="primary" type="submit" disabled={loading} className="mt-6 py-5 rounded-2xl text-[14px] font-black tracking-widest uppercase shadow-[0_20px_50px_rgba(245,158,11,0.2)]">
+                        {loading ? (
+                            <div className="flex items-center gap-3">
+                                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                                <span>Verifying Your Orbit...</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <PlusCircle className="w-5 h-5" />
+                                <span>Publish to Your Circle</span>
+                            </div>
+                        )}
                     </Button>
                 </form>
             </div>
-        </div>
+        </motion.div>
     );
 };
 

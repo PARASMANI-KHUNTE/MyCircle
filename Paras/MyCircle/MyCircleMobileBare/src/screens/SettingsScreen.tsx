@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Bell, Lock, Eye, Trash2, ChevronRight, UserX, Moon, Sun } from 'lucide-react-native';
+import { ArrowLeft, Bell, Lock, Eye, Trash2, ChevronRight, UserX, Moon, Sun, Info } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const SettingsScreen = ({ navigation }: any) => {
     const { logout } = useAuth() as any;
@@ -90,68 +93,97 @@ const SettingsScreen = ({ navigation }: any) => {
     );
 
     return (
-        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft color={colors.text} size={24} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, themeStyles.text]}>Settings</Text>
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
             </View>
 
-            <ScrollView style={styles.scrollView}>
-                <View style={styles.sectionHeader}>
+            {/* Header */}
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ArrowLeft size={24} color="#ffffff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Settings</Text>
+            </Animated.View>
+
+            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+                <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Appearance</Text>
-                </View>
-                <SettingItem
-                    icon={theme === 'dark' ? Moon : Sun}
-                    label="Dark Mode"
-                    value={theme === 'dark'}
-                    onValueChange={toggleTheme}
-                />
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(250).duration(800).springify()}>
+                    <View style={styles.settingsGroup}>
+                        <SettingItem
+                            icon={theme === 'dark' ? Moon : Sun}
+                            label="Dark Mode"
+                            value={theme === 'dark'}
+                            onValueChange={toggleTheme}
+                        />
+                    </View>
+                </Animated.View>
 
-                <View style={styles.sectionHeader}>
+                <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Notifications</Text>
-                </View>
-                <SettingItem
-                    icon={Bell}
-                    label="Push Notifications"
-                    value={notifications.push}
-                    onValueChange={(val: boolean) => setNotifications(prev => ({ ...prev, push: val }))}
-                />
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(350).duration(800).springify()}>
+                    <View style={styles.settingsGroup}>
+                        <SettingItem
+                            icon={Bell}
+                            label="Push Notifications"
+                            value={notifications.push}
+                            onValueChange={(val: boolean) => setNotifications(prev => ({ ...prev, push: val }))}
+                        />
+                    </View>
+                </Animated.View>
 
-                <View style={styles.sectionHeader}>
+                <Animated.View entering={FadeInDown.delay(400).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Privacy</Text>
-                </View>
-                <TouchableOpacity
-                    style={styles.settingItem}
-                    onPress={() => navigation.navigate('BlockedUsers')}
-                >
-                    <View style={styles.settingLeft}>
-                        <UserX size={20} color="#ef4444" />
-                        <Text style={styles.settingLabel}>Blocked Users</Text>
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(450).duration(800).springify()}>
+                    <View style={styles.settingsGroup}>
+                        <TouchableOpacity
+                            style={[styles.settingItem, { borderBottomWidth: 0 }]}
+                            onPress={() => navigation.navigate('BlockedUsers')}
+                        >
+                            <View style={styles.settingLeft}>
+                                <View style={[styles.iconContainer, { borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+                                    <UserX size={20} color="#ef4444" />
+                                </View>
+                                <Text style={styles.settingLabel}>Blocked Users</Text>
+                            </View>
+                            <ChevronRight size={20} color="#94a3b8" />
+                        </TouchableOpacity>
                     </View>
-                    <ChevronRight size={20} color="#52525b" />
-                </TouchableOpacity>
+                </Animated.View>
 
-                <View style={styles.sectionHeader}>
+                <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Danger Zone</Text>
-                </View>
-                <TouchableOpacity
-                    onPress={handleDeleteAccount}
-                    style={styles.deleteRow}
-                >
-                    <View style={styles.settingLeft}>
-                        <View style={styles.deleteIconContainer}>
-                            <Trash2 size={20} color="#ef4444" />
-                        </View>
-                        <Text style={styles.deleteText}>Delete Account</Text>
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(550).duration(800).springify()}>
+                    <View style={[styles.settingsGroup, { borderColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                        <TouchableOpacity
+                            onPress={handleDeleteAccount}
+                            style={styles.deleteRow}
+                        >
+                            <View style={styles.settingLeft}>
+                                <View style={styles.deleteIconContainer}>
+                                    <Trash2 size={20} color="#ef4444" />
+                                </View>
+                                <Text style={styles.deleteText}>Delete Account</Text>
+                            </View>
+                            <ChevronRight size={20} color="#ef4444" />
+                        </TouchableOpacity>
                     </View>
-                </TouchableOpacity>
+                </Animated.View>
 
-                <View style={styles.footer}>
+                <Animated.View entering={FadeInDown.delay(600).duration(800).springify()} style={styles.footer}>
                     <Text style={styles.versionText}>MyCircle v1.0.0</Text>
-                    <Text style={styles.copyrightText}>© 2025 Antigravity Technologies</Text>
-                </View>
+                    <Text style={styles.copyrightText}>© 2026 Antigravity Technologies</Text>
+                </Animated.View>
             </ScrollView>
 
             <ThemedAlert
@@ -170,76 +202,108 @@ const SettingsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#0a0a0a',
+    },
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     header: {
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
         flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 16,
+        zIndex: 10,
     },
     backButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
         marginRight: 16,
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: 'bold',
+        fontWeight: '800',
         color: '#ffffff',
+        letterSpacing: -0.5,
     },
     scrollView: {
         flex: 1,
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
     },
     sectionHeader: {
-        marginTop: 24,
-        marginBottom: 8,
+        marginTop: 32,
+        marginBottom: 12,
+        paddingHorizontal: 4,
     },
     sectionTitle: {
-        color: '#71717a', // zinc-500
-        fontWeight: 'bold',
+        color: '#94a3b8',
+        fontWeight: '700',
         textTransform: 'uppercase',
         fontSize: 12,
-        letterSpacing: 1.5,
-        paddingLeft: 4,
+        letterSpacing: 2,
+    },
+    settingsGroup: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        overflow: 'hidden',
     },
     settingItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        paddingHorizontal: 16,
+        paddingVertical: 18,
     },
     settingLeft: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     iconContainer: {
-        width: 40,
-        height: 40,
-        backgroundColor: '#18181b', // zinc-900
+        width: 42,
+        height: 42,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     settingLabel: {
         color: '#ffffff',
         fontSize: 16,
-        marginLeft: 12,
+        fontWeight: '600',
+        marginLeft: 14,
     },
     deleteRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 18,
     },
     deleteIconContainer: {
-        width: 40,
-        height: 40,
-        backgroundColor: 'rgba(239, 68, 68, 0.1)', // red-500/10
+        width: 42,
+        height: 42,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
@@ -249,23 +313,23 @@ const styles = StyleSheet.create({
     deleteText: {
         color: '#ef4444',
         fontSize: 16,
-        marginLeft: 12,
+        fontWeight: '700',
+        marginLeft: 14,
     },
     footer: {
-        marginTop: 'auto',
+        marginTop: 40,
         paddingVertical: 40,
         alignItems: 'center',
     },
     versionText: {
-        color: '#52525b', // zinc-600
-        fontSize: 12,
-        textAlign: 'center',
+        color: '#94a3b8',
+        fontSize: 13,
+        fontWeight: '600',
     },
     copyrightText: {
-        color: '#3f3f46', // zinc-700
-        fontSize: 10,
-        textAlign: 'center',
-        marginTop: 4,
+        color: '#64748b',
+        fontSize: 11,
+        marginTop: 6,
     },
 });
 

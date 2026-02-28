@@ -90,15 +90,15 @@ const Chat = () => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-7rem)] min-h-[600px] w-full max-w-6xl mx-auto pb-4">
-            <div className="flex-1 glass rounded-3xl overflow-hidden flex shadow-2xl border border-white/10 bg-[#0f172a]/50">
+        <div className="flex flex-col h-[calc(100vh-7rem)] min-h-[600px] w-full max-w-6xl mx-auto pb-4 text-foreground">
+            <div className="flex-1 glass-panel overflow-hidden flex shadow-2xl bg-card/50 backdrop-blur-md">
                 {/* Chat List Sidebar */}
-                <div className={`w-full md:w-1/3 border-r border-white/10 bg-black/20 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
-                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                        <h2 className="text-xl font-bold text-white">Messages</h2>
+                <div className={`w-full md:w-1/3 border-r border-card-border bg-card/30 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+                    <div className="p-4 border-b border-card-border flex items-center justify-between bg-hover-bg/30">
+                        <h2 className="text-xl font-bold text-text-heading">Messages</h2>
                         <button
                             onClick={() => setIsNewMessageModalOpen(true)}
-                            className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/20"
+                            className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-lg shadow-primary/20"
                             title="New Message"
                         >
                             <Plus className="w-5 h-5" />
@@ -112,12 +112,18 @@ const Chat = () => {
                             onSelect={setSelectedConversation}
                             loading={loading}
                             currentUserId={user?._id || user?.id}
+                            onConversationDeleted={(deletedId) => {
+                                setConversations(prev => prev.filter(c => c._id !== deletedId));
+                                if (selectedConversation?._id === deletedId) {
+                                    setSelectedConversation(null);
+                                }
+                            }}
                         />
                     </div>
                 </div>
 
                 {/* Chat Window */}
-                <div className={`w-full md:w-2/3 flex flex-col bg-black/40 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+                <div className={`w-full md:w-2/3 flex flex-col bg-card/60 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
                     {selectedConversation ? (
                         <ChatWindow
                             conversation={selectedConversation}
@@ -137,11 +143,11 @@ const Chat = () => {
                             }}
                         />
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                                <span className="text-4xl text-white/80">💬</span>
+                        <div className="flex-1 flex flex-col items-center justify-center text-text-muted">
+                            <div className="w-20 h-20 rounded-full bg-card/10 flex items-center justify-center mb-4">
+                                <span className="text-4xl opacity-80">💬</span>
                             </div>
-                            <p className="text-lg font-medium text-white/60">Select a conversation to start messaging</p>
+                            <p className="text-lg font-medium opacity-60">Select a conversation to start messaging</p>
                         </div>
                     )}
                 </div>

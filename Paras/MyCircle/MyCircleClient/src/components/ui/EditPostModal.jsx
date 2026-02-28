@@ -35,54 +35,54 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="glass w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl"
+                    className="glass-panel w-full max-w-lg shadow-2xl overflow-hidden"
                 >
-                    <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5">
-                        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <div className="flex items-center justify-between p-6 border-b border-card-border bg-hover-bg/30">
+                        <h2 className="text-xl font-bold text-text-heading flex items-center gap-2">
                             <Package className="w-5 h-5 text-primary" /> Edit Post
                         </h2>
-                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors group">
-                            <X className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <button onClick={onClose} className="p-2 hover:bg-hover-bg rounded-full transition-colors group">
+                            <X className="w-5 h-5 text-text-muted group-hover:text-text-heading transition-colors" />
                         </button>
                     </div>
 
                     <form onSubmit={handleSubmit} className="p-6 space-y-4">
                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-muted-foreground px-1">TITLE</label>
+                            <label className="text-[10px] font-black tracking-widest text-text-muted px-1">TITLE</label>
                             <input
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full bg-white/5 border border-transparent hover:bg-white/10 focus:bg-white/10 rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium"
+                                className="w-full bg-card border border-card-border hover:bg-hover-bg focus:bg-hover-bg rounded-xl px-4 py-3 text-text-heading placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium shadow-inner"
                                 required
                             />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-muted-foreground px-1">DESCRIPTION</label>
+                            <label className="text-[10px] font-black tracking-widest text-text-muted px-1">DESCRIPTION</label>
                             <textarea
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full bg-white/5 border border-transparent hover:bg-white/10 focus:bg-white/10 rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all min-h-[120px] resize-none text-sm leading-relaxed font-medium"
+                                className="w-full bg-card border border-card-border hover:bg-hover-bg focus:bg-hover-bg rounded-xl px-4 py-3 text-text-body placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all min-h-[120px] resize-none text-sm leading-relaxed font-medium shadow-inner"
                                 required
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-muted-foreground px-1">PRICE (₹)</label>
+                                <label className="text-[10px] font-black tracking-widest text-text-muted px-1">PRICE (₹)</label>
                                 <div className="relative">
-                                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                                     <input
                                         type="number"
                                         value={formData.price}
                                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                        className="w-full bg-white/5 border border-transparent hover:bg-white/10 focus:bg-white/10 rounded-xl pl-10 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium"
+                                        className="w-full bg-card border border-card-border hover:bg-hover-bg focus:bg-hover-bg rounded-xl pl-10 pr-4 py-3 text-text-heading focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium shadow-inner"
                                     />
                                 </div>
                             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { cn } from '../utils/cn';
 import api from '../utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../components/ui/Button';
@@ -19,23 +20,11 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icons
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-    iconUrl: markerIcon,
-    iconRetinaUrl: markerIconRetina,
-    shadowUrl: markerShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    tooltipAnchor: [16, -28],
-    shadowSize: [41, 41]
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-
-L.Marker.prototype.options.icon = DefaultIcon;
 
 const PostDetails = () => {
     const { id } = useParams();
@@ -300,94 +289,113 @@ const PostDetails = () => {
     const isOwnPost = currentUserId && post.user._id === currentUserId;
 
     return (
-        <div className="container mx-auto px-6 py-24 min-h-screen text-foreground">
-            <Button variant="ghost" className="mb-6 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground" onClick={() => navigate(-1)}>
-                <ArrowLeft className="w-5 h-5 mr-2" /> Back to Feed
-            </Button>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="container mx-auto px-6 py-24 min-h-screen text-foreground"
+        >
+            <button
+                className="group mb-10 flex items-center gap-2 text-text-muted hover:text-primary transition-all font-black text-[10px] uppercase tracking-[0.2em]"
+                onClick={() => navigate(-1)}
+            >
+                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                <span>Back to Orbit</span>
+            </button>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Hero Image */}
-                    <div className="rounded-[2.5rem] overflow-hidden aspect-video relative group shadow-2xl ring-1 ring-white/10">
+                    <div className="rounded-[2.5rem] overflow-hidden aspect-video relative group shadow-2xl border border-card-border">
                         {post.images && post.images.length > 0 ? (
                             <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
                         ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground bg-card/10">
+                            <div className="flex items-center justify-center h-full text-text-muted bg-background-section">
                                 No Image Available
                             </div>
                         )}
                     </div>
 
                     {/* Title & Info */}
-                    <div>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <div className="flex gap-2 mb-3">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider
-                                        ${post.type === 'job' ? 'bg-blue-500/20 text-blue-400' :
-                                            post.type === 'sell' ? 'bg-green-500/20 text-green-400' : 'bg-purple-500/20 text-purple-400'}`}>
-                                        {post.type}
-                                    </span>
-                                    {post.acceptsBarter && (
-                                        <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-pink-500/10 text-pink-500 border border-pink-500/20 flex items-center gap-1">
-                                            <Repeat className="w-3 h-3" /> Barter Accepted
-                                        </span>
-                                    )}
-                                </div>
-                                <h1 className="text-4xl font-bold text-foreground mb-4">{post.title}</h1>
-                                <div className="flex flex-wrap gap-4 text-muted-foreground text-sm font-medium">
-                                    <div className="flex items-center gap-1">
-                                        <MapPin className="w-4 h-4 text-primary" /> {post.location}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="w-4 h-4 text-primary" /> Posted {new Date(post.createdAt).toLocaleDateString()}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-pink-500/80">
-                                        <Heart className="w-4 h-4" /> {likes.length} Likes
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
+                    <div className="space-y-6">
+                        <div className="flex flex-wrap gap-2">
+                            <span className={cn(
+                                "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border",
+                                post.type === 'job' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                    post.type === 'sell' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                        'bg-primary/10 text-primary border-primary/20'
+                            )}>
+                                {post.type}
+                            </span>
+                            {post.acceptsBarter && (
+                                <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-pink-500/10 text-pink-500 border border-pink-500/20 flex items-center gap-1">
+                                    <Repeat className="w-3 h-3" /> Barter Ready
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex justify-between items-start gap-6">
+                            <h1 className="text-5xl md:text-6xl font-black text-text-heading tracking-tight leading-[0.9]">
+                                {post.title}
+                            </h1>
+                            <div className="flex gap-2 shrink-0">
                                 <button
                                     onClick={() => fetchAiContent(post)}
-                                    className={`p-3 rounded-full glass hover:bg-white/10 transition-all ${isFetchingAi || aiSummary ? 'text-primary ring-1 ring-primary/30' : 'text-foreground'}`}
-                                    title="Generate AI Summary"
+                                    className={cn(
+                                        "p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500",
+                                        isFetchingAi || aiSummary ? 'text-primary border-primary/30' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
+                                    )}
+                                    title="AI Synthesis"
                                     disabled={isFetchingAi}
                                 >
-                                    <Sparkles className={`w-5 h-5 ${isFetchingAi ? 'animate-pulse' : ''}`} />
+                                    <Sparkles className={cn("w-5 h-5", isFetchingAi && "animate-spin")} />
                                 </button>
                                 <button
                                     onClick={handleShare}
-                                    className="p-3 rounded-full glass hover:bg-white/10 transition-all text-foreground"
+                                    className="p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500 text-text-muted hover:text-text-heading hover:bg-hover-bg"
                                 >
                                     <Share2 className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={handleLike}
-                                    className={`p-3 rounded-full glass hover:bg-white/10 transition-all ${isLiked ? 'text-pink-500 ring-1 ring-pink-500/30' : 'text-foreground'}`}
+                                    className={cn(
+                                        "p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500",
+                                        isLiked ? 'text-pink-500 border-pink-500/30' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
+                                    )}
                                 >
-                                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                                    <Heart className={cn("w-5 h-5", isLiked && "fill-current scale-110")} />
                                 </button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-8 text-[11px] font-black uppercase tracking-widest text-text-muted border-t border-card-border pt-6">
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-primary" /> {post.location}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-primary" /> {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
+                            <div className="flex items-center gap-2 text-pink-500">
+                                <Heart className="w-4 h-4 fill-current opacity-50" /> {likes.length} Interactions
                             </div>
                         </div>
                     </div>
 
-                    <div className="h-px bg-white/5" />
+                    <div className="h-px bg-card-border/50" />
 
                     {/* Description */}
                     <div>
-                        <h2 className="text-xl font-bold text-foreground mb-4">Description</h2>
-                        <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap font-medium">
+                        <h2 className="text-xl font-bold text-text-heading mb-4">Description</h2>
+                        <p className="text-text-body leading-relaxed text-lg whitespace-pre-wrap font-medium">
                             {post.description}
                         </p>
 
                         {post.acceptsBarter && post.barterPreferences && (
                             <div className="mt-6 p-4 rounded-xl bg-pink-500/5 border border-pink-500/20">
-                                <h3 className="text-pink-400 font-semibold mb-2 flex items-center gap-2">
+                                <h3 className="text-pink-600 font-semibold mb-2 flex items-center gap-2">
                                     <Repeat className="w-4 h-4" /> Barter Preferences
                                 </h3>
-                                <p className="text-gray-300">
+                                <p className="text-text-body font-medium">
                                     {post.barterPreferences}
                                 </p>
                             </div>
@@ -409,7 +417,7 @@ const PostDetails = () => {
                                         <div className="h-4 bg-primary/10 rounded w-3/4 animate-pulse" />
                                     </div>
                                 ) : (
-                                    <p className="text-gray-300 leading-relaxed italic text-lg">
+                                    <p className="text-text-body leading-relaxed italic text-lg opacity-90">
                                         "{aiSummary}"
                                     </p>
                                 )}
@@ -419,33 +427,33 @@ const PostDetails = () => {
                         {/* AI Insights Section */}
                         {aiInsights && (
                             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl glass-panel">
-                                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Market Demand</p>
+                                <div className="p-4 rounded-xl bg-card border border-card-border shadow-sm">
+                                    <p className="text-xs text-text-muted uppercase font-bold mb-1">Market Demand</p>
                                     <div className="flex items-center gap-2">
-                                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="flex-1 h-2 bg-background-section rounded-full overflow-hidden">
                                             <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${aiInsights.demandScore * 10 || 50}%` }}
                                                 className="h-full bg-primary"
                                             />
                                         </div>
-                                        <span className="text-sm text-white font-medium">{aiInsights.demandLevel}</span>
+                                        <span className="text-sm text-text-heading font-medium">{aiInsights.demandLevel}</span>
                                     </div>
                                 </div>
-                                <div className="p-4 rounded-xl glass-panel">
-                                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Price Analysis</p>
-                                    <p className="text-sm text-white font-medium">{aiInsights.priceAnalysis}</p>
+                                <div className="p-4 rounded-xl bg-card border border-card-border shadow-sm">
+                                    <p className="text-xs text-text-muted uppercase font-bold mb-1">Price Analysis</p>
+                                    <p className="text-sm text-text-heading font-medium">{aiInsights.priceAnalysis}</p>
                                 </div>
                             </div>
                         )}
 
                         {/* Location Map Section */}
-                        {post.locationCoords?.coordinates && (
+                        {post.locationCoords?.coordinates?.length === 2 && (
                             <div className="mt-8">
-                                <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                                <h2 className="text-xl font-bold text-text-heading mb-4 flex items-center gap-2">
                                     <Navigation className="w-5 h-5 text-primary" /> Location
                                 </h2>
-                                <div className="w-full h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-white/10">
+                                <div className="w-full h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl border border-card-border">
                                     <MapContainer
                                         center={[post.locationCoords.coordinates[1], post.locationCoords.coordinates[0]]}
                                         zoom={14}
@@ -458,7 +466,7 @@ const PostDetails = () => {
                                         />
                                         <Marker position={[post.locationCoords.coordinates[1], post.locationCoords.coordinates[0]]}>
                                             <Popup className="custom-popup">
-                                                <div className="p-1 font-bold text-foreground">{post.location}</div>
+                                                <div className="p-1 font-bold text-text-heading">{post.location}</div>
                                             </Popup>
                                         </Marker>
                                     </MapContainer>
@@ -552,7 +560,7 @@ const PostDetails = () => {
                                                     <button
                                                         onClick={() => handleEditComment(comment._id)}
                                                         disabled={!editText.trim()}
-                                                        className="text-primary text-sm font-medium hover:text-white disabled:opacity-50"
+                                                        className="text-primary text-sm font-medium hover:text-primary-foreground disabled:opacity-50"
                                                     >
                                                         Save
                                                     </button>
@@ -561,7 +569,7 @@ const PostDetails = () => {
                                                             setEditingComment(null);
                                                             setEditText('');
                                                         }}
-                                                        className="text-gray-400 text-sm font-medium hover:text-white"
+                                                        className="text-text-muted text-sm font-medium hover:text-text-heading"
                                                     >
                                                         Cancel
                                                     </button>
@@ -594,7 +602,7 @@ const PostDetails = () => {
                                                     <button
                                                         onClick={() => handleReplySubmit(comment._id)}
                                                         disabled={!replyText.trim()}
-                                                        className="text-primary text-sm font-medium hover:text-white disabled:opacity-50"
+                                                        className="text-primary text-sm font-medium hover:text-text-heading disabled:opacity-50"
                                                     >
                                                         Send
                                                     </button>
@@ -606,15 +614,15 @@ const PostDetails = () => {
                                                 <div className="mt-4 space-y-4 border-l-2 border-card-border pl-4">
                                                     {comment.replies.map((reply, rIndex) => (
                                                         <div key={rIndex} className="flex gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
-                                                                <img src={reply.user?.avatar || "https://ui-avatars.com/api/?name=User"} alt={reply.user?.displayName || "User"} className="w-full h-full object-cover" />
+                                                            <div className="w-8 h-8 rounded-full bg-background-section overflow-hidden shrink-0 border border-card-border shadow-sm">
+                                                                <img src={getAvatarUrl(reply.user)} alt={reply.user?.displayName || "User"} className="w-full h-full object-cover" />
                                                             </div>
                                                             <div>
                                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                                    <span className="font-bold text-sm text-foreground">{reply.user?.displayName}</span>
-                                                                    <span className="text-[10px] text-muted-foreground font-medium">{new Date(reply.createdAt).toLocaleDateString()}</span>
+                                                                    <span className="font-bold text-sm text-text-heading">{reply.user?.displayName}</span>
+                                                                    <span className="text-[10px] text-text-muted font-medium">{new Date(reply.createdAt).toLocaleDateString()}</span>
                                                                 </div>
-                                                                <p className="text-sm text-muted-foreground font-medium">{reply.text}</p>
+                                                                <p className="text-sm text-text-body font-medium">{reply.text}</p>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -644,58 +652,83 @@ const PostDetails = () => {
                 </div>
 
                 {/* Sidebar */}
-                <div className="lg:col-span-1">
-                    <div className="glass rounded-[3rem] p-8 sticky top-24 border-card-border shadow-2xl">
-                        <div className="text-3xl font-black text-foreground mb-6 flex items-baseline gap-1">
-                            {post.acceptsBarter ? (
-                                <span className="text-pink-500 text-2xl">Barter / Exchange</span>
-                            ) : (
-                                <>₹{post.price} <span className="text-sm text-muted-foreground font-normal">/ estimated</span></>
-                            )}
+                <aside className="lg:col-span-1">
+                    <div className="glass-panel p-10 sticky top-24 shadow-2xl space-y-8">
+                        <div>
+                            <label className="text-[10px] font-black tracking-widest text-text-muted uppercase mb-2 block">Value Orbit</label>
+                            <div className="text-5xl font-black text-text-heading tracking-tight">
+                                {post.acceptsBarter ? (
+                                    <span className="text-pink-500 text-3xl">EXCHANGE</span>
+                                ) : (
+                                    <>₹{post.price}</>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="w-14 h-14 rounded-full bg-card/10 overflow-hidden border-2 border-primary/20 p-0.5 shadow-lg">
-                                <img src={post.user?.avatar} alt={post.user?.displayName} className="w-full h-full object-cover rounded-full" />
+                        <div className="h-px bg-card-border" />
+
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-2xl bg-background-section overflow-hidden border border-card-border shadow-xl">
+                                <img src={getAvatarUrl(post.user)} alt={post.user?.displayName} className="w-full h-full object-cover" />
                             </div>
-                            <div>
-                                <div className="font-black text-foreground text-lg">{post.user?.displayName}</div>
-                                <div className="text-yellow-500 text-sm flex items-center gap-1 font-bold">
-                                    ★ {post.user?.rating || 'New'}
+                            <div className="flex-1">
+                                <div className="text-[10px] font-black tracking-widest text-text-muted uppercase mb-1">Provider</div>
+                                <div className="font-black text-text-heading text-xl leading-none">{post.user?.displayName}</div>
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-black border border-amber-500/20">
+                                    ★ {post.user?.rating?.toFixed(1) || '0.0'}
                                 </div>
                             </div>
                         </div>
 
+                        <div className="h-px bg-card-border" />
+
                         {!isOwnPost && (
-                            <div className="space-y-4">
-                                <Button
-                                    variant="primary"
-                                    className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20"
+                            <div className="space-y-3">
+                                <button
                                     onClick={handleContactRequest}
                                     disabled={requestLoading || requestSent}
+                                    className={cn(
+                                        "w-full py-5 rounded-2xl text-[13px] font-black uppercase tracking-widest transition-all duration-500 flex items-center justify-center gap-3 shadow-xl",
+                                        requestSent
+                                            ? "bg-card text-text-muted border border-card-border opacity-80 cursor-default"
+                                            : "bg-primary text-primary-foreground hover:scale-[1.02] shadow-[0_20px_50px_rgba(245,158,11,0.3)] active:scale-95"
+                                    )}
                                 >
-                                    <MessageCircle className="w-5 h-5 mr-2" />
-                                    {requestSent ? 'Request Sent' : (requestLoading ? 'Sending...' : 'Request Contact')}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="w-full h-14 text-lg font-bold hover:bg-card/20 border-card-border text-foreground transition-all"
+                                    {requestLoading ? (
+                                        <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                                    ) : (
+                                        <>
+                                            {requestSent ? <UserCheck className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                                            <span>{requestSent ? 'Connection Pending' : 'Join Circle'}</span>
+                                        </>
+                                    )}
+                                </button>
+
+                                <button
                                     onClick={handleMessage}
                                     disabled={contactRequestStatus !== 'approved'}
+                                    className={cn(
+                                        "w-full py-5 rounded-2xl text-[13px] font-black uppercase tracking-widest transition-all duration-500 flex items-center justify-center gap-3 border border-card-border",
+                                        contactRequestStatus === 'approved'
+                                            ? "bg-card text-text-heading hover:bg-hover-bg shadow-xl"
+                                            : "bg-card/30 text-text-muted/50 border border-card-border/30 cursor-not-allowed"
+                                    )}
                                 >
-                                    <MessageCircle className="w-5 h-5 mr-2" />
-                                    {contactRequestStatus === 'approved' ? 'Message' : (contactRequestStatus === 'pending' ? 'Awaiting Approval' : 'Message (After Approval)')}
-                                </Button>
+                                    <MessageCircle className="w-5 h-5" />
+                                    <span>{contactRequestStatus === 'approved' ? 'Open Channel' : 'Channel Locked'}</span>
+                                </button>
                             </div>
                         )}
 
-                        <p className="text-xs text-center text-muted-foreground mt-8 font-medium italic">
-                            Safety Tip: Always meet in public places for exchanges.
-                        </p>
+                        <div className="pt-4 text-center">
+                            <p className="text-[10px] text-text-muted font-black uppercase tracking-widest leading-relaxed">
+                                Safety Protocol: Exchange in Neutral Zones.
+                            </p>
+                        </div>
                     </div>
-                </div>
+                </aside>
             </div>
-        </div>
+        </motion.div>
     );
 };
 

@@ -42,28 +42,28 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                    className="absolute inset-0 bg-background/60 backdrop-blur-sm"
                 />
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-md glass border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-md glass-panel shadow-2xl overflow-hidden"
                 >
                     {/* Header */}
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <div className="p-6 border-b border-card-border flex items-center justify-between bg-hover-bg/30">
+                        <h3 className="text-xl font-bold text-text-heading flex items-center gap-2">
                             <MessageSquare className="w-5 h-5 text-primary" />
                             New Message
                         </h3>
-                        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-white transition-colors">
+                        <button onClick={onClose} className="p-2 hover:bg-hover-bg rounded-full text-text-muted hover:text-text-heading transition-colors">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
 
                     {/* Search */}
-                    <div className="p-4 bg-white/5">
+                    <div className="p-4 bg-hover-bg/10">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <input
@@ -71,7 +71,7 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                                 placeholder="Search connections..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-secondary/50 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
+                                className="w-full bg-card border border-card-border rounded-xl py-2.5 pl-10 pr-4 text-text-heading placeholder:text-text-muted focus:outline-none focus:border-primary/50 transition-colors shadow-inner"
                             />
                         </div>
                     </div>
@@ -86,10 +86,10 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                                     <button
                                         key={user._id}
                                         onClick={() => onSelectUser(user)}
-                                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all group text-left w-full"
+                                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-hover-bg transition-all group text-left w-full"
                                     >
                                         <div className="relative">
-                                            <div className="w-11 h-11 rounded-full overflow-hidden border border-white/10 group-hover:border-primary/50 transition-colors">
+                                            <div className="w-11 h-11 rounded-full overflow-hidden border border-card-border group-hover:border-primary/50 transition-colors">
                                                 <img
                                                     src={getAvatarUrl(user)}
                                                     alt={user.displayName}
@@ -98,11 +98,11 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                                             </div>
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="text-sm font-semibold text-white truncate">{user.displayName}</h4>
-                                            <p className="text-xs text-gray-500 truncate">Connected via Request</p>
+                                            <h4 className="text-sm font-semibold text-text-heading truncate">{user.displayName}</h4>
+                                            <p className="text-xs text-text-muted truncate">Connected via Request</p>
                                         </div>
                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="primary" size="sm" className="h-8 px-3">
+                                            <Button variant="primary" size="sm" className="h-8 px-3 text-primary-foreground">
                                                 Chat
                                             </Button>
                                         </div>
@@ -111,15 +111,15 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                             </div>
                         ) : (
                             <div className="p-12 text-center">
-                                <UserIcon className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-                                <p className="text-gray-400 font-medium">No connections found</p>
-                                <p className="text-xs text-gray-600 mt-1 px-4">You can only chat with users who have accepted your contact requests.</p>
+                                <UserIcon className="w-12 h-12 text-text-heading/20 mx-auto mb-3" />
+                                <p className="text-text-muted font-medium">No connections found</p>
+                                <p className="text-xs text-text-muted/60 mt-1 px-4">You can only chat with users who have accepted your contact requests.</p>
                             </div>
                         )}
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 bg-white/5 border-t border-white/5 flex justify-end">
+                    <div className="p-4 bg-hover-bg/20 border-t border-card-border flex justify-end">
                         <Button variant="outline" size="sm" onClick={onClose}>
                             Cancel
                         </Button>

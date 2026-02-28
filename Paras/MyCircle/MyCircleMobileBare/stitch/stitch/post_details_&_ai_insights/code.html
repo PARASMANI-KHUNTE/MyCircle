@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Post Details &amp; AI Insights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a855f7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#191022",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(168, 85, 247, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        .glass-bubble {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .thread-line {
+            position: absolute;
+            left: 1.25rem;
+            top: 3.5rem;
+            bottom: 0;
+            width: 1.5px;
+            background: linear-gradient(to bottom, rgba(168, 85, 247, 0.3), transparent);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- Header Navigation (iOS Style) -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-background-dark/80 to-transparent backdrop-blur-sm">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-background-dark/40 border border-white/10 text-white">
+<span class="material-icons-round">arrow_back_ios_new</span>
+</button>
+<div class="flex gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-background-dark/40 border border-white/10 text-white">
+<span class="material-icons-round">share</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-background-dark/40 border border-white/10 text-white">
+<span class="material-icons-round">favorite_border</span>
+</button>
+</div>
+</header>
+<main class="pb-32">
+<!-- Hero Image Carousel -->
+<div class="relative w-full h-[450px] overflow-hidden rounded-b-[32px] shadow-2xl">
+<img alt="Premium Vintage Tech" class="w-full h-full object-cover" data-alt="Retro aesthetic gaming setup with neon lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKNs2rwXRfvwZe-e1Ko7uCNboAnlHA32jm8IJHhZSQTCA9gylZJdWKHJ7FuYmUlrubNQ90wA5C9ZIfFZeUBG_A3cYOYD4QPJfvcllq1tjKKY3nkI1Nq_yduWBFo9xRheBNdllgffSFSxBRdxaescBphSJUIzgIGZgvaR_zb8vJOiesL32mdiKCN-jxeZsd6M_Kb0KqnQWGu6UolC3LgzOeQzCARWJ_YnGol4pdE5QopwS7fd_WEGCxbmsPwWaLtl7ctcJh33bEOp4M"/>
+<!-- Gradient Overlay -->
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-60"></div>
+<!-- Pagination Indicators -->
+<div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-1.5">
+<span class="w-6 h-1 rounded-full bg-primary"></span>
+<span class="w-1.5 h-1 rounded-full bg-white/40"></span>
+<span class="w-1.5 h-1 rounded-full bg-white/40"></span>
+<span class="w-1.5 h-1 rounded-full bg-white/40"></span>
+</div>
+</div>
+<!-- Content Section -->
+<div class="px-6 -mt-6 relative z-10">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 mb-4 text-xs font-medium text-slate-400">
+<span>Marketplace</span>
+<span class="material-icons-round text-[10px]">chevron_right</span>
+<span>Collectibles</span>
+<span class="material-icons-round text-[10px]">chevron_right</span>
+<span class="text-primary">Cyberdeck v2.0</span>
+</nav>
+<!-- Post Title & Price -->
+<div class="flex justify-between items-start mb-6">
+<div>
+<h1 class="text-2xl font-bold tracking-tight mb-1">Custom Handbuilt Cyberdeck</h1>
+<div class="flex items-center gap-2 text-slate-400 text-sm">
+<span class="material-icons-round text-sm">location_on</span>
+<span>Neo Tokyo, Dist. 09</span>
+</div>
+</div>
+<div class="text-right">
+<span class="block text-2xl font-extrabold text-primary">Ξ 1.25</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Approx. $2,450</span>
+</div>
+</div>
+<!-- AI Insights Section -->
+<div class="glass-panel rounded-xl p-5 mb-8 neon-glow relative overflow-hidden">
+<!-- Glowing Decorative Element -->
+<div class="absolute -top-10 -right-10 w-24 h-24 bg-primary/20 blur-3xl rounded-full"></div>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+<span class="material-icons-round text-white">auto_awesome</span>
+</div>
+<div>
+<h3 class="font-bold text-sm tracking-wide uppercase">AI Insights</h3>
+<p class="text-[10px] text-primary/80 font-medium">Updated 2 minutes ago</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
+<span class="material-icons-round text-primary text-sm mt-0.5">verified_user</span>
+<div>
+<p class="text-xs font-semibold text-slate-200">Condition: Mint</p>
+<p class="text-[10px] text-slate-400">98% match with described collector's grade quality.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
+<span class="material-icons-round text-primary text-sm mt-0.5">trending_up</span>
+<div>
+<p class="text-xs font-semibold text-slate-200">Value Trend: Rising</p>
+<p class="text-[10px] text-slate-400">Demand for this artisan series has increased by 14% this month.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/5">
+<span class="material-icons-round text-primary text-sm mt-0.5">lightbulb</span>
+<div>
+<p class="text-xs font-semibold text-slate-200">Key Takeaway</p>
+<p class="text-[10px] text-slate-400">Mechanical switches are genuine Cherry MX Black from 1980s stock.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Seller Info -->
+<div class="flex items-center justify-between mb-8 p-4 glass-bubble rounded-xl">
+<div class="flex items-center gap-3">
+<img alt="Seller" class="w-12 h-12 rounded-full border-2 border-primary/40" data-alt="Profile portrait of an executive user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwZkUcAYMfpNt3lC_VPEKyW2AyGTKyzDUynGT0DKoOwTajbNGEikQMzFkMOCWFG9LW0w1sUk0aaBUHAzLgrxjkVPrd8kFizCvnjVpLgIuSXeeYevM-EcZFZGbCWhMeTAqz-YJEnhJOaVnLz-fKDZgKqFATl-9h7rVhqu9iBYhimswVFu7OI-XkTGQnQuhPvSCOmanCJ2AvF-Cu6mkCNtg9cNn15IVoE9FuHR8UQU2PtOruxrgqw2YJMjLMEbvv32pam8QjGBRmFPbC"/>
+<div>
+<h4 class="font-bold text-sm">Kaelen Vance</h4>
+<div class="flex items-center gap-1">
+<span class="material-icons-round text-yellow-500 text-[12px]">star</span>
+<span class="text-[11px] font-semibold">4.9</span>
+<span class="text-[11px] text-slate-500 ml-1">(128 Trades)</span>
+</div>
+</div>
+</div>
+<button class="px-4 py-2 rounded-full border border-primary/50 text-xs font-bold text-primary">Follow</button>
+</div>
+<!-- Description -->
+<div class="mb-8">
+<h3 class="text-lg font-bold mb-3">Description</h3>
+<p class="text-sm text-slate-400 leading-relaxed line-clamp-4">
+                    Extremely rare custom cyberdeck built on a modified mechanical frame. Features a sunlight-readable IPS display, internal battery pack with 8-hour life, and fully programmable ortho-linear layout. This is piece 04/10 from the 'Void-Runner' collection. Minimal use, strictly displayed in a humidity-controlled environment. Includes original flight case and custom-braided USB-C cable.
+                </p>
+<button class="text-primary text-xs font-bold mt-2">Read more</button>
+</div>
+<!-- Discussion / Comments -->
+<div class="mb-12">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-lg font-bold">Discussion</h3>
+<span class="text-xs font-medium text-slate-500">14 Comments</span>
+</div>
+<div class="space-y-6">
+<!-- Comment 1 -->
+<div class="relative">
+<div class="thread-line"></div>
+<div class="flex gap-3 mb-4">
+<img alt="User" class="w-10 h-10 rounded-full z-10" data-alt="Close up portrait of a young man" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6vmMUQuMikK0QM2w9NX3T7IW1QzvYi88bxuUT28yg47qhlThjUsDXN99i2iyzvIE6usPVCHCB3sDFm9HRtuOqGmrVSWvObjUZmmrq7P8eWH52OhjGbCx7yM0HwsBYuc-exJCXRQSO1_LtWPUmLV2FFUnlxXStWmzP8-b1x1PyNkW-ffdPFr_jrx5sh3GbsgCFeFNmKgN5e1hPxiaDXpDjNAmNGDnaFyxwWEoz1ex8G3rQ-zFvOjKVewzJblVaQHjz1IirqtyvnW2i"/>
+<div class="flex-1">
+<div class="glass-bubble rounded-2xl p-4 rounded-tl-none">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold">Marcus_Dev</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-tighter">1h ago</span>
+</div>
+<p class="text-xs text-slate-300">Are the switches hot-swappable or soldered on this build?</p>
+</div>
+<div class="flex gap-4 mt-2 px-1">
+<button class="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+<span class="material-icons-round text-[14px]">thumb_up</span> 12
+                                    </button>
+<button class="text-[10px] font-bold text-slate-500">Reply</button>
+</div>
+</div>
+</div>
+<!-- Nested Reply -->
+<div class="pl-12">
+<div class="flex gap-3">
+<img alt="Seller" class="w-8 h-8 rounded-full" data-alt="Profile portrait of the seller" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5T0NB3K5v7soSX9AeKfMbKkmCQvEP5FHT0LZ85hdRvhetAiawzVi1BZY1EjOfmw8tUgBJTWyEuD99NFknVR2x0LSboQB8-I6K_XEyOe_-Q2M7uYkjFXOOFhFnP6Fd6BuQFl4tKgT4PXGaprxV3JouELK3kofwz7_zNnFHb17gUoqBkr_iHQqhDsFaKp0CU6jnIv0D3iUCQfJHPsPMd7c6u8Y-DiFhqjXO3Rr-tO5r2P89pdOmOw5jjTpYThPu52O4BRRiWZOR3iFI"/>
+<div class="flex-1">
+<div class="glass-bubble rounded-2xl p-3 rounded-tl-none border-primary/20 bg-primary/5">
+<div class="flex justify-between items-center mb-1">
+<span class="text-[11px] font-bold text-primary">Kaelen Vance <span class="text-[9px] bg-primary/20 px-1.5 py-0.5 rounded ml-1">OP</span></span>
+<span class="text-[9px] text-slate-500 uppercase">45m ago</span>
+</div>
+<p class="text-xs text-slate-300">Soldered for maximum rigidity and long-term durability. Used silver solder for better conductivity.</p>
+</div>
+<div class="flex gap-4 mt-2 px-1">
+<button class="flex items-center gap-1 text-[10px] font-bold text-primary">
+<span class="material-icons-round text-[14px]">thumb_up</span> 4
+                                        </button>
+<button class="text-[10px] font-bold text-slate-500">Reply</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Comment 2 -->
+<div class="flex gap-3">
+<img alt="User" class="w-10 h-10 rounded-full" data-alt="Portrait of a female user smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOB58TRIDznOxKPr8OaeE6TZZStnec2kUAkhVQwif6XfkRIxYjQKE24XtVTSr4i5TbFnmlDafFz5VVEpSvOeXfY0le9C-sTyTMLjaNiRBmDOkFGicy2C5cYLx7GWbMRoKMxuz-2U9gLNAaZbxnjl7uBgnSCiHP0K4Nq4nzVQ4D77iLqIzLE3OEgyG380diFdYKHjChPZWzKhbQMwXsBsV4pMnElHR-5ueD7LlylCZh22gT3XJc3mqlD6lsg8x-bRrgPbokhxgWZLan"/>
+<div class="flex-1">
+<div class="glass-bubble rounded-2xl p-4 rounded-tl-none">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold">TechEnthusiast_01</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-tighter">2h ago</span>
+</div>
+<p class="text-xs text-slate-300">The finish on the chassis looks incredible. Is that powder-coated or anodized?</p>
+</div>
+<div class="flex gap-4 mt-2 px-1">
+<button class="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+<span class="material-icons-round text-[14px]">thumb_up</span> 2
+                                </button>
+<button class="text-[10px] font-bold text-slate-500">Reply</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Bar -->
+<div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent backdrop-blur-md">
+<div class="max-w-md mx-auto flex gap-4 items-center">
+<button class="w-14 h-14 rounded-2xl glass-bubble flex items-center justify-center text-slate-300">
+<span class="material-icons-round">chat_bubble_outline</span>
+</button>
+<button class="flex-1 h-14 bg-primary rounded-2xl neon-glow flex items-center justify-center gap-2 text-white font-extrabold tracking-wide uppercase shadow-lg shadow-primary/30">
+<span>Send Request</span>
+<span class="material-icons-round">bolt</span>
+</button>
+</div>
+<!-- iOS Home Indicator Safe Area -->
+<div class="h-4"></div>
+</div>
+</body></html>

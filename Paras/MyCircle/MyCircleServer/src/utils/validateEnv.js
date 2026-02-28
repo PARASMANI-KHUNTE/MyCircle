@@ -24,7 +24,7 @@ const validateEnv = () => {
     }
 
     const optionalVars = [
-        'GEMINI_API_KEY',
+        'GROQ_API_KEY',
         'CLIENT_URL',
         'CLIENT_URL_DEV',
         'CORS_ORIGINS',

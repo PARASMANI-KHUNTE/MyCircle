@@ -4,7 +4,7 @@ const {
     analyzePost,
     explainPost,
     getPlaceholderSuggestions
-} = require('../config/gemini');
+} = require('../config/groq');
 
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, AlertCircle, Info, X, MessageCircle, Heart, UserPlus } from 'lucide-react';
 
-const ToastContext = createContext();
+const ToastContext = createContext(null);
 
 export const useToast = () => {
     const context = useContext(ToastContext);
@@ -80,7 +80,7 @@ const Toast = ({ message, type, onClose }) => {
         >
             <div className="flex items-center gap-3">
                 {icons[type]}
-                <p className="text-sm font-medium text-white">{message}</p>
+                <p className="text-sm font-medium text-primary-foreground">{message}</p>
             </div>
             <button
                 onClick={onClose}

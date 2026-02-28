@@ -26,6 +26,9 @@ import RequestsScreen from './src/screens/RequestsScreen';
 import BlockedUsersScreen from './src/screens/BlockedUsersScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import EditPostScreen from './src/screens/EditPostScreen';
+import WalletScreen from './src/screens/WalletScreen';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 
 
 const Stack = createStackNavigator();
@@ -52,6 +55,8 @@ const RootNavigator = () => {
       {!isAuthenticated ? (
         <>
           <Stack.Screen name="Landing" component={LandingScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
         </>
       ) : (
         <>
@@ -67,6 +72,7 @@ const RootNavigator = () => {
           <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ headerShown: false }} />
           <Stack.Screen name="UserProfile" component={ProfileScreen} />
           <Stack.Screen name="EditPost" component={EditPostScreen} />
+          <Stack.Screen name="Wallet" component={WalletScreen} />
         </>
       )}
     </Stack.Navigator>

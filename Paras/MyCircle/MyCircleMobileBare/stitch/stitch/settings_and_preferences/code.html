@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings and Preferences</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a855f7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#09050d",
+                        "glass-border": "rgba(168, 85, 247, 0.2)",
+                        "glass-bg": "rgba(25, 16, 34, 0.6)",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-panel {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background: rgba(25, 16, 34, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+        }
+        .danger-glow {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+        }
+        .safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen font-display antialiased">
+<!-- Main Mobile Container -->
+<div class="max-w-[430px] mx-auto min-h-screen relative overflow-hidden flex flex-col">
+<!-- Background Accents -->
+<div class="fixed top-[-10%] left-[-20%] w-[300px] h-[300px] bg-primary/20 blur-[120px] rounded-full pointer-events-none"></div>
+<div class="fixed bottom-[10%] right-[-20%] w-[250px] h-[250px] bg-primary/10 blur-[100px] rounded-full pointer-events-none"></div>
+<!-- Header -->
+<header class="sticky top-0 z-50 px-6 pt-12 pb-4 backdrop-blur-lg bg-background-dark/80 flex items-center justify-between">
+<button class="w-10 h-10 flex items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
+<span class="material-icons-round text-primary">arrow_back_ios_new</span>
+</button>
+<h1 class="text-xl font-extrabold tracking-tight">Settings</h1>
+<div class="w-10"></div> <!-- Spacer for symmetry -->
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 px-6 pt-4 pb-20 overflow-y-auto space-y-8">
+<!-- User Profile Summary -->
+<div class="glass-panel p-5 rounded-xl flex items-center gap-4 border-primary/10">
+<div class="relative">
+<img alt="User Profile" class="w-16 h-16 rounded-xl object-cover border-2 border-primary/40 p-0.5" data-alt="Modern high-fashion male portrait profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATrY7u8wfGlJrtYIScG4d4BEOSHYQjWrBPO5FzNQ1oAjcnJ4gMql97Y7MmFVAFrKeT-JqFc1ArZ1PnBnOiXjl-Cbwq9vskMbNT1qWZbTQdoyGIBlsMQ3yzGZiXsFfmz8kjUt4P8bosk1iQtM1TYNrmnxvYckgTQWYqQYEgZv66n6CM-GFICMGhpVP5FYX3QwdGY6vJbLc5mE--9r6B6JoM-ViZx5-Z_b_JpA3vUlL1ehi4QTIwc9E5U7ADysdnV2zOpoo5N2A2sgJp"/>
+<div class="absolute -bottom-1 -right-1 bg-primary w-5 h-5 rounded-full flex items-center justify-center border-2 border-background-dark">
+<span class="material-icons-round text-[12px] text-white">verified</span>
+</div>
+</div>
+<div>
+<h2 class="text-lg font-bold leading-tight">Alex Sterling</h2>
+<p class="text-slate-400 text-sm">Elite Member • New York</p>
+</div>
+</div>
+<!-- Account Section -->
+<section>
+<h3 class="text-xs font-black uppercase tracking-[0.15em] text-primary mb-4 ml-1">Account Management</h3>
+<div class="glass-panel rounded-xl overflow-hidden">
+<button class="w-full flex items-center justify-between p-4 border-b border-white/5 active:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons-round text-primary text-xl">person</span>
+</div>
+<span class="font-semibold">Edit Profile</span>
+</div>
+<span class="material-icons-round text-slate-500">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 active:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons-round text-primary text-xl">lock</span>
+</div>
+<span class="font-semibold">Security &amp; Privacy</span>
+</div>
+<span class="material-icons-round text-slate-500">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Preferences Section -->
+<section>
+<h3 class="text-xs font-black uppercase tracking-[0.15em] text-primary mb-4 ml-1">Preferences</h3>
+<div class="glass-panel rounded-xl overflow-hidden">
+<button class="w-full flex items-center justify-between p-4 border-b border-white/5 active:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons-round text-primary text-xl">notifications</span>
+</div>
+<span class="font-semibold">Notifications</span>
+</div>
+<span class="material-icons-round text-slate-500">chevron_right</span>
+</button>
+<!-- Theme Toggle -->
+<div class="w-full flex items-center justify-between p-4 border-b border-white/5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons-round text-primary text-xl">dark_mode</span>
+</div>
+<span class="font-semibold">Dark Mode</span>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<div class="w-12 h-6 bg-primary rounded-full neon-glow transition-all"></div>
+<div class="absolute left-6 w-5 h-5 bg-white rounded-full transition-all border shadow-sm"></div>
+</div>
+</div>
+<button class="w-full flex items-center justify-between p-4 active:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons-round text-primary text-xl">translate</span>
+</div>
+<span class="font-semibold">Language</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-slate-400 text-sm">English (US)</span>
+<span class="material-icons-round text-slate-500">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Support Section -->
+<section>
+<h3 class="text-xs font-black uppercase tracking-[0.15em] text-primary mb-4 ml-1">Support</h3>
+<div class="glass-panel rounded-xl overflow-hidden">
+<button class="w-full flex items-center justify-between p-4 border-b border-white/5 active:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons-round text-primary text-xl">help</span>
+</div>
+<span class="font-semibold">Help Center</span>
+</div>
+<span class="material-icons-round text-slate-500">open_in_new</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 active:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons-round text-primary text-xl">info</span>
+</div>
+<span class="font-semibold">About NeonMarket</span>
+</div>
+<span class="text-slate-400 text-sm">v2.4.0</span>
+</button>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="mt-4">
+<div class="glass-panel rounded-xl border-red-500/20 bg-red-500/5 danger-glow overflow-hidden">
+<button class="w-full flex items-center justify-between p-4 active:bg-red-500/10 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+<span class="material-icons-round text-red-500 text-xl">no_accounts</span>
+</div>
+<span class="font-bold text-red-500 uppercase tracking-wide text-sm">Delete Account</span>
+</div>
+<span class="material-icons-round text-red-500/50">warning</span>
+</button>
+</div>
+<p class="mt-4 px-2 text-center text-[11px] text-slate-500 leading-relaxed font-medium">
+                    Deleting your account is permanent and will remove all of your listed items, history, and social connections.
+                </p>
+</section>
+<!-- Safe Area Spacer -->
+<div class="h-10 safe-bottom"></div>
+</main>
+<!-- Fixed Bottom Tab Bar (Contextual) -->
+<nav class="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto glass-panel border-t border-white/5 px-8 pt-4 safe-bottom flex justify-between items-center bg-background-dark/90 backdrop-blur-2xl">
+<button class="flex flex-col items-center gap-1 group">
+<span class="material-icons-round text-slate-500 group-hover:text-primary">home</span>
+</button>
+<button class="flex flex-col items-center gap-1 group">
+<span class="material-icons-round text-slate-500 group-hover:text-primary">explore</span>
+</button>
+<div class="w-12 h-12 -mt-10 bg-primary rounded-2xl flex items-center justify-center neon-glow border-4 border-background-dark">
+<span class="material-icons-round text-white text-3xl">add</span>
+</div>
+<button class="flex flex-col items-center gap-1 group">
+<span class="material-icons-round text-slate-500 group-hover:text-primary">shopping_bag</span>
+</button>
+<button class="flex flex-col items-center gap-1 group">
+<span class="material-icons-round text-primary">settings</span>
+<div class="w-1 h-1 bg-primary rounded-full"></div>
+</button>
+</nav>
+</div>
+</body></html>

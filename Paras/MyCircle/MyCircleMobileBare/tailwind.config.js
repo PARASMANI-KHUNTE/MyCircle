@@ -3,37 +3,42 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Vibrant Circle Palette
+        // Neon Dark Reference Palette
         background: "#09090b",
+        "background-dark": "#0a0a0a",
         surface: "#18181b",
-        primary: "#8b5cf6", // Violet-500
-        secondary: "#06b6d4", // Cyan-500 (Updated from Blue)
-        accent: "#ec4899", // Pink-500 (Updated from Orange)
+        primary: "#af25f4", // Stitch Violet
+        secondary: "#06b6d4",
+        "accent-cyan": "#00f5ff",
+        "accent-violet": "#8c25f4",
+        error: "#f20d0d", // Stitch Red
 
         // Status Colors
         success: "#10b981",
         warning: "#f59e0b",
-        error: "#ef4444",
 
         // Text Colors
         text: {
-          primary: "#f8fafc",
+          primary: "#ffffff",
           secondary: "#94a3b8",
           tertiary: "#64748b",
         },
 
-        // Glassmorphism helper colors (used with opacity)
+        // Glassmorphism helper colors
         glass: {
-          light: "#ffffff",
-          dark: "#000000",
+          white: "rgba(255, 255, 255, 0.05)",
+          border: "rgba(255, 255, 255, 0.1)",
         }
       },
       fontFamily: {
+        display: ["Plus Jakarta Sans", "sans-serif"],
         sans: ["System", "sans-serif"],
       },
       borderRadius: {
-        '4xl': '2rem',
-        '5xl': '2.5rem',
+        'lg': '1rem',
+        'xl': '2rem',
+        '2xl': '3rem',
+        'full': '9999px',
       },
       spacing: {
         '18': '4.5rem',

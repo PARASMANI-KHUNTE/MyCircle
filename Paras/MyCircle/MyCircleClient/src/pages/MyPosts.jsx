@@ -68,20 +68,20 @@ const MyPosts = () => {
         <div className="container mx-auto px-6 py-24 min-h-screen">
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">My Posts</h1>
-                    <p className="text-gray-400">Manage your listings and services</p>
+                    <h1 className="text-3xl font-bold text-text-heading mb-2">My Posts</h1>
+                    <p className="text-text-muted">Manage your listings and services</p>
                 </div>
             </div>
 
             {/* Filters & Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10 mb-8 gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-card p-4 rounded-xl border border-card-border mb-8 gap-4 shadow-card">
                 <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
                     {['all', 'active', 'inactive', 'sold'].map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors
-                                ${filter === f ? 'bg-primary text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-black uppercase tracking-widest transition-all
+                                ${filter === f ? 'bg-primary text-primary-foreground shadow-button' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'}`}
                         >
                             {f}
                         </button>
@@ -91,13 +91,13 @@ const MyPosts = () => {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setViewMode('grid')}
-                        className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
+                        className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-primary/10 text-primary border border-primary/20' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'}`}
                     >
                         <LayoutGrid className="w-5 h-5" />
                     </button>
                     <button
                         onClick={() => setViewMode('list')}
-                        className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
+                        className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-primary/10 text-primary border border-primary/20' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'}`}
                     >
                         <ListIcon className="w-5 h-5" />
                     </button>
@@ -106,10 +106,10 @@ const MyPosts = () => {
 
             {/* Posts Grid/List */}
             {filteredPosts.length === 0 ? (
-                <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10 border-dashed">
-                    <Filter className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">No posts found</h3>
-                    <p className="text-gray-400 mb-6">You haven't created any posts with this status yet.</p>
+                <div className="text-center py-20 bg-card rounded-2xl border border-card-border border-dashed shadow-card">
+                    <Filter className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-50" />
+                    <h3 className="text-xl font-bold text-text-heading mb-2">No posts found</h3>
+                    <p className="text-text-muted mb-6">You haven't created any posts with this status yet.</p>
                 </div>
             ) : (
                 <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>

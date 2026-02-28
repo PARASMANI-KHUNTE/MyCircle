@@ -4,41 +4,53 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: ['selector', '[data-theme="dark"]'],
     theme: {
         extend: {
             colors: {
-                background: "var(--background)",
-                foreground: "var(--foreground)",
+                background: {
+                    DEFAULT: "rgb(var(--background))",
+                    section: "rgb(var(--background-section))",
+                },
+                foreground: "rgb(var(--foreground))",
                 primary: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary) / ${opacityValue})` : "rgb(var(--primary))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-foreground) / ${opacityValue})` : "rgb(var(--primary-foreground))",
-                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--primary-hover) / ${opacityValue})` : "rgb(var(--primary-hover))",
+                    DEFAULT: "rgb(var(--primary))",
+                    hover: "rgb(var(--primary-hover))",
+                    foreground: "rgb(var(--primary-foreground))",
                 },
                 secondary: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary) / ${opacityValue})` : "rgb(var(--secondary))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-foreground) / ${opacityValue})` : "rgb(var(--secondary-foreground))",
-                    hover: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--secondary-hover) / ${opacityValue})` : "rgb(var(--secondary-hover))",
+                    DEFAULT: "rgb(var(--secondary))",
+                    foreground: "rgb(var(--secondary-foreground))",
+                    hover: "rgb(var(--secondary-hover))",
                 },
-                accent: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent) / ${opacityValue})` : "rgb(var(--accent))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--accent-foreground) / ${opacityValue})` : "rgb(var(--accent-foreground))",
+                text: {
+                    heading: "rgb(var(--text-heading))",
+                    body: "rgb(var(--text-body))",
+                    muted: "rgb(var(--text-muted))",
+                    lightMuted: "rgb(var(--text-light-muted))",
                 },
-                muted: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted) / ${opacityValue})` : "rgb(var(--muted))",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--muted-foreground) / ${opacityValue})` : "rgb(var(--muted-foreground))",
-                },
+                "muted-foreground": "rgb(var(--text-muted))",
                 card: {
-                    DEFAULT: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card) / ${opacityValue})` : "rgb(var(--card) / 0.6)",
-                    foreground: ({ opacityValue }) => opacityValue !== undefined ? `rgb(var(--card-foreground) / ${opacityValue})` : "rgb(var(--card-foreground))",
-                    border: ({ opacityValue }) => {
-                        // Light theme uses higher opacity for border
-                        return opacityValue !== undefined ? `rgb(var(--card-border) / ${opacityValue})` : "rgb(var(--card-border) / 0.15)";
-                    },
+                    DEFAULT: "rgb(var(--card))",
+                    foreground: "rgb(var(--card-foreground))",
+                    border: "rgb(var(--card-border-rgb))",
+                },
+                hover: {
+                    bg: "rgb(var(--hover-bg))",
                 }
             },
             fontFamily: {
-                sans: ['Inter', 'sans-serif'],
-                display: ['Outfit', 'sans-serif'], // For Headings
+                sans: ['Inter', 'Poppins', 'sans-serif'],
+                display: ['Poppins', 'Inter', 'sans-serif'],
+            },
+            borderRadius: {
+                'button': '12px',
+                'card': '16px',
+            },
+            boxShadow: {
+                'card': '0 4px 20px -2px rgba(0, 0, 0, 0.08)',
+                'button': '0 4px 14px 0 rgba(245, 158, 11, 0.25)',
+                'glass-panel': '0 32px 64px -16px rgba(0, 0, 0, 0.08)',
             },
             animation: {
                 'fade-in': 'fadeIn 0.5s ease-out',

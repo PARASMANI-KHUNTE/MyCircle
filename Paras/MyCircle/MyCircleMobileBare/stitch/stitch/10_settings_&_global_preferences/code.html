@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>10 Settings &amp; Global Preferences</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f20d0d",
+                        "background-light": "#f8f5f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(242, 13, 13, 0.3);
+        }
+        .neon-text-glow {
+            text-shadow: 0 0 8px rgba(242, 13, 13, 0.5);
+        }
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- iOS Status Bar Spacer -->
+<div class="h-12 w-full bg-background-light dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-50 flex items-center px-6 justify-between border-b border-primary/10">
+<span class="text-xs font-bold tracking-widest opacity-60">9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-icons text-sm">signal_cellular_alt</span>
+<span class="material-icons text-sm">wifi</span>
+<span class="material-icons text-sm rotate-90">battery_full</span>
+</div>
+</div>
+<!-- Header Section -->
+<header class="px-6 py-8">
+<h1 class="text-4xl font-extrabold tracking-tight dark:text-white neon-text-glow">Settings</h1>
+<p class="text-slate-500 dark:text-primary/60 text-sm mt-1 uppercase tracking-widest font-bold">Global Preferences</p>
+</header>
+<main class="px-4 pb-24 space-y-6">
+<!-- Profile Panel -->
+<section class="glass rounded-xl p-5 relative overflow-hidden">
+<div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-3xl"></div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<img alt="User Avatar" class="w-16 h-16 rounded-full border-2 border-primary object-cover" data-alt="Professional male portrait for user profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzTnQEjzipaluQzsGTCOMyU-lmkUIFO-zYxP1QVFqYZ_md6gDMVUv1C2triUDgsslUNXkxhFpjGRg5SC3j0DzPsOFsWAPt_nk-WScvuAC8mr8Poo4lZOn15FCbMOfnO8f9l9m4BGgBL5GjajwqUGNt7ND6829cUwBYudHP0-U7dLP-EugBxirN6FDJGjh7ShIOohg5FHcqGOnN5U6hWo9_2oMk-haCy70Oo0nreI9xF-_RHow86kcOGPbdB965YXxvSc4pJCGHO9jI"/>
+<span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-background-dark rounded-full"></span>
+</div>
+<div class="flex-1">
+<h2 class="text-lg font-bold">Alex Sterling</h2>
+<p class="text-sm text-slate-400">@asterling_neon</p>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white p-2 rounded-lg transition-all active:scale-95 shadow-lg shadow-primary/20">
+<span class="material-icons text-base">edit</span>
+</button>
+</div>
+<div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
+<span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Profile Completion</span>
+<span class="text-xs font-bold text-primary">85%</span>
+</div>
+<div class="mt-2 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary neon-glow" style="width: 85%"></div>
+</div>
+</section>
+<!-- Appearance Section -->
+<section class="space-y-3">
+<h3 class="px-2 text-xs font-bold text-slate-500 uppercase tracking-widest">Appearance</h3>
+<div class="glass rounded-xl overflow-hidden divide-y divide-white/5">
+<!-- Theme Toggle -->
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">dark_mode</span>
+</div>
+<span class="font-medium">Interface Theme</span>
+</div>
+<div class="bg-black/40 p-1 rounded-lg flex gap-1 border border-white/5">
+<button class="px-3 py-1 text-xs font-bold rounded bg-primary text-white shadow-sm">DARK</button>
+<button class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white transition-colors">LIGHT</button>
+</div>
+</div>
+<!-- Layout Grid -->
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">grid_view</span>
+</div>
+<span class="font-medium">Layout Density</span>
+</div>
+<span class="text-sm text-slate-400 font-medium">Compact</span>
+</div>
+</div>
+</section>
+<!-- Account Section -->
+<section class="space-y-3">
+<h3 class="px-2 text-xs font-bold text-slate-500 uppercase tracking-widest">Account &amp; Security</h3>
+<div class="glass rounded-xl overflow-hidden divide-y divide-white/5">
+<button class="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">mail</span>
+</div>
+<span class="font-medium">Email Address</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-400">alex@neon.com</span>
+<span class="material-icons text-slate-600 text-lg">chevron_right</span>
+</div>
+</button>
+<button class="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">lock</span>
+</div>
+<span class="font-medium">Security &amp; Privacy</span>
+</div>
+<span class="material-icons text-slate-600 text-lg">chevron_right</span>
+</button>
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">notifications_active</span>
+</div>
+<span class="font-medium">Push Notifications</span>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Performance Section -->
+<section class="space-y-3">
+<h3 class="px-2 text-xs font-bold text-slate-500 uppercase tracking-widest">Performance</h3>
+<div class="glass rounded-xl p-4">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">speed</span>
+</div>
+<div>
+<span class="font-medium block">Hardware Acceleration</span>
+<span class="text-[10px] text-slate-500">Enable for smoother glass effects</span>
+</div>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</div>
+<div class="p-3 bg-primary/5 rounded-lg border border-primary/10">
+<div class="flex justify-between text-[11px] mb-1 font-bold">
+<span class="text-slate-400">CACHE USAGE</span>
+<span class="text-primary">124.5 MB</span>
+</div>
+<div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary/40" style="width: 40%"></div>
+</div>
+<button class="mt-3 w-full text-center text-xs font-bold text-primary hover:text-white transition-colors uppercase tracking-widest">Clear Cache</button>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="space-y-3 mt-8">
+<h3 class="px-2 text-xs font-bold text-primary uppercase tracking-widest">Danger Zone</h3>
+<div class="glass rounded-xl overflow-hidden border-primary/20 bg-primary/5">
+<button class="w-full p-4 flex items-center justify-between hover:bg-primary/10 transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">logout</span>
+</div>
+<span class="font-bold text-slate-200">Sign Out</span>
+</div>
+<span class="material-icons text-slate-600 group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<button class="w-full p-4 flex items-center justify-between hover:bg-red-900/20 transition-colors group border-t border-primary/10">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">delete_forever</span>
+</div>
+<span class="font-bold text-primary">Delete Account</span>
+</div>
+<span class="material-icons text-slate-600 group-hover:text-primary transition-colors">priority_high</span>
+</button>
+</div>
+</section>
+<!-- App Info -->
+<footer class="text-center py-6 space-y-2">
+<p class="text-xs font-bold text-slate-600 uppercase tracking-widest">v2.4.1 (Stable)</p>
+<div class="flex justify-center gap-4 text-xs font-medium text-slate-500">
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<span class="opacity-20">•</span>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+</div>
+</footer>
+</main>
+<!-- Navigation Bar (iOS Style) -->
+<nav class="fixed bottom-0 left-0 right-0 glass h-20 px-8 flex items-center justify-between border-t border-white/10 z-50">
+<button class="text-slate-500 hover:text-primary transition-colors">
+<span class="material-icons text-2xl">home</span>
+</button>
+<button class="text-slate-500 hover:text-primary transition-colors">
+<span class="material-icons text-2xl">explore</span>
+</button>
+<div class="relative -top-6">
+<button class="w-14 h-14 bg-primary rounded-full flex items-center justify-center neon-glow shadow-xl active:scale-95 transition-transform">
+<span class="material-icons text-white text-3xl">add</span>
+</button>
+</div>
+<button class="text-slate-500 hover:text-primary transition-colors">
+<span class="material-icons text-2xl">chat_bubble</span>
+</button>
+<button class="text-primary">
+<span class="material-icons text-2xl">settings</span>
+</button>
+</nav>
+</body></html>

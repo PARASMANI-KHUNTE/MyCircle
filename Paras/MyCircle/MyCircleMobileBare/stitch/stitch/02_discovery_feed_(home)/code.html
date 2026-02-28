@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f20d0d",
+                        "background-light": "#f8f5f5",
+                        "background-dark": "#120808",
+                        "glass-dark": "rgba(34, 16, 16, 0.7)",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-card {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .orbit-glow {
+            box-shadow: 0 0 20px rgba(242, 13, 13, 0.15);
+        }
+        .ios-status-bar {
+            height: 44px;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white selection:bg-primary/30">
+<!-- Screen Container -->
+<div class="relative min-h-screen max-w-[430px] mx-auto overflow-hidden bg-background-dark">
+<!-- Status Bar -->
+<div class="ios-status-bar flex justify-between items-center px-8 pt-4">
+<span class="text-sm font-semibold">9:41</span>
+<div class="flex items-center gap-1.5">
+<span class="material-icons text-[18px]">signal_cellular_alt</span>
+<span class="material-icons text-[18px]">wifi</span>
+<span class="material-icons text-[18px]">battery_full</span>
+</div>
+</div>
+<!-- Floating Orbit Search UI -->
+<header class="px-6 pt-4 pb-2 sticky top-0 z-50">
+<div class="relative group">
+<div class="absolute -inset-1 bg-primary/20 rounded-full blur-xl opacity-50"></div>
+<div class="relative flex items-center bg-white/5 dark:bg-background-dark/80 glass-card rounded-full px-5 py-3.5 border border-white/10 orbit-glow">
+<span class="material-icons text-primary mr-3">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-white placeholder-white/40 flex-grow text-sm" placeholder="Explore the orbit..." type="text"/>
+<div class="flex items-center gap-3">
+<div class="w-[1px] h-6 bg-white/10"></div>
+<img alt="Profile" class="w-8 h-8 rounded-full border border-primary/40 p-0.5" data-alt="User profile avatar close up photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqrHPqq8JpEF4n2GWJfTp9AjdTFiV--X_DWRsssDxOTKZFUaTHrEqdaogk98EQflP0VsybfCnif1pl6LZxkiKFlRuVYSFWUj1GMleOPZ7D5VgtJqY74axKwAFK6rHc62WiKDtDf1UyV5rNVJcdoxtQ1qaMz_FkzSNeyETPqToACp5AUXJVbbqpzCCwkGkZmLjpXNnPa8xYJ2u_d39IridrLkI6uL1wsuJ04fAr1FiBn1nbW3uXLJFFIcHgmF2rZUfWWze35pgUtvIs"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Translucent Category Chips -->
+<div class="flex overflow-x-auto gap-3 px-6 py-4 hide-scrollbar">
+<button class="flex-shrink-0 px-6 py-2.5 rounded-full bg-primary text-white text-xs font-bold uppercase tracking-wider">
+                For You
+            </button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-full bg-white/5 glass-card text-white/70 text-xs font-bold uppercase tracking-wider border border-white/5 hover:border-primary/50 transition-colors">
+                Motion
+            </button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-full bg-white/5 glass-card text-white/70 text-xs font-bold uppercase tracking-wider border border-white/5 hover:border-primary/50 transition-colors">
+                Architecture
+            </button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-full bg-white/5 glass-card text-white/70 text-xs font-bold uppercase tracking-wider border border-white/5 hover:border-primary/50 transition-colors">
+                Cyber
+            </button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-full bg-white/5 glass-card text-white/70 text-xs font-bold uppercase tracking-wider border border-white/5 hover:border-primary/50 transition-colors">
+                UI/UX
+            </button>
+</div>
+<!-- Main Discovery Feed -->
+<main class="px-5 pb-32 space-y-8">
+<!-- Feed Card 1 -->
+<div class="relative group rounded-lg overflow-hidden h-[480px] bg-white/5 border border-white/10">
+<img alt="Content" class="absolute inset-0 w-full h-full object-cover" data-alt="Abstract vibrant red and black neon wave" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcOL9xKb_u60BUPKiVrNRyPs-xMQbWzsSfqP6YpfwIar8W7itCemwPpncvlAm2gW8g-6ySeN3KSvu4wwxmO5Vx0vOrYOcZ9Htz1uJeOKLrxE4XRFYUp4cPt2gFU7QlxBf547lhtvjLo0gFFw9vzFMRJvOJIkVxXeK5THx2g1bQ-RmsvQVZrVqJ9no_UGH2sXyQZHOvHjBGoje_EOMumyld1z9zaTWN-OKI3ZQCr9Y5kwyGDYJI9m8GzMayGz3krmdfvp-xEUhEn-7N"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-80"></div>
+<!-- Card Content Overlay -->
+<div class="absolute bottom-0 left-0 right-0 p-8 space-y-4">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 backdrop-blur-md border border-primary/30 text-primary text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Featured</span>
+</div>
+<div>
+<h3 class="text-3xl font-extrabold leading-tight text-white mb-2">Neural Networks in Modern Design</h3>
+<p class="text-white/60 text-sm line-clamp-2">Exploring the synthesis between human creativity and algorithmic precision in the next decade.</p>
+</div>
+<div class="flex items-center justify-between pt-2">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full border border-white/20" data-alt="Photographer avatar portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcjQAn7Sy2T5BBLu9xG0kwxgbhpOqd3BIhhp4DYVofkgh-N18j3Syw8S1CDnR48J0j47XgiD6TT_7iBkfpQezqeKaZsYHnHVXtmcGA_wlHgubqr2U4T-2LYAhwYM8lw79aBl_EC5-66VuUW9y7_luJJjoaeISOPFF3xHeRqEYNHFSwT1Nh-cuwJLd8v7xfx2tVm2_RIFtXta3XTD-Mqw0kMW7sZ_7-eB5Q4jC4qzwCx0Gzs1pX0HqKXZdodPOSAheFk9g4bC8aF_fl"/>
+<div>
+<p class="text-xs font-bold">Alex Volkov</p>
+<p class="text-[10px] text-white/40">Creative Director</p>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="flex flex-col items-center">
+<span class="material-icons text-white/80 hover:text-primary transition-colors">favorite_border</span>
+<span class="text-[10px] text-white/50 mt-1">2.4k</span>
+</button>
+<button class="flex flex-col items-center">
+<span class="material-icons text-white/80 hover:text-primary transition-colors">chat_bubble_outline</span>
+<span class="text-[10px] text-white/50 mt-1">128</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Feed Card 2 -->
+<div class="relative group rounded-lg overflow-hidden h-[480px] bg-white/5 border border-white/10">
+<img alt="Tech Content" class="absolute inset-0 w-full h-full object-cover" data-alt="Retro hardware and neon lighting aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMks6Dpzo98Ih5HY-OsDCavgIS8xzIvxWpFtA7-xuBeBfagZVQKf2Yb_KlZL2FQtT_SOHeuE5TsRcn3ahvZ9ZucguZ4-WilY3Zf0dG2wxS-gHTwxomFNwaWvl8tfR0s3Ju_FNsa1ddJhotRBfxQ58zyT23MLGbap9rGwsUHUKLws8uxej4IJZU8Yph-MGPDR017Dx4rV6OFu88RW_wRSfcNFu7k8rzw8cnnwtvRDK7V6Kf3FddzYvMLWLNw61NSCAWSwoZ8Wes0N9F"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-80"></div>
+<div class="absolute bottom-0 left-0 right-0 p-8 space-y-4">
+<div class="flex items-center gap-2">
+<span class="bg-white/10 backdrop-blur-md border border-white/10 text-white/80 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Community Peak</span>
+</div>
+<div>
+<h3 class="text-3xl font-extrabold leading-tight text-white mb-2">The Retro-Future of Hardware</h3>
+<p class="text-white/60 text-sm line-clamp-2">Why physical tactile interfaces are making a massive comeback in the digital era.</p>
+</div>
+<div class="flex items-center justify-between pt-2">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full border border-white/20" data-alt="Woman creative profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6n94y8lrsJu6yvofnmnU8LaQFEFxDfj_FX78XpvmqvdzZjEerVQJ68ApuvogpGQRQvO_I674CyXCpCO1vse-xIdl_V_cbzlsF3vaPH_OLv5WbbokNJD36EX3ZfrOlIhGg3eSskUYgx7JHRctu_2AmOVEzKyeqvJxk2t6qkPiWriquN1qFy8Dzhj44s7ptWNkPF4iOqTatvTBLPpbvCwf2OyGjzIK81DiB6Rr3cw_vVxLTDSPMZD4-9TFinjbGG345RFp4nBp655Gi"/>
+<div>
+<p class="text-xs font-bold">Elena Rossi</p>
+<p class="text-[10px] text-white/40">Industrial Designer</p>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="flex flex-col items-center text-primary">
+<span class="material-icons">favorite</span>
+<span class="text-[10px] text-white/50 mt-1">4.1k</span>
+</button>
+<button class="flex flex-col items-center">
+<span class="material-icons text-white/80 hover:text-primary transition-colors">chat_bubble_outline</span>
+<span class="text-[10px] text-white/50 mt-1">452</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Feed Card 3 -->
+<div class="relative group rounded-lg overflow-hidden h-[480px] bg-white/5 border border-white/10">
+<img alt="Cyber Content" class="absolute inset-0 w-full h-full object-cover" data-alt="Digital red neon portal 3d render" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDe7-PBfHohJYLzmvDRlrmaqtbda0Y59Hp0v93SOBkxPofA3b6aVunvfq1DigFM80_N1RngyuzOkG03SjVzAZ1rJ0hPUK3yIgmDIJl_nVle7nqjeHby0z39g3m628DoJh92nkg6ZbQcrqDJlg4FdCeoMgS6synesMWfl5x7Z6OzVwP-AV-PyB_DLAoi1zELMxPpTxvdtYRywx0mKumSOxK7OHJhaqs1Z8f5Oi4JvViLWggiU_Lhbs-2oKfU_NgE3P7F_4uBp6iIsDC6"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-80"></div>
+<div class="absolute bottom-0 left-0 right-0 p-8 space-y-4">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 backdrop-blur-md border border-primary/30 text-primary text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Trending Now</span>
+</div>
+<div>
+<h3 class="text-3xl font-extrabold leading-tight text-white mb-2">Synthetic Realities</h3>
+<p class="text-white/60 text-sm line-clamp-2">A deep dive into spatial computing and the future of interconnected immersive worlds.</p>
+</div>
+<div class="flex items-center justify-between pt-2">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full border border-white/20" data-alt="Male designer profile photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2S9IIAS1pbySOyNJ1UYzfMR5BEjjKXuK-0L5lQ9a889-IuTk42qiwODPo5lk6zym4CRpjqfZ69HuZL6nO5E2HYz78GJPUGevcltT8crjUyYk96Ff7HjsL1_RhwhyF52t1VnIy9GdkD3JDsG19u5o-hwZXeom9ouQSSpfhpe4LP0QpWFSdj0XZYkCx3WH2DM6VdO8cVE5rQuIbwi2Rc95f3RH0OyqrL2GEzmr_3JeZgVbZBfeNsIOAYMOZUSWfMrt16nP99DR81SDQ"/>
+<div>
+<p class="text-xs font-bold">Marcus Chen</p>
+<p class="text-[10px] text-white/40">VR Architect</p>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="flex flex-col items-center">
+<span class="material-icons text-white/80 hover:text-primary transition-colors">favorite_border</span>
+<span class="text-[10px] text-white/50 mt-1">892</span>
+</button>
+<button class="flex flex-col items-center">
+<span class="material-icons text-white/80 hover:text-primary transition-colors">chat_bubble_outline</span>
+<span class="text-[10px] text-white/50 mt-1">56</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Glass Bottom Navigation -->
+<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[380px] z-[100]">
+<div class="flex items-center justify-around px-6 py-4 glass-card bg-white/5 rounded-full border border-white/10 shadow-2xl">
+<button class="relative flex flex-col items-center justify-center text-primary">
+<span class="material-icons text-[28px]">explore</span>
+<div class="absolute -bottom-1 w-1 h-1 bg-primary rounded-full"></div>
+</button>
+<button class="flex flex-col items-center justify-center text-white/40 hover:text-white transition-colors">
+<span class="material-icons text-[28px]">grid_view</span>
+</button>
+<button class="flex items-center justify-center w-14 h-14 bg-primary rounded-full -mt-10 shadow-lg shadow-primary/30 active:scale-95 transition-transform">
+<span class="material-icons text-white text-[32px]">add</span>
+</button>
+<button class="flex flex-col items-center justify-center text-white/40 hover:text-white transition-colors">
+<span class="material-icons text-[28px]">notifications</span>
+</button>
+<button class="flex flex-col items-center justify-center text-white/40 hover:text-white transition-colors">
+<span class="material-icons text-[28px]">person</span>
+</button>
+</div>
+</nav>
+<!-- iOS Bottom Indicator -->
+<div class="fixed bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full z-[101]"></div>
+</div>
+</body></html>

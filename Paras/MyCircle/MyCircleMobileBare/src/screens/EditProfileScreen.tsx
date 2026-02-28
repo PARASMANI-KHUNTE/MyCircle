@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Alert, StyleSheet, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Loader } from 'lucide-react-native';
+import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Loader, Check } from 'lucide-react-native';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const EditProfileScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
@@ -122,8 +123,8 @@ const EditProfileScreen = ({ navigation }: any) => {
     };
 
     if (loading) return (
-        <View style={[styles.container, styles.centerContent, { backgroundColor: colors.background }]}>
-            <ActivityIndicator color={colors.primary} size="large" />
+        <View style={styles.loadingContainer}>
+            <ActivityIndicator color="#af25f4" size="large" />
         </View>
     );
 
@@ -138,113 +139,146 @@ const EditProfileScreen = ({ navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
-            <View style={[styles.header, themeStyles.border]}>
-                <View style={styles.headerLeft}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft color={colors.text} size={24} />
-                    </TouchableOpacity>
-                    <Text style={[styles.headerTitle, themeStyles.headerTitle]}>Edit Profile</Text>
-                </View>
-                <TouchableOpacity onPress={handleSave} disabled={saving}>
-                    {saving ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>}
-                </TouchableOpacity>
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            
+            {/* Modern Gradient Background */}
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
             </View>
 
-            <ScrollView style={styles.scrollView}>
-                <View style={styles.avatarSection}>
+            {/* Header */}
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ArrowLeft size={24} color="#ffffff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitleMain}>Edit Profile</Text>
+                </View>
+                <TouchableOpacity
+                    onPress={handleSave}
+                    disabled={saving}
+                    style={styles.saveButton}
+                >
+                    {saving ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                        <View style={styles.saveBtnInner}>
+                            <Check size={20} color="#ffffff" />
+                            <Text style={styles.saveText}>Save</Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
+            </Animated.View>
+
+            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 60 }}>
+                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.avatarSection}>
                     <View style={styles.avatarWrapper}>
-                        <View style={[styles.avatarContainer, { backgroundColor: colors.input, borderColor: colors.card }]}>
+                        <View style={styles.avatarContainer}>
                             <Image
                                 source={{ uri: avatar?.uri || auth?.user?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${auth?.user?.displayName}` }}
                                 style={styles.avatarImage}
                             />
                         </View>
-                        <TouchableOpacity style={[styles.cameraButton, { backgroundColor: colors.primary, borderColor: colors.background }]} onPress={pickImage}>
-                            <Camera size={20} color="white" />
+                        <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+                            <Camera size={20} color="#ffffff" />
                         </TouchableOpacity>
                     </View>
-                    <Text style={[styles.changePictureText, themeStyles.textSecondary]}>Change Profile Picture</Text>
-                </View>
+                    <Text style={styles.changePictureText}>TAP TO CHANGE IMAGE</Text>
+                </Animated.View>
 
                 <View style={styles.formContainer}>
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, themeStyles.textSecondary]}>Display Name</Text>
-                        <View style={[styles.inputWrapper, themeStyles.input]}>
-                            <User size={20} color={colors.textSecondary} />
-                            <TextInput
-                                style={[styles.input, { color: colors.text }]}
-                                value={formData.displayName}
-                                onChangeText={(text) => setFormData(prev => ({ ...prev, displayName: text }))}
-                                placeholder="Enter display name"
-                                placeholderTextColor={colors.textSecondary}
-                            />
-                        </View>
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, themeStyles.textSecondary]}>Phone Number</Text>
-                        <View style={styles.phoneContainer}>
-                            <View style={[styles.countryCodeContainer, themeStyles.input]}>
-                                <Text style={[styles.countryCodeText, themeStyles.text]}>{formData.countryCode}</Text>
+                    <Animated.View entering={FadeInDown.delay(200).springify()}>
+                        <View style={styles.formSection}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>DISPLAY NAME</Text>
+                                <View style={styles.inputWrapper}>
+                                    <User size={20} color="#64748b" />
+                                    <TextInput
+                                        style={styles.input}
+                                        value={formData.displayName}
+                                        onChangeText={(text) => setFormData(prev => ({ ...prev, displayName: text }))}
+                                        placeholder="Display Name"
+                                        placeholderTextColor="#64748b"
+                                    />
+                                </View>
                             </View>
-                            <View style={[styles.inputWrapper, { flex: 1 }, themeStyles.input]}>
-                                <Phone size={20} color={colors.textSecondary} />
-                                <TextInput
-                                    style={[styles.input, { color: colors.text }]}
-                                    value={formData.phone}
-                                    onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text.replace(/[^0-9]/g, '') }))}
-                                    placeholder="Phone Number"
-                                    placeholderTextColor={colors.textSecondary}
-                                    keyboardType="phone-pad"
-                                />
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>PHONE NUMBER</Text>
+                                <View style={styles.phoneContainer}>
+                                    <View style={styles.countryCode}>
+                                        <Text style={styles.countryCodeText}>{formData.countryCode}</Text>
+                                    </View>
+                                    <View style={[styles.inputWrapper, { flex: 1 }]}>
+                                        <Phone size={20} color="#64748b" />
+                                        <TextInput
+                                            style={styles.input}
+                                            value={formData.phone}
+                                            onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text.replace(/[^0-9]/g, '') }))}
+                                            placeholder="Phone Number"
+                                            placeholderTextColor="#64748b"
+                                            keyboardType="phone-pad"
+                                        />
+                                    </View>
+                                </View>
                             </View>
                         </View>
-                    </View>
+                    </Animated.View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, themeStyles.textSecondary]}>Bio</Text>
-                        <View style={[styles.inputWrapper, styles.textAreaWrapper, themeStyles.input]}>
-                            <TextInput
-                                style={[styles.input, styles.textArea, { color: colors.text }]}
-                                value={formData.bio}
-                                onChangeText={(text) => setFormData(prev => ({ ...prev, bio: text }))}
-                                placeholder="Tell us about yourself..."
-                                placeholderTextColor={colors.textSecondary}
-                                multiline
-                                numberOfLines={4}
-                                textAlignVertical="top"
-                            />
+                    <Animated.View entering={FadeInDown.delay(300).springify()}>
+                        <View style={styles.formSection}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>BIO</Text>
+                                <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                                    <TextInput
+                                        style={[styles.input, styles.textArea]}
+                                        value={formData.bio}
+                                        onChangeText={(text) => setFormData(prev => ({ ...prev, bio: text }))}
+                                        placeholder="Tell us about yourself..."
+                                        placeholderTextColor="#64748b"
+                                        multiline
+                                        numberOfLines={4}
+                                        textAlignVertical="top"
+                                    />
+                                </View>
+                            </View>
                         </View>
-                    </View>
+                    </Animated.View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, themeStyles.textSecondary]}>Location</Text>
-                        <View style={[styles.inputWrapper, themeStyles.input]}>
-                            <MapPin size={20} color={colors.textSecondary} />
-                            <TextInput
-                                style={[styles.input, { color: colors.text }]}
-                                value={formData.location}
-                                onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
-                                placeholder="City, Country"
-                                placeholderTextColor={colors.textSecondary}
-                            />
-                        </View>
-                    </View>
+                    <Animated.View entering={FadeInDown.delay(400).springify()}>
+                        <View style={styles.formSection}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>LOCATION</Text>
+                                <View style={styles.inputWrapper}>
+                                    <MapPin size={20} color="#64748b" />
+                                    <TextInput
+                                        style={styles.input}
+                                        value={formData.location}
+                                        onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
+                                        placeholder="City, Country"
+                                        placeholderTextColor="#64748b"
+                                    />
+                                </View>
+                            </View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, themeStyles.textSecondary]}>Skills (comma separated)</Text>
-                        <View style={[styles.inputWrapper, themeStyles.input]}>
-                            <Briefcase size={20} color={colors.textSecondary} />
-                            <TextInput
-                                style={[styles.input, { color: colors.text }]}
-                                value={formData.skills}
-                                onChangeText={(text) => setFormData(prev => ({ ...prev, skills: text }))}
-                                placeholder="e.g. Design, React, Painting"
-                                placeholderTextColor={colors.textSecondary}
-                            />
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>SKILLS</Text>
+                                <View style={styles.inputWrapper}>
+                                    <Briefcase size={20} color="#64748b" />
+                                    <TextInput
+                                        style={styles.input}
+                                        value={formData.skills}
+                                        onChangeText={(text) => setFormData(prev => ({ ...prev, skills: text }))}
+                                        placeholder="Design, React, Painting"
+                                        placeholderTextColor="#64748b"
+                                    />
+                                </View>
+                            </View>
                         </View>
-                    </View>
+                    </Animated.View>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -254,96 +288,163 @@ const EditProfileScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#0a0a0a',
     },
-    centerContent: {
+    backgroundGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    gradientLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    loadingContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#0a0a0a',
     },
     header: {
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
         paddingVertical: 16,
-        borderBottomWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        zIndex: 10,
     },
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     backButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         marginRight: 16,
     },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
+    headerTitleMain: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#ffffff',
+        letterSpacing: -0.5,
+    },
+    saveButton: {
+        backgroundColor: '#af25f4',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    saveBtnInner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     saveText: {
-        fontWeight: 'bold',
-        fontSize: 18,
+        color: '#ffffff',
+        fontWeight: '700',
+        fontSize: 14,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     scrollView: {
         flex: 1,
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
     },
     avatarSection: {
         alignItems: 'center',
-        marginVertical: 32,
+        marginVertical: 40,
     },
     avatarWrapper: {
         position: 'relative',
     },
     avatarContainer: {
-        width: 128,
-        height: 128,
-        borderRadius: 64,
-        borderWidth: 4,
-        overflow: 'hidden',
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.1)',
+        padding: 4,
     },
     avatarImage: {
         width: '100%',
         height: '100%',
+        borderRadius: 66,
     },
     cameraButton: {
         position: 'absolute',
-        bottom: 0,
-        right: 0,
-        padding: 8,
-        borderRadius: 20,
-        borderWidth: 2,
+        bottom: 5,
+        right: 5,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#af25f4',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 3,
+        borderColor: '#0a0a0a',
     },
     changePictureText: {
-        marginTop: 8,
-        fontSize: 12,
+        marginTop: 16,
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#94a3b8',
+        letterSpacing: 2,
     },
     formContainer: {
-        gap: 24,
-        paddingBottom: 40,
+        gap: 20,
+    },
+    formSection: {
+        padding: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     inputGroup: {
-        marginBottom: 24,
+        marginBottom: 20,
     },
     label: {
-        marginBottom: 8,
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#94a3b8',
+        letterSpacing: 1.5,
+        marginBottom: 10,
         marginLeft: 4,
-        fontWeight: '500',
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 16,
         borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        height: 56,
     },
     textAreaWrapper: {
-        minHeight: 120,
-        alignItems: 'flex-start',
+        height: 120,
+        paddingVertical: 12,
     },
     input: {
         flex: 1,
-        marginLeft: 8,
+        marginLeft: 12,
         fontSize: 16,
+        color: '#ffffff',
+        fontWeight: '500',
     },
     textArea: {
         marginLeft: 0,
@@ -353,16 +454,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 12,
     },
-    countryCodeContainer: {
+    countryCode: {
+        width: 70,
+        height: 56,
         borderRadius: 16,
         borderWidth: 1,
-        paddingHorizontal: 16,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     countryCodeText: {
-        fontWeight: 'bold',
+        fontWeight: '700',
         fontSize: 16,
+        color: '#ffffff',
     },
 });
 

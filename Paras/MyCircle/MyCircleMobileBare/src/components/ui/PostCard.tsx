@@ -176,13 +176,13 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
 
 
 
-                {/* Dark Gradient Overlay - Subtle top, strong bottom */}
+                {/* Dark Gradient Overlay - Refined for Neon Dark */}
                 <Svg style={StyleSheet.absoluteFill}>
                     <Defs>
                         <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                            <Stop offset="0" stopColor="#000" stopOpacity="0.2" />
-                            <Stop offset="0.5" stopColor="#000" stopOpacity="0" />
-                            <Stop offset="0.75" stopColor="#000" stopOpacity="0.6" />
+                            <Stop offset="0" stopColor="#000" stopOpacity="0.4" />
+                            <Stop offset="0.4" stopColor="#000" stopOpacity="0" />
+                            <Stop offset="0.7" stopColor="#af25f4" stopOpacity="0.1" />
                             <Stop offset="1" stopColor="#000" stopOpacity="0.95" />
                         </SvgLinearGradient>
                     </Defs>
@@ -263,24 +263,17 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
 
 const styles = StyleSheet.create({
     cardContainer: {
-        marginBottom: 24,
+        marginBottom: 20,
         width: '100%',
-        paddingHorizontal: 4, // Tiny breathing room if needed, or 0 for edge-to-edge
     },
     cardWrapper: {
         width: '100%',
-        height: 420, // Taller, fixed height for consistency
-        borderRadius: 32, // Super rounded corners
+        height: 480,
+        borderRadius: 32,
         overflow: 'hidden',
-        backgroundColor: '#18181b', // Fallback
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 8,
-        },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
-        elevation: 8,
+        backgroundColor: '#0a0a0a',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
     },
     backgroundImage: {
         ...StyleSheet.absoluteFillObject,
@@ -292,39 +285,39 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         zIndex: 20,
     },
-
-
     topRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        padding: 16,
+        padding: 20,
         width: '100%',
         zIndex: 10,
     },
     typeBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
     typeDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        marginRight: 6,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 8,
     },
     typeText: {
         color: '#fff',
         fontWeight: '700',
         fontSize: 12,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 1,
     },
     likeButtonContainer: {
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     likeButton: {
         width: '100%',
@@ -337,73 +330,77 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        padding: 20,
-        paddingBottom: 24,
+        padding: 24,
     },
     mainInfo: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     title: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: '800',
         color: '#fff',
-        marginBottom: 8,
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
+        marginBottom: 10,
+        fontFamily: 'Plus Jakarta Sans',
+        lineHeight: 32,
     },
     locationRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 8,
     },
     locationText: {
-        color: '#e4e4e7', // zinc-200
+        color: '#a1a1aa',
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     footerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginTop: 8,
     },
     userSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        padding: 6,
-        paddingRight: 14,
-        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        padding: 8,
+        paddingRight: 16,
+        borderRadius: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.06)',
     },
     avatar: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         borderWidth: 1.5,
         borderColor: '#fff',
-        marginRight: 10,
+        marginRight: 12,
     },
     userName: {
         color: '#fff',
-        fontSize: 13,
-        fontWeight: '600',
+        fontSize: 14,
+        fontWeight: '700',
     },
     priceTag: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        backgroundColor: 'rgba(175, 37, 244, 0.15)',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(175, 37, 244, 0.3)',
     },
     priceSymbol: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginTop: 2,
+        fontSize: 16,
+        fontWeight: '700',
         marginRight: 2,
     },
     priceValue: {
         color: '#fff',
-        fontSize: 20,
-        fontWeight: '800',
+        fontSize: 22,
+        fontWeight: '900',
     }
 });
 

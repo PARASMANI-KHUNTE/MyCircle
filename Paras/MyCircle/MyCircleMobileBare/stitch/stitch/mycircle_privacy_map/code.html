@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MyCircle Privacy Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a855f7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#191022",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>body {
+    font-family: "Plus Jakarta Sans", sans-serif;
+    overflow: hidden
+    }
+.glass {
+    background: rgba(25, 16, 34, 0.6);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    }
+.glass-light {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    }
+.neon-glow {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4)
+    }
+.neon-border {
+    border: 1px solid rgba(168, 85, 247, 0.5)
+    }
+.map-bg {
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuCnHiTZS0Nx2AS7L__WBUKBpR73yl1aPnDB3XbUQJPDaFuIZLpHcuQigBppxcXeUuo5I4MZibUeysdD4smjnBNUBLvvoi8rlp6uP1-VzpI_zpcQ_620Bt-ri5IiXbSAlKKGIdBeJYO_OcHFkcOGp_dA_b3LUqRlFjT02NpNv_bBNkVkE4QgHWd2TGXlHaYHpJGexeDV1GPwTHlY_qb_58x8lU1eQACwTOW_OC-7KXUETM83RXwHBeXUK1JR_43WO24H3AgoqUmWk2fo);
+    background-size: cover;
+    background-position: center;
+    filter: grayscale(1) brightness(0.3) contrast(1.2)
+    }</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display text-white h-screen w-full flex items-center justify-center p-0 md:p-4">
+<!-- Mobile Device Container -->
+<div class="relative w-full max-w-[400px] h-full md:h-[850px] bg-background-dark rounded-[3.5rem] overflow-hidden border-[8px] border-zinc-900 shadow-2xl">
+<!-- Map Canvas (Background) -->
+<div class="absolute inset-0 z-0 map-bg" data-alt="Dark stylized urban map with neon accents">
+<!-- Overlay to deepen the map -->
+<div class="absolute inset-0 bg-background-dark/40"></div>
+</div>
+<!-- Privacy Aura (User Location) -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="w-32 h-32 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-primary rounded-full border-4 border-white shadow-lg neon-glow"></div>
+</div>
+<!-- Floating Glass Markers (Marketplace Listings) -->
+<div class="absolute top-[28%] left-[20%] z-20">
+<div class="glass-light rounded-full p-2 flex items-center gap-2 pr-4 shadow-xl border-primary/30">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+<span class="material-icons-round text-sm">shopping_bag</span>
+</div>
+<span class="font-bold text-sm">$85</span>
+</div>
+</div>
+<div class="absolute top-[45%] right-[15%] z-20">
+<div class="glass-light rounded-full p-2 flex items-center gap-2 pr-4 shadow-xl border-primary/30">
+<div class="w-10 h-10 rounded-full bg-primary/80 flex items-center justify-center">
+<span class="material-icons-round text-sm">electric_bolt</span>
+</div>
+<span class="font-bold text-sm">$120</span>
+</div>
+</div>
+<div class="absolute bottom-[35%] left-[25%] z-20">
+<div class="glass-light rounded-full p-2 flex items-center gap-2 pr-4 shadow-xl border-primary/30">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+<span class="material-icons-round text-sm">home_repair_service</span>
+</div>
+<span class="font-bold text-sm">$45</span>
+</div>
+</div>
+<!-- UI Overlays -->
+<div class="relative z-30 h-full w-full flex flex-col pointer-events-none">
+<!-- Top Status Bar (iOS style) -->
+<div class="pt-12 px-8 flex justify-between items-center w-full">
+<div class="text-xs font-bold tracking-wider">9:41</div>
+<div class="flex gap-1.5 items-center">
+<div class="w-4 h-4 bg-white/20 rounded-sm"></div>
+<div class="w-4 h-4 bg-white/20 rounded-sm"></div>
+<div class="w-6 h-3 bg-white/20 rounded-full"></div>
+</div>
+</div>
+<!-- Floating Orbit Slider Section -->
+<div class="mt-4 px-6 pointer-events-auto">
+<div class="glass rounded-full p-4 flex flex-col gap-2">
+<div class="flex justify-between items-center px-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-white/50">Visibility Orbit</span>
+<span class="text-xs font-bold text-primary">4.2 KM</span>
+</div>
+<div class="relative h-6 flex items-center">
+<div class="absolute inset-0 h-1.5 my-auto bg-white/10 rounded-full"></div>
+<div class="absolute left-0 h-1.5 my-auto bg-primary rounded-full w-[45%]"></div>
+<div class="absolute left-[45%] -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center">
+<div class="w-2 h-2 bg-primary rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Filter Chips -->
+<div class="mt-4 px-6 flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto">
+<button class="flex-shrink-0 px-4 py-2 rounded-full glass-light text-[11px] font-bold text-primary neon-border">
+                    ALL OFFERS
+                </button>
+<button class="flex-shrink-0 px-4 py-2 rounded-full glass-light text-[11px] font-bold text-white/70">
+                    RENTALS
+                </button>
+<button class="flex-shrink-0 px-4 py-2 rounded-full glass-light text-[11px] font-bold text-white/70">
+                    EVENTS
+                </button>
+<button class="flex-shrink-0 px-4 py-2 rounded-full glass-light text-[11px] font-bold text-white/70">
+                    SKILLS
+                </button>
+</div>
+<div class="spacer flex-grow"></div>
+<!-- Privacy Indicator Badge -->
+<div class="flex justify-center mb-4 pointer-events-auto">
+<div class="glass-light rounded-full px-4 py-1.5 flex items-center gap-2 border-white/5">
+<span class="material-icons-round text-emerald-400 text-[14px]">verified_user</span>
+<span class="text-[10px] font-semibold text-white/80 uppercase tracking-widest">Privacy Guard Active</span>
+</div>
+</div>
+<!-- Bottom Control Cluster -->
+<div class="px-6 pb-24 flex justify-between items-end pointer-events-auto">
+<!-- Location Lock Button -->
+<button class="w-14 h-14 rounded-full glass flex items-center justify-center neon-border text-white shadow-2xl">
+<span class="material-icons-round">my_location</span>
+</button>
+<!-- Search/Expand Circle -->
+<button class="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white shadow-2xl neon-glow">
+<span class="material-icons-round">search</span>
+</button>
+</div>
+<!-- Floating Navigation Bar -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] pointer-events-auto">
+<nav class="glass rounded-full p-2 flex justify-around items-center shadow-2xl">
+<a class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary" href="#">
+<span class="material-icons-round">explore</span>
+</a>
+<a class="w-12 h-12 rounded-full flex items-center justify-center text-white/40" href="#">
+<span class="material-icons-round">diversity_3</span>
+</a>
+<a class="w-12 h-12 rounded-full flex items-center justify-center text-white/40" href="#">
+<span class="material-icons-round">add_circle_outline</span>
+</a>
+<a class="w-12 h-12 rounded-full flex items-center justify-center text-white/40 relative" href="#">
+<span class="material-icons-round">chat_bubble_outline</span>
+<div class="absolute top-3 right-3 w-2 h-2 bg-primary rounded-full border border-background-dark"></div>
+</a>
+<a class="w-12 h-12 rounded-full flex items-center justify-center text-white/40" href="#">
+<span class="material-icons-round">person_outline</span>
+</a>
+</nav>
+</div>
+<!-- iOS Home Indicator -->
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-white/20 rounded-full"></div>
+</div>
+<!-- Corner Vignette -->
+<div class="pointer-events-none absolute inset-0 bg-radial-gradient from-transparent via-transparent to-background-dark/40 rounded-[3.5rem]"></div>
+</div>
+<!-- Background Decoration (for desktop view) -->
+<div class="hidden lg:block absolute -top-24 -left-24 w-96 h-96 bg-primary/10 rounded-full blur-[120px]"></div>
+<div class="hidden lg:block absolute -bottom-24 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px]"></div>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</body></html>

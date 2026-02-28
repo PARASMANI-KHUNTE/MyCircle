@@ -2,23 +2,25 @@ const admin = require('firebase-admin');
 const path = require('path');
 const fs = require('fs');
 
-// Path to service account key file
-// The user provided the filename in the root directory
-const serviceAccountPath = path.join(__dirname, '../../mycircle-8c36a-firebase-adminsdk-fbsvc-826bc9410a.json');
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL;
+const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined;
 
-if (!fs.existsSync(serviceAccountPath)) {
-    console.error('Firebase service account key file not found at:', serviceAccountPath);
+if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+    console.error('❌ Firebase Admin SDK environment variables missing. Firebase features may be disabled.');
 } else {
     try {
-        const serviceAccount = require(serviceAccountPath);
-
         admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
+            credential: admin.credential.cert({
+                projectId: FIREBASE_PROJECT_ID,
+                clientEmail: FIREBASE_CLIENT_EMAIL,
+                privateKey: FIREBASE_PRIVATE_KEY,
+            })
         });
 
-        console.log('Firebase Admin SDK initialized successfully');
+        console.log('✅ Firebase Admin SDK initialized successfully');
     } catch (error) {
-        console.error('Error initializing Firebase Admin SDK:', error.message);
+        console.error('❌ Error initializing Firebase Admin SDK:', error.message);
     }
 }
 

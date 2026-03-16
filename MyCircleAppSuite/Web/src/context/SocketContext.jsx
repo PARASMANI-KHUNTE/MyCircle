@@ -17,12 +17,6 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         if (!user) {
-            // Disconnect if user logs out
-            if (socket) {
-                socket.disconnect();
-                setSocket(null);
-                setConnected(false);
-            }
             return;
         }
 
@@ -46,34 +40,24 @@ export const SocketProvider = ({ children }) => {
         });
 
         newSocket.on('connect', () => {
-            console.log('Socket connected:', newSocket.id);
             setConnected(true);
             // Join user's personal room
             newSocket.emit('join', user._id || user.id);
         });
 
         newSocket.on('disconnect', () => {
-            console.log('Socket disconnected');
             setConnected(false);
         });
 
-        newSocket.on('connect_error', (err) => {
-            console.error('Socket connect_error:', err?.message || err);
+        newSocket.on('connect_error', () => {
             setConnected(false);
         });
 
         // Reconnection lifecycle events (socket.io v4)
-        newSocket.io.on('reconnect_attempt', (attempt) => {
-            console.log('Socket reconnect_attempt:', attempt);
-        });
-        newSocket.io.on('reconnect', (attempt) => {
-            console.log('Socket reconnect:', attempt);
-        });
-        newSocket.io.on('reconnect_error', (err) => {
-            console.error('Socket reconnect_error:', err?.message || err);
-        });
+        newSocket.io.on('reconnect_attempt', () => {});
+        newSocket.io.on('reconnect', () => {});
+        newSocket.io.on('reconnect_error', () => {});
         newSocket.io.on('reconnect_failed', () => {
-            console.error('Socket reconnect_failed');
             setConnected(false);
         });
 
@@ -91,8 +75,8 @@ export const SocketProvider = ({ children }) => {
     }, [user]);
 
     const value = {
-        socket,
-        connected
+        socket: user ? socket : null,
+        connected: user ? connected : false
     };
 
     return (

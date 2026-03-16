@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useSocket } from './SocketContext';
@@ -16,13 +16,48 @@ export const NotificationProvider = ({ children }) => {
     const { socket } = useSocket();
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
-    const { info, toast } = useToast();
+    const { toast } = useToast();
+
+    const fetchNotifications = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/notifications');
+            setNotifications(res.data);
+            setUnreadCount(res.data.filter(n => !n.read).length);
+        } catch (err) {
+            console.error('Failed to fetch notifications:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const playNotificationSound = useCallback(() => {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        } catch {
+            // Audio may be unavailable or blocked
+        }
+    }, []);
 
     useEffect(() => {
         if (isAuthenticated) {
-            fetchNotifications();
+            void fetchNotifications();
         }
-    }, [isAuthenticated]);
+    }, [fetchNotifications, isAuthenticated]);
 
     useEffect(() => {
         if (!socket) return;
@@ -44,25 +79,12 @@ export const NotificationProvider = ({ children }) => {
         return () => {
             socket.off('new_notification', handleNewNotification);
         };
-    }, [socket]);
-
-    const fetchNotifications = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/notifications');
-            setNotifications(res.data);
-            setUnreadCount(res.data.filter(n => !n.read).length);
-            setLoading(false);
-        } catch (err) {
-            console.error('Failed to fetch notifications:', err);
-            setLoading(false);
-        }
-    };
+    }, [playNotificationSound, socket, toast]);
 
     const markAsRead = async (id) => {
         try {
             await api.put(`/notifications/${id}/read`);
-            setNotifications(notifications.map(n => n._id === id ? { ...n, read: true } : n));
+            setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (err) {
             console.error(err);
@@ -72,7 +94,7 @@ export const NotificationProvider = ({ children }) => {
     const markAllRead = async () => {
         try {
             await api.put('/notifications/read-all');
-            setNotifications(notifications.map(n => ({ ...n, read: true })));
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
         } catch (err) {
             console.error(err);
@@ -86,29 +108,6 @@ export const NotificationProvider = ({ children }) => {
             setUnreadCount(0);
         } catch (err) {
             console.error(err);
-        }
-    };
-
-    const playNotificationSound = () => {
-        try {
-            // Create a simple notification beep using Web Audio API
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.value = 800; // Frequency in Hz
-            oscillator.type = 'sine';
-
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
-        } catch (e) {
-            console.log('Audio not supported or blocked');
         }
     };
 

@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, CheckCircle, MessageCircle, Info, Trash2, Heart, AlertCircle } from 'lucide-react';
+import { Bell, CheckCircle, MessageCircle, Info, Trash2, Heart } from 'lucide-react';
 import Button from '../components/ui/Button';
 import api from '../utils/api';
-import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
 import { useNotifications } from '../context/NotificationContext';
 import { getAvatarUrl } from '../utils/avatar';
 
 const Notifications = () => {
     const { notifications, markAsRead, markAllRead, clearAll, refresh, loading, handleNotificationClick } = useNotifications();
-    const { success, error: showError } = useToast();
+    const { error: showError } = useToast();
 
     const handleDelete = async (id) => {
         try {
             await api.delete(`/notifications/${id}`);
             refresh();
-        } catch (err) {
+        } catch {
             showError('Failed to delete');
         }
     };

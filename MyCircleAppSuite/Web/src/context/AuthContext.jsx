@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import axios from 'axios';
@@ -25,15 +25,12 @@ export const AuthProvider = ({ children }) => {
 
     const navigate = useNavigate();
 
-    const fetchUserProfile = async () => {
+    const fetchUserProfile = useCallback(async () => {
         try {
-            console.log("AuthContext: Fetching user profile...");
             const res = await api.get('/user/profile');
-            console.log("AuthContext: User profile received:", JSON.stringify(res.data, null, 2));
             setUser(res.data);
             return res.data;
         } catch (err) {
-            console.error("Error fetching profile:", err.message);
             const status = err?.response?.status;
             if (status === 401 || status === 403) {
                 localStorage.removeItem('token');
@@ -43,7 +40,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -95,9 +92,9 @@ export const AuthProvider = ({ children }) => {
         };
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
-    }, [navigate]);
+    }, [fetchUserProfile, navigate]);
 
-    const login = async (tokenOrEmail, isEmail = false) => {
+    const login = useCallback(async (tokenOrEmail, isEmail = false) => {
         if (isEmail) {
             try {
                 const res = await axios.post(`${apiURL}/auth/dev-login`, { email: tokenOrEmail });
@@ -115,13 +112,13 @@ export const AuthProvider = ({ children }) => {
         } else {
             window.location.href = `${apiURL}/auth/google`;
         }
-    };
+    }, [fetchUserProfile]);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
-    };
+    }, []);
 
     const value = useMemo(() => ({
         user,
@@ -131,7 +128,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated: !!user,
         token
-    }), [user, loading, token]);
+    }), [user, login, logout, fetchUserProfile, loading, token]);
 
     return (
         <AuthContext.Provider value={value}>

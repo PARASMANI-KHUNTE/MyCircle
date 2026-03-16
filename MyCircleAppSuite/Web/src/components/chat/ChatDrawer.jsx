@@ -16,10 +16,22 @@ const ChatDrawer = ({ isOpen, onClose }) => {
 
     const [typingUsers, setTypingUsers] = useState({});
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchConversations();
+    const fetchConversations = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get('/chat/conversations');
+            setConversations(res.data);
+        } catch {
+            // Silent fail handled by empty state
+        } finally {
+            setLoading(false);
         }
+    };
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        void fetchConversations();
     }, [isOpen]);
 
     // Listen for new messages to update conversation list order
@@ -44,7 +56,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
 
                 // If it's a new conversation, we might want to fetch it or ignore
                 // For now, let's refresh to be safe if we don't have it
-                fetchConversations();
+                void fetchConversations();
                 return prev;
             });
         };
@@ -89,17 +101,6 @@ const ChatDrawer = ({ isOpen, onClose }) => {
             socket.off('user_stop_typing', handleTypingStop);
         };
     }, [socket]);
-
-    const fetchConversations = async () => {
-        try {
-            const res = await api.get('/chat/conversations');
-            setConversations(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error(err);
-            setLoading(false);
-        }
-    };
 
     const handleConversationDeleted = (deletedId) => {
         setConversations(prev => prev.filter(c => c._id !== deletedId));

@@ -4,11 +4,11 @@ const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { validatePostContent } = require('../middleware/validateContent');
 const postController = require('../controllers/postController');
-const { validate, schemas } = require('../middleware/validation');
 
 // @route   POST /api/posts
 // @access  Private
-router.post('/', [auth, validate(schemas.createPost), upload.array('images', 5), validatePostContent], postController.createPost);
+// Upload first, then validate content (upload parses multipart before validation)
+router.post('/', [auth, upload.array('images', 5), validatePostContent], postController.createPost);
 
 // Get user's own posts
 router.get('/my-posts', auth, postController.getMyPosts);

@@ -11,6 +11,7 @@ const ContactRequest = require('../models/ContactRequest');
 const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
 const { addAIJob, addImageJob } = require('../utils/queue');
+const mongoose = require('mongoose');
 
 // @desc    Create a post
 // @route   POST /api/posts
@@ -91,6 +92,17 @@ exports.getPosts = async (req, res, next) => {
 
         let pipeline = [];
 
+        // Build base filter for active posts
+        const baseFilter = { isActive: true };
+        
+        // Add userId filter if provided (for profile pages)
+        if (userId) {
+            if (!mongoose.Types.ObjectId.isValid(userId)) {
+                throw new ApiError(400, 'Invalid userId');
+            }
+            baseFilter.user = new mongoose.Types.ObjectId(userId);
+        }
+
         // 1. Geospatial Stage (Must be first if present)
         const lat = parseFloat(latitude);
         const lng = parseFloat(longitude);
@@ -107,13 +119,13 @@ exports.getPosts = async (req, res, next) => {
                     distanceField: 'dist.calculated', // Output field
                     maxDistance: parseFloat(radius) * 1000, // Meters
                     spherical: true,
-                    query: { isActive: true } // Filter for active posts
+                    query: baseFilter // Filter for active posts (and userId if present)
                 }
             };
             pipeline.push(geoNearStage);
         } else {
-            // If no location, just match active posts
-            pipeline.push({ $match: { isActive: true } });
+            // If no location, just match active posts (and userId if present)
+            pipeline.push({ $match: baseFilter });
         }
 
         // Filter expired posts (if expiresAt is set)

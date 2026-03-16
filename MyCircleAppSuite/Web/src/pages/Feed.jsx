@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api'; // Use API
 import { useToast } from '../components/ui/Toast';
@@ -65,25 +65,7 @@ const Feed = () => {
 
     const { socket } = useSocket(); // Get socket from context
 
-    useEffect(() => {
-        if (socket) {
-            socket.on('new_post', (newPost) => {
-                setPosts(prev => [newPost, ...prev]);
-                success('New post added!');
-            });
-            return () => socket.off('new_post');
-        }
-    }, [socket]);
-
-    useEffect(() => {
-        if (filter === 'service') {
-            fetchServices();
-        } else {
-            fetchPosts();
-        }
-    }, [filter]); // Re-fetch when filter changes (especially switching to/from Services)
-
-    const fetchPosts = async () => {
+    const fetchPosts = useCallback(async () => {
         setLoading(true);
         try {
             const res = await api.get('/posts');
@@ -93,9 +75,9 @@ const Feed = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchServices = async () => {
+    const fetchServices = useCallback(async () => {
         setLoading(true);
         try {
             // Fetch services with flexible search if term exists
@@ -117,14 +99,34 @@ const Feed = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [searchTerm, showError, sortOrder]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewPost = (newPost) => {
+            setPosts(prev => [newPost, ...prev]);
+            success('New post added!');
+        };
+
+        socket.on('new_post', handleNewPost);
+        return () => socket.off('new_post', handleNewPost);
+    }, [socket, success]);
+
+    useEffect(() => {
+        if (filter === 'service') {
+            void fetchServices();
+        } else {
+            void fetchPosts();
+        }
+    }, [fetchPosts, fetchServices, filter]);
 
     // Trigger service fetch on search/sort change if in service mode
     useEffect(() => {
         if (filter === 'service') {
-            fetchServices();
+            void fetchServices();
         }
-    }, [searchTerm, sortOrder]);
+    }, [fetchServices, filter, searchTerm, sortOrder]);
 
 
     // Get unique locations for filter dropdown
@@ -189,8 +191,7 @@ const Feed = () => {
                     });
                     setLoadingLocation(false);
                 },
-                (err) => {
-                    console.log("Location denied", err);
+                () => {
                     setLoadingLocation(false);
                     showError("Could not access your location. Showing default map.");
                 }
@@ -506,7 +507,7 @@ const Feed = () => {
                     {filter === 'service' ? (
                         // Render Service Cards
                         filteredPosts.length > 0 ? (
-                            filteredPosts.map((user, index) => (
+                            filteredPosts.map((user) => (
                                 <motion.div
                                     key={user._id}
                                     variants={{

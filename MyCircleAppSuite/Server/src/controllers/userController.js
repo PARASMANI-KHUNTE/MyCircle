@@ -19,7 +19,14 @@ exports.getUserProfile = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/user/profile
 // @access  Private
 exports.updateUserProfile = asyncHandler(async (req, res, next) => {
-    const { bio, contactPhone, contactWhatsapp, location, skills } = req.body;
+    const {
+        displayName,
+        bio,
+        contactPhone,
+        contactWhatsapp,
+        location
+    } = req.body;
+    const rawSkills = req.body.skills ?? req.body['skills[]'];
 
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -32,14 +39,19 @@ exports.updateUserProfile = asyncHandler(async (req, res, next) => {
     }
 
     // Update fields
+    if (displayName !== undefined) user.displayName = displayName.trim();
     if (bio !== undefined) user.bio = bio;
     if (contactPhone !== undefined) user.contactPhone = contactPhone;
     if (contactWhatsapp !== undefined) user.contactWhatsapp = contactWhatsapp;
     if (location !== undefined) user.location = location;
 
     // Ensure skills is an array
-    if (skills !== undefined) {
-        user.skills = Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()) : user.skills);
+    if (rawSkills !== undefined) {
+        user.skills = Array.isArray(rawSkills)
+            ? rawSkills.map(skill => String(skill).trim()).filter(Boolean)
+            : (typeof rawSkills === 'string'
+                ? rawSkills.split(',').map(s => s.trim()).filter(Boolean)
+                : user.skills);
     }
 
     if (req.file) user.avatar = req.file.path;

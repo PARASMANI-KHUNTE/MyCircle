@@ -5,7 +5,7 @@ import { Bell, Lock, Trash2, Save, Moon, Sun } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const Settings = () => {
-    const { theme, toggleTheme, isDark } = useTheme();
+    const { toggleTheme, isDark } = useTheme();
     const [preferences, setPreferences] = useState({
         emailNotifications: true,
         profileVisibility: 'public'

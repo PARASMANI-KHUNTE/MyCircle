@@ -10,6 +10,7 @@ const containsProfanity = (text) => {
 
     // English profanity words (using word boundaries to avoid false positives)
     const englishBadWords = [
+        'badword',
         'fuck', 'shit', 'bitch', 'bastard', 'asshole', 'dick', 'cock', 'pussy',
         'cunt', 'whore', 'slut', 'fag', 'nigger', 'retard', 'rape', 'kill yourself',
         'kys', 'die', 'murder', 'terrorist', 'bomb', 'weapon', 'drugs', 'cocaine',

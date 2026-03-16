@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Linking, StyleSheet, Dimensions, TextInput, KeyboardAvoidingView, Platform, StatusBar, Clipboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles, X } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import api, { BASE_URL } from '../services/api';
+import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
@@ -27,6 +29,17 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [contactRequestStatus, setContactRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected' | 'expired'>('none');
     const [likes, setLikes] = useState<string[]>([]);
     const [shares, setShares] = useState(0);
+    const [hasShared, setHasShared] = useState(false);
+
+    useEffect(() => {
+        const checkShared = async () => {
+            try {
+                const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
+                setHasShared(sharedPosts.includes(id));
+            } catch {}
+        };
+        checkShared();
+    }, [id]);
     const [comments, setComments] = useState<any[]>([]);
     const [commentText, setCommentText] = useState('');
     const [postingComment, setPostingComment] = useState(false);
@@ -113,7 +126,17 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleShare = async () => {
+        if (hasShared) {
+            Alert.alert("Already Shared", "Link already copied!");
+            return;
+        }
+        
         try {
+            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
+            sharedPosts.push(id);
+            await AsyncStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
+            setHasShared(true);
+            
             await api.post(`/posts/${id}/share`);
             setShares(shares + 1);
             const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
@@ -155,10 +178,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const handleMessage = async () => {
         if (contactRequestStatus !== 'approved') return Alert.alert('Approval Required', 'Chat unlocks after approval.');
         try {
-            const res = await api.get(`/chat/conversation/${post.user._id}`);
-            navigation.navigate('ChatWindow', { id: res.data._id, recipient: post.user });
+            const conversation = await ensureConversationWithUser(post.user._id);
+            navigation.navigate('ChatWindow', { conversation });
         } catch (err) {
-            navigation.navigate('ChatWindow', { recipient: post.user });
+            Alert.alert("Error", "Failed to start chat.");
         }
     };
 

@@ -7,10 +7,10 @@ const userController = require('../controllers/userController');
 const { validate, schemas } = require('../middleware/validation');
 
 router.get('/profile', auth, userController.getUserProfile);
-router.put('/profile', [auth, validate(schemas.updateProfile), upload.single('avatar'), validateProfileContent], userController.updateUserProfile);
+router.put('/profile', [auth, upload.single('avatar'), validateProfileContent], userController.updateUserProfile);
 router.get('/stats', auth, userController.getUserStats);
 router.put('/settings', auth, userController.updateUserSettings);
-router.post('/block/:userId', [auth, validate(schemas.blockUser)], userController.blockUser);
+router.post('/block/:userId', auth, userController.blockUser);
 router.post('/unblock/:userId', auth, userController.unblockUser);
 router.get('/blocked', auth, userController.getBlockedUsers);
 router.post('/report', [auth, validate(schemas.reportUser)], userController.reportUser);

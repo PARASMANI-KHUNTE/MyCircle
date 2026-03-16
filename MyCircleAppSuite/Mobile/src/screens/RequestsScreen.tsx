@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import api from '../services/api';
+import { ensureConversationWithUser } from '../services/chat';
 import { X, Check, MessageCircle, Trash2, ArrowLeft } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -135,6 +136,23 @@ const RequestsScreen = ({ navigation }: any) => {
         });
     };
 
+    const openChat = async (userId: string) => {
+        try {
+            const conversation = await ensureConversationWithUser(userId);
+            navigation.navigate('ChatWindow', { conversation });
+        } catch (error) {
+            console.error(error);
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to start chat',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
+        }
+    };
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -215,7 +233,7 @@ const RequestsScreen = ({ navigation }: any) => {
                             </View>
                             {item.status === 'approved' && (
                                 <TouchableOpacity
-                                    onPress={() => navigation.navigate('ChatWindow', { recipient: item.requester })}
+                                    onPress={() => openChat(item.requester._id)}
                                     style={styles.chatButtonNeon}
                                 >
                                     <MessageCircle size={18} color="white" />
@@ -280,7 +298,7 @@ const RequestsScreen = ({ navigation }: any) => {
                         {item.status === 'approved' && (
                             <View style={styles.contactActions}>
                                 <TouchableOpacity
-                                    onPress={() => navigation.navigate('ChatWindow', { recipient: item.recipient })}
+                                    onPress={() => openChat(item.recipient._id)}
                                     style={styles.iconButtonNeon}
                                 >
                                     <MessageCircle size={18} color="white" />

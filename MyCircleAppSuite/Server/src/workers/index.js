@@ -1,9 +1,8 @@
 const { Worker } = require('bullmq');
 const sharp = require('sharp');
-const cloudinary = require('cloudinary').v2;
-const { connection, imageQueue, notificationQueue, aiQueue } = require('../utils/queue');
+const { connection } = require('../utils/queue');
 const { createNotification } = require('../controllers/notificationController');
-const { checkContentSafety } = require('../controllers/aiController');
+const { checkContentSafety } = require('../config/groq');
 const pino = require('pino');
 
 const logger = pino({ name: 'worker' });
@@ -50,10 +49,10 @@ imageWorker.on('failed', (job, err) => {
 const notificationWorker = new Worker('notifications', async (job) => {
     logger.info({ jobId: job.id, data: job.data }, 'Processing notification');
     
-    const { io, recipient, sender, type, title, message, link, conversationId, postId } = job.data;
+    const { recipient, sender, type, title, message, link, conversationId, relatedId, postId } = job.data;
     
     try {
-        await createNotification(io, {
+        await createNotification(null, {
             recipient,
             sender,
             type,
@@ -61,7 +60,7 @@ const notificationWorker = new Worker('notifications', async (job) => {
             message,
             link,
             conversationId,
-            postId
+            relatedId: relatedId || postId || null
         });
         return { success: true };
     } catch (error) {

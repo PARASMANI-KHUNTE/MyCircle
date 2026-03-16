@@ -32,16 +32,12 @@ const Profile = () => {
         const fetchProfile = async () => {
             try {
                 const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
-                console.log(`Profile: Fetching from ${endpoint}`);
                 setLoading(true);
                 const res = await api.get(endpoint);
-                console.log("Profile: User data received:", res.data);
 
                 let statsRes = { data: { stats: res.data.stats || {} } };
                 if (isOwnProfile) {
-                    console.log("Profile: Fetching stats from /user/stats");
                     statsRes = await api.get('/user/stats');
-                    console.log("Profile: Stats received:", statsRes.data);
                 }
 
                 const userData = res.data;
@@ -91,7 +87,7 @@ const Profile = () => {
                 await api.delete(`/posts/${postId}`);
                 setPosts(posts.filter(p => p._id !== postId));
                 success('Post deleted successfully');
-            } catch (err) {
+            } catch {
                 showError('Failed to delete post');
             }
         }
@@ -102,7 +98,7 @@ const Profile = () => {
             const res = await api.patch(`/posts/${postId}/status`, { status });
             handleUpdatePost(res.data);
             success(`Post status updated to ${status}`);
-        } catch (err) {
+        } catch {
             showError('Failed to update status');
         }
     };
@@ -155,8 +151,6 @@ const Profile = () => {
     if (loading || !profile) {
         return <div className="min-h-screen flex items-center justify-center text-text-heading">Loading profile...</div>;
     }
-
-    const stats = profile.stats || { rating: 0, totalPosts: 0, activePosts: 0 };
 
     return (
         <div className="container mx-auto px-6 py-24 text-foreground">

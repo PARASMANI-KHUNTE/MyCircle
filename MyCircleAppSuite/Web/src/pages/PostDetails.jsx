@@ -41,6 +41,10 @@ const PostDetails = () => {
     const [contactRequestStatus, setContactRequestStatus] = useState('none');
     const [likes, setLikes] = useState([]);
     const [shares, setShares] = useState(0);
+    const [hasShared, setHasShared] = useState(() => {
+        const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
+        return sharedPosts.includes(id);
+    });
     const [relatedPosts, setRelatedPosts] = useState([]);
     const [replyingTo, setReplyingTo] = useState(null); // Comment ID being replied to
     const [replyText, setReplyText] = useState('');
@@ -162,7 +166,7 @@ const PostDetails = () => {
 
     const handleLike = async () => {
         try {
-            const res = await api.post(`/posts/${id}/like`);
+            await api.post(`/posts/${id}/like`);
             if (isLiked) {
                 setLikes(likes.filter(uid => uid !== currentUserId));
             } else {
@@ -174,18 +178,26 @@ const PostDetails = () => {
     };
 
     const handleShare = async () => {
+        if (hasShared) {
+            success('Link already copied!');
+            return;
+        }
+        
         try {
+            const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
+            sharedPosts.push(id);
+            localStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
+            setHasShared(true);
+            
             const res = await api.post(`/posts/${id}/share`);
             setShares(shares + 1);
             await navigator.clipboard.writeText(res?.data?.link || window.location.href);
             success('Link copied to clipboard!');
-        } catch (err) {
-            console.error(err);
-            // Fallback to purely client-side clipboard if api response doesn't give link (though it should now)
+        } catch {
             try {
                 await navigator.clipboard.writeText(window.location.href);
-            } catch (clipboardErr) {
-                console.error('Clipboard write failed:', clipboardErr);
+            } catch {
+                // Ignore clipboard fallback errors
             }
             success('Link copied to clipboard!');
         }
@@ -352,7 +364,11 @@ const PostDetails = () => {
                                 </button>
                                 <button
                                     onClick={handleShare}
-                                    className="p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500 text-text-muted hover:text-text-heading hover:bg-hover-bg"
+                                    className={cn(
+                                        "p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500",
+                                        hasShared ? 'text-blue-500 border-blue-500/30' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
+                                    )}
+                                    title={hasShared ? "Link already copied!" : "Copy share link"}
                                 >
                                     <Share2 className="w-5 h-5" />
                                 </button>

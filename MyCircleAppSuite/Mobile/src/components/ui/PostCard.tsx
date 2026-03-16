@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Pressable, Clipboard, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MapPin, Heart, MessageCircle, Share2, Star } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import Animated, {
@@ -58,6 +59,7 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
     const { success, error } = useToast();
     const { colors } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
+    const [hasShared, setHasShared] = useState(false);
     const lastTapRef = useRef<number>(0);
     const [aiSuggestion, setAiSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
 
@@ -65,7 +67,34 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
         if (!post.images || post.images.length === 0) {
             getPlaceholderSuggestions(post.title, post.description).then(setAiSuggestion);
         }
+        checkShared();
     }, [post._id]);
+
+    const checkShared = async () => {
+        try {
+            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
+            setHasShared(sharedPosts.includes(post._id));
+        } catch {}
+    };
+
+    const handleShare = async () => {
+        if (hasShared) {
+            Alert.alert("Already Shared", "Link already copied!");
+            return;
+        }
+        try {
+            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
+            sharedPosts.push(post._id);
+            await AsyncStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
+            setHasShared(true);
+            await api.post(`/posts/${post._id}/share`);
+            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+            Clipboard.setString(`${serverBase}/post/${post._id}`);
+            Alert.alert("Copied", "Post link copied!");
+        } catch {
+            Alert.alert("Error", "Failed to share");
+        }
+    };
 
 
     const isLiked = currentUser && likes.includes(currentUser._id);
@@ -203,6 +232,14 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
                                 size={20}
                                 color={isLiked ? "#ef4444" : "#fff"}
                                 fill={isLiked ? "#ef4444" : "transparent"}
+                            />
+                        </TouchableOpacity>
+                    </GlassView>
+                    <GlassView intensity={30} borderRadius={20} style={styles.likeButtonContainer}>
+                        <TouchableOpacity onPress={handleShare} hitSlop={10} style={styles.likeButton}>
+                            <Share2
+                                size={20}
+                                color={hasShared ? "#3b82f6" : "#fff"}
                             />
                         </TouchableOpacity>
                     </GlassView>

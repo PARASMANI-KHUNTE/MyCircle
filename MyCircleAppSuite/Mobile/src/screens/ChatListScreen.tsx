@@ -166,7 +166,7 @@ const ChatListScreen = ({ navigation }: any) => {
                         if (isSelectionMode) {
                             toggleSelection(item._id);
                         } else {
-                            navigation.navigate('ChatWindow', { id: item._id, recipient: otherUser });
+                            navigation.navigate('ChatWindow', { conversation: item });
                         }
                     }}
                     onLongPress={() => enterSelectionMode(item._id)}

@@ -10,23 +10,23 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchConnections();
-        }
-    }, [isOpen]);
-
     const fetchConnections = async () => {
         try {
             setLoading(true);
             const res = await api.get('/user/connections');
             setConnections(res.data);
             setLoading(false);
-        } catch (err) {
-            console.error('Failed to fetch connections:', err);
+        } catch {
+            // Silent fail handled by empty state
+        } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!isOpen) return;
+        void fetchConnections();
+    }, [isOpen]);
 
     const filteredConnections = connections.filter(user =>
         user.displayName.toLowerCase().includes(searchQuery.toLowerCase())

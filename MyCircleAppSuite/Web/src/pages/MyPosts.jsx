@@ -1,44 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import { useDialog } from '../hooks/useDialog';
+import { useAuth } from '../context/AuthContext';
 import PostCard from '../components/ui/PostCard';
-import Button from '../components/ui/Button';
-import { Plus, Filter, LayoutGrid, List as ListIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Filter, LayoutGrid, List as ListIcon } from 'lucide-react';
 
 const MyPosts = () => {
+    const { isAuthenticated, loading: authLoading } = useAuth();
     const { success, error: showError } = useToast();
     const dialog = useDialog();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('all'); // all, active, inactive, sold
-    const [viewMode, setViewMode] = useState('grid'); // grid, list
+    const [filter, setFilter] = useState('all');
+    const [viewMode, setViewMode] = useState('grid');
 
-    useEffect(() => {
-        fetchMyPosts();
-    }, []);
-
-    const fetchMyPosts = async () => {
+    const fetchMyPosts = useCallback(async () => {
         try {
-            console.log("MyPosts: Fetching from /posts/my-posts");
             const res = await api.get('/posts/my-posts');
-            console.log("MyPosts: Data received:", res.data);
             setPosts(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error("MyPosts: Error:", err);
+        } catch {
             showError('Failed to fetch your posts');
         } finally {
             setLoading(false);
         }
-    };
+    }, [showError]);
+
+    useEffect(() => {
+        if (!authLoading && isAuthenticated) {
+            void fetchMyPosts();
+        }
+    }, [authLoading, fetchMyPosts, isAuthenticated]);
 
     const handleStatusChange = async (postId, newStatus) => {
         try {
             await api.patch(`/posts/${postId}/status`, { status: newStatus });
-            fetchMyPosts(); // Refresh list
+            void fetchMyPosts();
         } catch (err) {
             console.error(err);
         }

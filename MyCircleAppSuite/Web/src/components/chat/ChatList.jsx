@@ -38,8 +38,6 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
         return <div className="p-8 text-center text-text-muted font-medium">No conversations yet.</div>;
     }
 
-    console.log('ChatList Render:', { conversationsCount: conversations?.length, currentUserId, loading });
-
     return (
         <div className="flex flex-col">
             {conversations.map(conv => {

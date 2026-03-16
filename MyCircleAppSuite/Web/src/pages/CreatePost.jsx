@@ -1,24 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { AlertCircle, CheckCircle, Upload, X, PlusCircle, Sparkles } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CreatePost = () => {
     const navigate = useNavigate();
-    const { user } = useAuth(); // Get user from context
-    console.log("CreatePost: Component Rendering", { user, isAuthenticated: !!user });
 
     const { error: showError } = useToast();
 
-    useEffect(() => {
-        console.log("CreatePost: Component Mounted");
-    }, []);
     const [formData, setFormData] = useState({
         type: 'job',
         title: '',
@@ -28,7 +22,6 @@ const CreatePost = () => {
         acceptsBarter: false,
         barterPreferences: ''
     });
-    console.log('CreatePost [State Initialization]:', { formData });
     const [images, setImages] = useState([]);
     const [previews, setPreviews] = useState([]);
     const [loading, setLoading] = useState(false);

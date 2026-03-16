@@ -17,6 +17,17 @@ const Chat = () => {
     const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
     const location = useLocation();
 
+    const fetchConversations = async () => {
+        try {
+            const res = await api.get('/chat/conversations');
+            setConversations(res.data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         const initChat = async () => {
             await fetchConversations();
@@ -77,17 +88,6 @@ const Chat = () => {
             socket.off('messages_read', handleReadReceipt);
         };
     }, [socket]);
-
-    const fetchConversations = async () => {
-        try {
-            const res = await api.get('/chat/conversations');
-            setConversations(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error(err);
-            setLoading(false);
-        }
-    };
 
     return (
         <div className="flex flex-col h-[calc(100vh-7rem)] min-h-[600px] w-full max-w-6xl mx-auto pb-4 text-foreground">
@@ -160,7 +160,7 @@ const Chat = () => {
                     try {
                         const res = await api.post(`/chat/init/${otherUser._id}`);
                         setSelectedConversation(res.data);
-                        fetchConversations(); // Refresh list
+                        void fetchConversations();
                         setIsNewMessageModalOpen(false);
                     } catch (err) {
                         console.error('Failed to init chat:', err);

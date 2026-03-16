@@ -33,10 +33,8 @@ export const getPostInsights = async (post) => {
 export const getPostExplanation = async (post) => {
     try {
         const response = await api.post('/ai/explain-post', { post });
-        console.log("AI Service Response:", response.data);
         return response.data;
-    } catch (error) {
-        console.error('Explanation error:', error);
+    } catch {
         return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
     }
 };

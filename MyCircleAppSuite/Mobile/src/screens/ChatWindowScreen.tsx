@@ -1,21 +1,23 @@
 // Core chat window component for individual conversations
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, StyleSheet, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
+import { ensureConversationWithUser, getConversationById } from '../services/chat';
 import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, MoreVertical } from 'lucide-react-native';
 import { getSmartSuggestions } from '../utils/smartSuggestions';
 import { getAvatarUrl } from '../utils/avatar';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
-    const { conversation } = route.params || {};
+    const { conversation: initialConversation, id: conversationId, recipient } = route.params || {};
     const { socket } = useSocket();
     const { user } = useAuth();
     const { colors } = useTheme();
+    const [conversation, setConversation] = useState<any>(initialConversation || null);
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
@@ -24,35 +26,51 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const flatListRef = useRef<FlatList>(null);
     const typingTimeoutRef = useRef<any>(null);
 
-    // Handle missing conversation parameter
-    if (!conversation) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-                <View style={styles.backgroundGradient}>
-                    <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                    <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                    <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
-                </View>
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Unable to load conversation</Text>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#ffffff" />
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        );
-    }
+    const resolveConversation = useCallback(async () => {
+        if (initialConversation?._id || initialConversation?.participants) {
+            setConversation(initialConversation);
+            return initialConversation;
+        }
 
-    const otherParticipant = conversation.participants?.find((p: any) => p._id !== user?._id) || conversation.participants?.[0];
+        if (conversationId) {
+            const existingConversation = await getConversationById(conversationId);
+            if (existingConversation) {
+                setConversation(existingConversation);
+                return existingConversation;
+            }
+        }
 
-    useEffect(() => {
-        fetchMessages();
-        markAsRead();
-        generateSuggestions(conversation.lastMessage?.text || '');
-    }, []);
+        if (recipient?._id) {
+            const ensuredConversation = await ensureConversationWithUser(recipient._id);
+            setConversation(ensuredConversation);
+            return ensuredConversation;
+        }
+
+        return null;
+    }, [conversationId, initialConversation, recipient]);
+    const otherParticipant = conversation?.participants?.find((p: any) => p._id !== user?._id)
+        || conversation?.participants?.[0]
+        || recipient;
 
     useEffect(() => {
+        const initialize = async () => {
+            const resolvedConversation = await resolveConversation();
+            if (!resolvedConversation?._id) {
+                setLoading(false);
+                return;
+            }
+
+            await fetchMessages(resolvedConversation._id);
+            await markAsRead(resolvedConversation._id);
+            generateSuggestions(resolvedConversation.lastMessage?.text || '');
+        };
+
+        void initialize();
+    }, [resolveConversation]);
+
+    useEffect(() => {
+        if (!conversation?._id || !socket) return;
+
         if (!socket) return;
 
         const handleReceiveMessage = (data: any) => {
@@ -110,11 +128,12 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             socket.off('user_stop_typing', handleTypingStop);
             socket.off('conversation_deleted', handleConversationDeleted);
         };
-    }, [socket, conversation._id]);
+    }, [socket, conversation?._id, navigation, user?._id]);
 
-    const fetchMessages = async () => {
+    const fetchMessages = async (targetConversationId = conversation?._id) => {
+        if (!targetConversationId) return;
         try {
-            const res = await api.get(`/chat/messages/${conversation._id}`);
+            const res = await api.get(`/chat/messages/${targetConversationId}`);
             setMessages(res.data);
             setLoading(false);
         } catch (err) {
@@ -123,9 +142,10 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         }
     };
 
-    const markAsRead = async () => {
+    const markAsRead = async (targetConversationId = conversation?._id) => {
+        if (!targetConversationId) return;
         try {
-            await api.put(`/chat/read/${conversation._id}`);
+            await api.put(`/chat/read/${targetConversationId}`);
         } catch (err) {
             console.error(err);
         }
@@ -144,7 +164,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         else {
             socket.emit('typing_start', {
-                conversationId: conversation._id,
+                conversationId: conversation?._id,
                 userId: user?._id,
                 recipientId: otherParticipant?._id
             });
@@ -152,7 +172,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
         typingTimeoutRef.current = setTimeout(() => {
             socket.emit('typing_stop', {
-                conversationId: conversation._id,
+                conversationId: conversation?._id,
                 userId: user?._id,
                 recipientId: otherParticipant?._id
             });
@@ -178,10 +198,19 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         setMessages(prev => [...prev, optimisticMsg]);
 
         try {
+            const activeConversation = conversation?._id ? conversation : await resolveConversation();
+            if (!activeConversation?._id) {
+                throw new Error('Conversation unavailable');
+            }
+
+            if (!conversation?._id) {
+                setConversation(activeConversation);
+            }
+
             await api.post('/chat/message', {
                 recipientId: otherParticipant._id,
                 text: msgText,
-                postId: conversation.postId
+                postId: activeConversation.postId
             });
         } catch (err: any) {
             setMessages(prev => prev.filter(m => m._id !== optimisticMsg._id));
@@ -192,7 +221,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const handleBlock = () => {
         Alert.alert(
             'Block User',
-            `Are you sure you want to block ${otherParticipant.displayName}?`,
+            `Are you sure you want to block ${otherParticipant?.displayName || 'this user'}?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -264,6 +293,41 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         );
     };
 
+    if (!conversation && loading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <View style={styles.backgroundGradient}>
+                    <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                </View>
+                <View style={styles.errorContainer}>
+                    <ActivityIndicator size="large" color="#af25f4" />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (!conversation) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <View style={styles.backgroundGradient}>
+                    <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                    <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                </View>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Unable to load conversation</Text>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ArrowLeft size={24} color="#ffffff" />
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -294,7 +358,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                             <View style={styles.onlineStatus} />
                         </View>
                         <View style={styles.userNameContainer}>
-                            <Text style={styles.headerUserName}>{otherParticipant?.displayName}</Text>
+                        <Text style={styles.headerUserName}>{otherParticipant?.displayName || 'Chat'}</Text>
                             <Text style={styles.statusText}>Online</Text>
                         </View>
                     </TouchableOpacity>

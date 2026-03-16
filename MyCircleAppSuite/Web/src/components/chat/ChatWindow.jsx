@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../utils/api';
 import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
 import { getAvatarUrl } from '../../utils/avatar';
-import { db } from '../../config/firebase';
 
 const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead }) => {
     const { success, error: showError } = useToast();
@@ -26,15 +25,57 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         return pId?.toString() !== strUserId;
     }) || conversation.participants?.[0];
 
+    const fetchMessages = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await api.get(`/chat/messages/${conversation._id}`);
+            setMessages(res.data);
+            scrollToBottom();
+
+            if (res.data.length > 0) {
+                const lastMsg = res.data[res.data.length - 1];
+                if (lastMsg.sender !== currentUserId) {
+                    generateSuggestions(lastMsg.text);
+                }
+            }
+        } catch {
+            // Silent fail handled by UI state
+        } finally {
+            setLoading(false);
+        }
+    }, [conversation._id, currentUserId]);
+
+    const markAsRead = useCallback(async () => {
+        try {
+            await api.put(`/chat/read/${conversation._id}`);
+            if (onMessagesRead) {
+                onMessagesRead(conversation._id);
+            }
+        } catch {
+            // Silent fail for mark as read
+        }
+    }, [conversation._id, onMessagesRead]);
+
+    const generateSuggestions = (lastMessageText = '') => {
+        const newSuggestions = getSmartSuggestions(lastMessageText);
+        setSuggestions(newSuggestions.slice(0, 3));
+    };
+
+    const scrollToBottom = () => {
+        setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+    };
+
     useEffect(() => {
         if (!conversation._id) return;
-        fetchMessages();
-        markAsRead();
+        setMessages([]);
         const lastMsgText = conversation.lastMessage?.text || '';
         generateSuggestions(lastMsgText);
-        setMessages([]);
         typingStartEmitted.current = false;
-    }, [conversation._id]);
+        void fetchMessages();
+        void markAsRead();
+    }, [conversation._id, conversation.lastMessage?.text, fetchMessages, markAsRead]);
 
     useEffect(() => {
         if (!socket || !conversation._id) return;
@@ -49,7 +90,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
 
                 if (data.message.sender !== (currentUser?._id || currentUser?.id)) {
                     generateSuggestions(data.message.text);
-                    markAsRead();
+                    void markAsRead();
                 }
             }
         };
@@ -94,50 +135,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             socket.off('user_stop_typing', handleUserStopTyping);
             socket.off('conversation_deleted', handleConversationDeleted);
         };
-    }, [socket, conversation._id, currentUserId, dialog, onBack]);
-
-    const fetchMessages = async () => {
-        try {
-            setLoading(true);
-            const res = await api.get(`/chat/messages/${conversation._id}`);
-            setMessages(res.data);
-            setLoading(false);
-            scrollToBottom();
-
-            if (res.data.length > 0) {
-                const lastMsg = res.data[res.data.length - 1];
-                if (lastMsg.sender !== currentUserId) {
-                    generateSuggestions(lastMsg.text);
-                }
-            }
-        } catch (err) {
-            console.error('Failed to fetch messages:', err);
-            setLoading(false);
-        }
-    };
-
-    const markAsRead = async () => {
-        try {
-            await api.put(`/chat/read/${conversation._id}`);
-            if (onMessagesRead) {
-                onMessagesRead(conversation._id);
-            }
-        } catch (err) {
-            console.error("Failed to mark read", err);
-        }
-    };
-
-    const generateSuggestions = (lastMessageText = '') => {
-        // Use smart suggestions based on last received message
-        const newSuggestions = getSmartSuggestions(lastMessageText);
-        setSuggestions(newSuggestions.slice(0, 3));
-    };
-
-    const scrollToBottom = () => {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-    };
+    }, [socket, conversation._id, currentUser?._id, currentUser?.id, currentUserId, dialog, markAsRead, onBack]);
 
     const handleInputChange = (e) => {
         setNewMessage(e.target.value);
@@ -220,7 +218,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             await api.post(`/user/block/${otherParticipant._id}`);
             success('User blocked');
             onBack();
-        } catch (err) {
+        } catch {
             showError('Failed to block user');
         }
     };
@@ -241,7 +239,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                 contentId: conversation._id
             });
             success('Report submitted');
-        } catch (err) {
+        } catch {
             showError('Failed to report');
         }
     };

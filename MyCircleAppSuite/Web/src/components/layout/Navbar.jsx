@@ -36,6 +36,15 @@ const Navbar = () => {
         window.location.href = `${apiURL}/auth/google`;
     };
 
+    const fetchUnreadMsgCount = async () => {
+        try {
+            const res = await api.get('/chat/unread/count');
+            setUnreadMsgCount(res.data.count);
+        } catch {
+            // Silent fail keeps current badge state
+        }
+    };
+
     useEffect(() => {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 10);
@@ -71,15 +80,6 @@ const Navbar = () => {
             socket.off('unread_count_update', handleUpdate);
         };
     }, [socket, isAuthenticated]);
-
-    const fetchUnreadMsgCount = async () => {
-        try {
-            const res = await api.get('/chat/unread/count');
-            setUnreadMsgCount(res.data.count);
-        } catch (err) {
-            console.error(err);
-        }
-    };
 
     const navLinks = [
         { name: 'Feed', path: '/feed', public: true },

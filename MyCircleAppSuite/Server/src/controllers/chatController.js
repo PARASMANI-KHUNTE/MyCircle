@@ -7,7 +7,6 @@ const { createNotification } = require('./notificationController');
 const { db, admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
-const { addNotificationJob } = require('../utils/queue');
 
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
@@ -217,8 +216,8 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
             message: savedMessage
         });
 
-        addNotificationJob({
-            io,
+        // Send notification inline since io cannot be serialized for queue
+        await createNotification(io, {
             recipient: recipientId,
             sender: req.user.id,
             type: 'message',

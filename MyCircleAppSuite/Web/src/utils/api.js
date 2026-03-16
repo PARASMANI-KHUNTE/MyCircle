@@ -50,7 +50,7 @@ api.interceptors.response.use(
         if (status === 401) {
             try {
                 localStorage.removeItem('token');
-            } catch (_) {
+            } catch {
                 // ignore storage errors
             }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../utils/api';
@@ -14,11 +14,7 @@ const Requests = () => {
     const [sentRequests, setSentRequests] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchRequests();
-    }, [activeTab]);
-
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         setLoading(true);
         try {
             const endpoint = activeTab === 'received' ? '/contacts/received' : '/contacts/sent';
@@ -30,7 +26,11 @@ const Requests = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [activeTab]);
+
+    useEffect(() => {
+        void fetchRequests();
+    }, [fetchRequests]);
 
     const navigate = useNavigate();
 

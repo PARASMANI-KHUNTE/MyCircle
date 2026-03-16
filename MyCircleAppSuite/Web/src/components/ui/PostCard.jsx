@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
@@ -10,7 +10,7 @@ import { getPostInsights, getPostExplanation } from '../../services/aiService';
 import {
     Sparkles, X, Edit2, Trash2, Eye,
     Heart, Share2, MessageCircle, MapPin,
-    Clock, Repeat, ChevronDown, ChevronUp, BarChart2
+    Clock, Repeat, ChevronDown, ChevronUp, BarChart2, Check
 } from 'lucide-react';
 
 const typeColors = {
@@ -22,10 +22,9 @@ const typeColors = {
 
 const PostCard = ({
     post,
-    onRequestContact = (postId, e) => { },
+    onRequestContact = () => {},
     currentUserId = null,
     isOwnPost: propIsOwnPost = false,
-    onStatusChange = () => { },
     onDelete = () => { },
     onEdit = () => { }
 }) => {
@@ -34,7 +33,13 @@ const PostCard = ({
     const navigate = useNavigate();
     const [likes, setLikes] = useState(initialLikes || []);
     const [shares, setShares] = useState(initialShares || 0);
+    const [hasShared, setHasShared] = useState(false);
     const [expanded, setExpanded] = useState(false);
+
+    useEffect(() => {
+        const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
+        setHasShared(sharedPosts.includes(post._id));
+    }, [post._id]);
 
     // AI State
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -93,7 +98,14 @@ const PostCard = ({
 
     const handleShare = async (e) => {
         e.stopPropagation();
+        if (hasShared) return;
+        
         try {
+            const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
+            sharedPosts.push(post._id);
+            localStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
+            setHasShared(true);
+            
             await api.post(`/posts/${post._id}/share`);
             setShares(shares + 1);
             navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`);
@@ -307,6 +319,18 @@ const PostCard = ({
                     >
                         <Heart className={cn("w-4 h-4", isLiked && "fill-current")} />
                         <span className="text-xs font-bold">{likes.length}</span>
+                    </button>
+
+                    <button
+                        onClick={handleShare}
+                        className={cn(
+                            "p-2 rounded-lg transition-all flex items-center gap-1.5",
+                            hasShared ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" : "text-text-muted hover:bg-hover-bg"
+                        )}
+                        title={hasShared ? "Link copied!" : "Copy share link"}
+                    >
+                        <Share2 className="w-4 h-4" />
+                        <span className="text-xs font-bold">{shares}</span>
                     </button>
 
                     {isOwnPost ? (

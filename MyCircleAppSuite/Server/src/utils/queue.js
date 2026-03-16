@@ -11,9 +11,12 @@ connection.on('error', (err) => {
 });
 
 const createQueue = (name, options = {}) => {
+    const { defaultJobOptions = {}, ...queueOptions } = options;
+
     return new Queue(name, {
         connection,
         skipVersionCheck: true,
+        ...queueOptions,
         defaultJobOptions: {
             attempts: 3,
             backoff: {
@@ -22,7 +25,7 @@ const createQueue = (name, options = {}) => {
             },
             removeOnComplete: 100,
             removeOnFail: 100,
-            ...options,
+            ...defaultJobOptions,
         },
     });
 };
@@ -60,7 +63,12 @@ const addImageJob = async (data, options = {}) => {
 };
 
 const addNotificationJob = async (data, options = {}) => {
-    return notificationQueue.add('send-notification', data, options);
+    const { io, postId, relatedId, ...rest } = data || {};
+
+    return notificationQueue.add('send-notification', {
+        ...rest,
+        relatedId: relatedId || postId || null,
+    }, options);
 };
 
 const addAIJob = async (data, options = {}) => {

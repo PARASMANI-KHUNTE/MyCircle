@@ -1,2 +1,29 @@
+# IDE
 .vscode/
-.windsurf/workflows/
+.idea/
+.windsurf/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Cache
+.cache/
+.vite/

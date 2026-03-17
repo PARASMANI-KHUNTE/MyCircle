@@ -15,7 +15,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowRight, Sparkles, Users, Zap } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -38,7 +37,7 @@ const LandingScreen = ({ navigation }: any) => {
                 await GoogleSignin.signOut();
             } catch (error) { }
             const googleResponse = await GoogleSignin.signIn();
-            const idToken = googleResponse.data?.idToken;
+            const idToken = 'data' in googleResponse ? googleResponse.data?.idToken : null;
 
             if (!idToken) {
                 Alert.alert("Error", "No ID token received from Google.");
@@ -73,12 +72,11 @@ const LandingScreen = ({ navigation }: any) => {
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
             {/* Modern Gradient Background */}
-            <LinearGradient
-                colors={['#0a0a0a', '#1a1a2e', '#16213e']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            />
+            <View style={styles.backgroundGradient}>
+                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+            </View>
 
             {/* Subtle Grid Pattern */}
             <View style={styles.gridPattern}>
@@ -193,15 +191,10 @@ const LandingScreen = ({ navigation }: any) => {
                         activeOpacity={0.9}
                         style={styles.primaryButton}
                     >
-                        <LinearGradient
-                            colors={['#af25f4', '#8c25f4']}
-                            style={styles.buttonGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        >
+                        <View style={[styles.buttonGradient, styles.primaryButtonFill]}>
                             <Text style={styles.primaryButtonText}>Get Started</Text>
                             <ArrowRight size={20} color="#fff" style={styles.buttonIcon} />
-                        </LinearGradient>
+                        </View>
                     </TouchableOpacity>
 
                     {/* Secondary Action */}
@@ -243,6 +236,12 @@ const LandingScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
+    backgroundGradient: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    gradientLayer: {
+        ...StyleSheet.absoluteFillObject,
+    },
     gridPattern: {
         position: 'absolute',
         top: 0,
@@ -369,6 +368,9 @@ const styles = StyleSheet.create({
         paddingVertical: 18,
         paddingHorizontal: 32,
         borderRadius: 16,
+    },
+    primaryButtonFill: {
+        backgroundColor: '#af25f4',
     },
     primaryButtonText: {
         fontSize: 18,

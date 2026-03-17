@@ -2,7 +2,21 @@ import messaging, { AuthorizationStatus } from '@react-native-firebase/messaging
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Alert } from 'react-native';
 
+const isFirebaseMessagingConfigured = () => {
+    if (Platform.OS === 'ios') {
+        return true;
+    }
+
+    // Android Firebase Messaging requires google-services.json at build time.
+    return typeof messaging === 'function';
+};
+
 export const requestUserPermission = async () => {
+    if (!isFirebaseMessagingConfigured()) {
+        console.warn('Firebase messaging is not configured for this build.');
+        return false;
+    }
+
     if (Platform.OS === 'android' && Platform.Version >= 33) {
         const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
@@ -24,6 +38,10 @@ export const requestUserPermission = async () => {
 };
 
 export const getFCMToken = async () => {
+    if (!isFirebaseMessagingConfigured()) {
+        return null;
+    }
+
     try {
         const token = await messaging().getToken();
         console.log('FCM Token:', token);
@@ -35,6 +53,10 @@ export const getFCMToken = async () => {
 };
 
 export const notificationListener = () => {
+    if (!isFirebaseMessagingConfigured()) {
+        return () => undefined;
+    }
+
     // Assume a message-notification contains a "type" property in data payload of screen to open
 
     const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {

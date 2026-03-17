@@ -37,7 +37,7 @@ const LandingScreen = ({ navigation }: any) => {
                 await GoogleSignin.signOut();
             } catch (error) { }
             const googleResponse = await GoogleSignin.signIn();
-            const idToken = googleResponse.data?.idToken;
+            const idToken = 'data' in googleResponse ? googleResponse.data?.idToken : null;
 
             if (!idToken) {
                 Alert.alert("Error", "No ID token received from Google.");

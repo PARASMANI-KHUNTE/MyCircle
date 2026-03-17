@@ -315,7 +315,6 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
-        transition: 'all 0.2s ease',
     },
     inputFocused: {
         borderColor: '#af25f4',

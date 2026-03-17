@@ -52,6 +52,8 @@ interface PostCardProps {
         subType?: string;
     };
     onPress?: () => void;
+    isOwnPost?: boolean;
+    navigation?: any;
 }
 
 const PostCard = ({ post, onPress }: PostCardProps) => {

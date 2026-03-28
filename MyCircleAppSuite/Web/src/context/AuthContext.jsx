@@ -44,54 +44,58 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const checkAuth = async () => {
-            // Check for token in URL hash fragment (new method) or query params (legacy)
-            let tokenFromUrl = null;
-            
-            // Check hash fragment first (new method - token not sent to server)
-            const hash = window.location.hash;
-            if (hash && hash.includes('token=')) {
-                tokenFromUrl = hash.split('token=')[1];
-            } else {
-                // Fallback to query params for backward compatibility
-                const params = new URLSearchParams(window.location.search);
-                tokenFromUrl = params.get('token');
-            }
-
-            if (tokenFromUrl) {
-                if (!tokenFromUrl || tokenFromUrl.length < 10) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    setLoading(false);
-                    return;
-                }
-                localStorage.setItem('token', tokenFromUrl);
-                setToken(tokenFromUrl);
-                window.history.replaceState({}, document.title, window.location.pathname);
-                const userData = await fetchUserProfile();
-                if (userData) {
-                    navigate('/feed', { replace: true });
-                }
-            } else {
-                const storedToken = localStorage.getItem('token');
-                if (storedToken) {
-                    setToken(storedToken);
-                    await fetchUserProfile();
+            try {
+                // Check for token in URL hash fragment (new method) or query params (legacy)
+                let tokenFromUrl = null;
+                
+                // Check hash fragment first (new method - token not sent to server)
+                const hash = window.location.hash;
+                if (hash && hash.includes('token=')) {
+                    const tokenPart = hash.split('token=')[1];
+                    // Extract token until next param or end
+                    tokenFromUrl = tokenPart ? tokenPart.split('&')[0] : null;
                 } else {
+                    // Fallback to query params for backward compatibility
+                    const params = new URLSearchParams(window.location.search);
+                    tokenFromUrl = params.get('token');
+                }
+
+                if (tokenFromUrl && tokenFromUrl.length >= 50) {
+                    localStorage.setItem('token', tokenFromUrl);
+                    setToken(tokenFromUrl);
+                    // Clean URL without reloading
+                    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+                    const userData = await fetchUserProfile();
+                    if (userData) {
+                        navigate('/feed', { replace: true });
+                    }
+                    setLoading(false);
+                } else {
+                    const storedToken = localStorage.getItem('token');
+                    if (storedToken) {
+                        setToken(storedToken);
+                        await fetchUserProfile();
+                    }
                     setLoading(false);
                 }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                setLoading(false);
             }
         };
 
-        checkAuth();
-
-        const handleStorage = (e) => {
-            if (e.key === 'token') {
-                setToken(e.newValue);
-                if (e.newValue) checkAuth();
-                else setUser(null);
-            }
+        // Small delay to ensure DOM is ready
+        const timer = setTimeout(checkAuth, 100);
+        
+        // Fallback timeout - if auth check hangs, stop loading
+        const timeoutId = setTimeout(() => {
+            setLoading(false);
+        }, 10000);
+        
+        return () => {
+            clearTimeout(timer);
+            clearTimeout(timeoutId);
         };
-        window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
     }, [fetchUserProfile, navigate]);
 
     const login = useCallback(async (tokenOrEmail, isEmail = false) => {
@@ -132,7 +136,34 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {loading ? (
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '100vh',
+                    backgroundColor: '#0f172a',
+                    color: 'white'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '1rem'
+                    }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            border: '3px solid rgba(139, 92, 246, 0.3)',
+                            borderTopColor: '#8b5cf6',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite'
+                        }} />
+                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                        <span>Loading...</span>
+                    </div>
+                </div>
+            ) : children}
         </AuthContext.Provider>
     );
 };

@@ -345,6 +345,26 @@ const CreatePostScreen = ({ navigation }: any) => {
                     <Text style={styles.label}>Price / Budget (₹)</Text>
                     <TextInput style={styles.glassInput} keyboardType="numeric" value={price} onChangeText={setPrice} placeholder="0" placeholderTextColor="#64748b" />
                 </View>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Expected Duration</Text>
+                    <View style={styles.durationGrid}>
+                        {durations.map((item) => (
+                            <TouchableOpacity
+                                key={item.value}
+                                onPress={() => setDuration(item.value)}
+                                style={[styles.durationPill, duration === item.value && styles.activeDurationPill]}
+                            >
+                                <Text style={[styles.durationPillText, duration === item.value && styles.activeDurationPillText]}>
+                                    {item.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+                <TouchableOpacity onPress={() => setIsUrgent(!isUrgent)} style={[styles.checkboxRow, { marginBottom: 20 }]}>
+                    <View style={[styles.checkbox, isUrgent && styles.checkboxActive]}>{isUrgent && <Check size={12} color="#ffffff" />}</View>
+                    <Text style={styles.checkboxLabel}>Mark as urgent</Text>
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => setAcceptsBarter(!acceptsBarter)} style={styles.checkboxRow}>
                     <View style={[styles.checkbox, acceptsBarter && styles.checkboxActive]}>{acceptsBarter && <Check size={12} color="#ffffff" />}</View>
                     <Text style={styles.checkboxLabel}>Open to Barter / Favour</Text>
@@ -833,6 +853,31 @@ const styles = StyleSheet.create({
     prefGrid: {
         flexDirection: 'row',
         gap: 8
+    },
+    durationGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10
+    },
+    durationPill: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.03)'
+    },
+    activeDurationPill: {
+        borderColor: '#af25f4',
+        backgroundColor: 'rgba(175, 37, 244, 0.14)'
+    },
+    durationPillText: {
+        color: '#94a3b8',
+        fontWeight: '700',
+        fontSize: 12
+    },
+    activeDurationPillText: {
+        color: '#ffffff'
     },
     prefBtn: {
         flex: 1,

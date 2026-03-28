@@ -12,16 +12,18 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
-        // Get theme from localStorage or default to 'dark'
+        if (typeof window === 'undefined') return 'dark';
         const savedTheme = localStorage.getItem('theme');
         return savedTheme || 'dark';
     });
 
     useEffect(() => {
-        // Apply theme to document root
         document.documentElement.setAttribute('data-theme', theme);
-        // Save to localStorage
-        localStorage.setItem('theme', theme);
+        try {
+            localStorage.setItem('theme', theme);
+        } catch {
+            // localStorage might be blocked
+        }
     }, [theme]);
 
     const toggleTheme = () => {

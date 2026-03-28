@@ -10,53 +10,90 @@ export default {
             colors: {
                 background: {
                     DEFAULT: "rgb(var(--background))",
-                    section: "rgb(var(--background-section))",
+                    secondary: "rgb(var(--background-secondary))",
+                    tertiary: "rgb(var(--background-tertiary))",
                 },
-                foreground: "rgb(var(--foreground))",
+                foreground: {
+                    DEFAULT: "rgb(var(--foreground))",
+                    secondary: "rgb(var(--foreground-secondary))",
+                    muted: "rgb(var(--foreground-muted))",
+                },
                 primary: {
                     DEFAULT: "rgb(var(--primary))",
                     hover: "rgb(var(--primary-hover))",
+                    light: "rgb(var(--primary-light))",
+                    dark: "rgb(var(--primary-dark))",
                     foreground: "rgb(var(--primary-foreground))",
                 },
                 secondary: {
                     DEFAULT: "rgb(var(--secondary))",
-                    foreground: "rgb(var(--secondary-foreground))",
                     hover: "rgb(var(--secondary-hover))",
+                    foreground: "rgb(var(--secondary-foreground))",
                 },
-                text: {
-                    heading: "rgb(var(--text-heading))",
-                    body: "rgb(var(--text-body))",
-                    muted: "rgb(var(--text-muted))",
-                    lightMuted: "rgb(var(--text-light-muted))",
+                accent: {
+                    DEFAULT: "rgb(var(--accent))",
+                    hover: "rgb(var(--accent-hover))",
+                    foreground: "rgb(var(--accent-foreground))",
                 },
-                "muted-foreground": "rgb(var(--text-muted))",
+                success: {
+                    DEFAULT: "rgb(var(--success))",
+                    light: "rgb(var(--success-light))",
+                },
+                warning: {
+                    DEFAULT: "rgb(var(--warning))",
+                    light: "rgb(var(--warning-light))",
+                },
+                error: {
+                    DEFAULT: "rgb(var(--error))",
+                    light: "rgb(var(--error-light))",
+                },
+                info: {
+                    DEFAULT: "rgb(var(--info))",
+                    light: "rgb(var(--info-light))",
+                },
                 card: {
                     DEFAULT: "rgb(var(--card))",
+                    hover: "rgb(var(--card-hover))",
                     foreground: "rgb(var(--card-foreground))",
-                    border: "rgb(var(--card-border-rgb))",
+                    border: "rgb(var(--card-border))",
+                    "border-hover": "rgb(var(--card-border-hover))",
                 },
-                hover: {
-                    bg: "rgb(var(--hover-bg))",
-                }
+                input: {
+                    DEFAULT: "rgb(var(--input))",
+                    border: "rgb(var(--input-border))",
+                    placeholder: "rgb(var(--input-placeholder))",
+                },
+                ring: {
+                    DEFAULT: "rgb(var(--ring))",
+                    offset: "rgb(var(--ring-offset))",
+                },
             },
             fontFamily: {
-                sans: ['Inter', 'Poppins', 'sans-serif'],
-                display: ['Poppins', 'Inter', 'sans-serif'],
+                sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+                display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
             },
             borderRadius: {
-                'button': '12px',
-                'card': '16px',
+                '2xl': '1rem',
+                '3xl': '1.5rem',
+                '4xl': '2rem',
             },
             boxShadow: {
-                'card': '0 4px 20px -2px rgba(0, 0, 0, 0.08)',
-                'button': '0 4px 14px 0 rgba(245, 158, 11, 0.25)',
-                'glass-panel': '0 32px 64px -16px rgba(0, 0, 0, 0.08)',
+                'sm': 'var(--shadow-sm)',
+                'DEFAULT': 'var(--shadow)',
+                'md': 'var(--shadow-md)',
+                'lg': 'var(--shadow-lg)',
+                'xl': 'var(--shadow-xl)',
+                '2xl': 'var(--shadow-2xl)',
+                'glow': '0 0 40px rgb(var(--primary) / 0.4)',
+                'glow-lg': '0 0 60px rgb(var(--primary) / 0.5)',
             },
             animation: {
-                'fade-in': 'fadeIn 0.5s ease-out',
-                'slide-up': 'slideUp 0.5s ease-out',
-                'pulse-slow': 'pulse 3s infinite',
+                'fade-in': 'fadeIn 0.5s ease-out forwards',
+                'slide-up': 'slideUp 0.5s ease-out forwards',
+                'scale-in': 'scaleIn 0.3s ease-out forwards',
                 'float': 'float 3s ease-in-out infinite',
+                'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+                'gradient-shift': 'gradientShift 8s ease infinite',
             },
             keyframes: {
                 fadeIn: {
@@ -67,14 +104,36 @@ export default {
                     '0%': { transform: 'translateY(20px)', opacity: '0' },
                     '100%': { transform: 'translateY(0)', opacity: '1' },
                 },
+                scaleIn: {
+                    '0%': { transform: 'scale(0.95)', opacity: '0' },
+                    '100%': { transform: 'scale(1)', opacity: '1' },
+                },
                 float: {
                     '0%, 100%': { transform: 'translateY(0)' },
                     '50%': { transform: 'translateY(-10px)' },
-                }
+                },
+                pulseGlow: {
+                    '0%, 100%': { boxShadow: '0 0 20px rgb(99 102 241 / 0.3)' },
+                    '50%': { boxShadow: '0 0 40px rgb(99 102 241 / 0.6)' },
+                },
+                gradientShift: {
+                    '0%': { backgroundPosition: '0% 50%' },
+                    '50%': { backgroundPosition: '100% 50%' },
+                    '100%': { backgroundPosition: '0% 50%' },
+                },
             },
             backdropBlur: {
-                xs: '2px',
-            }
+                'xs': '2px',
+            },
+            transitionDuration: {
+                '400': '400ms',
+                '600': '600ms',
+            },
+            spacing: {
+                '18': '4.5rem',
+                '88': '22rem',
+                '128': '32rem',
+            },
         },
     },
     plugins: [],

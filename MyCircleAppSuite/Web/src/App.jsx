@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import { AuthProvider } from './context/AuthContext';
@@ -23,40 +23,66 @@ const MyPosts = lazy(() => import('./pages/MyPosts'));
 const Settings = lazy(() => import('./pages/Settings'));
 const BlockedUsers = lazy(() => import('./pages/BlockedUsers'));
 
+function AppContent() {
+  return (
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AuthProvider>
+        <SocketProvider>
+          <NotificationProvider>
+            <DialogProvider>
+              <Layout>
+                <Suspense fallback={<Loading fullscreen text="Loading page..." />}>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/feed" element={<Feed />} />
+                    <Route path="/create-post" element={<CreatePost />} />
+                    <Route path="/my-posts" element={<MyPosts />} />
+                    <Route path="/requests" element={<Requests />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/edit-profile" element={<EditProfile />} />
+                    <Route path="/post/:id" element={<PostDetails />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/chat" element={<Chat />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/blocked-users" element={<BlockedUsers />} />
+                    <Route path="/login/success" element={<Home />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </DialogProvider>
+          </NotificationProvider>
+        </SocketProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+
 function App() {
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  if (!isHydrated) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#0f172a'
+      }}>
+        <Loading fullscreen text="Initializing..." />
+      </div>
+    );
+  }
+
   return (
     <ThemeProvider>
       <ToastProvider>
-        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AuthProvider>
-            <SocketProvider>
-              <NotificationProvider>
-                <DialogProvider>
-                  <Layout>
-                    <Suspense fallback={<Loading fullscreen text="Loading page..." />}>
-                      <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/feed" element={<Feed />} />
-                        <Route path="/create-post" element={<CreatePost />} />
-                        <Route path="/my-posts" element={<MyPosts />} />
-                        <Route path="/requests" element={<Requests />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/edit-profile" element={<EditProfile />} />
-                        <Route path="/post/:id" element={<PostDetails />} />
-                        <Route path="/notifications" element={<Notifications />} />
-                        <Route path="/chat" element={<Chat />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/blocked-users" element={<BlockedUsers />} />
-                        <Route path="/login/success" element={<Home />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </Suspense>
-                  </Layout>
-                </DialogProvider>
-              </NotificationProvider>
-            </SocketProvider>
-          </AuthProvider>
-        </Router>
+        <AppContent />
       </ToastProvider>
     </ThemeProvider>
   );

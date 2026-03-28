@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 const normalizeBaseUrl = (value) => {
-    if (!value) return '';
+    if (!value) return 'http://localhost:5000';
 
     let normalized = value.trim();
     if (normalized.startsWith(':')) {
-        throw new Error('API URL env var must be a full URL (e.g. http://localhost:5000). Port-only values like ":5000" are not supported.');
+        normalized = `http://${normalized}`;
     }
     if (!normalized.startsWith('http')) {
         normalized = `http://${normalized}`;
@@ -17,17 +17,8 @@ const normalizeBaseUrl = (value) => {
 const isProduction = import.meta.env.PROD;
 let rawApiURL = isProduction
     ? (import.meta.env.VITE_API_URL || '')
-    : (import.meta.env.VITE_API_URL_DEV || '');
+    : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
 
-if (isProduction && !rawApiURL) {
-    throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
-}
-
-if (!isProduction && !rawApiURL) {
-    throw new Error('VITE_API_URL_DEV is not set. Please configure it in your web .env file.');
-}
-
-// Robust URL check: Ensure it has http/https. 
 const apiURL = normalizeBaseUrl(rawApiURL);
 
 const api = axios.create({
@@ -35,6 +26,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 10000,
 });
 
 export const getSocketBaseUrl = () => apiURL;

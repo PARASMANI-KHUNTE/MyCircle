@@ -87,7 +87,7 @@ const Navbar = () => {
 
     const navLinks = [
         { name: 'Feed', path: '/feed', icon: Home },
-        { name: 'Explore', path: '/feed', icon: Compass },
+        { name: 'Explore', path: '/explore', icon: Compass },
         { name: 'My Posts', path: '/my-posts', icon: User, auth: true },
     ];
 

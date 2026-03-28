@@ -3,6 +3,7 @@
     <!-- CodePush Deployment Keys - Replace with actual keys from App Center -->
     <!-- Development -->
     <string name="CodePushDeploymentKey_Debug">YOUR_DEBUG_DEPLOYMENT_KEY</string>
+    <string name="CodePushDeploymentKey">@string/CodePushDeploymentKey_Debug</string>
     <!-- Staging (Pre-production testing) -->
     <string name="CodePushDeploymentKey_Staging">YOUR_STAGING_DEPLOYMENT_KEY</string>
     <!-- Production (Live users) -->

@@ -11,6 +11,7 @@ import Loading from './components/ui/Loading';
 
 const Home = lazy(() => import('./pages/Home'));
 const Feed = lazy(() => import('./pages/Feed'));
+const Explore = lazy(() => import('./pages/Explore'));
 const CreatePost = lazy(() => import('./pages/CreatePost'));
 const Requests = lazy(() => import('./pages/Requests'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -35,6 +36,7 @@ function AppContent() {
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/feed" element={<Feed />} />
+                    <Route path="/explore" element={<Explore />} />
                     <Route path="/create-post" element={<CreatePost />} />
                     <Route path="/my-posts" element={<MyPosts />} />
                     <Route path="/requests" element={<Requests />} />

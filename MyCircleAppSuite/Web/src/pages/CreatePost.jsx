@@ -295,39 +295,46 @@ const CreatePost = () => {
 
                     {/* Location Section - Only geolocation */}
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black tracking-widest text-text-muted uppercase px-1">Your Location</label>
+                        <label className="text-[10px] font-black tracking-widest text-text-muted uppercase px-1">Your Exact Location</label>
                         <div className="flex flex-col gap-3">
                             <div className={cn(
-                                "relative p-4 rounded-xl border-2 border-dashed transition-all",
+                                "relative p-5 rounded-xl border-2 transition-all",
                                 locationStatus === 'found' ? 'border-green-500/50 bg-green-500/5' : 
                                 locationStatus === 'error' ? 'border-red-500/50 bg-red-500/5' :
-                                'border-card-border bg-card/10'
+                                'border-primary/30 bg-primary/5'
                             )}>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                     <div className={cn(
-                                        "w-12 h-12 rounded-xl flex items-center justify-center",
+                                        "w-14 h-14 rounded-xl flex items-center justify-center shrink-0",
                                         locationStatus === 'found' ? 'bg-green-500/20' : 
                                         locationStatus === 'error' ? 'bg-red-500/20' :
                                         'bg-primary/20'
                                     )}>
                                         {gettingLocation ? (
-                                            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                                            <Loader2 className="w-7 h-7 text-primary animate-spin" />
                                         ) : locationStatus === 'found' ? (
-                                            <MapPin className="w-6 h-6 text-green-500" />
+                                            <MapPin className="w-7 h-7 text-green-500" />
                                         ) : (
-                                            <Navigation className="w-6 h-6 text-primary" />
+                                            <Navigation className="w-7 h-7 text-primary" />
                                         )}
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-text-heading">
-                                            {gettingLocation ? 'Finding your location...' : 
-                                             locationStatus === 'found' ? 'Location Set!' :
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-text-heading text-lg">
+                                            {gettingLocation ? 'Locating...' : 
+                                             locationStatus === 'found' ? '✓ Location Captured!' :
                                              locationStatus === 'error' ? 'Location Failed' :
-                                             'Share your location'}
+                                             'Location Required'}
                                         </p>
-                                        <p className="text-sm text-text-muted">
-                                            {formData.location}
-                                        </p>
+                                        {formData.latitude && formData.longitude && (
+                                            <p className="text-sm font-mono text-green-400 mt-1 bg-black/20 px-2 py-1 rounded inline-block">
+                                                {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+                                            </p>
+                                        )}
+                                        {formData.location && formData.location !== 'Detecting...' && (
+                                            <p className="text-sm text-text-muted mt-1 truncate">
+                                                {formData.location}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

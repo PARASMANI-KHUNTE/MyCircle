@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
+    "android:win": "powershell -ExecutionPolicy Bypass -File scripts/run-android-shortpath.ps1",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "postinstall": "patch-package",
     "start": "react-native start --config metro.config.js",
+    "start:8081": "react-native start --config metro.config.js --port 8081",
     "test": "jest",
     "build:android:release": "cd android && ./gradlew assembleRelease",
     "build:android:debug": "cd android && ./gradlew assembleDebug",

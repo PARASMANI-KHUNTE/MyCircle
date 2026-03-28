@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../context/ThemeContext';
 import GlassView from '../components/ui/GlassView';
@@ -7,14 +7,12 @@ import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withSpring,
-    withTiming,
     FadeInDown,
     FadeOutDown
 } from 'react-native-reanimated';
-import { Palette, Gradients } from '../constants/design';
 import { Home, Inbox, User, Plus, Map } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+const ACCENT_COLOR = '#af25f4';
 
 const TabIcon = ({ routeName, isFocused, color }: { routeName: string, isFocused: boolean, color: string }) => {
 
@@ -30,13 +28,13 @@ const TabIcon = ({ routeName, isFocused, color }: { routeName: string, isFocused
 
     const scale = useSharedValue(1);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (isFocused) {
             scale.value = withSpring(1.2);
         } else {
             scale.value = withSpring(1);
         }
-    }, [isFocused]);
+    }, [isFocused, scale]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
@@ -129,7 +127,7 @@ const ModernTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                                 <TabIcon
                                     routeName={route.name}
                                     isFocused={isFocused}
-                                    color={isFocused ? Palette.violet.neon : colors.textSecondary}
+                                    color={isFocused ? ACCENT_COLOR : colors.textSecondary}
                                 />
                             </TouchableOpacity>
                         );
@@ -198,7 +196,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: -20, // Lowered for better integration (was -30)
         alignSelf: 'center',
-        shadowColor: Palette.violet[500],
+        shadowColor: ACCENT_COLOR,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -209,7 +207,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: Palette.violet[500],
+        backgroundColor: ACCENT_COLOR,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 4,

@@ -8,6 +8,8 @@ import api from '../utils/api';
 import { Plus } from 'lucide-react';
 import NewMessageModal from '../components/chat/NewMessageModal';
 
+const getParticipantId = (participant) => participant?._id?.toString?.() || participant?.id?.toString?.();
+
 const Chat = () => {
     const { user } = useAuth();
     const { socket } = useSocket();
@@ -15,6 +17,7 @@ const Chat = () => {
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
+    const [typingUsers, setTypingUsers] = useState({});
     const location = useLocation();
 
     const fetchConversations = async () => {
@@ -73,21 +76,40 @@ const Chat = () => {
                 const other = prev.filter(c => c._id !== data.conversationId);
                 const current = prev.find(c => c._id === data.conversationId);
                 if (current) {
-                    current.lastMessage = data.message;
-                    current.updatedAt = new Date().toISOString();
-                    return [current, ...other];
+                    return [{
+                        ...current,
+                        lastMessage: data.message,
+                        updatedAt: new Date().toISOString(),
+                        unreadCount: data.message.sender === (user?._id || user?.id)
+                            ? current.unreadCount
+                            : (current.unreadCount || 0) + 1
+                    }, ...other];
                 }
                 return prev; // If new convo, might need refresh or separate event
             });
         });
 
+        const handleTypingStart = (data) => {
+            if (data.userId !== (user?._id || user?.id)) {
+                setTypingUsers((prev) => ({ ...prev, [data.conversationId]: true }));
+            }
+        };
+
+        const handleTypingStop = (data) => {
+            setTypingUsers((prev) => ({ ...prev, [data.conversationId]: false }));
+        };
+
         socket.on('messages_read', handleReadReceipt);
+        socket.on('user_typing', handleTypingStart);
+        socket.on('user_stop_typing', handleTypingStop);
 
         return () => {
             socket.off('receive_message');
             socket.off('messages_read', handleReadReceipt);
+            socket.off('user_typing', handleTypingStart);
+            socket.off('user_stop_typing', handleTypingStop);
         };
-    }, [socket]);
+    }, [socket, user?._id, user?.id]);
 
     return (
         <div className="flex flex-col h-[calc(100vh-7rem)] min-h-[600px] w-full max-w-6xl mx-auto pb-4 text-foreground">
@@ -112,6 +134,7 @@ const Chat = () => {
                             onSelect={setSelectedConversation}
                             loading={loading}
                             currentUserId={user?._id || user?.id}
+                            typingUsers={typingUsers}
                             onConversationDeleted={(deletedId) => {
                                 setConversations(prev => prev.filter(c => c._id !== deletedId));
                                 if (selectedConversation?._id === deletedId) {
@@ -135,7 +158,8 @@ const Chat = () => {
                                     if (c._id === convoId && c.lastMessage) {
                                         return {
                                             ...c,
-                                            lastMessage: { ...c.lastMessage, status: 'read' }
+                                            lastMessage: { ...c.lastMessage, status: 'read' },
+                                            unreadCount: 0
                                         };
                                     }
                                     return c;

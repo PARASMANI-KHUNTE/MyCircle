@@ -5,7 +5,7 @@ import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { getAvatarUrl } from '../utils/avatar';
-import { Check, X, Clock, MessageCircle, ArrowRight, Layers, User, Package, Trash2 } from 'lucide-react';
+import { Check, X, Clock, MessageCircle, ArrowRight, Layers, User, Package, Trash2, Star, BadgeCheck } from 'lucide-react';
 
 const Requests = () => {
     const { success, error: showError } = useToast();
@@ -55,6 +55,43 @@ const Requests = () => {
         } catch (err) {
             console.error(err);
             showError("Action failed. Please try again.");
+        }
+    };
+
+    const updateRequestInState = (updatedRequest) => {
+        setReceivedRequests((prev) => prev.map((req) => req._id === updatedRequest._id ? updatedRequest : req));
+        setSentRequests((prev) => prev.map((req) => req._id === updatedRequest._id ? updatedRequest : req));
+    };
+
+    const handleComplete = async (requestId) => {
+        try {
+            const res = await api.put(`/contacts/${requestId}/status`, { status: 'completed' });
+            updateRequestInState(res.data);
+            success('Work marked complete');
+        } catch (err) {
+            console.error(err);
+            showError('Failed to mark work as complete.');
+        }
+    };
+
+    const handleRate = async (request) => {
+        const scoreInput = window.prompt('Rate this completed work from 1 to 5');
+        const score = Number(scoreInput);
+        if (!scoreInput) return;
+        if (!Number.isFinite(score) || score < 1 || score > 5) {
+            showError('Please enter a score between 1 and 5.');
+            return;
+        }
+
+        const review = window.prompt('Optional review (max 300 characters)') || '';
+
+        try {
+            const res = await api.post(`/contacts/${request._id}/rate`, { score, review });
+            updateRequestInState(res.data);
+            success('Rating submitted');
+        } catch (err) {
+            console.error(err);
+            showError(err.response?.data?.msg || 'Failed to submit rating.');
         }
     };
 
@@ -181,10 +218,10 @@ const Requests = () => {
                                         <>
                                             <Button
                                                 variant="primary"
-                                                onClick={() => handleAction(req._id, 'approved')}
+                                                onClick={() => handleAction(req._id, 'accepted')}
                                                 className="h-10 px-4 text-sm"
                                             >
-                                                <Check className="w-4 h-4 mr-2" /> Approve
+                                                <Check className="w-4 h-4 mr-2" /> Accept
                                             </Button>
                                             <Button
                                                 variant="outline"
@@ -196,7 +233,7 @@ const Requests = () => {
                                         </>
                                     ) : (
                                         <div className="flex items-center gap-2">
-                                            <span className={`px-4 py-1.5 rounded-xl text-xs font-bold border ${req.status === 'approved'
+                                            <span className={`px-4 py-1.5 rounded-xl text-xs font-bold border ${req.status === 'accepted' || req.status === 'completed'
                                                 ? 'bg-green-500/10 text-green-400 border-green-500/20'
                                                 : 'bg-red-500/10 text-red-400 border-red-500/20'
                                                 }`}>
@@ -210,14 +247,36 @@ const Requests = () => {
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
-                                            {req.status === 'approved' && (
-                                                <Button
-                                                    variant="ghost"
-                                                    className="text-primary hover:bg-primary/10 p-2.5 h-auto rounded-xl"
-                                                    onClick={() => handleMessage(req.requester._id)}
-                                                >
-                                                    <MessageCircle className="w-5 h-5" />
-                                                </Button>
+                                            {(req.status === 'accepted' || req.status === 'completed') && (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        className="text-primary hover:bg-primary/10 p-2.5 h-auto rounded-xl"
+                                                        onClick={() => handleMessage(req.requester._id)}
+                                                    >
+                                                        <MessageCircle className="w-5 h-5" />
+                                                    </Button>
+                                                    {req.status === 'accepted' && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            className="text-green-400 hover:bg-green-500/10 p-2.5 h-auto rounded-xl"
+                                                            onClick={() => handleComplete(req._id)}
+                                                            title="Mark Completed"
+                                                        >
+                                                            <BadgeCheck className="w-5 h-5" />
+                                                        </Button>
+                                                    )}
+                                                    {req.status === 'completed' && req.canRate && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            className="text-yellow-400 hover:bg-yellow-500/10 p-2.5 h-auto rounded-xl"
+                                                            onClick={() => handleRate(req)}
+                                                            title="Rate User"
+                                                        >
+                                                            <Star className="w-5 h-5" />
+                                                        </Button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     )}
@@ -283,7 +342,7 @@ const Requests = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className={`px-4 py-1.5 rounded-xl text-xs font-bold border ${req.status === 'approved' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                        <span className={`px-4 py-1.5 rounded-xl text-xs font-bold border ${req.status === 'accepted' || req.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                                             req.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
                                                 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
                                             }`}>
@@ -311,18 +370,42 @@ const Requests = () => {
                                 </div>
 
                                 {/* Contact Reveal */}
-                                {req.status === 'approved' && req.post && (
+                                {(req.status === 'accepted' || req.status === 'completed') && req.post && (
                                     <div className="bg-card/5 p-4 rounded-xl border border-card-border flex flex-col gap-4 mt-2">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-green-500 text-sm font-medium">Request Approved! You can now chat with the user.</p>
-                                            <Button
-                                                variant="primary"
-                                                className="py-1.5 px-3 text-sm"
-                                                onClick={() => handleMessage(req.recipient?._id)}
-                                            >
-                                                <MessageCircle className="w-4 h-4 mr-2" />
-                                                Message
-                                            </Button>
+                                            <p className="text-green-500 text-sm font-medium">
+                                                {req.status === 'completed'
+                                                    ? 'Work completed. Finish the loop by rating each other.'
+                                                    : 'Request accepted. You can now coordinate and complete the work.'}
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="primary"
+                                                    className="py-1.5 px-3 text-sm"
+                                                    onClick={() => handleMessage(req.recipient?._id)}
+                                                >
+                                                    <MessageCircle className="w-4 h-4 mr-2" />
+                                                    Message
+                                                </Button>
+                                                {req.status === 'accepted' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        className="py-1.5 px-3 text-sm border-green-500/20 text-green-400 hover:bg-green-500/10"
+                                                        onClick={() => handleComplete(req._id)}
+                                                    >
+                                                        Mark Complete
+                                                    </Button>
+                                                )}
+                                                {req.status === 'completed' && req.canRate && (
+                                                    <Button
+                                                        variant="outline"
+                                                        className="py-1.5 px-3 text-sm border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/10"
+                                                        onClick={() => handleRate(req)}
+                                                    >
+                                                        Rate
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}

@@ -1,5 +1,19 @@
 import axios from 'axios';
 
+const normalizeBaseUrl = (value) => {
+    if (!value) return '';
+
+    let normalized = value.trim();
+    if (normalized.startsWith(':')) {
+        throw new Error('API URL env var must be a full URL (e.g. http://localhost:5000). Port-only values like ":5000" are not supported.');
+    }
+    if (!normalized.startsWith('http')) {
+        normalized = `http://${normalized}`;
+    }
+
+    return normalized.replace(/\/api\/?$/, '');
+};
+
 const isProduction = import.meta.env.PROD;
 let rawApiURL = isProduction
     ? (import.meta.env.VITE_API_URL || '')
@@ -14,13 +28,7 @@ if (!isProduction && !rawApiURL) {
 }
 
 // Robust URL check: Ensure it has http/https. 
-if (rawApiURL.startsWith(':')) {
-    throw new Error('API URL env var must be a full URL (e.g. http://localhost:5000). Port-only values like ":5000" are not supported.');
-} else if (rawApiURL && !rawApiURL.startsWith('http')) {
-    rawApiURL = `http://${rawApiURL}`;
-}
-
-const apiURL = rawApiURL;
+const apiURL = normalizeBaseUrl(rawApiURL);
 
 const api = axios.create({
     baseURL: `${apiURL}/api`,
@@ -28,6 +36,8 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+export const getSocketBaseUrl = () => apiURL;
 
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(

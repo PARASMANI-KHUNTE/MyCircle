@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">TempMobile</string>
+    <string name="app_name">MyCircle</string>
+    <!-- CodePush Deployment Keys - Replace with actual keys from App Center -->
+    <!-- Development -->
+    <string name="CodePushDeploymentKey_Debug">YOUR_DEBUG_DEPLOYMENT_KEY</string>
+    <!-- Staging (Pre-production testing) -->
+    <string name="CodePushDeploymentKey_Staging">YOUR_STAGING_DEPLOYMENT_KEY</string>
+    <!-- Production (Live users) -->
+    <string name="CodePushDeploymentKey_Production">YOUR_PRODUCTION_DEPLOYMENT_KEY</string>
 </resources>

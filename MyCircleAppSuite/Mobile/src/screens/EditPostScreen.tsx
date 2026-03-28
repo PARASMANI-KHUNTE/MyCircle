@@ -21,7 +21,9 @@ const EditPostScreen = ({ navigation, route }: any) => {
     const [type, setType] = useState(post.type);
     const [location, setLocation] = useState(post.location);
     const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(
-        post.latitude && post.longitude ? { lat: post.latitude, lng: post.longitude } : null
+        post.locationCoords?.coordinates?.length === 2
+            ? { lat: post.locationCoords.coordinates[1], lng: post.locationCoords.coordinates[0] }
+            : null
     );
     const [price, setPrice] = useState(post.price?.toString() || '');
     const [acceptsBarter, setAcceptsBarter] = useState(post.acceptsBarter || false);

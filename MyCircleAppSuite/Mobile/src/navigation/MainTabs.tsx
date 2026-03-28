@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
-import { useNotifications } from '../context/NotificationContext';
 import { useSocket } from '../context/SocketContext';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import Sound from 'react-native-sound';
 
 import FeedScreen from '../screens/FeedScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
-import ChatListScreen from '../screens/ChatListScreen';
 import RequestsScreen from '../screens/RequestsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
@@ -22,11 +16,8 @@ const Tab = createBottomTabNavigator();
 Sound.setCategory('Playback');
 
 const MainTabs = () => {
-    const { unreadCount, notifications } = useNotifications();
     const { socket } = useSocket() as any;
-    const { user } = useAuth();
-    const { colors } = useTheme();
-    const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+    const [_, setUnreadMsgCount] = useState(0);
 
     const fetchUnreadMsgCount = async () => {
         try {

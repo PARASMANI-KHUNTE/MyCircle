@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
+import { StyleSheet, ViewStyle, DimensionValue } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withRepeat,
     withTiming,
-    interpolate,
     withSequence
 } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,7 +18,7 @@ interface ShimmerProps {
 }
 
 const ShimmerEffect = ({ width = '100%', height = 20, borderRadius = 8, style }: ShimmerProps) => {
-    const { colors, theme } = useTheme();
+    const { theme } = useTheme();
     const opacity = useSharedValue(0.3);
 
     useEffect(() => {
@@ -32,7 +31,7 @@ const ShimmerEffect = ({ width = '100%', height = 20, borderRadius = 8, style }:
             -1,
             true
         );
-    }, []);
+    }, [opacity]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         opacity: opacity.value,

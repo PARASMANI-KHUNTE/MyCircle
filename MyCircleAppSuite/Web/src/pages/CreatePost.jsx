@@ -18,7 +18,10 @@ const CreatePost = () => {
         title: '',
         description: '',
         price: '',
+        budgetMin: '',
+        budgetMax: '',
         location: '',
+        availability: '',
         acceptsBarter: false,
         barterPreferences: ''
     });
@@ -84,6 +87,9 @@ const CreatePost = () => {
             } else {
                 data.append('price', formData.price);
             }
+            data.append('budgetMin', formData.budgetMin);
+            data.append('budgetMax', formData.budgetMax);
+            data.append('availability', formData.availability);
 
             images.forEach(image => data.append('images', image));
 
@@ -230,6 +236,41 @@ const CreatePost = () => {
                             required
                             className=""
                             error={null}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                            label="Budget From (Optional)"
+                            name="budgetMin"
+                            type="number"
+                            placeholder="e.g. 300"
+                            value={formData.budgetMin}
+                            onChange={handleChange}
+                            className=""
+                            error={null}
+                        />
+                        <Input
+                            label="Budget To (Optional)"
+                            name="budgetMax"
+                            type="number"
+                            placeholder="e.g. 800"
+                            value={formData.budgetMax}
+                            onChange={handleChange}
+                            className=""
+                            error={null}
+                        />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-text-muted ml-1">Availability</label>
+                        <textarea
+                            name="availability"
+                            rows={3}
+                            className="w-full bg-card/10 border border-card-border rounded-xl px-4 py-3 text-text-body placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                            placeholder="e.g. Weekdays after 5 PM, weekends full-day, available near campus"
+                            value={formData.availability}
+                            onChange={handleChange}
                         />
                     </div>
 

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle, Pattern } from 'react-native-svg';
-import { Briefcase, Wrench, ShoppingBag, Zap, MapPin, Heart, MessageCircle, Share2, Star } from 'lucide-react-native';
+import { Briefcase, Wrench, ShoppingBag, Zap } from 'lucide-react-native';
 import { Palette } from '../../constants/design';
 
 interface GenerativePlaceholderProps {
@@ -17,18 +17,16 @@ interface GenerativePlaceholderProps {
 }
 
 const GenerativePlaceholder = ({ id, type, style, showIcon = true, iconSize = 80, aiIcon, aiGifKeyword, title, description }: GenerativePlaceholderProps) => {
-    const [fetchedIcon, setFetchedIcon] = React.useState<string | null>(null);
-    const [fetchedGifKeyword, setFetchedGifKeyword] = React.useState<string | null>(null);
+    const [fetchedIcon, setFetchedIcon] = useState<string | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!aiIcon && !aiGifKeyword && title) {
             const { getPlaceholderSuggestions } = require('../../services/aiService');
             getPlaceholderSuggestions(title, description || '').then((res: any) => {
                 setFetchedIcon(res.icon);
-                setFetchedGifKeyword(res.gifKeywords?.[0]);
             });
         }
-    }, [id]);
+    }, [id, aiIcon, aiGifKeyword, title, description]);
 
 
     const getTypeColor = () => {

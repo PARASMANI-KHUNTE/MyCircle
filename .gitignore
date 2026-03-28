@@ -2,6 +2,9 @@
 .vscode/
 .idea/
 .windsurf/
+.kilocode/
+.agent/
+
 
 # OS
 .DS_Store

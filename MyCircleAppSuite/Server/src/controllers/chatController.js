@@ -7,34 +7,83 @@ const { createNotification } = require('./notificationController');
 const { db, admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
+const mongoose = require('mongoose');
+
+const DEFAULT_CONVERSATION_LIMIT = 25;
+const MAX_CONVERSATION_LIMIT = 50;
+const DEFAULT_MESSAGE_LIMIT = 50;
+const MAX_MESSAGE_LIMIT = 100;
+
+const parsePagination = (query, defaultLimit, maxLimit) => {
+    const page = Math.max(parseInt(query.page, 10) || 1, 1);
+    const requestedLimit = parseInt(query.limit, 10) || defaultLimit;
+    const limit = Math.min(Math.max(requestedLimit, 1), maxLimit);
+
+    return {
+        page,
+        limit,
+        skip: (page - 1) * limit
+    };
+};
 
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
 // @access  Private
 exports.getConversations = asyncHandler(async (req, res, next) => {
-    const conversations = await Conversation.find({
+    const { page, limit, skip } = parsePagination(
+        req.query,
+        DEFAULT_CONVERSATION_LIMIT,
+        MAX_CONVERSATION_LIMIT
+    );
+    const userObjectId = new mongoose.Types.ObjectId(req.user.id);
+    const conversationFilter = {
         participants: req.user.id,
         deletedBy: { $ne: req.user.id }
-    })
-        .populate('participants', 'displayName avatar')
-        .populate('lastMessage')
-        .sort({ updatedAt: -1 });
+    };
 
-    // Add unread count for each conversation
-    const conversationsWithUnread = await Promise.all(
-        conversations.map(async (conv) => {
-            const unreadCount = await Message.countDocuments({
-                conversationId: conv._id,
-                sender: { $ne: req.user.id },
-                readBy: { $ne: req.user.id }
-            });
+    const [conversations, total] = await Promise.all([
+        Conversation.find(conversationFilter)
+            .populate('participants', 'displayName avatar')
+            .populate('lastMessage')
+            .sort({ updatedAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Conversation.countDocuments(conversationFilter)
+    ]);
 
-            return {
-                ...conv.toObject(),
-                unreadCount
-            };
-        })
+    const conversationIds = conversations.map((conv) => conv._id);
+    const unreadCounts = conversationIds.length
+        ? await Message.aggregate([
+            {
+                $match: {
+                    conversationId: { $in: conversationIds },
+                    sender: { $ne: userObjectId },
+                    readBy: { $ne: userObjectId }
+                }
+            },
+            {
+                $group: {
+                    _id: '$conversationId',
+                    unreadCount: { $sum: 1 }
+                }
+            }
+        ])
+        : [];
+
+    const unreadCountMap = new Map(
+        unreadCounts.map((entry) => [entry._id.toString(), entry.unreadCount])
     );
+
+    const conversationsWithUnread = conversations.map((conv) => ({
+        ...conv,
+        unreadCount: unreadCountMap.get(conv._id.toString()) || 0
+    }));
+
+    res.set('X-Page', String(page));
+    res.set('X-Limit', String(limit));
+    res.set('X-Total-Count', String(total));
+    res.set('X-Has-More', String(skip + conversations.length < total));
 
     res.json(conversationsWithUnread);
 });
@@ -53,10 +102,35 @@ exports.getMessages = asyncHandler(async (req, res, next) => {
         throw new ApiError(403, 'Not authorized to access this conversation');
     }
 
-    const messages = await Message.find({ conversationId: req.params.conversationId })
-        .sort({ createdAt: 1 });
+    const { page, limit, skip } = parsePagination(
+        req.query,
+        DEFAULT_MESSAGE_LIMIT,
+        MAX_MESSAGE_LIMIT
+    );
+    const before = req.query.before ? new Date(req.query.before) : null;
+    const messageFilter = { conversationId: req.params.conversationId };
 
-    res.json(messages);
+    if (before && !isNaN(before.getTime())) {
+        messageFilter.createdAt = { $lt: before };
+    }
+
+    const [messages, total] = await Promise.all([
+        Message.find(messageFilter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Message.countDocuments(messageFilter)
+    ]);
+
+    const orderedMessages = messages.reverse();
+
+    res.set('X-Page', String(page));
+    res.set('X-Limit', String(limit));
+    res.set('X-Total-Count', String(total));
+    res.set('X-Has-More', String(skip + messages.length < total));
+
+    res.json(orderedMessages);
 });
 
 // @desc    Get or Create Conversation with specific user
@@ -99,6 +173,35 @@ exports.getOrCreateConversation = asyncHandler(async (req, res, next) => {
     }
 
     res.json(conversation);
+});
+
+// @desc    Get conversation by ID
+// @route   GET /api/chat/conversations/:conversationId
+// @access  Private
+exports.getConversationById = asyncHandler(async (req, res, next) => {
+    const conversation = await Conversation.findById(req.params.conversationId)
+        .populate('participants', 'displayName avatar isOnline')
+        .populate('lastMessage')
+        .lean();
+
+    if (!conversation) {
+        throw new ApiError(404, 'Conversation not found');
+    }
+
+    if (!conversation.participants.some((participant) => participant._id.toString() === req.user.id)) {
+        throw new ApiError(403, 'Not authorized to access this conversation');
+    }
+
+    const unreadCount = await Message.countDocuments({
+        conversationId: conversation._id,
+        sender: { $ne: req.user.id },
+        readBy: { $ne: req.user.id }
+    });
+
+    res.json({
+        ...conversation,
+        unreadCount
+    });
 });
 
 // @desc    Send a message

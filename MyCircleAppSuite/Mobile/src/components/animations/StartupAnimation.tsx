@@ -1,18 +1,15 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withSpring,
     withDelay,
-    withSequence,
     withTiming,
     withRepeat,
     Easing
 } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
-
-const { width, height } = Dimensions.get('window');
 
 const StartupAnimation = ({ onComplete }: { onComplete: () => void }) => {
     const { colors } = useTheme();
@@ -21,26 +18,24 @@ const StartupAnimation = ({ onComplete }: { onComplete: () => void }) => {
     const textY = useSharedValue(20);
     const hiveRotate = useSharedValue(0);
 
+    const handleComplete = useCallback(() => {
+        onComplete?.();
+    }, [onComplete]);
+
     useEffect(() => {
-        // Logo pop-in
         scale.value = withSpring(1, { damping: 12 });
         opacity.value = withTiming(1, { duration: 800 });
-
-        // Hive wobble
         hiveRotate.value = withDelay(500, withRepeat(withTiming(10, { duration: 100 }), 6, true));
-
-        // Text slide-up
         textY.value = withDelay(300, withSpring(0));
 
-        // Exit sequence
         const timer = setTimeout(() => {
             scale.value = withTiming(0, { duration: 500, easing: Easing.back(1) });
             opacity.value = withTiming(0, { duration: 500 });
-            setTimeout(onComplete, 600);
+            setTimeout(handleComplete, 600);
         }, 2500);
 
         return () => clearTimeout(timer);
-    }, []);
+    }, [handleComplete, hiveRotate, opacity, scale, textY]);
 
     const logoStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }, { rotate: hiveRotate.value + 'deg' }],

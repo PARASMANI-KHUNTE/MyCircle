@@ -1,13 +1,12 @@
 // Core chat window component for individual conversations
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, StyleSheet, Dimensions, StatusBar } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, StyleSheet, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import { ensureConversationWithUser, getConversationById } from '../services/chat';
-import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, MoreVertical } from 'lucide-react-native';
+import { Send, ArrowLeft, Shield, Check, CheckCheck, Sparkles, MoreVertical } from 'lucide-react-native';
 import { getSmartSuggestions } from '../utils/smartSuggestions';
 import { getAvatarUrl } from '../utils/avatar';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -16,7 +15,6 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const { conversation: initialConversation, id: conversationId, recipient } = route.params || {};
     const { socket } = useSocket();
     const { user } = useAuth();
-    const { colors } = useTheme();
     const [conversation, setConversation] = useState<any>(initialConversation || null);
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -25,6 +23,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const [isTyping, setIsTyping] = useState(false);
     const flatListRef = useRef<FlatList>(null);
     const typingTimeoutRef = useRef<any>(null);
+    const currentUserId = user?._id || user?.id;
 
     const resolveConversation = useCallback(async () => {
         if (initialConversation?._id || initialConversation?.participants) {
@@ -52,6 +51,32 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         || conversation?.participants?.[0]
         || recipient;
 
+    const fetchMessages = useCallback(async (targetConversationId = conversation?._id) => {
+        if (!targetConversationId) return;
+        try {
+            const res = await api.get(`/chat/messages/${targetConversationId}`);
+            setMessages(res.data);
+            setLoading(false);
+        } catch {
+            console.error('Failed to fetch messages');
+            setLoading(false);
+        }
+    }, [conversation?._id]);
+
+    const markAsRead = useCallback(async (targetConversationId = conversation?._id) => {
+        if (!targetConversationId) return;
+        try {
+            await api.put(`/chat/read/${targetConversationId}`);
+        } catch {
+            console.error('Failed to mark as read');
+        }
+    }, [conversation?._id]);
+
+    const generateSuggestions = useCallback((lastMsg = '') => {
+        const newSuggestions = getSmartSuggestions(lastMsg);
+        setSuggestions(newSuggestions.slice(0, 3));
+    }, []);
+
     useEffect(() => {
         const initialize = async () => {
             const resolvedConversation = await resolveConversation();
@@ -66,12 +91,10 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         };
 
         void initialize();
-    }, [resolveConversation]);
+    }, [resolveConversation, fetchMessages, markAsRead, generateSuggestions]);
 
     useEffect(() => {
         if (!conversation?._id || !socket) return;
-
-        if (!socket) return;
 
         const handleReceiveMessage = (data: any) => {
             if (data.conversationId === conversation._id) {
@@ -79,8 +102,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     if (prev.find(m => m._id === data.message._id)) return prev;
                     return [...prev, data.message];
                 });
-                // If message is from other user, generate suggestions and mark read
-                if (data.message.sender !== user?._id) {
+                if ((data.message.sender?._id || data.message.sender) !== currentUserId) {
                     generateSuggestions(data.message.text);
                     markAsRead();
                 }
@@ -88,15 +110,15 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         };
 
         const handleReadReceipt = (data: any) => {
-            if (data.conversationId === conversation._id && data.readerId !== user?._id) {
+            if (data.conversationId === conversation._id && data.readerId !== currentUserId) {
                 setMessages(prev => prev.map(msg =>
-                    msg.sender === user?._id ? { ...msg, status: 'read' } : msg
+                    msg.sender === currentUserId ? { ...msg, status: 'read' } : msg
                 ));
             }
         };
 
         const handleTypingStart = (data: any) => {
-            if (data.conversationId === conversation._id && data.userId !== user?._id) {
+            if (data.conversationId === conversation._id && data.userId !== currentUserId) {
                 setIsTyping(true);
             }
         };
@@ -128,33 +150,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             socket.off('user_stop_typing', handleTypingStop);
             socket.off('conversation_deleted', handleConversationDeleted);
         };
-    }, [socket, conversation?._id, navigation, user?._id]);
-
-    const fetchMessages = async (targetConversationId = conversation?._id) => {
-        if (!targetConversationId) return;
-        try {
-            const res = await api.get(`/chat/messages/${targetConversationId}`);
-            setMessages(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error(err);
-            setLoading(false);
-        }
-    };
-
-    const markAsRead = async (targetConversationId = conversation?._id) => {
-        if (!targetConversationId) return;
-        try {
-            await api.put(`/chat/read/${targetConversationId}`);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const generateSuggestions = (lastMsg = '') => {
-        const newSuggestions = getSmartSuggestions(lastMsg);
-        setSuggestions(newSuggestions.slice(0, 3));
-    };
+    }, [socket, conversation?._id, navigation, currentUserId, generateSuggestions, markAsRead]);
 
     const handleInputChange = (text: string) => {
         setNewMessage(text);
@@ -189,7 +185,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
         const optimisticMsg = {
             _id: Date.now().toString(),
-            sender: user?._id,
+            sender: currentUserId,
             text: msgText,
             status: 'sent',
             createdAt: new Date().toISOString()
@@ -207,11 +203,13 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                 setConversation(activeConversation);
             }
 
-            await api.post('/chat/message', {
+            const response = await api.post('/chat/message', {
                 recipientId: otherParticipant._id,
                 text: msgText,
                 postId: activeConversation.postId
             });
+
+            setMessages(prev => prev.map(m => m._id === optimisticMsg._id ? response.data : m));
         } catch (err: any) {
             setMessages(prev => prev.filter(m => m._id !== optimisticMsg._id));
             Alert.alert('Error', err.response?.data?.msg || 'Failed to send message');
@@ -258,7 +256,8 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     };
 
     const renderMessage = ({ item, index }: any) => {
-        const isOwn = item.sender === user?._id;
+        const senderId = item.sender?._id || item.sender;
+        const isOwn = senderId === currentUserId;
         return (
             <Animated.View entering={FadeInDown.delay(index % 10 * 50).springify()}>
                 <View style={{

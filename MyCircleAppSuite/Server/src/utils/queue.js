@@ -1,13 +1,29 @@
 const { Queue, Worker } = require('bullmq');
 const Redis = require('ioredis');
+const pino = require('pino');
+
+const logger = pino({ name: 'queue' });
 
 const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
 });
 
+let redisAvailable = false;
+
+connection.on('ready', () => {
+    redisAvailable = true;
+    logger.info('Redis queue connection ready');
+});
+
 connection.on('error', (err) => {
-    console.error('Redis connection error:', err.message);
+    redisAvailable = false;
+    logger.error({ error: err.message }, 'Redis connection error');
+});
+
+connection.on('end', () => {
+    redisAvailable = false;
+    logger.warn('Redis queue connection closed');
 });
 
 const createQueue = (name, options = {}) => {
@@ -59,10 +75,18 @@ const cleanupQueue = createQueue('cleanup', {
 });
 
 const addImageJob = async (data, options = {}) => {
+    if (!redisAvailable) {
+        logger.warn({ queue: 'image-processing' }, 'Skipping image job because Redis is unavailable');
+        return null;
+    }
     return imageQueue.add('process-image', data, options);
 };
 
 const addNotificationJob = async (data, options = {}) => {
+    if (!redisAvailable) {
+        logger.warn({ queue: 'notifications' }, 'Skipping notification job because Redis is unavailable');
+        return null;
+    }
     const { io, postId, relatedId, ...rest } = data || {};
 
     return notificationQueue.add('send-notification', {
@@ -72,11 +96,33 @@ const addNotificationJob = async (data, options = {}) => {
 };
 
 const addAIJob = async (data, options = {}) => {
+    if (!redisAvailable) {
+        logger.warn({ queue: 'ai-processing' }, 'Skipping AI job because Redis is unavailable');
+        return null;
+    }
     return aiQueue.add('ai-task', data, options);
 };
 
 const addCleanupJob = async (data, options = {}) => {
+    if (!redisAvailable) {
+        logger.warn({ queue: 'cleanup' }, 'Skipping cleanup job because Redis is unavailable');
+        return null;
+    }
     return cleanupQueue.add('cleanup-task', data, options);
+};
+
+const closeQueueConnection = async () => {
+    try {
+        await Promise.all([
+            imageQueue.close(),
+            notificationQueue.close(),
+            aiQueue.close(),
+            cleanupQueue.close(),
+        ]);
+        await connection.quit();
+    } catch (error) {
+        logger.error({ error: error.message }, 'Failed to close queue connection cleanly');
+    }
 };
 
 module.exports = {
@@ -90,4 +136,5 @@ module.exports = {
     addAIJob,
     addCleanupJob,
     createQueue,
+    closeQueueConnection,
 };

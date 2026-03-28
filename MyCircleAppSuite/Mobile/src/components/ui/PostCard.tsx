@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Pressable, Clipboard, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Pressable, Clipboard, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MapPin, Heart, MessageCircle, Share2, Star } from 'lucide-react-native';
+import { MapPin, Heart, Share2 } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import Animated, {
 
@@ -58,26 +58,26 @@ interface PostCardProps {
 
 const PostCard = ({ post, onPress }: PostCardProps) => {
     const { user: currentUser } = useAuth();
-    const { success, error } = useToast();
+    const { error } = useToast();
     const { colors } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
     const [hasShared, setHasShared] = useState(false);
     const lastTapRef = useRef<number>(0);
     const [aiSuggestion, setAiSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
 
+    const checkShared = useCallback(async () => {
+        try {
+            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
+            setHasShared(sharedPosts.includes(post._id));
+        } catch {}
+    }, [post._id]);
+
     useEffect(() => {
         if (!post.images || post.images.length === 0) {
             getPlaceholderSuggestions(post.title, post.description).then(setAiSuggestion);
         }
         checkShared();
-    }, [post._id]);
-
-    const checkShared = async () => {
-        try {
-            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
-            setHasShared(sharedPosts.includes(post._id));
-        } catch {}
-    };
+    }, [post._id, post.title, post.description, post.images, checkShared]);
 
     const handleShare = async () => {
         if (hasShared) {

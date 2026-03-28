@@ -29,6 +29,9 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [location, setLocation] = useState('');
     const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [price, setPrice] = useState('');
+    const [budgetMin, setBudgetMin] = useState('');
+    const [budgetMax, setBudgetMax] = useState('');
+    const [availability, setAvailability] = useState('');
     const [acceptsBarter, setAcceptsBarter] = useState(false);
     const [duration, setDuration] = useState(40320); // 28 days
     const [isUrgent, setIsUrgent] = useState(false);
@@ -113,6 +116,9 @@ const CreatePostScreen = ({ navigation }: any) => {
                 formData.append('longitude', coordinates.lng.toString());
             }
             formData.append('price', price || '0');
+            if (budgetMin) formData.append('budgetMin', budgetMin);
+            if (budgetMax) formData.append('budgetMax', budgetMax);
+            if (availability.trim()) formData.append('availability', availability.trim());
             formData.append('duration', duration.toString());
             formData.append('isUrgent', isUrgent.toString());
             formData.append('exchangePreference', exchangePreference);
@@ -207,6 +213,41 @@ const CreatePostScreen = ({ navigation }: any) => {
                         multiline
                         onChangeText={setDescription}
                     />
+                </View>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Availability</Text>
+                    <TextInput
+                        style={[styles.glassInput, styles.textAreaSmall]}
+                        placeholder="Weekday evenings, weekends, 2 hours/day..."
+                        placeholderTextColor="#64748b"
+                        value={availability}
+                        multiline
+                        onChangeText={setAvailability}
+                    />
+                </View>
+                <View style={[styles.dualInputRow, { marginBottom: 0 }]}>
+                    <View style={[styles.inputGroup, styles.dualInput]}>
+                        <Text style={styles.label}>Budget Min</Text>
+                        <TextInput
+                            style={styles.glassInput}
+                            keyboardType="numeric"
+                            placeholder="300"
+                            placeholderTextColor="#64748b"
+                            value={budgetMin}
+                            onChangeText={setBudgetMin}
+                        />
+                    </View>
+                    <View style={[styles.inputGroup, styles.dualInput]}>
+                        <Text style={styles.label}>Budget Max</Text>
+                        <TextInput
+                            style={styles.glassInput}
+                            keyboardType="numeric"
+                            placeholder="1200"
+                            placeholderTextColor="#64748b"
+                            value={budgetMax}
+                            onChangeText={setBudgetMax}
+                        />
+                    </View>
                 </View>
             </View>
 
@@ -334,6 +375,14 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
                 <Text style={styles.previewTitle}>{title}</Text>
                 <Text style={styles.previewDesc} numberOfLines={4}>{description}</Text>
+                {!!availability && (
+                    <Text style={styles.previewMeta}>Availability: {availability}</Text>
+                )}
+                {(budgetMin || budgetMax) && (
+                    <Text style={styles.previewMeta}>
+                        Budget Range: ₹{budgetMin || '0'} - ₹{budgetMax || budgetMin || '0'}
+                    </Text>
+                )}
                 <View style={styles.previewFooter}>
                     <View style={styles.footerInfo}><MapPin size={12} color="#94a3b8" /><Text style={styles.footerInfoText}>{location}</Text></View>
                     <View style={styles.footerInfo}><Clock size={12} color="#94a3b8" /><Text style={styles.footerInfoText}>{durations.find(d => d.value === duration)?.label}</Text></View>
@@ -609,6 +658,17 @@ const styles = StyleSheet.create({
         height: 120,
         textAlignVertical: 'top'
     },
+    textAreaSmall: {
+        height: 88,
+        textAlignVertical: 'top'
+    },
+    dualInputRow: {
+        flexDirection: 'row',
+        gap: 12
+    },
+    dualInput: {
+        flex: 1
+    },
     imageSection: {
         marginTop: 8
     },
@@ -843,6 +903,12 @@ const styles = StyleSheet.create({
         color: '#94a3b8',
         lineHeight: 20,
         marginBottom: 20
+    },
+    previewMeta: {
+        fontSize: 13,
+        color: '#cbd5e1',
+        lineHeight: 18,
+        marginBottom: 10
     },
     previewFooter: {
         flexDirection: 'row',

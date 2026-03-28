@@ -340,6 +340,29 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                 <Text className="text-slate-200 text-lg leading-7">{post.description}</Text>
                             </View>
 
+                            {(post.budgetMin || post.budgetMax || post.availability || post.duration) && (
+                                <View className="mt-6 gap-3">
+                                    {(post.budgetMin || post.budgetMax) && (
+                                        <View className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                            <Text className="text-slate-400 font-bold mb-2 uppercase tracking-widest text-xs">Budget Range</Text>
+                                            <Text className="text-white font-semibold text-base">₹{post.budgetMin || post.price || 0} to ₹{post.budgetMax || post.price || 0}</Text>
+                                        </View>
+                                    )}
+                                    {post.duration && (
+                                        <View className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                            <Text className="text-slate-400 font-bold mb-2 uppercase tracking-widest text-xs">Estimated Duration</Text>
+                                            <Text className="text-white font-semibold text-base">{post.duration} minutes</Text>
+                                        </View>
+                                    )}
+                                    {post.availability && (
+                                        <View className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                            <Text className="text-slate-400 font-bold mb-2 uppercase tracking-widest text-xs">Availability</Text>
+                                            <Text className="text-white font-semibold text-base">{post.availability}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+
                             {/* AI Insights Panel */}
                             <TouchableOpacity
                                 onPress={handleGetInsights}

@@ -8,7 +8,7 @@ const ApiError = require('../utils/ApiError');
 // @route   GET /api/user/profile
 // @access  Private
 exports.getUserProfile = asyncHandler(async (req, res, next) => {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select('-passwordHash -passwordSalt');
     if (!user) {
         throw new ApiError(404, 'User not found');
     }
@@ -136,7 +136,7 @@ exports.blockUser = async (req, res, next) => {
         }
         const user = await User.findById(req.user.id);
 
-        if (!user.blockedUsers.includes(userToBlockId)) {
+        if (!user.blockedUsers.some(id => id.toString() === userToBlockId)) {
             user.blockedUsers.push(userToBlockId);
             await user.save();
         }
@@ -246,7 +246,7 @@ exports.getConnections = async (req, res, next) => {
 // @route   GET /api/user/:userId
 // @access  Private
 exports.getUserById = asyncHandler(async (req, res, next) => {
-    const user = await User.findById(req.params.userId).select('-password -preferences -blockedUsers');
+    const user = await User.findById(req.params.userId).select('-passwordHash -passwordSalt -preferences -blockedUsers');
     if (!user) {
         throw new ApiError(404, 'User not found');
     }
@@ -273,9 +273,9 @@ exports.followUser = async (req, res, next) => {
         }
 
         // Check if already following
-        if (currentUser.following.includes(userId)) {
-            return res.status(400).json({ msg: 'Already following this user' });
-        }
+            if ((currentUser.following || []).some(id => id.toString() === userId)) {
+                return res.status(400).json({ msg: 'Already following this user' });
+            }
 
         // Add to following/followers arrays
         currentUser.following.push(userId);
@@ -388,7 +388,7 @@ exports.endorseSkill = async (req, res, next) => {
 
         if (skillEntry) {
             // Check if already endorsed
-            if (skillEntry.endorsedBy.includes(endorserId)) {
+            if ((skillEntry.endorsedBy || []).some(id => id.toString() === endorserId)) {
                 return res.status(400).json({ msg: 'You have already endorsed this skill for this user' });
             }
             skillEntry.count += 1;

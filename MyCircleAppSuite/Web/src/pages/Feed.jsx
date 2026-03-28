@@ -65,17 +65,27 @@ const Feed = () => {
 
     const { socket } = useSocket(); // Get socket from context
 
+    const serverCategory = filter === 'service' ? 'all' : filter;
+    const serverSort = sortOrder === 'latest' || sortOrder === 'oldest' ? sortOrder : 'latest';
+
     const fetchPosts = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await api.get('/posts');
+            const params = {
+                limit: 50,
+                type: serverCategory !== 'all' ? serverCategory : undefined,
+                q: searchTerm.trim() || undefined,
+                location: locationFilter !== 'all' ? locationFilter : undefined,
+                sort: serverSort,
+            };
+            const res = await api.get('/posts', { params });
             setPosts(res.data);
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [locationFilter, searchTerm, serverCategory, serverSort]);
 
     const fetchServices = useCallback(async () => {
         setLoading(true);
@@ -136,25 +146,9 @@ const Feed = () => {
     }, [posts]);
 
     const filteredPosts = React.useMemo(() => {
-        if (filter === 'service') return services; // Pass through services if in service mode
-
-        let result = posts.filter(post => {
-            const matchesFilter = filter === 'all' || post.type === filter;
-            const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                post.description.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesLocation = locationFilter === 'all' || post.location === locationFilter;
-            return matchesFilter && matchesSearch && matchesLocation;
-        });
-
-        // Sort posts
-        result.sort((a, b) => {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
-        });
-
-        return result;
-    }, [posts, services, filter, searchTerm, locationFilter, sortOrder]);
+        if (filter === 'service') return services;
+        return posts;
+    }, [posts, services, filter]);
 
     // Map Specific logic
     const mapPosts = React.useMemo(() => {

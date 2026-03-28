@@ -16,7 +16,7 @@ router.get('/blocked', auth, userController.getBlockedUsers);
 router.post('/report', [auth, validate(schemas.reportUser)], userController.reportUser);
 router.get('/connections', auth, userController.getConnections);
 router.post('/endorse/:userId', auth, userController.endorseSkill);
-router.get('/services', auth, userController.getServices);
+router.get('/services', userController.getServices);
 router.get('/:userId', auth, userController.getUserById);
 
 module.exports = router;

@@ -9,6 +9,8 @@ import { ArrowLeft, MessageCircle, ChevronRight, CheckSquare, Square, X, Trash2,
 import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+const getParticipantId = (participant: any) => participant?._id?.toString?.() || participant?.id?.toString?.();
+
 const ChatListScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
     const { socket } = useSocket() as any;
@@ -154,7 +156,8 @@ const ChatListScreen = ({ navigation }: any) => {
     };
 
     const renderItem = ({ item, index }: { item: any, index: number }) => {
-        const otherUser = item.participants.find((p: any) => p._id !== auth?.user?._id);
+        const currentUserId = auth?.user?._id?.toString?.() || auth?.user?.id?.toString?.();
+        const otherUser = item.participants.find((p: any) => getParticipantId(p) !== currentUserId) || item.participants[0];
         const lastMsg = item.lastMessage;
         const hasUnread = item.unreadCount > 0;
         const isSelected = selectedItems.has(item._id);
@@ -194,7 +197,7 @@ const ChatListScreen = ({ navigation }: any) => {
                                     source={{ uri: otherUser?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${otherUser?.displayName}` }}
                                     style={styles.avatar}
                                 />
-                                {hasUnread && <View style={styles.activeIndicator} />}
+                                {otherUser?.isOnline && <View style={styles.activeIndicator} />}
                             </View>
 
                             <View style={styles.contentContainer}>

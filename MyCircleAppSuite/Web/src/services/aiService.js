@@ -23,7 +23,13 @@ export const getChatSuggestions = async (messages) => {
 export const getPostInsights = async (post) => {
     try {
         const response = await api.post('/ai/analyze-post', { post });
-        return response.data;
+        const data = response.data || {};
+        return {
+            ...data,
+            score: data.demandScore ?? data.score ?? 0,
+            summary: data.priceAnalysis ?? data.summary ?? 'Analysis unavailable',
+            tips: data.tips ?? [],
+        };
     } catch (error) {
         console.error('Insight error:', error);
         return { summary: 'Analysis unavailable', tips: [], score: 0 };
@@ -33,8 +39,12 @@ export const getPostInsights = async (post) => {
 export const getPostExplanation = async (post) => {
     try {
         const response = await api.post('/ai/explain-post', { post });
-        return response.data;
+        const data = response.data || {};
+        return {
+            ...data,
+            explanation: data.summary || data.explanation || 'Explanation unavailable',
+        };
     } catch {
-        return { summary: 'Explanation unavailable', context: '', interestingFacts: [] };
+        return { explanation: 'Explanation unavailable', summary: 'Explanation unavailable', context: '', interestingFacts: [] };
     }
 };

@@ -5,15 +5,19 @@ const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
 const http = require('http');
+const crypto = require('crypto');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const compression = require('compression');
 const pino = require('pino');
+const jwt = require('jsonwebtoken');
 const connectDB = require('./src/config/db');
 require('./src/config/firebase');
 const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
+const User = require('./src/models/User');
+const { closeQueueConnection } = require('./src/utils/queue');
 
 validateEnv();
 
@@ -42,24 +46,62 @@ const io = new Server(server, {
         origin: isProduction ? corsOrigins : true,
         methods: ['GET', 'POST'],
         credentials: true
-    }
+    },
+    transports: ['websocket', 'polling'],
+    pingInterval: 25000,
+    pingTimeout: 20000,
+    maxHttpBufferSize: 1e6,
 });
 
 app.set('io', io);
 
+io.use((socket, next) => {
+    try {
+        const handshakeToken = socket.handshake.auth?.token;
+        const headerToken = socket.handshake.headers['x-auth-token'];
+        const bearerToken = socket.handshake.headers.authorization?.startsWith('Bearer ')
+            ? socket.handshake.headers.authorization.slice(7)
+            : null;
+        const token = handshakeToken || headerToken || bearerToken;
+
+        if (!token) {
+            return next(new Error('Authentication required'));
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = decoded.user;
+        return next();
+    } catch (error) {
+        return next(new Error('Authentication failed'));
+    }
+});
+
 io.on('connection', (socket) => {
     logger.info({ socketId: socket.id }, 'User connected');
 
+    if (socket.user?.id) {
+        socket.userId = socket.user.id;
+        socket.join(`user:${socket.user.id}`);
+        logger.info({ userId: socket.user.id, room: `user:${socket.user.id}` }, 'User auto-joined room');
+        socket.broadcast.emit('user_online', socket.user.id);
+        User.findByIdAndUpdate(socket.user.id, {
+            $set: { isOnline: true, lastSeenAt: new Date() }
+        }).catch((error) => {
+            logger.warn({ userId: socket.user.id, error: error.message }, 'Failed to update online status');
+        });
+    }
+
     socket.on('join', (userId) => {
         try {
-            if (!userId) {
-                logger.warn({ socketId: socket.id }, 'Join event without userId');
+            if (!socket.user?.id) {
+                logger.warn({ socketId: socket.id }, 'Join rejected for unauthenticated socket');
                 return;
             }
-            socket.join(`user:${userId}`);
-            socket.userId = userId;
-            logger.info({ userId, room: `user:${userId}` }, 'User joined room');
-            socket.broadcast.emit('user_online', userId);
+            if (userId && userId !== socket.user.id) {
+                logger.warn({ socketId: socket.id, claimedUserId: userId, authenticatedUserId: socket.user.id }, 'Ignoring mismatched join userId');
+            }
+            socket.join(`user:${socket.user.id}`);
+            socket.userId = socket.user.id;
         } catch (error) {
             logger.error({ error: error.message }, 'Error in join event');
         }
@@ -117,6 +159,11 @@ io.on('connection', (socket) => {
             logger.info({ socketId: socket.id }, 'User disconnected');
             if (socket.userId) {
                 socket.broadcast.emit('user_offline', socket.userId);
+                User.findByIdAndUpdate(socket.userId, {
+                    $set: { isOnline: false, lastSeenAt: new Date() }
+                }).catch((error) => {
+                    logger.warn({ userId: socket.userId, error: error.message }, 'Failed to update offline status');
+                });
             }
         } catch (error) {
             logger.error({ error: error.message }, 'Error in disconnect');
@@ -139,8 +186,8 @@ app.use(helmet({
 app.use(compression());
 
 const corsOptions = {
-    origin: isProduction 
-        ? (process.env.CLIENT_URL || 'https://mycircle.com')
+    origin: isProduction
+        ? (corsOrigins.length ? corsOrigins : (process.env.CLIENT_URL || 'https://mycircle.com'))
         : true,
     credentials: true
 };
@@ -176,6 +223,7 @@ if (isProduction) {
         message: 'Too many authentication attempts, please try again later.',
     });
     app.use('/auth/', authLimiter);
+    app.use('/api/auth/', authLimiter);
     logger.info('Rate limiting enabled');
 } else {
     logger.info('Rate limiting disabled (development mode)');
@@ -184,14 +232,24 @@ if (isProduction) {
 app.use(express.json({ limit: '10mb' }));
 
 app.use((req, res, next) => {
+    const requestId = req.header('x-request-id') || crypto.randomUUID();
+    req.requestId = requestId;
+    res.setHeader('x-request-id', requestId);
+    req.log = logger.child({
+        requestId,
+        method: req.method,
+        path: req.originalUrl
+    });
+
     req.startTime = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - req.startTime;
-        logger.info({
+        req.log.info({
             method: req.method,
             url: req.url,
             status: res.statusCode,
             duration: `${duration}ms`,
+            userId: req.user?.id,
         }, 'Request completed');
     });
     next();
@@ -270,21 +328,29 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const gracefulShutdown = (signal) => {
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+server.requestTimeout = 30000;
+
+const gracefulShutdown = async (signal) => {
     logger.info(`${signal} received, starting graceful shutdown`);
-    server.close(() => {
-        logger.info('HTTP server closed');
-        const mongoose = require('mongoose');
-        mongoose.connection.close(false, () => {
-            logger.info('MongoDB connection closed');
-            process.exit(0);
-        });
-    });
-    
-    setTimeout(() => {
+    const forcedShutdownTimer = setTimeout(() => {
         logger.error('Forced shutdown after timeout');
         process.exit(1);
     }, 10000);
+
+    server.close(async () => {
+        logger.info('HTTP server closed');
+        const mongoose = require('mongoose');
+
+        await closeQueueConnection();
+
+        mongoose.connection.close(false, () => {
+            logger.info('MongoDB connection closed');
+            clearTimeout(forcedShutdownTimer);
+            process.exit(0);
+        });
+    });
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

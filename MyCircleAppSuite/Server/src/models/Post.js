@@ -23,6 +23,12 @@ const PostSchema = new mongoose.Schema({
     price: {
         type: Number,
     },
+    budgetMin: {
+        type: Number,
+    },
+    budgetMax: {
+        type: Number,
+    },
     location: {
         type: String,
         required: true,
@@ -80,6 +86,10 @@ const PostSchema = new mongoose.Schema({
     duration: {
         type: Number, // duration in minutes
         default: 40320 // 28 days
+    },
+    availability: {
+        type: String,
+        trim: true,
     },
     barterPreferences: {
         type: String, // e.g., "Looking for: Laptop, Books, or similar services"
@@ -164,9 +174,9 @@ PostSchema.pre('save', async function () {
 // Indexes for performance
 PostSchema.index({ user: 1 });
 PostSchema.index({ title: 'text', description: 'text' });
-PostSchema.index({ category: 1, status: 1 });
+PostSchema.index({ type: 1, status: 1, isActive: 1 });
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ price: 1 });
-PostSchema.index({ tags: 1 });
+PostSchema.index({ expiresAt: 1, status: 1, isActive: 1 });
 
 module.exports = mongoose.model('Post', PostSchema);

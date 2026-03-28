@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withRepeat,
     withTiming,
-    withSequence,
-    withDelay
+    withSequence
 } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -28,7 +27,6 @@ const Skeleton = ({
     const opacity = useSharedValue(0.3);
     const { colors } = useTheme();
 
-    // Default base color if not specified
     const baseColor = dark ? '#27272a' : (colors.background === '#09090b' ? '#27272a' : '#e4e4e7');
 
     useEffect(() => {
@@ -40,7 +38,7 @@ const Skeleton = ({
             -1,
             true
         );
-    }, []);
+    }, [opacity]);
 
     const animatedStyle = useAnimatedStyle(() => {
         return {

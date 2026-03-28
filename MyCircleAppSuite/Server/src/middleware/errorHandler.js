@@ -4,20 +4,11 @@
  */
 
 const ApiError = require('../utils/ApiError');
+const logger = require('../utils/logger');
 
 const errorHandler = (err, req, res, next) => {
     let error = err;
-
-    // Log error for debugging (only in development)
-    if (process.env.NODE_ENV === 'development') {
-        console.error('Error Details:', {
-            message: error.message,
-            stack: error.stack,
-            url: req.originalUrl,
-            method: req.method,
-            timestamp: new Date().toISOString()
-        });
-    }
+    const requestId = req.requestId;
 
     // Default error status and message
     let statusCode = error.statusCode || 500;
@@ -50,11 +41,22 @@ const errorHandler = (err, req, res, next) => {
         error = new ApiError(statusCode, message, false, err.stack);
     }
 
+    logger.error({
+        requestId,
+        method: req.method,
+        url: req.originalUrl,
+        statusCode: error.statusCode,
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        userId: req.user?.id,
+    }, 'Request failed');
+
     // Send structured error response
     res.status(error.statusCode).json({
         success: false,
         msg: error.message,
         error: error.message,
+        requestId,
         ...(process.env.NODE_ENV === 'development' && {
             stack: error.stack,
             details: error.isOperational ? 'Operational' : 'Programmatic/Unknown'

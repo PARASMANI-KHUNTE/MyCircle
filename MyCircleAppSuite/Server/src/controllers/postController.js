@@ -13,16 +13,33 @@ const jwt = require('jsonwebtoken');
 const { addAIJob, addImageJob } = require('../utils/queue');
 const mongoose = require('mongoose');
 
+const DEFAULT_POST_LIMIT = 20;
+const MAX_POST_LIMIT = 50;
+
+const parsePagination = (query, defaultLimit, maxLimit) => {
+    const page = Math.max(parseInt(query.page, 10) || 1, 1);
+    const requestedLimit = parseInt(query.limit, 10) || defaultLimit;
+    const limit = Math.min(Math.max(requestedLimit, 1), maxLimit);
+
+    return {
+        page,
+        limit,
+        skip: (page - 1) * limit
+    };
+};
+
 // @desc    Create a post
 // @route   POST /api/posts
 // @access  Private
 exports.createPost = asyncHandler(async (req, res) => {
-    const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
+    const { type, title, description, price, location, contactPhone, contactWhatsapp, duration, availability, budgetMin, budgetMax } = req.body;
 
     const numericPrice = parseFloat(price);
     if (price !== undefined && price !== '' && isNaN(numericPrice)) {
         throw new ApiError(400, 'Price must be a valid number');
     }
+    const numericBudgetMin = budgetMin !== undefined && budgetMin !== '' ? parseFloat(budgetMin) : undefined;
+    const numericBudgetMax = budgetMax !== undefined && budgetMax !== '' ? parseFloat(budgetMax) : undefined;
 
     let expiresAt = null;
     if (duration) {
@@ -67,6 +84,9 @@ exports.createPost = asyncHandler(async (req, res) => {
         expiresAt,
         duration: req.body.duration ? parseInt(req.body.duration, 10) : undefined,
         price: numericPrice || 0,
+        budgetMin: !isNaN(numericBudgetMin) ? numericBudgetMin : undefined,
+        budgetMax: !isNaN(numericBudgetMax) ? numericBudgetMax : undefined,
+        availability,
         isUrgent: req.body.isUrgent === 'true' || req.body.isUrgent === true,
         exchangePreference: req.body.exchangePreference || 'money',
         acceptsBarter: req.body.acceptsBarter === 'true' || req.body.acceptsBarter === true || req.body.exchangePreference === 'barter' || req.body.exchangePreference === 'flexible',
@@ -88,7 +108,19 @@ exports.createPost = asyncHandler(async (req, res) => {
 // @access  Public
 exports.getPosts = async (req, res, next) => {
     try {
-        const { latitude, longitude, radius = 50, type, filter, userId } = req.query; // radius in km
+        const {
+            latitude,
+            longitude,
+            radius = 50,
+            type,
+            filter,
+            userId,
+            location,
+            sort = 'latest',
+            q,
+            barterOnly
+        } = req.query; // radius in km
+        const { page, limit, skip } = parsePagination(req.query, DEFAULT_POST_LIMIT, MAX_POST_LIMIT);
 
         let pipeline = [];
 
@@ -101,6 +133,12 @@ exports.getPosts = async (req, res, next) => {
                 throw new ApiError(400, 'Invalid userId');
             }
             baseFilter.user = new mongoose.Types.ObjectId(userId);
+        }
+        if (location) {
+            baseFilter.location = location;
+        }
+        if (barterOnly === 'true' || barterOnly === true || type === 'barter') {
+            baseFilter.acceptsBarter = true;
         }
 
         // 1. Geospatial Stage (Must be first if present)
@@ -142,7 +180,25 @@ exports.getPosts = async (req, res, next) => {
 
         // 2. Additional Filters
         if (type && type !== 'all') {
-            pipeline.push({ $match: { type: type } });
+            if (type === 'barter') {
+                pipeline.push({ $match: { acceptsBarter: true } });
+            } else {
+                pipeline.push({ $match: { type: type } });
+            }
+        }
+
+        if (q) {
+            const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const searchRegex = new RegExp(escapedQuery, 'i');
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { title: searchRegex },
+                        { description: searchRegex },
+                        { location: searchRegex }
+                    ]
+                }
+            });
         }
 
         // Handle 'filter' param (e.g., 'active', 'sold' - though getPosts usually just shows active)
@@ -151,38 +207,76 @@ exports.getPosts = async (req, res, next) => {
         // 3. Sorting
         // $geoNear sorts by distance automatically. If not using geoNear, sort by date.
         if (!latitude || !longitude) {
+            if (sort === 'oldest') {
+                pipeline.push({ $sort: { createdAt: 1 } });
+            } else if (sort === 'urgent') {
+                pipeline.push({ $sort: { isUrgent: -1, expiresAt: 1, createdAt: -1 } });
+            } else {
+                pipeline.push({ $sort: { createdAt: -1 } });
+            }
+        } else if (sort === 'urgent') {
+            pipeline.push({ $sort: { isUrgent: -1, 'dist.calculated': 1, createdAt: -1 } });
+        } else if (sort === 'oldest') {
+            pipeline.push({ $sort: { createdAt: 1 } });
+        } else if (sort === 'latest') {
             pipeline.push({ $sort: { createdAt: -1 } });
         }
 
-        // 4. Lookup (Populate) User
         pipeline.push({
-            $lookup: {
-                from: 'users',
-                localField: 'user',
-                foreignField: '_id',
-                as: 'user'
+            $facet: {
+                items: [
+                    { $skip: skip },
+                    { $limit: limit },
+                    {
+                        $lookup: {
+                            from: 'users',
+                            localField: 'user',
+                            foreignField: '_id',
+                            as: 'user'
+                        }
+                    },
+                    { $unwind: '$user' },
+                    {
+                        $lookup: {
+                            from: 'contactrequests',
+                            let: { postId: '$_id' },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: { $eq: ['$post', '$$postId'] }
+                                    }
+                                },
+                                {
+                                    $count: 'count'
+                                }
+                            ],
+                            as: 'applicationStats'
+                        }
+                    },
+                    {
+                        $project: {
+                            user: { _id: '$user._id', displayName: '$user.displayName', avatar: '$user.avatar' },
+                            type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
+                            isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
+                            locationCoords: 1, duration: 1, availability: 1, budgetMin: 1, budgetMax: 1,
+                            distance: { $ifNull: ['$dist.calculated', null] },
+                            applicationCount: {
+                                $ifNull: [{ $arrayElemAt: ['$applicationStats.count', 0] }, 0]
+                            }
+                        }
+                    }
+                ],
+                totalCount: [
+                    { $count: 'count' }
+                ]
             }
         });
-        pipeline.push({ $unwind: '$user' }); // Lookup returns array, flatten it
 
-        // 5. Project (Select Fields & Formatting)
-        pipeline.push({
-            $project: {
-                // Include all post fields
-                user: { _id: '$user._id', displayName: '$user.displayName', avatar: '$user.avatar' }, // Select specific user fields
-                type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
-                isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
-                // Include locationCoords for map visibility
-                locationCoords: 1,
-                distance: { $ifNull: ['$dist.calculated', null] } // Flatten distance
-            }
-        });
+        const aggregationResult = await Post.aggregate(pipeline);
+        const posts = aggregationResult[0]?.items || [];
+        const total = aggregationResult[0]?.totalCount?.[0]?.count || 0;
 
-        const posts = await Post.aggregate(pipeline);
-
-        // Add application count for each post (Aggregation makes this harder to do efficiently in one go without complex lookups)
-        // We can do it in parallel
-        const postsWithCount = await Promise.all(posts.map(async (post) => {
+        const postsWithCount = posts.map((post) => {
             // Convert distance to km/m string if present
             let distanceDisplay = null;
             if (post.distance !== null) {
@@ -193,13 +287,17 @@ exports.getPosts = async (req, res, next) => {
                 }
             }
 
-            const applicationCount = await ContactRequest.countDocuments({ post: post._id });
             return {
                 ...post,
                 distance: distanceDisplay,
-                applicationCount
+                applicationCount: post.applicationCount || 0
             };
-        }));
+        });
+
+        res.set('X-Page', String(page));
+        res.set('X-Limit', String(limit));
+        res.set('X-Total-Count', String(total));
+        res.set('X-Has-More', String(skip + posts.length < total));
 
         res.json(postsWithCount);
     } catch (err) {
@@ -309,21 +407,64 @@ exports.deletePost = async (req, res, next) => {
 // @access  Private
 exports.getMyPosts = async (req, res, next) => {
     try {
-        const posts = await Post.find({ user: req.user.id })
-            .sort({ createdAt: -1 })
-            .populate('user', ['displayName', 'avatar']);
+        const { page, limit, skip } = parsePagination(req.query, DEFAULT_POST_LIMIT, MAX_POST_LIMIT);
+        const userObjectId = new mongoose.Types.ObjectId(req.user.id);
 
-        // Add application count for each post
+        const [posts, total] = await Promise.all([
+            Post.aggregate([
+                { $match: { user: userObjectId } },
+                { $sort: { createdAt: -1 } },
+                { $skip: skip },
+                { $limit: limit },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'user',
+                        foreignField: '_id',
+                        as: 'user'
+                    }
+                },
+                { $unwind: '$user' },
+                {
+                    $lookup: {
+                        from: 'contactrequests',
+                        let: { postId: '$_id' },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ['$post', '$$postId'] }
+                                }
+                            },
+                            {
+                                $count: 'count'
+                            }
+                        ],
+                        as: 'applicationStats'
+                    }
+                },
+                {
+                    $project: {
+                        user: { _id: '$user._id', displayName: '$user.displayName', avatar: '$user.avatar' },
+                        type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
+                        isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1, locationCoords: 1,
+                        contactPhone: 1, contactWhatsapp: 1, expiresAt: 1, duration: 1,
+                        barterPreferences: 1, exchangePreference: 1, isUrgent: 1, acceptsBarter: 1,
+                        availability: 1, budgetMin: 1, budgetMax: 1,
+                        applicationCount: {
+                            $ifNull: [{ $arrayElemAt: ['$applicationStats.count', 0] }, 0]
+                        }
+                    }
+                }
+            ]),
+            Post.countDocuments({ user: req.user.id })
+        ]);
 
-        const postsWithCount = await Promise.all(posts.map(async (post) => {
-            const applicationCount = await ContactRequest.countDocuments({ post: post._id });
-            return {
-                ...post.toObject(),
-                applicationCount
-            };
-        }));
+        res.set('X-Page', String(page));
+        res.set('X-Limit', String(limit));
+        res.set('X-Total-Count', String(total));
+        res.set('X-Has-More', String(skip + posts.length < total));
 
-        res.json(postsWithCount);
+        res.json(posts);
     } catch (err) {
         return next(err);
     }
@@ -381,7 +522,24 @@ exports.updatePost = async (req, res, next) => {
             return res.status(401).json({ msg: 'User not authorized' });
         }
 
-        const { type, title, description, price, location, contactPhone, contactWhatsapp, duration } = req.body;
+        const {
+            type,
+            title,
+            description,
+            price,
+            budgetMin,
+            budgetMax,
+            location,
+            contactPhone,
+            contactWhatsapp,
+            duration,
+            existingImages,
+            barterPreferences,
+            exchangePreference,
+            isUrgent,
+            acceptsBarter,
+            availability,
+        } = req.body;
 
         // Validation for price
         let numericPrice = post.price;
@@ -397,12 +555,64 @@ exports.updatePost = async (req, res, next) => {
 
         // Update fields
         if (type) post.type = type;
-        if (title) post.title = title;
-        if (description) post.description = description;
+        if (title !== undefined) post.title = title;
+        if (description !== undefined) post.description = description;
         post.price = numericPrice;
-        if (location) post.location = location;
+        if (location !== undefined) post.location = location;
         if (contactPhone !== undefined) post.contactPhone = contactPhone;
         if (contactWhatsapp !== undefined) post.contactWhatsapp = contactWhatsapp;
+        if (availability !== undefined) post.availability = availability;
+        if (barterPreferences !== undefined) post.barterPreferences = barterPreferences;
+        if (exchangePreference !== undefined) post.exchangePreference = exchangePreference;
+        if (isUrgent !== undefined) {
+            post.isUrgent = isUrgent === true || isUrgent === 'true';
+        }
+        if (acceptsBarter !== undefined) {
+            post.acceptsBarter = acceptsBarter === true || acceptsBarter === 'true';
+        }
+
+        const latitude = parseFloat(req.body.latitude);
+        const longitude = parseFloat(req.body.longitude);
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+            post.locationCoords = {
+                type: 'Point',
+                coordinates: [longitude, latitude]
+            };
+        }
+
+        if (existingImages !== undefined) {
+            try {
+                const parsedExistingImages = JSON.parse(existingImages);
+                if (Array.isArray(parsedExistingImages)) {
+                    post.images = parsedExistingImages.filter(Boolean);
+                }
+            } catch (error) {
+                return res.status(400).json({ msg: 'existingImages must be a valid JSON array' });
+            }
+        }
+
+        if (budgetMin !== undefined && budgetMin !== '') {
+            const parsedBudgetMin = parseFloat(budgetMin);
+            if (isNaN(parsedBudgetMin)) {
+                return res.status(400).json({ msg: 'budgetMin must be a valid number' });
+            }
+            post.budgetMin = parsedBudgetMin;
+        }
+
+        if (budgetMax !== undefined && budgetMax !== '') {
+            const parsedBudgetMax = parseFloat(budgetMax);
+            if (isNaN(parsedBudgetMax)) {
+                return res.status(400).json({ msg: 'budgetMax must be a valid number' });
+            }
+            post.budgetMax = parsedBudgetMax;
+        }
+
+        if (req.files?.length) {
+            const uploadedImages = req.files
+                .map((file) => file?.path)
+                .filter(Boolean);
+            post.images = [...(post.images || []), ...uploadedImages].slice(0, 5);
+        }
 
         // Recalculate expiresAt if duration is changed
         if (duration !== undefined && duration !== null && duration !== '') {
@@ -414,7 +624,8 @@ exports.updatePost = async (req, res, next) => {
         }
 
         await post.save();
-        res.json(post);
+        const updatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
+        res.json(updatedPost);
     } catch (err) {
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });

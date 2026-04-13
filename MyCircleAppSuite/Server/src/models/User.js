@@ -91,5 +91,7 @@ const UserSchema = new mongoose.Schema({
 UserSchema.index({ displayName: 'text' });
 UserSchema.index({ skills: 1 });
 UserSchema.index({ createdAt: -1 });
+UserSchema.index({ following: 1 });
+UserSchema.index({ followers: 1 });
 
 module.exports = mongoose.model('User', UserSchema);

@@ -103,11 +103,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         if (!user) {
-            if (socket) {
-                socket.disconnect();
-                setSocket(null);
-                setConnected(false);
-            }
+            setConnected(false);
+            setSocket((previousSocket) => {
+                if (previousSocket) {
+                    previousSocket.disconnect();
+                }
+                return null;
+            });
             return;
         }
 

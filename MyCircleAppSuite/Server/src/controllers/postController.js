@@ -1,16 +1,14 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
-const { checkContentSafety } = require('../config/groq');
 const { createNotification } = require('./notificationController');
 const Conversation = require('../models/Conversation');
 const { db } = require('../config/firebase');
-const { containsProfanity } = require('../utils/profanityFilter');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const ContactRequest = require('../models/ContactRequest');
 const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
-const { addAIJob, addImageJob } = require('../utils/queue');
+const { addImageJob } = require('../utils/queue');
 const mongoose = require('mongoose');
 
 // @desc    Create a post
@@ -43,11 +41,6 @@ exports.createPost = asyncHandler(async (req, res) => {
                 postId: null,
             }, { priority: 2 });
         }
-    }
-
-    const safetyCheck = await checkContentSafety(`${title} ${description} `);
-    if (!safetyCheck.safe) {
-        throw new ApiError(400, safetyCheck.reason || 'Post rejected by AI moderation');
     }
 
     const newPost = new Post({

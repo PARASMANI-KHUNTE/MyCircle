@@ -29,16 +29,14 @@ const schemas = {
     createPost: z.object({
         title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
         description: z.string().max(5000, 'Description too long').optional(),
-        category: z.enum(['service', 'item', 'job', 'lost_found', 'event', 'general']).optional(),
+        type: z.enum(['job', 'service', 'sell', 'rent', 'barter']).optional(),
         price: z.number().min(0).optional(),
-        location: z.object({
-            type: z.literal('Point'),
-            coordinates: z.array(z.number()).length(2),
-            address: z.string().optional(),
-        }).optional(),
+        location: z.string().optional(),
         images: z.array(z.string()).optional(),
-        tags: z.array(z.string()).optional(),
-        endDate: z.string().datetime().optional(),
+        duration: z.number().optional(),
+        isUrgent: z.boolean().optional(),
+        exchangePreference: z.enum(['money', 'barter', 'flexible']).optional(),
+        acceptsBarter: z.boolean().optional(),
     }),
 
     updateProfile: z.object({

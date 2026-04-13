@@ -1,6 +1,7 @@
 const { checkContentSafety, checkImageSafety } = require('../config/groq');
 const { containsProfanity } = require('../utils/profanityFilter');
 const fs = require('fs').promises;
+const ApiError = require('../utils/ApiError');
 
 const POST_TYPES = new Set(['job', 'service', 'sell', 'rent', 'barter']);
 
@@ -93,13 +94,14 @@ async function validatePostContent(req, res, next) {
                 }
             } catch (err) {
                 console.error('Error processing image:', err.message);
+                return next(new ApiError(503, 'Image moderation service unavailable'));
             }
         }
 
         next();
     } catch (error) {
         console.error('Content validation error:', error.message);
-        next(); // Fail open
+        next(new ApiError(503, 'Content moderation service unavailable'));
     }
 }
 
@@ -157,7 +159,7 @@ async function validateProfileContent(req, res, next) {
         next();
     } catch (error) {
         console.error('Profile validation error:', error.message);
-        next(); // Fail open
+        next(new ApiError(503, 'Profile moderation service unavailable'));
     }
 }
 

@@ -8,6 +8,13 @@ const { db, admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 
+const getNotificationMessagePreview = (messageText) => {
+    if (typeof messageText !== 'string') return '';
+    const normalized = messageText.replace(/\s+/g, ' ').trim();
+    const maxLength = 80;
+    return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}…` : normalized;
+};
+
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
 // @access  Private
@@ -222,7 +229,7 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
             sender: req.user.id,
             type: 'message',
             title: 'New Message',
-            message: `${currentUser.displayName || 'Someone'}: ${text}`,
+            message: `${currentUser.displayName || 'Someone'}: ${getNotificationMessagePreview(text)}`,
             link: '/chat',
             conversationId: conversation._id.toString()
         });

@@ -226,6 +226,7 @@ exports.getPostById = async (req, res, next) => {
         // Check if current user has already requested contact
         let hasRequested = false;
         let contactRequestStatus = 'none';
+        let canViewContact = false;
         const token = req.header('x-auth-token');
         if (token) {
             try {
@@ -239,14 +240,21 @@ exports.getPostById = async (req, res, next) => {
                     });
                     hasRequested = !!existingRequest;
                     contactRequestStatus = existingRequest?.status || 'none';
+                    canViewContact = requesterId === post.user._id.toString() || contactRequestStatus === 'approved';
                 }
             } catch (err) {
                 // Token invalid or expired, just ignore and keep hasRequested as false
             }
         }
 
+        const postResponse = post.toObject();
+        if (!canViewContact) {
+            delete postResponse.contactPhone;
+            delete postResponse.contactWhatsapp;
+        }
+
         res.json({
-            ...post.toObject(),
+            ...postResponse,
             applicationCount,
             hasRequested,
             contactRequestStatus

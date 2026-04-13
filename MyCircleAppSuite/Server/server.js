@@ -10,6 +10,7 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const compression = require('compression');
 const pino = require('pino');
+const jwt = require('jsonwebtoken');
 const connectDB = require('./src/config/db');
 require('./src/config/firebase');
 const validateEnv = require('./src/utils/validateEnv');
@@ -47,19 +48,58 @@ const io = new Server(server, {
 
 app.set('io', io);
 
+const extractSocketToken = (socket) => {
+    const authToken = socket.handshake?.auth?.token;
+    if (typeof authToken === 'string' && authToken.trim()) {
+        return authToken.replace(/^Bearer\s+/i, '').trim();
+    }
+
+    const headerToken = socket.handshake?.headers?.['x-auth-token'];
+    if (typeof headerToken === 'string' && headerToken.trim()) {
+        return headerToken.trim();
+    }
+
+    const authorization = socket.handshake?.headers?.authorization;
+    if (typeof authorization === 'string' && authorization.trim()) {
+        return authorization.replace(/^Bearer\s+/i, '').trim();
+    }
+
+    return null;
+};
+
+const getSocketUserId = (socket) => {
+    const token = extractSocketToken(socket);
+    if (!token) return null;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded?.user?.id || null;
+    } catch (error) {
+        return null;
+    }
+};
+
 io.on('connection', (socket) => {
     logger.info({ socketId: socket.id }, 'User connected');
 
-    socket.on('join', (userId) => {
+    socket.on('join', (requestedUserId) => {
         try {
-            if (!userId) {
-                logger.warn({ socketId: socket.id }, 'Join event without userId');
+            const authenticatedUserId = getSocketUserId(socket);
+            if (!authenticatedUserId) {
+                logger.warn({ socketId: socket.id }, 'Socket join rejected: missing or invalid token');
+                socket.emit('auth_error', { message: 'Authentication required' });
+                socket.disconnect(true);
                 return;
             }
-            socket.join(`user:${userId}`);
-            socket.userId = userId;
-            logger.info({ userId, room: `user:${userId}` }, 'User joined room');
-            socket.broadcast.emit('user_online', userId);
+
+            if (requestedUserId && requestedUserId !== authenticatedUserId) {
+                logger.warn({ socketId: socket.id, requestedUserId, authenticatedUserId }, 'Socket join userId mismatch');
+            }
+
+            socket.join(`user:${authenticatedUserId}`);
+            socket.userId = authenticatedUserId;
+            logger.info({ userId: authenticatedUserId, room: `user:${authenticatedUserId}` }, 'User joined room');
+            socket.broadcast.emit('user_online', authenticatedUserId);
         } catch (error) {
             logger.error({ error: error.message }, 'Error in join event');
         }

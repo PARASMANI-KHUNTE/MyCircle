@@ -66,7 +66,17 @@ const UserSchema = new mongoose.Schema({
         totalPosts: { type: Number, default: 0 },
         activePosts: { type: Number, default: 0 },
         tasksCompleted: { type: Number, default: 0 },
+        followingCount: { type: Number, default: 0 },
+        followersCount: { type: Number, default: 0 },
     },
+    following: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     reputation: {
         trustScore: { type: Number, default: 50 },
         reviewsCount: { type: Number, default: 0 },
@@ -81,5 +91,7 @@ const UserSchema = new mongoose.Schema({
 UserSchema.index({ displayName: 'text' });
 UserSchema.index({ skills: 1 });
 UserSchema.index({ createdAt: -1 });
+UserSchema.index({ following: 1 });
+UserSchema.index({ followers: 1 });
 
 module.exports = mongoose.model('User', UserSchema);

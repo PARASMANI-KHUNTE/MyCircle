@@ -164,9 +164,8 @@ PostSchema.pre('save', async function () {
 // Indexes for performance
 PostSchema.index({ user: 1 });
 PostSchema.index({ title: 'text', description: 'text' });
-PostSchema.index({ category: 1, status: 1 });
+PostSchema.index({ type: 1, status: 1 });
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ price: 1 });
-PostSchema.index({ tags: 1 });
 
 module.exports = mongoose.model('Post', PostSchema);

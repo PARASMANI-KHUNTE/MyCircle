@@ -4,6 +4,8 @@ const ContactRequest = require('../models/ContactRequest');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // @desc    Get current user profile
 // @route   GET /api/user/profile
 // @access  Private
@@ -417,13 +419,17 @@ exports.getServices = async (req, res, next) => {
     try {
         const { sort } = req.query;
         const skill = req.query.skill ? req.query.skill.trim() : '';
+        if (skill.length > 100) {
+            return res.status(400).json({ msg: 'Skill query is too long' });
+        }
+        const safeSkillRegex = skill ? escapeRegex(skill) : '';
         let query = {};
 
         if (skill) {
             // Flexible search: Case-insensitive regex for skills array OR skillEndorsements
             query.$or = [
-                { skills: { $regex: skill, $options: 'i' } },
-                { 'skillEndorsements.skill': { $regex: skill, $options: 'i' } }
+                { skills: { $regex: safeSkillRegex, $options: 'i' } },
+                { 'skillEndorsements.skill': { $regex: safeSkillRegex, $options: 'i' } }
             ];
         }
 

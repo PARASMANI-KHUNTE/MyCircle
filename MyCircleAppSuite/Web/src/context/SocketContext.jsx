@@ -11,7 +11,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const [socket, setSocket] = useState(null);
     const [connected, setConnected] = useState(false);
 
@@ -36,7 +36,8 @@ export const SocketProvider = ({ children }) => {
         // Connect to Socket.io server
         const newSocket = io(serverURL, {
             withCredentials: true,
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            auth: { token }
         });
 
         newSocket.on('connect', () => {
@@ -72,7 +73,7 @@ export const SocketProvider = ({ children }) => {
             newSocket.io.off('reconnect_error');
             newSocket.io.off('reconnect_failed');
         };
-    }, [user]);
+    }, [user, token]);
 
     const value = {
         socket: user ? socket : null,

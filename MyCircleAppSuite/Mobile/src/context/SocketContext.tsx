@@ -26,7 +26,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [connected, setConnected] = useState(false);
 
@@ -103,11 +103,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         if (!user) {
-            if (socket) {
-                socket.disconnect();
-                setSocket(null);
-                setConnected(false);
-            }
+            setConnected(false);
+            setSocket((previousSocket) => {
+                if (previousSocket) {
+                    previousSocket.disconnect();
+                }
+                return null;
+            });
             return;
         }
 
@@ -116,6 +118,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         const newSocket = io(socketUrl, {
             transports: ['websocket'],
             forceNew: true,
+            auth: { token },
         });
 
         newSocket.on('connect', () => {
@@ -188,7 +191,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         return () => {
             newSocket.disconnect();
         };
-    }, [user]);
+    }, [user, token]);
 
     const getNotificationTitle = (type: string) => {
         switch (type) {

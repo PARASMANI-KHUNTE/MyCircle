@@ -92,8 +92,11 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            if (requestedUserId && requestedUserId !== authenticatedUserId) {
+            if (requestedUserId && String(requestedUserId) !== String(authenticatedUserId)) {
                 logger.warn({ socketId: socket.id, requestedUserId, authenticatedUserId }, 'Socket join userId mismatch');
+                socket.emit('auth_error', { message: 'Socket identity mismatch' });
+                socket.disconnect(true);
+                return;
             }
 
             socket.join(`user:${authenticatedUserId}`);

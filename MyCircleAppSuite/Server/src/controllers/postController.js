@@ -11,6 +11,14 @@ const jwt = require('jsonwebtoken');
 const { addImageJob } = require('../utils/queue');
 const mongoose = require('mongoose');
 
+const REDACTABLE_CONTACT_FIELDS = ['contactPhone', 'contactWhatsapp'];
+
+const isPostOwner = (post, userId) => {
+    if (!post || !userId) return false;
+    const ownerId = post.user?._id ? post.user._id.toString() : post.user?.toString();
+    return ownerId === userId;
+};
+
 // @desc    Create a post
 // @route   POST /api/posts
 // @access  Private
@@ -240,7 +248,7 @@ exports.getPostById = async (req, res, next) => {
                     });
                     hasRequested = !!existingRequest;
                     contactRequestStatus = existingRequest?.status || 'none';
-                    canViewContact = requesterId === post.user._id.toString() || contactRequestStatus === 'approved';
+                    canViewContact = isPostOwner(post, requesterId) || contactRequestStatus === 'approved';
                 }
             } catch (err) {
                 // Token invalid or expired, just ignore and keep hasRequested as false
@@ -249,8 +257,9 @@ exports.getPostById = async (req, res, next) => {
 
         const postResponse = post.toObject();
         if (!canViewContact) {
-            delete postResponse.contactPhone;
-            delete postResponse.contactWhatsapp;
+            REDACTABLE_CONTACT_FIELDS.forEach((field) => {
+                delete postResponse[field];
+            });
         }
 
         res.json({

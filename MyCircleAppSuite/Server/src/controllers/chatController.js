@@ -8,11 +8,14 @@ const { db, admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 
+const NOTIFICATION_MESSAGE_MAX_LENGTH = 80;
+
 const getNotificationMessagePreview = (messageText) => {
     if (typeof messageText !== 'string') return '';
     const normalized = messageText.replace(/\s+/g, ' ').trim();
-    const maxLength = 80;
-    return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}…` : normalized;
+    return normalized.length > NOTIFICATION_MESSAGE_MAX_LENGTH
+        ? `${normalized.slice(0, NOTIFICATION_MESSAGE_MAX_LENGTH)}…`
+        : normalized;
 };
 
 // @desc    Get all conversations for a user

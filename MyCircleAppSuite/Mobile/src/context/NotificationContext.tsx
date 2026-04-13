@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
-import { useToast } from '../components/ui/Toast';
 import notificationService from '../services/notificationService';
 
 interface Notification {
@@ -40,7 +39,6 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     const [loading, setLoading] = useState(true);
     const { socket } = useSocket();
     const { isAuthenticated } = useAuth();
-    const { info } = useToast();
 
     useEffect(() => {
         // Initialize notification service
@@ -112,18 +110,19 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             markAsRead(notification._id);
         }
 
-        if (notification.relatedId) {
-            if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'reply') {
-                navigation.navigate('PostDetails', { id: notification.relatedId });
-            } else if (notification.type === 'approval' || notification.type === 'request_approved') {
-                if (notification.conversationId) {
-                    navigation.navigate('ChatWindow', { id: notification.conversationId });
-                } else {
-                    navigation.navigate('Requests');
-                }
-            } else if (notification.type === 'request' || notification.type === 'info') {
+        const postId = (notification as any).postId || notification.relatedId;
+        if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'reply') {
+            if (postId) {
+                navigation.navigate('PostDetails', { id: postId });
+            }
+        } else if (notification.type === 'approval' || notification.type === 'request_approved') {
+            if (notification.conversationId) {
+                navigation.navigate('ChatWindow', { id: notification.conversationId });
+            } else {
                 navigation.navigate('Requests');
             }
+        } else if (notification.type === 'request' || notification.type === 'info') {
+            navigation.navigate('Requests');
         }
     };
 

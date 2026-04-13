@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform, Modal, RefreshControl, AppState, StatusBar, Dimensions } from 'react-native';
+import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, AppState, StatusBar, Dimensions } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Briefcase, Zap, ShoppingCart, Key, MapPin, Calendar, ArrowUpDown, X, Check, MessageCircle, Bell, Wrench } from 'lucide-react-native';
+import { Search, Briefcase, Zap, ShoppingCart, MapPin, ArrowUpDown, X, Check, Bell, MessageCircle } from 'lucide-react-native';
 import api from '../services/api';
 import Animated, {
     FadeInDown,
-    FadeInUp,
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
 import { getCurrentLocation } from '../utils/location';
@@ -22,8 +21,6 @@ import { useToast } from '../components/ui/Toast';
 // Enable playback in silent mode
 Sound.setCategory('Playback');
 
-const { width, height } = Dimensions.get('window');
-
 const getCatColor = (catId: string, colors: any) => {
     return colors.primary; // Unified MyCircle Blue for all categories
 };
@@ -35,6 +32,8 @@ const CATEGORIES = [
     { id: 'sell', label: 'Sell or Rent', icon: ShoppingCart },
     { id: 'barter', label: 'Barter', icon: ArrowUpDown },
 ];
+
+const { width, height } = Dimensions.get('window');
 
 const FeedScreen = ({ navigation, route }: any) => {
     const initialViewMode = route?.params?.viewMode || 'list';
@@ -62,17 +61,26 @@ const FeedScreen = ({ navigation, route }: any) => {
     const [availableLocations, setAvailableLocations] = useState<string[]>(['All']);
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [isNearby, setIsNearby] = useState(false);
-    const [nearbyLoading, setNearbyLoading] = useState(false);
+    const [, setNearbyLoading] = useState(false);
 
     // Distance filter (radius in km)
     const [distanceRadius, setDistanceRadius] = useState<number>(50); // Default 50km (All)
 
     // React Query Hook
-    const { data: postsData, isLoading: loading, refetch, isRefetching, isError, error } = usePosts(
-        isNearby ? userLocation?.lat : undefined,
-        isNearby ? userLocation?.lng : undefined,
-        distanceRadius
-    );
+    const serverCategory = selectedCategory === 'barter' ? 'barter' : selectedCategory;
+    const serverSort = sortOrder === 'nearest' && !isNearby ? 'latest' : sortOrder;
+
+    const { data: postsData, isLoading: loading, refetch, isRefetching, isError } = usePosts({
+        latitude: isNearby ? userLocation?.lat : undefined,
+        longitude: isNearby ? userLocation?.lng : undefined,
+        radius: distanceRadius,
+        limit: 50,
+        type: serverCategory,
+        q: searchQuery.trim() || undefined,
+        location: locationFilter !== 'All' ? locationFilter : undefined,
+        sort: serverSort,
+        barterOnly: selectedCategory === 'barter',
+    });
 
     const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
 
@@ -94,68 +102,32 @@ const FeedScreen = ({ navigation, route }: any) => {
     };
 
     useEffect(() => {
-        requestLocationPermission();
-        fetchUnreadMsgCount();
-    }, []);
-
-    useEffect(() => {
         if (viewMode !== initialViewMode) {
             setViewMode(initialViewMode);
         }
-    }, [initialViewMode]);
+    }, [initialViewMode, viewMode]);
 
-    useEffect(() => {
-        if (socket) {
-            socket.on('new_post', (newPost: any) => {
-                const queryKey = ['posts', {
-                    latitude: isNearby ? userLocation?.lat : undefined,
-                    longitude: isNearby ? userLocation?.lng : undefined,
-                    radius: distanceRadius
-                }];
-                queryClient.setQueryData(queryKey, (oldData: any[]) => {
-                    return oldData ? [newPost, ...oldData] : [newPost];
-                });
-                success('New post added!');
-            });
-            socket.on('receive_message', () => fetchUnreadMsgCount());
-            socket.on('messages_read', () => fetchUnreadMsgCount());
-            socket.on('unread_count_update', () => fetchUnreadMsgCount());
-            return () => {
-                socket.off('new_post');
-                socket.off('receive_message');
-                socket.off('messages_read');
-                socket.off('unread_count_update');
-            };
-        }
-    }, [socket]);
-
-    useEffect(() => {
-        if (postsData) {
-            const locs = Array.from(new Set((postsData as any[]).map(p => p.location).filter(Boolean)));
-            setAvailableLocations(['All', ...locs]);
-        }
-        filterPosts();
-    }, [postsData, searchQuery, selectedCategory, sortOrder, locationFilter, selectedDate, isNearby]);
+    const handleNewPost = useCallback((newPost: any) => {
+        const queryKey = ['posts', {
+            latitude: isNearby ? userLocation?.lat : undefined,
+            longitude: isNearby ? userLocation?.lng : undefined,
+            radius: distanceRadius,
+            limit: 50,
+            type: serverCategory,
+            q: searchQuery.trim() || undefined,
+            location: locationFilter !== 'All' ? locationFilter : undefined,
+            sort: serverSort,
+            barterOnly: selectedCategory === 'barter'
+        }];
+        queryClient.setQueryData(queryKey, (oldData: any[]) => {
+            return oldData ? [newPost, ...oldData] : [newPost];
+        });
+        success('New post added!');
+    }, [isNearby, userLocation?.lat, userLocation?.lng, distanceRadius, serverCategory, searchQuery, locationFilter, serverSort, selectedCategory, queryClient, success]);
 
     // const [refreshing, setRefreshing] = useState(false); // Managed by React Query now
 
-    const onRefresh = async () => {
-        refetch();
-        // Also try to refresh location if it was missing
-        if (!userLocation) requestLocationPermission();
-    };
-
-    // Auto-check location when returning to app (e.g. from Settings)
-    useEffect(() => {
-        const subscription = AppState.addEventListener('change', nextAppState => {
-            if (nextAppState === 'active') {
-                requestLocationPermission();
-            }
-        });
-        return () => subscription.remove();
-    }, []);
-
-    const requestLocationPermission = async () => {
+    const requestLocationPermission = useCallback(async () => {
         try {
             const loc = await getCurrentLocation();
             if (loc) {
@@ -167,28 +139,33 @@ const FeedScreen = ({ navigation, route }: any) => {
             console.warn('Location permission request failed', err);
             return false;
         }
-    };
+    }, []);
 
-    const fetchUnreadMsgCount = async () => {
+    const fetchUnreadMsgCount = useCallback(async () => {
         try {
             const res = await api.get('/chat/unread/count');
             setUnreadMsgCount(res.data.count);
         } catch (err) {
             console.error('Failed to fetch unread messages count', err);
         }
-    };
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        refetch();
+        if (!userLocation) requestLocationPermission();
+    }, [refetch, requestLocationPermission, userLocation]);
+
+    // Auto-check location when returning to app (e.g. from Settings)
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (nextAppState === 'active') {
+                requestLocationPermission();
+            }
+        });
+        return () => subscription.remove();
+    }, [requestLocationPermission]);
 
     // Removed manual fetchPosts function
-
-    const handleDistanceChange = async (newRadius: number) => {
-        if (isNearby) {
-            setNearbyLoading(true);
-            const loc = await getCurrentLocation() as any;
-            if (loc) {
-                // usePosts will auto-refetch
-            }
-        }
-    };
 
     const handleNearbyToggle = async () => {
         if (!isNearby) {
@@ -197,40 +174,21 @@ const FeedScreen = ({ navigation, route }: any) => {
             if (loc) {
                 setIsNearby(true);
                 setLocationFilter('All');
-                // State change (isNearby) triggers refetch
             } else {
                 setNearbyLoading(false);
             }
         } else {
             setIsNearby(false);
-            // State change triggers refetch
         }
     };
 
-    const filterPosts = () => {
+    const handleDistanceChange = useCallback((radius: number) => {
+        setDistanceRadius(radius);
+    }, []);
+
+    const filterPosts = useCallback(() => {
         let result = [...(postsData || [])];
 
-        // 1. Search
-        if (searchQuery) {
-            result = result.filter((p: any) =>
-                p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.description.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
-
-        // 2. Category
-        if (selectedCategory === 'barter') {
-            result = result.filter((p: any) => p.acceptsBarter === true);
-        } else if (selectedCategory !== 'all') {
-            result = result.filter((p: any) => p.type === selectedCategory);
-        }
-
-        // 3. Location
-        if (locationFilter !== 'All') {
-            result = result.filter((p: any) => p.location === locationFilter);
-        }
-
-        // 4. Date
         if (selectedDate) {
             result = result.filter((p: any) => {
                 const pDate = new Date(p.createdAt).toISOString().split('T')[0];
@@ -238,28 +196,52 @@ const FeedScreen = ({ navigation, route }: any) => {
             });
         }
 
-        // 5. Sort
         result.sort((a: any, b: any) => {
-            if (sortOrder === 'urgent') {
-                // Sort by expiration (soonest first)
-                const expiresA = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
-                const expiresB = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
-                return expiresA - expiresB;
-            } else if (sortOrder === 'nearest') {
-                // Sort by distance (assume dist.calculated exists from geoNear)
-                const distA = a.dist?.calculated || Infinity;
-                const distB = b.dist?.calculated || Infinity;
+            if (sortOrder === 'nearest') {
+                const parseDistance = (value: any) => {
+                    if (typeof value === 'number') return value;
+                    if (typeof value !== 'string') return Infinity;
+                    if (value.endsWith('m away')) return parseFloat(value);
+                    if (value.endsWith('km away')) return parseFloat(value) * 1000;
+                    return Infinity;
+                };
+                const distA = parseDistance(a.distance);
+                const distB = parseDistance(b.distance);
                 return distA - distB;
-            } else {
-                // Sort by date (latest or oldest)
-                const dateA = new Date(a.createdAt).getTime();
-                const dateB = new Date(b.createdAt).getTime();
-                return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
             }
+            return 0;
         });
 
         setFilteredPosts(result);
-    };
+    }, [postsData, selectedDate, sortOrder]);
+
+    useEffect(() => {
+        requestLocationPermission();
+        fetchUnreadMsgCount();
+    }, [requestLocationPermission, fetchUnreadMsgCount]);
+
+    useEffect(() => {
+        if (socket) {
+            socket.on('new_post', handleNewPost);
+            socket.on('receive_message', fetchUnreadMsgCount);
+            socket.on('messages_read', fetchUnreadMsgCount);
+            socket.on('unread_count_update', fetchUnreadMsgCount);
+            return () => {
+                socket.off('new_post', handleNewPost);
+                socket.off('receive_message', fetchUnreadMsgCount);
+                socket.off('messages_read', fetchUnreadMsgCount);
+                socket.off('unread_count_update', fetchUnreadMsgCount);
+            };
+        }
+    }, [socket, handleNewPost, fetchUnreadMsgCount]);
+
+    useEffect(() => {
+        if (postsData) {
+            const locs = Array.from(new Set((postsData as any[]).map(p => p.location).filter(Boolean)));
+            setAvailableLocations(['All', ...locs]);
+        }
+        filterPosts();
+    }, [postsData, selectedDate, filterPosts]);
 
     // State moved to top
 
@@ -284,7 +266,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         });
     }, [mapPosts]);
 
-    const toggleViewMode = async () => {
+    const toggleViewMode = useCallback(async () => {
         if (viewMode === 'list') {
             setMapLoading(true);
             try {
@@ -308,7 +290,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         } else {
             setViewMode('list');
         }
-    };
+    }, [viewMode]);
 
     const mapHTML = `
     <!DOCTYPE html>
@@ -574,18 +556,18 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
     };
 
-    const handleRequestContact = async (postId: string) => {
+    const handleRequestContact = useCallback(async (postId: string) => {
         try {
             await api.post(`/contacts/${postId}`);
             Alert.alert("Success", "Contact Request Sent!");
         } catch (err: any) {
             Alert.alert("Error", err.response?.data?.msg || "Failed to send request");
         }
-    }
+    }, []);
 
-    const toggleSort = () => {
+    const toggleSort = useCallback(() => {
         setSortOrder(prev => prev === 'latest' ? 'oldest' : 'latest');
-    };
+    }, []);
 
     const renderListContent = () => {
         if (loading) return (

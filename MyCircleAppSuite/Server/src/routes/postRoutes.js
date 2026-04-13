@@ -15,7 +15,7 @@ router.get('/my-posts', auth, postController.getMyPosts);
 
 router.get('/', postController.getPosts);
 router.get('/:id', postController.getPostById);
-router.put('/:id', auth, postController.updatePost);
+router.put('/:id', [auth, upload.array('images', 5)], postController.updatePost);
 router.delete('/:id', auth, postController.deletePost);
 router.patch('/:id/toggle-status', auth, postController.togglePostStatus);
 router.post('/:id/like', auth, postController.likePost);

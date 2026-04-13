@@ -79,15 +79,20 @@ async function validatePostContent(req, res, next) {
             }
         }
 
-        // Analyze all uploaded images (req.files is array from upload.array())
+        // Analyze uploaded images only when the storage layer exposes an in-memory buffer.
+        // Cloudinary storage streams uploads directly and does not provide readable local paths.
         const files = req.files || (req.file ? [req.file] : []);
         for (const file of files) {
-            try {
-                const imageBuffer = await fs.readFile(file.path);
-                const imageAnalysis = await checkImageSafety(imageBuffer, file.mimetype);
+            if (!file?.buffer) {
+                continue;
+            }
 
+            try {
+                const imageAnalysis = await checkImageSafety(file.buffer, file.mimetype);
                 if (!imageAnalysis.safe) {
-                    await fs.unlink(file.path).catch(console.error);
+                    if (file.path) {
+                        await fs.unlink(file.path).catch(console.error);
+                    }
                     return res.status(400).json({
                         msg: `Image Violation: ${imageAnalysis.reason || 'Potentially unsafe image'}`
                     });
@@ -144,12 +149,9 @@ async function validateProfileContent(req, res, next) {
             }
         }
 
-        if (req.file) {
-            const imageBuffer = await fs.readFile(req.file.path);
-            const imageAnalysis = await checkImageSafety(imageBuffer, req.file.mimetype);
-
+        if (req.file?.buffer) {
+            const imageAnalysis = await checkImageSafety(req.file.buffer, req.file.mimetype);
             if (!imageAnalysis.safe) {
-                await fs.unlink(req.file.path).catch(console.error);
                 return res.status(400).json({
                     msg: `Avatar Violation: ${imageAnalysis.reason || 'Potentially unsafe image'}`
                 });

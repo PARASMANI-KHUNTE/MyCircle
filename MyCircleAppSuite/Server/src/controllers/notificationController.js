@@ -2,14 +2,46 @@ const Notification = require('../models/Notification');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 
+const DEFAULT_NOTIFICATION_LIMIT = 30;
+const MAX_NOTIFICATION_LIMIT = 100;
+
+const parsePagination = (query, defaultLimit, maxLimit) => {
+    const page = Math.max(parseInt(query.page, 10) || 1, 1);
+    const requestedLimit = parseInt(query.limit, 10) || defaultLimit;
+    const limit = Math.min(Math.max(requestedLimit, 1), maxLimit);
+
+    return {
+        page,
+        limit,
+        skip: (page - 1) * limit
+    };
+};
+
 // @desc    Get user notifications
 // @route   GET /api/notifications
 // @access  Private
 exports.getNotifications = asyncHandler(async (req, res, next) => {
-    const notifications = await Notification.find({ recipient: req.user.id })
-        .populate('sender', 'displayName avatar')
-        .sort({ createdAt: -1 })
-        .limit(50); // Limit to last 50
+    const { page, limit, skip } = parsePagination(
+        req.query,
+        DEFAULT_NOTIFICATION_LIMIT,
+        MAX_NOTIFICATION_LIMIT
+    );
+
+    const [notifications, total] = await Promise.all([
+        Notification.find({ recipient: req.user.id })
+            .populate('sender', 'displayName avatar')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Notification.countDocuments({ recipient: req.user.id })
+    ]);
+
+    res.set('X-Page', String(page));
+    res.set('X-Limit', String(limit));
+    res.set('X-Total-Count', String(total));
+    res.set('X-Has-More', String(skip + notifications.length < total));
+
     res.json(notifications);
 });
 
@@ -106,7 +138,11 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
         await notification.save();
 
         if (io) {
-            io.to(`user:${recipientIdStr}`).emit('new_notification', notification);
+            const emittedNotification = notification.toObject();
+            if (relatedId) {
+                emittedNotification.postId = relatedId.toString();
+            }
+            io.to(`user:${recipientIdStr}`).emit('new_notification', emittedNotification);
         }
     } catch (err) {
         console.error("Notification creation failed:", err);

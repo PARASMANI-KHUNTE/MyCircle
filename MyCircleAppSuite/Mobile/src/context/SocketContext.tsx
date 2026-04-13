@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { useAuth } from './AuthContext';
@@ -29,54 +29,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const { user, token } = useAuth();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [connected, setConnected] = useState(false);
+    const socketRef = useRef<Socket | null>(null);
 
-
-    useEffect(() => {
-        async function setupNotifications() {
-            await notifee.requestPermission();
-
-            // Create a channel (required for Android)
-            await notifee.createChannel({
-                id: 'default',
-                name: 'Default Channel',
-                importance: AndroidImportance.HIGH,
-                sound: 'default',
-            });
-        }
-        setupNotifications();
-
-        // Foreground Event Listener
-        const unsubscribeForeground = notifee.onForegroundEvent(({ type, detail }) => {
-            if (type === EventType.PRESS) {
-                handleNotificationPress(detail.notification?.data);
-            }
-        });
-
-        // Background Event Listener (must be at module level for full support, but this helps)
-        notifee.onBackgroundEvent(async ({ type, detail }) => {
-            if (type === EventType.PRESS) {
-                handleNotificationPress(detail.notification?.data);
-            }
-        });
-
-        return unsubscribeForeground;
-    }, []);
-
-    // Check for initial notification (App opened from quit state)
-    useEffect(() => {
-        async function checkInitialNotification() {
-            const initialNotification = await notifee.getInitialNotification();
-            if (initialNotification) {
-                handleNotificationPress(initialNotification.notification.data);
-            }
-        }
-        checkInitialNotification();
-    }, []);
-
-    const handleNotificationPress = (data: any) => {
+    const handleNotificationPress = useCallback((data: any) => {
         if (!data) return;
 
         console.log("Notification Pressed:", data);
+        const postId = data.postId || data.relatedId;
 
         if (data.type === 'request' || data.type === 'info' || data.type === 'request_received') {
             navigate('Requests');
@@ -87,44 +46,117 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 navigate('Requests');
             }
         } else if (data.type === 'message') {
-            // For messages, we need conversation ID. 
-            // If data contains conversationId, navigate to ChatWindow
             if (data.conversationId) {
                 navigate('ChatWindow', { id: data.conversationId });
             } else {
                 navigate('ChatList');
             }
         } else if (data.type === 'comment' || data.type === 'like') {
-            if (data.postId) {
-                navigate('PostDetails', { id: data.postId });
+            if (postId) {
+                navigate('PostDetails', { id: postId });
             }
         }
-    };
+    }, []);
+
+    const getNotificationTitle = useCallback((type: string) => {
+        switch (type) {
+            case 'request': return 'New Request';
+            case 'approval': return 'Request Approved';
+            case 'info': return 'Update';
+            case 'request_received': return 'New Request';
+            case 'request_approved': return 'Request Approved';
+            case 'request_rejected': return 'Request Rejected';
+            case 'like': return 'New Like';
+            case 'comment': return 'New Comment';
+            default: return 'New Notification';
+        }
+    }, []);
+
+    const generateNotificationBody = useCallback((data: any) => {
+        if (data.type === 'request' || data.type === 'request_received') return data.message || 'Someone sent you a request.';
+        if (data.type === 'approval' || data.type === 'request_approved') return data.message || 'Your request was approved.';
+        if (data.type === 'like') return data.message || 'Someone liked your post.';
+        if (data.type === 'comment') return data.message || 'Someone commented on your post.';
+        return data.message || 'You have a new update.';
+    }, []);
 
     useEffect(() => {
-        if (!user) {
-            setConnected(false);
-            setSocket((previousSocket) => {
-                if (previousSocket) {
-                    previousSocket.disconnect();
+        async function setupNotifications() {
+            try {
+                await notifee.requestPermission();
+                await notifee.createChannel({
+                    id: 'default',
+                    name: 'Default Channel',
+                    importance: AndroidImportance.HIGH,
+                    sound: 'default',
+                });
+            } catch (error) {
+                console.error('Failed to setup notifications:', error);
+            }
+        }
+        setupNotifications();
+
+        const unsubscribeForeground = notifee.onForegroundEvent(({ type, detail }) => {
+            if (type === EventType.PRESS) {
+                handleNotificationPress(detail.notification?.data);
+            }
+        });
+
+        notifee.onBackgroundEvent(async ({ type, detail }) => {
+            if (type === EventType.PRESS) {
+                handleNotificationPress(detail.notification?.data);
+            }
+        });
+
+        return unsubscribeForeground;
+    }, [handleNotificationPress]);
+
+    useEffect(() => {
+        async function checkInitialNotification() {
+            try {
+                const initialNotification = await notifee.getInitialNotification();
+                if (initialNotification) {
+                    handleNotificationPress(initialNotification.notification.data);
                 }
-                return null;
-            });
+            } catch (error) {
+                console.error('Failed to check initial notification:', error);
+            }
+        }
+        checkInitialNotification();
+    }, [handleNotificationPress, user]);
+
+    useEffect(() => {
+        if (!user || !token) {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+                setSocket(null);
+                setConnected(false);
+            }
             return;
         }
 
         const socketUrl = getSocketUrl();
         console.log('Connecting to socket at:', socketUrl);
+        
+        if (socketRef.current) {
+            socketRef.current.disconnect();
+        }
+
         const newSocket = io(socketUrl, {
             transports: ['websocket'],
             forceNew: true,
-            auth: { token },
+            auth: {
+                token
+            }
         });
+
+        socketRef.current = newSocket;
+        setSocket(newSocket);
 
         newSocket.on('connect', () => {
             console.log('Socket connected mobile:', newSocket.id);
             setConnected(true);
-            newSocket.emit('join', user._id || user.id);
         });
 
         newSocket.on('disconnect', () => {
@@ -134,12 +166,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         newSocket.on('connect_error', (err) => {
             console.log('Socket connection error mobile:', err.message);
+            setConnected(false);
         });
 
-        // Listen for new notifications
         newSocket.on('new_notification', async (data: any) => {
             try {
-                // Ensure channel exists (use new ID to escape immutable bad config)
                 const channelId = await notifee.createChannel({
                     id: 'mycircle_channel_v1',
                     name: 'MyCircle Notifications',
@@ -149,16 +180,14 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                     vibrationPattern: [300, 500],
                 });
 
-                // Sanitize data for Notifee (must be flat object with strings)
                 const notifeeData: any = {
                     type: String(data.type || ''),
                 };
-                if (data.postId) notifeeData.postId = String(data.postId);
+                if (data.postId || data.relatedId) notifeeData.postId = String(data.postId || data.relatedId);
                 if (data.conversationId) notifeeData.conversationId = String(data.conversationId);
                 if (data.relatedId) notifeeData.relatedId = String(data.relatedId);
                 if (data.link) notifeeData.link = String(data.link);
 
-                // Display a notification
                 await notifee.displayNotification({
                     title: data.title || getNotificationTitle(data.type),
                     body: data.message || generateNotificationBody(data),
@@ -169,7 +198,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                             id: 'default',
                         },
                         vibrationPattern: [300, 500],
-                        smallIcon: 'ic_launcher', // Uses the app launcher icon
+                        smallIcon: 'ic_launcher',
                     },
                     ios: {
                         sound: 'default',
@@ -186,34 +215,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             }
         });
 
-        setSocket(newSocket);
-
         return () => {
-            newSocket.disconnect();
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
         };
-    }, [user, token]);
-
-    const getNotificationTitle = (type: string) => {
-        switch (type) {
-            case 'request': return 'New Request';
-            case 'approval': return 'Request Approved';
-            case 'info': return 'Update';
-            case 'request_received': return 'New Request';
-            case 'request_approved': return 'Request Approved';
-            case 'request_rejected': return 'Request Rejected';
-            case 'like': return 'New Like';
-            case 'comment': return 'New Comment';
-            default: return 'New Notification';
-        }
-    };
-
-    const generateNotificationBody = (data: any) => {
-        if (data.type === 'request' || data.type === 'request_received') return data.message || 'Someone sent you a request.';
-        if (data.type === 'approval' || data.type === 'request_approved') return data.message || 'Your request was approved.';
-        if (data.type === 'like') return data.message || 'Someone liked your post.';
-        if (data.type === 'comment') return data.message || 'Someone commented on your post.';
-        return data.message || 'You have a new update.';
-    };
+    }, [user, user?.id, token, getNotificationTitle, generateNotificationBody, handleNotificationPress]);
 
     return (
         <SocketContext.Provider value={{ socket, connected }}>

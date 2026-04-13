@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, TouchableWithoutFeedback, Animated } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
 
 export interface ActionItem {
     label: string;

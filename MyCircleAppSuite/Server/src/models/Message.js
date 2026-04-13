@@ -31,6 +31,8 @@ const MessageSchema = new mongoose.Schema({
 });
 
 MessageSchema.index({ conversationId: 1, createdAt: -1 });
+MessageSchema.index({ conversationId: 1, sender: 1, createdAt: -1 });
+MessageSchema.index({ conversationId: 1, status: 1, createdAt: -1 });
 MessageSchema.index({ sender: 1 });
 MessageSchema.index({ createdAt: -1 });
 

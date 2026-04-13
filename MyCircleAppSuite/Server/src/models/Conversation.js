@@ -25,6 +25,8 @@ const ConversationSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 ConversationSchema.index({ participants: 1 });
+ConversationSchema.index({ participants: 1, updatedAt: -1 });
+ConversationSchema.index({ participants: 1, deletedBy: 1, updatedAt: -1 });
 ConversationSchema.index({ updatedAt: -1 });
 ConversationSchema.index({ postId: 1 });
 

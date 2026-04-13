@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { getSocketBaseUrl } from '../utils/api';
 
 const SocketContext = createContext();
 
@@ -20,30 +21,20 @@ export const SocketProvider = ({ children }) => {
             return;
         }
 
-        const isProduction = import.meta.env.PROD;
-        const serverURL = isProduction
-            ? (import.meta.env.VITE_API_URL || '')
-            : (import.meta.env.VITE_API_URL_DEV || '');
-
-        if (isProduction && !serverURL) {
-            throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
-        }
-
-        if (!isProduction && !serverURL) {
-            throw new Error('VITE_API_URL_DEV is not set. Please configure it in your web .env file.');
-        }
+        const serverURL = getSocketBaseUrl();
 
         // Connect to Socket.io server
         const newSocket = io(serverURL, {
             withCredentials: true,
             transports: ['websocket', 'polling'],
-            auth: { token }
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            auth: { token: token || localStorage.getItem('token') }
         });
 
         newSocket.on('connect', () => {
             setConnected(true);
-            // Join user's personal room
-            newSocket.emit('join', user._id || user.id);
         });
 
         newSocket.on('disconnect', () => {

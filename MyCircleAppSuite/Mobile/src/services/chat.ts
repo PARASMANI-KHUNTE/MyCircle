@@ -6,7 +6,6 @@ export const ensureConversationWithUser = async (userId: string) => {
 };
 
 export const getConversationById = async (conversationId: string) => {
-    const res = await api.get('/chat/conversations');
-    return res.data.find((conversation: any) => conversation._id === conversationId) || null;
+    const res = await api.get(`/chat/conversations/${conversationId}`);
+    return res.data;
 };
-

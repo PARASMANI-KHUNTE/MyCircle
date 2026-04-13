@@ -5,6 +5,7 @@ const chatController = require('../controllers/chatController');
 const { validate, schemas } = require('../middleware/validation');
 
 router.get('/conversations', auth, chatController.getConversations);
+router.get('/conversations/:conversationId', auth, chatController.getConversationById);
 router.get('/conversation/:userId', auth, chatController.getOrCreateConversation);
 router.get('/messages/:conversationId', auth, chatController.getMessages);
 router.post('/message', [auth, validate(schemas.sendMessage)], chatController.sendMessage);

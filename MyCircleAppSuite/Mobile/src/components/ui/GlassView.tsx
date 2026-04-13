@@ -1,9 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
-// Note: If you have @react-native-community/blur, use it here. 
-// Since this is a "bare" project without explicit confirmation of that library, 
-// we will simulate glassmorphism with high-quality translucency and borders.
-// If the user installs the blur library later, we can upgrade this.
+import { View, StyleSheet, ViewStyle } from 'react-native';
 
 interface GlassViewProps {
     children: React.ReactNode;

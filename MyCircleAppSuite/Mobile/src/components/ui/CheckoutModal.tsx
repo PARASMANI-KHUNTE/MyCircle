@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { ShoppingBag, X, CheckCircle2, ShieldCheck, Wallet } from 'lucide-react-native';
 import GlassView from './GlassView';
-import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface CheckoutModalProps {
     visible: boolean;

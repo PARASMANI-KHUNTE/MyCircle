@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import api from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
-import { X, Check, MessageCircle, Trash2, ArrowLeft } from 'lucide-react-native';
+import { X, Check, MessageCircle, Trash2, ArrowLeft, Star, BadgeCheck } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -153,6 +153,45 @@ const RequestsScreen = ({ navigation }: any) => {
         }
     };
 
+    const updateRequestInState = (updatedRequest: any) => {
+        setReceivedRequests(prev => prev.map(req => req._id === updatedRequest._id ? updatedRequest : req));
+        setSentRequests(prev => prev.map(req => req._id === updatedRequest._id ? updatedRequest : req));
+    };
+
+    const handleComplete = async (id: string) => {
+        try {
+            const res = await api.put(`/contacts/${id}/status`, { status: 'completed' });
+            updateRequestInState(res.data);
+        } catch (error) {
+            console.error(error);
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to mark work complete',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
+        }
+    };
+
+    const handleRate = async (requestId: string, score: number) => {
+        try {
+            const res = await api.post(`/contacts/${requestId}/rate`, { score });
+            updateRequestInState(res.data);
+        } catch (error) {
+            console.error(error);
+            setAlertConfig({
+                visible: true,
+                title: 'Error',
+                message: 'Failed to submit rating',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
+        }
+    };
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -212,33 +251,50 @@ const RequestsScreen = ({ navigation }: any) => {
                                 <Text style={styles.rejectText}>Reject</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handleAction(item._id, 'approved')}
+                                onPress={() => handleAction(item._id, 'accepted')}
                                 style={[styles.actionButton, styles.approveButton]}
                             >
                                 <Check size={16} color="#10b981" />
-                                <Text style={styles.approveText}>Approve</Text>
+                                <Text style={styles.approveText}>Accept</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
                         <View>
                             <View style={[
                                 styles.statusBadge,
-                                item.status === 'approved' ? styles.approvedBadge : styles.rejectedBadge,
+                                item.status === 'accepted' || item.status === 'completed' ? styles.approvedBadge : styles.rejectedBadge,
                                 { marginTop: 12 }
                             ]}>
                                 <Text style={[
                                     styles.statusText,
-                                    item.status === 'approved' ? styles.approvedText : styles.rejectedText
+                                    item.status === 'accepted' || item.status === 'completed' ? styles.approvedText : styles.rejectedText
                                 ]}>Request {item.status}</Text>
                             </View>
-                            {item.status === 'approved' && (
-                                <TouchableOpacity
-                                    onPress={() => openChat(item.requester._id)}
-                                    style={styles.chatButtonNeon}
-                                >
-                                    <MessageCircle size={18} color="white" />
-                                    <Text style={styles.chatButtonText}>START CHAT</Text>
-                                </TouchableOpacity>
+                            {(item.status === 'accepted' || item.status === 'completed') && (
+                                <View style={styles.postDecisionActions}>
+                                    <TouchableOpacity
+                                        onPress={() => openChat(item.requester._id)}
+                                        style={styles.chatButtonNeon}
+                                    >
+                                        <MessageCircle size={18} color="white" />
+                                        <Text style={styles.chatButtonText}>START CHAT</Text>
+                                    </TouchableOpacity>
+                                    {item.status === 'accepted' && (
+                                        <TouchableOpacity onPress={() => handleComplete(item._id)} style={styles.completeButton}>
+                                            <BadgeCheck size={16} color="#10b981" />
+                                            <Text style={styles.completeButtonText}>MARK COMPLETE</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    {item.status === 'completed' && item.canRate && (
+                                        <View style={styles.ratingRow}>
+                                            {[1, 2, 3, 4, 5].map((score) => (
+                                                <TouchableOpacity key={score} onPress={() => handleRate(item._id, score)} style={styles.ratingButton}>
+                                                    <Star size={16} color="#facc15" fill="#facc15" />
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
                             )}
                         </View>
                     )}
@@ -283,19 +339,19 @@ const RequestsScreen = ({ navigation }: any) => {
                             <Text style={[styles.statusLabel, { marginRight: 8 }]}>Status:</Text>
                             <View style={[
                                 styles.statusChip,
-                                item.status === 'approved' ? styles.approvedBadge :
+                                item.status === 'accepted' || item.status === 'completed' ? styles.approvedBadge :
                                     item.status === 'rejected' ? styles.rejectedBadge : styles.pendingBadge
                             ]}>
                                 <Text style={[
                                     styles.statusText,
-                                    item.status === 'approved' ? styles.approvedText :
+                                    item.status === 'accepted' || item.status === 'completed' ? styles.approvedText :
                                         item.status === 'rejected' ? styles.rejectedText : styles.pendingText,
                                     { fontSize: 12 }
                                 ]}>{item.status}</Text>
                             </View>
                         </View>
 
-                        {item.status === 'approved' && (
+                        {(item.status === 'accepted' || item.status === 'completed') && (
                             <View style={styles.contactActions}>
                                 <TouchableOpacity
                                     onPress={() => openChat(item.recipient._id)}
@@ -303,9 +359,23 @@ const RequestsScreen = ({ navigation }: any) => {
                                 >
                                     <MessageCircle size={18} color="white" />
                                 </TouchableOpacity>
+                                {item.status === 'accepted' && (
+                                    <TouchableOpacity onPress={() => handleComplete(item._id)} style={styles.iconButtonComplete}>
+                                        <BadgeCheck size={18} color="#10b981" />
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         )}
                     </View>
+                    {item.status === 'completed' && item.canRate && (
+                        <View style={styles.ratingRowSent}>
+                            {[1, 2, 3, 4, 5].map((score) => (
+                                <TouchableOpacity key={score} onPress={() => handleRate(item._id, score)} style={styles.ratingButton}>
+                                    <Star size={16} color="#facc15" fill="#facc15" />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
                 </View>
             </Animated.View>
         );
@@ -579,6 +649,10 @@ const styles = StyleSheet.create({
     contactActions: {
         flexDirection: 'row',
     },
+    postDecisionActions: {
+        marginTop: 12,
+        gap: 10,
+    },
     whatsappButton: {
         backgroundColor: '#16a34a', // green-600
         paddingHorizontal: 16,
@@ -676,6 +750,53 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 5,
+    },
+    iconButtonComplete: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
+        backgroundColor: 'rgba(16,185,129,0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(16,185,129,0.2)',
+    },
+    completeButton: {
+        minHeight: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(16,185,129,0.2)',
+        backgroundColor: 'rgba(16,185,129,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+    },
+    completeButtonText: {
+        color: '#10b981',
+        fontWeight: '800',
+        fontSize: 12,
+    },
+    ratingRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    ratingRowSent: {
+        flexDirection: 'row',
+        marginTop: 12,
+        gap: 8,
+    },
+    ratingButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(250,204,21,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(250,204,21,0.2)',
     },
 });
 

@@ -61,6 +61,10 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         setSuggestions(newSuggestions.slice(0, 3));
     };
 
+    const normalizeSenderId = (message) => {
+        return message?.sender?._id || message?.sender?.id || message?.sender;
+    };
+
     const scrollToBottom = () => {
         setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,7 +92,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                 });
                 scrollToBottom();
 
-                if (data.message.sender !== (currentUser?._id || currentUser?.id)) {
+                if (normalizeSenderId(data.message)?.toString() !== currentUserId?.toString()) {
                     generateSuggestions(data.message.text);
                     void markAsRead();
                 }
@@ -171,8 +175,9 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         let tempMessage; // Define outside try block
         try {
             // Optimistic update
+            const tempId = `temp-${Date.now()}`;
             tempMessage = {
-                _id: Date.now(),
+                _id: tempId,
                 conversationId: conversation._id,
                 sender: currentUser?._id || currentUser?.id,
                 text: newMessage,
@@ -184,11 +189,15 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             scrollToBottom();
             generateSuggestions(); // Refresh suggestions
 
-            await api.post('/chat/message', {
+            const response = await api.post('/chat/message', {
                 recipientId: otherParticipant._id,
                 text: tempMessage.text,
                 postId: conversation.postId
             });
+
+            setMessages(prev => prev.map((message) =>
+                message._id === tempId ? response.data : message
+            ));
 
         } catch (err) {
             console.error("Failed to send", err);

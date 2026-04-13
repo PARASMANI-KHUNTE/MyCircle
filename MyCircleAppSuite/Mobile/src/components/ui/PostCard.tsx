@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Pressable, Clipboard, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Pressable, Clipboard, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MapPin, Heart, MessageCircle, Share2, Star } from 'lucide-react-native';
+import { MapPin, Heart, Share2 } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 import Animated, {
 
@@ -50,6 +50,10 @@ interface PostCardProps {
         images?: string[];
         isUrgent?: boolean;
         subType?: string;
+        budgetMin?: number;
+        budgetMax?: number;
+        availability?: string;
+        duration?: number;
     };
     onPress?: () => void;
     isOwnPost?: boolean;
@@ -58,26 +62,28 @@ interface PostCardProps {
 
 const PostCard = ({ post, onPress }: PostCardProps) => {
     const { user: currentUser } = useAuth();
-    const { success, error } = useToast();
+    const { error } = useToast();
     const { colors } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
     const [hasShared, setHasShared] = useState(false);
     const lastTapRef = useRef<number>(0);
     const [aiSuggestion, setAiSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
+    const budgetFloor = post.budgetMin ?? post.price;
+    const budgetCeiling = post.budgetMax ?? post.price;
+
+    const checkShared = useCallback(async () => {
+        try {
+            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
+            setHasShared(sharedPosts.includes(post._id));
+        } catch {}
+    }, [post._id]);
 
     useEffect(() => {
         if (!post.images || post.images.length === 0) {
             getPlaceholderSuggestions(post.title, post.description).then(setAiSuggestion);
         }
         checkShared();
-    }, [post._id]);
-
-    const checkShared = async () => {
-        try {
-            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
-            setHasShared(sharedPosts.includes(post._id));
-        } catch {}
-    };
+    }, [post._id, post.title, post.description, post.images, checkShared]);
 
     const handleShare = async () => {
         if (hasShared) {
@@ -267,6 +273,27 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
                                 {post.location.split(',')[0]} • {post.distance || '2km'} away
                             </Text>
                         </View>
+                        {(post.availability || post.duration || budgetFloor || budgetCeiling) && (
+                            <View style={styles.metaRow}>
+                                {(budgetFloor || budgetCeiling) && (
+                                    <View style={styles.metaChipPrimary}>
+                                        <Text style={styles.metaChipPrimaryText}>
+                                            Budget ₹{budgetFloor || 0}{budgetCeiling && budgetCeiling !== budgetFloor ? `-₹${budgetCeiling}` : ''}
+                                        </Text>
+                                    </View>
+                                )}
+                                {post.duration ? (
+                                    <View style={styles.metaChip}>
+                                        <Text style={styles.metaChipText}>{post.duration} mins</Text>
+                                    </View>
+                                ) : null}
+                                {post.availability ? (
+                                    <View style={styles.metaChip}>
+                                        <Text style={styles.metaChipText} numberOfLines={1}>{post.availability}</Text>
+                                    </View>
+                                ) : null}
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.footerRow}>
@@ -391,6 +418,38 @@ const styles = StyleSheet.create({
         color: '#a1a1aa',
         fontSize: 14,
         fontWeight: '600',
+    },
+    metaRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 14,
+    },
+    metaChip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.78)',
+        borderRadius: 14,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    metaChipPrimary: {
+        backgroundColor: 'rgba(175, 37, 244, 0.18)',
+        borderRadius: 14,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(175, 37, 244, 0.32)',
+    },
+    metaChipText: {
+        color: '#e2e8f0',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    metaChipPrimaryText: {
+        color: '#ffffff',
+        fontSize: 11,
+        fontWeight: '800',
     },
     footerRow: {
         flexDirection: 'row',

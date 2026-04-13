@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { ShieldCheck, ShieldAlert, Star } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 import GlassView from './GlassView';

@@ -5,6 +5,34 @@ const Conversation = require('../models/Conversation');
 const { createNotification } = require('./notificationController');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
+const { applyNewRating, refreshTrustScore } = require('../utils/trustScore');
+
+const normalizeRequestStatus = (status) => {
+    if (status === 'approved') return 'accepted';
+    return status;
+};
+
+const serializeRequest = (request, viewerId) => {
+    const requestObject = request.toObject ? request.toObject() : request;
+    const normalizedStatus = normalizeRequestStatus(requestObject.status);
+    const viewerRole = requestObject.requester?._id?.toString?.() === viewerId || requestObject.requester?.toString?.() === viewerId
+        ? 'requester'
+        : 'recipient';
+    const counterparty = viewerRole === 'requester' ? requestObject.recipient : requestObject.requester;
+    const myRating = (requestObject.ratings || []).find(
+        (rating) => rating.fromUser?.toString?.() === viewerId || rating.fromUser?._id?.toString?.() === viewerId
+    );
+
+    return {
+        ...requestObject,
+        status: normalizedStatus,
+        viewerRole,
+        counterparty,
+        canMarkComplete: normalizedStatus === 'accepted',
+        canRate: normalizedStatus === 'completed' && !myRating,
+        myRating: myRating || null,
+    };
+};
 
 // @desc    Create a contact request
 // @route   POST /api/contacts/request or POST /api/contacts/:postId
@@ -104,7 +132,7 @@ exports.createRequest = asyncHandler(async (req, res) => {
         relatedId: postId
     });
 
-    res.json(contactRequest);
+    res.json(serializeRequest(contactRequest, requesterId));
 });
 
 // @desc    Get received requests (for my posts)
@@ -113,11 +141,11 @@ exports.createRequest = asyncHandler(async (req, res) => {
 exports.getReceivedRequests = async (req, res, next) => {
     try {
         const requests = await ContactRequest.find({ recipient: req.user.id })
-            .populate('post', ['title', 'type', 'images', 'price'])
-            .populate('requester', ['displayName', 'avatar'])
+            .populate('post', ['title', 'type', 'images', 'price', 'budgetMin', 'budgetMax', 'duration', 'availability'])
+            .populate('requester', ['displayName', 'avatar', 'rating', 'reputation'])
             .sort({ createdAt: -1 });
 
-        res.json(requests);
+        res.json(requests.map((request) => serializeRequest(request, req.user.id)));
     } catch (err) {
         return next(err);
     }
@@ -129,8 +157,8 @@ exports.getReceivedRequests = async (req, res, next) => {
 exports.getSentRequests = async (req, res, next) => {
     try {
         const requests = await ContactRequest.find({ requester: req.user.id })
-            .populate('post', ['title', 'type', 'images', 'price'])
-            .populate('recipient', ['displayName', 'avatar'])
+            .populate('post', ['title', 'type', 'images', 'price', 'budgetMin', 'budgetMax', 'duration', 'availability'])
+            .populate('recipient', ['displayName', 'avatar', 'rating', 'reputation'])
             .sort({ createdAt: -1 });
 
         // Filter out contact info if not approved! 
@@ -144,8 +172,8 @@ exports.getSentRequests = async (req, res, next) => {
 
         // Let's refine the response:
         const enrichedRequests = requests.map(reqObj => {
-            const reqJson = reqObj.toObject();
-            if (reqJson.status !== 'approved') {
+            const reqJson = serializeRequest(reqObj, req.user.id);
+            if (reqJson.status !== 'accepted' && reqJson.status !== 'completed') {
                 if (reqJson.post) {
                     delete reqJson.post.contactPhone;
                     delete reqJson.post.contactWhatsapp;
@@ -165,8 +193,8 @@ exports.getSentRequests = async (req, res, next) => {
 // @access  Private
 exports.updateRequestStatus = async (req, res, next) => {
     try {
-        const { status } = req.body; // 'approved' or 'rejected'
-        if (!['approved', 'rejected'].includes(status)) {
+        const requestedStatus = normalizeRequestStatus(req.body.status);
+        if (!['accepted', 'rejected', 'completed', 'canceled'].includes(requestedStatus)) {
             return res.status(400).json({ msg: 'Invalid status' });
         }
 
@@ -176,20 +204,45 @@ exports.updateRequestStatus = async (req, res, next) => {
             return res.status(404).json({ msg: 'Request not found' });
         }
 
-        // Verify recipient is the logged in user
-        if (request.recipient.toString() !== req.user.id) {
+        const isRecipient = request.recipient.toString() === req.user.id;
+        const isRequester = request.requester.toString() === req.user.id;
+
+        if (!isRecipient && !isRequester) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        request.status = status;
+        if ((requestedStatus === 'accepted' || requestedStatus === 'rejected') && !isRecipient) {
+            return res.status(403).json({ msg: 'Only the post owner can accept or reject a request' });
+        }
+
+        if ((requestedStatus === 'completed' || requestedStatus === 'canceled') && !isRecipient && !isRequester) {
+            return res.status(403).json({ msg: 'Not authorized to update this request' });
+        }
+
+        if (requestedStatus === 'completed' && !['accepted', 'approved'].includes(request.status)) {
+            return res.status(400).json({ msg: 'Only accepted requests can be completed' });
+        }
+
+        request.status = requestedStatus;
+        if (requestedStatus === 'accepted' && !request.acceptedAt) {
+            request.acceptedAt = new Date();
+        }
+        if (requestedStatus === 'completed') {
+            request.completedAt = new Date();
+            if (!request.completionMarkedBy.some((userId) => userId.toString() === req.user.id)) {
+                request.completionMarkedBy.push(req.user.id);
+            }
+        }
         await request.save();
 
         // Populate recipient details for notification
         await request.populate('recipient', 'displayName');
+        await request.populate('requester', 'displayName');
+        await request.populate('post', 'title user');
 
         // If approved, ensure a conversation exists
         let conversationId = null;
-        if (status === 'approved') {
+        if (requestedStatus === 'accepted') {
             let conversation = await Conversation.findOne({
                 participants: { $all: [request.requester, req.user.id] }
             });
@@ -204,15 +257,33 @@ exports.updateRequestStatus = async (req, res, next) => {
             conversationId = conversation._id;
         }
 
+        if (requestedStatus === 'completed') {
+            const post = await Post.findById(request.post);
+            if (post?.user?.toString() === request.recipient.toString()) {
+                const provider = await User.findById(request.recipient);
+                if (provider) {
+                    provider.stats.tasksCompleted = (provider.stats.tasksCompleted || 0) + 1;
+                    await refreshTrustScore(provider);
+                }
+            }
+        }
+
         // Send real-time notification to requester
         const io = req.app.get('io');
         try {
+            const isPositive = requestedStatus === 'accepted' || requestedStatus === 'completed';
             await createNotification(io, {
-                recipient: request.requester,
+                recipient: isRecipient ? request.requester : request.recipient,
                 sender: req.user.id,
-                type: status === 'approved' ? 'approval' : 'info',
-                title: status === 'approved' ? 'Request Approved' : 'Request Rejected',
-                message: `${request.recipient?.displayName || 'User'} has ${status} your contact request.`,
+                type: requestedStatus === 'accepted' ? 'approval' : 'info',
+                title: requestedStatus === 'accepted'
+                    ? 'Request Accepted'
+                    : requestedStatus === 'completed'
+                        ? 'Work Marked Complete'
+                        : requestedStatus === 'canceled'
+                            ? 'Request Canceled'
+                            : 'Request Rejected',
+                message: `${isRecipient ? request.recipient?.displayName : request.requester?.displayName || 'User'} has ${requestedStatus} this request.`,
                 link: '/requests',
                 relatedId: request.post,
                 conversationId: conversationId
@@ -221,11 +292,76 @@ exports.updateRequestStatus = async (req, res, next) => {
             console.error('Failed to send notification for request status update:', notifErr);
         }
 
-        res.json(request);
+        res.json(serializeRequest(request, req.user.id));
     } catch (err) {
         return next(err);
     }
 };
+
+// @desc    Rate a completed request counterparty
+// @route   POST /api/contact/:id/rate
+// @access  Private
+exports.rateRequest = asyncHandler(async (req, res) => {
+    const { score, review } = req.body;
+    const numericScore = Number(score);
+
+    if (!Number.isFinite(numericScore) || numericScore < 1 || numericScore > 5) {
+        throw new ApiError(400, 'Score must be between 1 and 5');
+    }
+
+    const request = await ContactRequest.findById(req.params.id)
+        .populate('requester', 'displayName')
+        .populate('recipient', 'displayName');
+
+    if (!request) {
+        throw new ApiError(404, 'Request not found');
+    }
+
+    const isRequester = request.requester._id.toString() === req.user.id;
+    const isRecipient = request.recipient._id.toString() === req.user.id;
+
+    if (!isRequester && !isRecipient) {
+        throw new ApiError(403, 'Not authorized to rate this request');
+    }
+
+    if (normalizeRequestStatus(request.status) !== 'completed') {
+        throw new ApiError(400, 'You can only rate completed requests');
+    }
+
+    if (request.ratings.some((rating) => rating.fromUser.toString() === req.user.id)) {
+        throw new ApiError(400, 'You have already rated this request');
+    }
+
+    const targetUserId = isRequester ? request.recipient._id : request.requester._id;
+    request.ratings.push({
+        fromUser: req.user.id,
+        toUser: targetUserId,
+        role: isRequester ? 'requester' : 'recipient',
+        score: numericScore,
+        review: review || ''
+    });
+    await request.save();
+
+    const ratedUser = await User.findById(targetUserId);
+    if (!ratedUser) {
+        throw new ApiError(404, 'Rated user not found');
+    }
+
+    await applyNewRating(ratedUser, numericScore);
+
+    const io = req.app.get('io');
+    await createNotification(io, {
+        recipient: targetUserId,
+        sender: req.user.id,
+        type: 'info',
+        title: 'New Rating Received',
+        message: `You received a ${numericScore}-star rating for completed work.`,
+        link: '/requests',
+        relatedId: request.post
+    });
+
+    res.json(serializeRequest(request, req.user.id));
+});
 // @desc    Delete a contact request (Withdraw/Clear)
 // @route   DELETE /api/contact/:id
 // @access  Private

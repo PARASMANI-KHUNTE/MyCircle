@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema({
     googleId: {
         type: String,
-        required: true,
         unique: true,
+        sparse: true,
     },
     displayName: {
         type: String,
@@ -20,6 +20,12 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
+    },
+    passwordHash: {
+        type: String,
+    },
+    passwordSalt: {
+        type: String,
     },
     avatar: {
         type: String,
@@ -55,6 +61,21 @@ const UserSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    following: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    isOnline: {
+        type: Boolean,
+        default: false,
+    },
+    lastSeenAt: {
+        type: Date,
+    },
     reports: [{
         reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         reason: String,
@@ -69,14 +90,6 @@ const UserSchema = new mongoose.Schema({
         followingCount: { type: Number, default: 0 },
         followersCount: { type: Number, default: 0 },
     },
-    following: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    followers: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
     reputation: {
         trustScore: { type: Number, default: 50 },
         reviewsCount: { type: Number, default: 0 },
@@ -93,5 +106,6 @@ UserSchema.index({ skills: 1 });
 UserSchema.index({ createdAt: -1 });
 UserSchema.index({ following: 1 });
 UserSchema.index({ followers: 1 });
+UserSchema.index({ isOnline: 1, lastSeenAt: -1 });
 
 module.exports = mongoose.model('User', UserSchema);

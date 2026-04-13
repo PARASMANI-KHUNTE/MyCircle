@@ -391,6 +391,11 @@ const PostDetails = () => {
                             <div className="flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-primary" /> {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
+                            {post.duration ? (
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-primary" /> {post.duration} min duration
+                                </div>
+                            ) : null}
                             <div className="flex items-center gap-2 text-pink-500">
                                 <Heart className="w-4 h-4 fill-current opacity-50" /> {likes.length} Interactions
                             </div>
@@ -414,6 +419,25 @@ const PostDetails = () => {
                                 <p className="text-text-body font-medium">
                                     {post.barterPreferences}
                                 </p>
+                            </div>
+                        )}
+
+                        {(post.budgetMin || post.budgetMax || post.availability) && (
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {(post.budgetMin || post.budgetMax) && (
+                                    <div className="p-4 rounded-xl bg-card border border-card-border">
+                                        <h3 className="text-text-heading font-semibold mb-2">Budget Range</h3>
+                                        <p className="text-text-body font-medium">
+                                            ₹{post.budgetMin || post.price || 0} to ₹{post.budgetMax || post.price || 0}
+                                        </p>
+                                    </div>
+                                )}
+                                {post.availability && (
+                                    <div className="p-4 rounded-xl bg-card border border-card-border">
+                                        <h3 className="text-text-heading font-semibold mb-2">Availability</h3>
+                                        <p className="text-text-body font-medium whitespace-pre-wrap">{post.availability}</p>
+                                    </div>
+                                )}
                             </div>
                         )}
 

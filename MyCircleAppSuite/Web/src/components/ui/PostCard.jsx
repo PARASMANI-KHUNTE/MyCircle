@@ -10,14 +10,35 @@ import { getPostInsights, getPostExplanation } from '../../services/aiService';
 import {
     Sparkles, X, Edit2, Trash2, Eye,
     Heart, Share2, MessageCircle, MapPin,
-    Clock, Repeat, ChevronDown, ChevronUp, BarChart2, Check
+    Clock, Repeat, BarChart2, Check, Shield, Star,
+    MoreHorizontal, DollarSign, Calendar, ArrowRight
 } from 'lucide-react';
 
-const typeColors = {
-    job: 'bg-blue-50 text-blue-600 border-blue-100',
-    service: 'bg-purple-50 text-purple-600 border-purple-100',
-    sell: 'bg-green-50 text-green-600 border-green-100',
-    rent: 'bg-primary/5 text-primary border-primary/10'
+const typeStyles = {
+    job: {
+        bg: 'bg-blue-500/10',
+        border: 'border-blue-500/20',
+        text: 'text-blue-500',
+        icon: '💼'
+    },
+    service: {
+        bg: 'bg-purple-500/10',
+        border: 'border-purple-500/20',
+        text: 'text-purple-500',
+        icon: '🔧'
+    },
+    sell: {
+        bg: 'bg-emerald-500/10',
+        border: 'border-emerald-500/20',
+        text: 'text-emerald-500',
+        icon: '🏷️'
+    },
+    rent: {
+        bg: 'bg-amber-500/10',
+        border: 'border-amber-500/20',
+        text: 'text-amber-500',
+        icon: '🏠'
+    }
 };
 
 const PostCard = ({
@@ -26,31 +47,35 @@ const PostCard = ({
     currentUserId = null,
     isOwnPost: propIsOwnPost = false,
     onDelete = () => { },
-    onEdit = () => { }
+    onEdit = () => { },
+    index = 0
 }) => {
     const { title, description, type, location, price, user, createdAt, images, acceptsBarter, likes: initialLikes, shares: initialShares, isActive, status } = post;
     const { success } = useToast();
     const navigate = useNavigate();
     const [likes, setLikes] = useState(initialLikes || []);
-    const [shares, setShares] = useState(initialShares || 0);
+    const [sharesCount, setSharesCount] = useState(initialShares || 0);
     const [hasShared, setHasShared] = useState(false);
     const [expanded, setExpanded] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
 
     useEffect(() => {
         const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
         setHasShared(sharedPosts.includes(post._id));
     }, [post._id]);
 
-    // AI State
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
     const [aiResult, setAiResult] = useState(null);
 
-    // Check if this is the current user's post
     const isOwnPost = propIsOwnPost || (currentUserId && user?._id === currentUserId);
     const isLiked = currentUserId && likes.includes(currentUserId);
+    const budgetFloor = post.budgetMin ?? price;
+    const budgetCeiling = post.budgetMax ?? price;
+
+    const typeStyle = typeStyles[type] || typeStyles.job;
 
     const handleGetAIInsights = async (e) => {
-        e.stopPropagation();
+        e?.stopPropagation();
         if (aiResult) {
             setAiResult(null);
             return;
@@ -83,7 +108,7 @@ const PostCard = ({
     };
 
     const handleLike = async (e) => {
-        e.stopPropagation();
+        e?.stopPropagation();
         try {
             await api.post(`/posts/${post._id}/like`);
             if (isLiked) {
@@ -97,7 +122,7 @@ const PostCard = ({
     };
 
     const handleShare = async (e) => {
-        e.stopPropagation();
+        e?.stopPropagation();
         if (hasShared) return;
         
         try {
@@ -107,7 +132,7 @@ const PostCard = ({
             setHasShared(true);
             
             await api.post(`/posts/${post._id}/share`);
-            setShares(shares + 1);
+            setSharesCount(prev => prev + 1);
             navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`);
             success('Link copied to clipboard!');
         } catch (err) {
@@ -133,255 +158,323 @@ const PostCard = ({
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.05 }}
             whileHover={{ y: -4 }}
-            className={`group relative bg-card rounded-card p-5 border border-card-border shadow-card hover:shadow-lg transition-all flex flex-col h-full ${!isActive ? 'opacity-75 grayscale' : ''}`}
+            className={cn(
+                'group relative bg-card rounded-2xl border border-card-border overflow-hidden',
+                'transition-all duration-300 hover:shadow-xl hover:border-card-border-hover',
+                !isActive && 'opacity-60 grayscale'
+            )}
         >
             {/* Analytics Overlay */}
             <AnimatePresence>
                 {showAnalytics && analyticsData && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="absolute inset-x-2 inset-y-2 bg-card/95 backdrop-blur-md z-30 rounded-card p-6 flex flex-col shadow-2xl"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-50 bg-card/95 backdrop-blur-xl p-6 flex flex-col"
                     >
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold text-text-heading">Post Insights</h3>
-                            <button onClick={handleShowAnalytics} className="p-1 hover:bg-hover-bg rounded-full">
-                                <X className="w-5 h-5 text-text-muted" />
+                            <h3 className="font-bold text-lg">Post Analytics</h3>
+                            <button onClick={handleShowAnalytics} className="icon-btn">
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="grid grid-cols-2 gap-4 mb-6">
                             {[
                                 { label: 'Views', value: analyticsData.views, icon: Eye, color: 'text-primary' },
                                 { label: 'Likes', value: analyticsData.likes, icon: Heart, color: 'text-pink-500' },
                                 { label: 'Shares', value: analyticsData.shares, icon: Share2, color: 'text-blue-500' },
-                                { label: 'Days', value: analyticsData.daysActive, icon: Clock, color: 'text-text-muted' }
+                                { label: 'Days Active', value: analyticsData.daysActive, icon: Calendar, color: 'text-foreground-muted' }
                             ].map((stat, i) => (
-                                <div key={i} className="p-3 rounded-xl bg-background-section border border-card-border">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <stat.icon className={`w-3 h-3 ${stat.color}`} />
-                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{stat.label}</span>
+                                <div key={i} className="p-4 rounded-xl bg-background-secondary border border-card-border">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <stat.icon className={cn('w-4 h-4', stat.color)} />
+                                        <span className="text-xs font-semibold text-foreground-muted uppercase">{stat.label}</span>
                                     </div>
-                                    <div className="text-lg font-bold text-text-heading">{stat.value}</div>
+                                    <div className="text-2xl font-bold">{stat.value}</div>
                                 </div>
                             ))}
                         </div>
 
-                        <Button variant="outline" size="sm" onClick={handleShowAnalytics} className="mt-auto">
-                            Close Analytics
+                        <Button variant="outline" className="mt-auto" onClick={handleShowAnalytics}>
+                            Close
                         </Button>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Media Section */}
-            <div className="relative mb-4">
+            {/* Image Section */}
+            <div className="relative aspect-[16/10] overflow-hidden bg-background-secondary">
                 {images && images.length > 0 ? (
                     <div
-                        className="rounded-xl overflow-hidden aspect-[4/3] bg-background-section relative group/img cursor-pointer"
+                        className="w-full h-full cursor-pointer"
                         onClick={() => navigate(`/post/${post._id}`)}
                     >
                         <img
                             src={images[0]}
                             alt={title}
-                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                     </div>
                 ) : (
-                    <div className="rounded-xl aspect-[4/3] bg-background-section flex items-center justify-center border border-card-border border-dashed">
-                        <Sparkles className="w-8 h-8 text-primary/20" />
+                    <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <span className="text-3xl">{typeStyle.icon}</span>
+                        </div>
                     </div>
                 )}
 
-                <div className="absolute top-2 left-2 flex gap-1.5 z-20">
-                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${typeColors[type] || typeColors.job}`}>
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                {/* Type Badge */}
+                <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <span className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider',
+                        typeStyle.bg, typeStyle.text, typeStyle.border,
+                        'border backdrop-blur-sm'
+                    )}>
                         {type}
                     </span>
                     {acceptsBarter && (
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold border bg-primary/5 text-primary border-primary/10 flex items-center gap-1 shadow-sm">
-                            <Repeat className="w-2.5 h-2.5" /> BARTER
+                        <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20 backdrop-blur-sm flex items-center gap-1">
+                            <Repeat className="w-3 h-3" /> Barter
                         </span>
                     )}
                 </div>
 
+                {/* Status Badge */}
                 {status && status !== 'active' && (
-                    <div className="absolute bottom-2 right-2 bg-text-heading text-white text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded shadow-lg z-20">
+                    <div className="absolute top-3 right-3 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-black/70 text-white backdrop-blur-sm">
                         {status}
                     </div>
                 )}
             </div>
 
             {/* Content Section */}
-            <div className="flex-grow">
-                <Link to={`/post/${post._id}`} className="hover:text-primary transition-colors block">
-                    <h3 className="font-bold text-text-heading leading-snug line-clamp-2 text-[15px] mb-2">{title}</h3>
+            <div className="p-4">
+                {/* Title */}
+                <Link to={`/post/${post._id}`} className="block group/title">
+                    <h3 className="font-bold text-lg leading-tight mb-2 group-hover/title:text-primary transition-colors line-clamp-2">
+                        {title}
+                    </h3>
                 </Link>
 
-                <div className="flex items-center gap-2 mb-3">
+                {/* Author Row */}
+                <div className="flex items-center gap-3 mb-3">
                     <Link to={`/profile?userId=${user?._id}`} className="shrink-0">
                         <img
                             src={getAvatarUrl(user)}
                             alt={user?.displayName}
-                            className="w-6 h-6 rounded-full bg-background-section object-cover border border-card-border"
+                            className="w-8 h-8 rounded-full object-cover ring-2 ring-card-border"
                         />
                     </Link>
-                    <div className="flex items-center gap-1 text-[11px] text-text-muted font-medium">
-                        <Link to={`/profile?userId=${user?._id}`} className="hover:text-primary transition-colors font-bold">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <Link to={`/profile?userId=${user?._id}`} className="text-sm font-semibold hover:text-primary transition-colors truncate">
                             {user?.displayName || 'Anonymous'}
                         </Link>
-                        <span>•</span>
-                        <span>{new Date(createdAt).toLocaleDateString()}</span>
+                        <span className="text-foreground-muted">•</span>
+                        <span className="text-xs text-foreground-muted">
+                            {new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
                     </div>
                 </div>
 
-                <p className={`text-text-body text-sm mb-3 ${expanded ? '' : 'line-clamp-2'} leading-relaxed`}>
+                {/* Trust & Rating Badges */}
+                {(user?.reputation?.trustScore || user?.reputation?.averageRating) && (
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                        {user?.reputation?.trustScore && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 border border-success/20 px-3 py-1 text-xs font-semibold text-success">
+                                <Shield className="w-3.5 h-3.5" />
+                                Trust {user.reputation.trustScore}
+                            </span>
+                        )}
+                        {user?.reputation?.averageRating && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 border border-warning/20 px-3 py-1 text-xs font-semibold text-warning">
+                                <Star className="w-3.5 h-3.5 fill-current" />
+                                {Number(user.reputation.averageRating).toFixed(1)}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Description */}
+                <p className={cn(
+                    'text-sm text-foreground-muted mb-3 leading-relaxed',
+                    expanded ? '' : 'line-clamp-2'
+                )}>
                     {description}
                 </p>
-                {description && description.length > 80 && (
+                {description && description.length > 100 && (
                     <button
                         onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-                        className="text-[11px] text-primary hover:underline font-bold mb-3"
+                        className="text-xs text-primary hover:underline font-semibold mb-3"
                     >
-                        {expanded ? 'Show Less' : 'Read More'}
+                        {expanded ? 'Show less' : 'Read more'}
                     </button>
                 )}
-            </div>
 
-            {/* AI Result Section */}
-            <AnimatePresence>
-                {(isGeneratingAI || aiResult) && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className={`p-4 rounded-xl mb-4 border text-[13px] ${aiResult?.type === 'owner' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-primary/10 border-primary/20 text-text-body'}`}
-                    >
-                        {isGeneratingAI ? (
-                            <div className="flex items-center gap-3">
-                                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-                                <span className="text-xs font-medium">AI is thinking...</span>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <Sparkles className="w-3.5 h-3.5 text-primary" />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider">AI Insights</span>
-                                    </div>
-                                    <button onClick={() => setAiResult(null)}>
-                                        <X className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
-                                    </button>
+                {/* Tags */}
+                {(budgetFloor || budgetCeiling || post.duration || post.availability) && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {(budgetFloor || budgetCeiling) && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary">
+                                <DollarSign className="w-3.5 h-3.5" />
+                                ₹{budgetFloor}{budgetCeiling && budgetCeiling !== budgetFloor ? ` - ₹${budgetCeiling}` : ''}
+                            </span>
+                        )}
+                        {post.duration && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 border border-info/20 px-3 py-1.5 text-xs font-semibold text-info">
+                                <Clock className="w-3.5 h-3.5" />
+                                {post.duration} mins
+                            </span>
+                        )}
+                        {post.availability && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary/10 border border-secondary/20 px-3 py-1.5 text-xs font-semibold text-secondary">
+                                <Check className="w-3.5 h-3.5" />
+                                {post.availability}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* AI Result */}
+                <AnimatePresence>
+                    {(isGeneratingAI || aiResult) && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className={cn(
+                                'p-4 rounded-xl mb-4 border',
+                                aiResult?.type === 'owner' 
+                                    ? 'bg-success/10 border-success/20' 
+                                    : 'bg-primary/10 border-primary/20'
+                            )}
+                        >
+                            {isGeneratingAI ? (
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                                    <span className="text-sm font-medium">AI analyzing...</span>
                                 </div>
-                                <p className="font-bold mb-1 leading-tight">{aiResult.summary}</p>
-                                <p className="text-[11px] opacity-80 leading-relaxed">{aiResult.details}</p>
-                            </>
-                        )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                            ) : (
+                                <>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-primary" />
+                                            <span className="text-xs font-bold uppercase">AI Insights</span>
+                                        </div>
+                                        <button onClick={() => setAiResult(null)} className="icon-btn p-1">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <p className="font-semibold mb-1">{aiResult.summary}</p>
+                                    <p className="text-xs opacity-80">{aiResult.details}</p>
+                                </>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-            {/* Footer / Actions Section */}
-            <div className="pt-4 border-t border-card-border flex items-end justify-between">
-                <div>
-                    <div className="flex items-center gap-1 text-text-muted text-[10px] font-bold uppercase tracking-widest mb-1">
-                        <MapPin className="w-2.5 h-2.5 text-primary" />
-                        {location}
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-card-border">
+                    <div className="flex items-center gap-2 text-foreground-muted">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-medium truncate max-w-[120px]">{location}</span>
                     </div>
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-lg font-bold text-text-heading">{price ? `₹${price}` : 'Trade'}</span>
-                        {price && <span className="text-[10px] text-text-muted font-medium uppercase tracking-tighter">Total</span>}
-                    </div>
-                </div>
 
-                <div className="flex items-center gap-1.5">
-                    <button
-                        onClick={handleGetAIInsights}
-                        className={cn(
-                            "p-2 rounded-lg transition-all",
-                            aiResult ? "bg-primary text-white shadow-button" : "text-text-muted hover:bg-hover-bg"
-                        )}
-                        title="AI Analysis"
-                    >
-                        <Sparkles className={cn("w-4 h-4", isGeneratingAI && "animate-spin")} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {/* AI Button */}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleGetAIInsights}
+                            className={cn(
+                                'p-2 rounded-xl transition-all',
+                                aiResult 
+                                    ? 'bg-primary text-white shadow-glow' 
+                                    : 'bg-primary/10 text-primary hover:bg-primary/20'
+                            )}
+                        >
+                            <Sparkles className={cn('w-4 h-4', isGeneratingAI && 'animate-spin')} />
+                        </motion.button>
 
-                    <button
-                        onClick={handleLike}
-                        className={cn(
-                            "p-2 rounded-lg transition-all flex items-center gap-1.5",
-                            isLiked ? "bg-pink-500/10 text-pink-500 border border-pink-500/20" : "text-text-muted hover:bg-hover-bg"
-                        )}
-                    >
-                        <Heart className={cn("w-4 h-4", isLiked && "fill-current")} />
-                        <span className="text-xs font-bold">{likes.length}</span>
-                    </button>
+                        {/* Like Button */}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleLike}
+                            className={cn(
+                                'p-2 rounded-xl transition-all flex items-center gap-1.5',
+                                isLiked 
+                                    ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' 
+                                    : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500'
+                            )}
+                        >
+                            <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} />
+                            <span className="text-xs font-bold">{likes.length}</span>
+                        </motion.button>
 
-                    <button
-                        onClick={handleShare}
-                        className={cn(
-                            "p-2 rounded-lg transition-all flex items-center gap-1.5",
-                            hasShared ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" : "text-text-muted hover:bg-hover-bg"
-                        )}
-                        title={hasShared ? "Link copied!" : "Copy share link"}
-                    >
-                        <Share2 className="w-4 h-4" />
-                        <span className="text-xs font-bold">{shares}</span>
-                    </button>
+                        {/* Share Button */}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleShare}
+                            className={cn(
+                                'p-2 rounded-xl transition-all flex items-center gap-1.5',
+                                hasShared 
+                                    ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' 
+                                    : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500'
+                            )}
+                        >
+                            <Share2 className="w-4 h-4" />
+                            <span className="text-xs font-bold">{sharesCount}</span>
+                        </motion.button>
 
-                    {isOwnPost ? (
-                        <div className="relative group/actions">
-                            <button
-                                className="p-2 text-text-muted hover:bg-hover-bg rounded-lg"
-                                onClick={(e) => { e.stopPropagation(); setShowAnalytics(!showAnalytics); }}
+                        {/* Owner Actions */}
+                        {isOwnPost ? (
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleShowAnalytics}
+                                className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all"
                             >
                                 <BarChart2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ) : (
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            className=""
-                            onClick={(e) => { e.stopPropagation(); onRequestContact(post._id, e); }}
-                        >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>Contact</span>
-                        </Button>
-                    )}
+                            </motion.button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                className="ml-2 gap-1.5"
+                                onClick={(e) => { e?.stopPropagation(); onRequestContact(post._id, e); }}
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                                Contact
+                            </Button>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            {/* Management Actions for Owner */}
-            {isOwnPost && !showAnalytics && (
-                <div className="mt-4 pt-3 border-t border-card-border grid grid-cols-2 gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                        className="py-1.5 border-card-border text-text-body hover:bg-primary/5"
-                    >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                        className="py-1.5 border-card-border text-red-500 hover:bg-red-50"
-                    >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                    </Button>
-                </div>
-            )}
+                {/* Owner Management */}
+                {isOwnPost && !showAnalytics && (
+                    <div className="flex gap-2 mt-3 pt-3 border-t border-card-border">
+                        <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={onEdit}>
+                            <Edit2 className="w-4 h-4" />
+                            Edit
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-error border-error/20 hover:bg-error/10" onClick={onDelete}>
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                        </Button>
+                    </div>
+                )}
+            </div>
         </motion.div>
     );
 };
 
 export default PostCard;
-

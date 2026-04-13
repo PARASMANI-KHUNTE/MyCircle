@@ -73,6 +73,11 @@ const schemas = {
         page: z.coerce.number().min(1).default(1),
         limit: z.coerce.number().min(1).max(50).default(20),
     }),
+
+    rateRequest: z.object({
+        score: z.coerce.number().min(1).max(5),
+        review: z.string().max(300, 'Review too long').optional(),
+    }),
 };
 
 module.exports = { validate, schemas };

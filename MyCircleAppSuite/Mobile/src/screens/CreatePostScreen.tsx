@@ -15,7 +15,6 @@ import Stepper from '../components/ui/Stepper';
 const CreatePostScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
     const webviewRef = useRef<any>(null);
-    const searchTimeout = useRef<any>(null);
 
     // Wizard State
     const [step, setStep] = useState(1);
@@ -36,7 +35,7 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [duration, setDuration] = useState(40320); // 28 days
     const [isUrgent, setIsUrgent] = useState(false);
     const [exchangePreference, setExchangePreference] = useState<'money' | 'barter' | 'flexible'>('money');
-    const [locationMethod, setLocationMethod] = useState<'search' | 'detect' | 'pin'>('search');
+    const [locationMethod, setLocationMethod] = useState<'detect' | 'pin'>('detect');
     const [images, setImages] = useState<any[]>([]);
 
     // UI State
@@ -44,7 +43,6 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [locationLoading, setLocationLoading] = useState(false);
     const [showCityModal, setShowCityModal] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
-    const [searchResults, setSearchResults] = useState<any[]>([]);
     const [alertConfig, setAlertConfig] = useState<any>({
         visible: false,
         title: '',
@@ -275,43 +273,14 @@ const CreatePostScreen = ({ navigation }: any) => {
         <Animated.View entering={FadeInRight} style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Post Location</Text>
             <View style={styles.methodTabs}>
-                {['search', 'detect', 'pin'].map((m) => (
+                {['detect', 'pin'].map((m) => (
                     <TouchableOpacity key={m} onPress={() => setLocationMethod(m as any)} style={[styles.methodTab, locationMethod === m && styles.activeMethodTab]}>
-                        <Text style={[styles.methodTabText, locationMethod === m && styles.activeMethodTabText]}>{m === 'detect' ? 'GPS' : m.toUpperCase()}</Text>
+                        <Text style={[styles.methodTabText, locationMethod === m && styles.activeMethodTabText]}>{m === 'detect' ? 'DETECT GPS' : m.toUpperCase()}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
 
             <View style={styles.inputCard}>
-                {locationMethod === 'search' && (
-                    <View>
-                        <TextInput
-                            style={styles.glassInput}
-                            placeholder="Search area..."
-                            placeholderTextColor="#64748b"
-                            value={location}
-                            onChangeText={async (text) => {
-                                setLocation(text);
-                                if (text.length > 2) {
-                                    try {
-                                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&addressdetails=1&limit=5`, { headers: { 'User-Agent': 'MyCircleApp/1.0' } });
-                                        const data = await res.json();
-                                        setSearchResults(data);
-                                    } catch (e) { }
-                                } else setSearchResults([]);
-                            }}
-                        />
-                        {searchResults.map((item, idx) => (
-                            <TouchableOpacity key={idx} style={styles.suggestionItem} onPress={() => {
-                                setLocation(item.display_name);
-                                setCoordinates({ lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
-                                setSearchResults([]);
-                            }}>
-                                <Text style={styles.suggestionText}>{item.display_name}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
                 {locationMethod === 'detect' && (
                     <TouchableOpacity onPress={async () => {
                         setLocationLoading(true);

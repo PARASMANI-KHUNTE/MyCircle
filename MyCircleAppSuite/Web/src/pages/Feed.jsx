@@ -30,9 +30,8 @@ L.Icon.Default.mergeOptions({
 const categories = [
     { id: 'all', label: 'All', icon: Package },
     { id: 'job', label: 'Jobs', icon: Briefcase },
-    { id: 'service', label: 'Services', icon: Wrench },
     { id: 'sell', label: 'For Sale', icon: Tag },
-    { id: 'rent', label: 'For Rent', icon: Key }
+    { id: 'request', label: 'Requests', icon: Wrench }
 ];
 
 const MapUpdater = ({ center, zoom }) => {

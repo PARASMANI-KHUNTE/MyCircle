@@ -8,8 +8,16 @@ const PostSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['job', 'service', 'sell', 'rent', 'barter'],
+        enum: ['job', 'sell', 'request'],
         required: true,
+    },
+    jobType: {
+        type: String,
+        enum: ['full-time', 'part-time', 'contractual', 'gig-based', 'freelance', 'internship'],
+    },
+    itemCategory: {
+        type: String,
+        enum: ['electronics', 'other'],
     },
     title: {
         type: String,
@@ -163,7 +171,7 @@ const PostSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     }
-});
+}, { timestamps: true });
 
 // Middleware to sync isActive with status before saving
 PostSchema.pre('save', async function () {

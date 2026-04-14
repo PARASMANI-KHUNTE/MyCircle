@@ -16,9 +16,22 @@ const STEPS = [
 
 const CATEGORIES = [
     { id: 'job', emoji: '💼', label: 'Job', desc: 'Find or offer work' },
-    { id: 'service', emoji: '⚔️', label: 'Service', desc: 'Professional skills' },
-    { id: 'sell', emoji: '💰', label: 'For Sale', desc: 'Items to sell' },
-    { id: 'rent', emoji: '🏠', label: 'For Rent', desc: 'Rentals & leases' },
+    { id: 'sell', emoji: '🛒', label: 'For Sale', desc: 'Items to sell' },
+    { id: 'request', emoji: '🙋', label: 'Request', desc: 'Ask for help/items' },
+];
+
+const JOB_TYPES = [
+    { id: 'full-time', label: 'Full-time' },
+    { id: 'part-time', label: 'Part-time' },
+    { id: 'contractual', label: 'Contractual' },
+    { id: 'gig-based', label: 'Gig-based' },
+    { id: 'freelance', label: 'Freelance' },
+    { id: 'internship', label: 'Internship' },
+];
+
+const ITEM_CATEGORIES = [
+    { id: 'electronics', label: 'Electronics' },
+    { id: 'other', label: 'Other' },
 ];
 
 const CreatePost = () => {
@@ -28,6 +41,8 @@ const CreatePost = () => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         type: '',
+        jobType: '',
+        itemCategory: '',
         title: '',
         description: '',
         price: '',
@@ -139,6 +154,8 @@ const CreatePost = () => {
         try {
             const data = new FormData();
             data.append('type', formData.type);
+            data.append('jobType', formData.jobType || '');
+            data.append('itemCategory', formData.itemCategory || '');
             data.append('title', formData.title);
             data.append('description', formData.description);
             data.append('location', formData.location);
@@ -166,7 +183,10 @@ const CreatePost = () => {
     const canProceed = () => {
         switch (step) {
             case 1: return !!formData.type;
-            case 2: return formData.title.trim() && formData.description.trim();
+            case 2:
+                if (formData.type === 'job') return formData.jobType && formData.title.trim() && formData.description.trim();
+                if (formData.type === 'sell' || formData.type === 'request') return formData.itemCategory && formData.title.trim() && formData.description.trim();
+                return formData.title.trim() && formData.description.trim();
             case 3: return !!formData.latitude && !!formData.longitude;
             case 4: return true;
             default: return false;
@@ -275,13 +295,49 @@ const CreatePost = () => {
                             exit={{ opacity: 0, x: -20 }}
                             className="space-y-6"
                         >
+                            {/* Job Type Selection */}
+                            {formData.type === 'job' && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Job Type</label>
+                                    <select
+                                        name="jobType"
+                                        value={formData.jobType}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 rounded-xl border border-card-border bg-card focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    >
+                                        <option value="">Select job type</option>
+                                        {JOB_TYPES.map(type => (
+                                            <option key={type.id} value={type.id}>{type.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Item Category for Sell/Request */}
+                            {(formData.type === 'sell' || formData.type === 'request') && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Category</label>
+                                    <select
+                                        name="itemCategory"
+                                        value={formData.itemCategory}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 rounded-xl border border-card-border bg-card focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    >
+                                        <option value="">Select category</option>
+                                        {ITEM_CATEGORIES.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-sm font-medium mb-2">Title</label>
                                 <input
                                     name="title"
                                     value={formData.title}
                                     onChange={handleChange}
-                                    placeholder="e.g. Need a plumber for kitchen repair"
+                                    placeholder={formData.type === 'job' ? "e.g. Need a plumber for kitchen repair" : "e.g. Selling a laptop"}
                                     className="w-full px-4 py-3 rounded-xl border border-card-border bg-card focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                 />
                             </div>

@@ -6,6 +6,35 @@ import Button from '../components/ui/Button';
 import { AlertCircle, Upload, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const LocationPicker = ({ position, setPosition }) => {
+    const map = useMapEvents({
+        click(e) {
+            setPosition(e.latlng);
+            map.flyTo(e.latlng, map.getZoom());
+        },
+    });
+
+    React.useEffect(() => {
+        if (position) {
+            map.flyTo(position, map.getZoom());
+        }
+    }, [position, map]);
+
+    return position === null ? null : (
+        <Marker position={position} />
+    );
+};
 
 const STEPS = [
     { id: 1, title: 'Category', icon: '📋' },
@@ -17,6 +46,7 @@ const STEPS = [
 const CATEGORIES = [
     { id: 'job', emoji: '💼', label: 'Job', desc: 'Find or offer work' },
     { id: 'sell', emoji: '🛒', label: 'For Sale', desc: 'Items to sell' },
+    { id: 'rent', emoji: '🏠', label: 'For Rent', desc: 'Rentals & spaces' },
     { id: 'request', emoji: '🙋', label: 'Request', desc: 'Ask for help/items' },
 ];
 
@@ -56,6 +86,7 @@ const CreatePost = () => {
     const [error, setError] = useState(null);
     const [gettingLocation, setGettingLocation] = useState(false);
     const [locationStatus, setLocationStatus] = useState('idle');
+    const [locationMethod, setLocationMethod] = useState('detect');
     const hasAutoDetected = React.useRef(false);
 
     const handleChange = (e) => {
@@ -185,7 +216,7 @@ const CreatePost = () => {
             case 1: return !!formData.type;
             case 2:
                 if (formData.type === 'job') return formData.jobType && formData.title.trim() && formData.description.trim();
-                if (formData.type === 'sell' || formData.type === 'request') return formData.itemCategory && formData.title.trim() && formData.description.trim();
+                if (formData.type === 'sell' || formData.type === 'rent' || formData.type === 'request') return formData.itemCategory && formData.title.trim() && formData.description.trim();
                 return formData.title.trim() && formData.description.trim();
             case 3: return !!formData.latitude && !!formData.longitude;
             case 4: return true;
@@ -313,8 +344,8 @@ const CreatePost = () => {
                                 </div>
                             )}
 
-                            {/* Item Category for Sell/Request */}
-                            {(formData.type === 'sell' || formData.type === 'request') && (
+                            {/* Item Category for Sell/Rent/Request */}
+                            {(formData.type === 'sell' || formData.type === 'rent' || formData.type === 'request') && (
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Category</label>
                                     <select
@@ -383,61 +414,134 @@ const CreatePost = () => {
                                 <p className="text-foreground-muted">We'll automatically detect your current location</p>
                             </div>
 
-                            <div className={cn(
-                                'p-6 rounded-2xl border-2 transition-all',
-                                locationStatus === 'found' ? 'border-green-500 bg-green-500/5' :
-                                locationStatus === 'error' ? 'border-red-500 bg-red-500/5' :
-                                'border-primary/30 bg-primary/5'
-                            )}>
-                                <div className="flex items-center gap-4">
-                                    <div className={cn(
-                                        'w-16 h-16 rounded-2xl flex items-center justify-center',
-                                        locationStatus === 'found' ? 'bg-green-500/20' :
-                                        locationStatus === 'error' ? 'bg-red-500/20' :
-                                        'bg-primary/20'
-                                    )}>
-                                        {gettingLocation ? (
-                                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                                        ) : locationStatus === 'found' ? (
-                                            <Navigation className="w-8 h-8 text-green-500" />
-                                        ) : (
-                                            <Navigation className="w-8 h-8 text-primary" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-lg">
-                                            {gettingLocation ? 'Detecting location...' :
-                                             locationStatus === 'found' ? 'Location detected!' :
-                                             locationStatus === 'error' ? 'Detection failed' :
-                                             'Tap to detect'}
-                                        </h3>
-                                        {formData.latitude && (
-                                            <p className="text-sm font-mono text-green-400 mt-1">
-                                                {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-                                            </p>
-                                        )}
-                                        {formData.location && locationStatus === 'found' && (
-                                            <p className="text-sm text-foreground-muted mt-1">{formData.location}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <Button
+                            <div className="flex bg-card-hover rounded-xl p-1 mb-6">
+                                <button
                                     type="button"
-                                    variant={locationStatus === 'found' ? 'outline' : 'primary'}
-                                    onClick={getCurrentLocation}
-                                    disabled={gettingLocation}
-                                    className="w-full mt-4"
-                                >
-                                    {gettingLocation ? (
-                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Detecting...</>
-                                    ) : locationStatus === 'found' ? (
-                                        <><Navigation className="w-4 h-4 mr-2" /> Re-detect Location</>
-                                    ) : (
-                                        <><Navigation className="w-4 h-4 mr-2" /> Detect My Location</>
+                                    onClick={() => setLocationMethod('detect')}
+                                    className={cn(
+                                        'flex-1 py-2 text-sm font-medium rounded-lg transition-all',
+                                        locationMethod === 'detect' ? 'bg-primary text-white shadow-sm' : 'text-foreground-muted hover:text-foreground'
                                     )}
-                                </Button>
+                                >
+                                    Detect GPS
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setLocationMethod('pin')}
+                                    className={cn(
+                                        'flex-1 py-2 text-sm font-medium rounded-lg transition-all',
+                                        locationMethod === 'pin' ? 'bg-primary text-white shadow-sm' : 'text-foreground-muted hover:text-foreground'
+                                    )}
+                                >
+                                    Map Pin
+                                </button>
                             </div>
+
+                            {locationMethod === 'detect' ? (
+                                <div className={cn(
+                                    'p-6 rounded-2xl border-2 transition-all',
+                                    locationStatus === 'found' ? 'border-green-500 bg-green-500/5' :
+                                    locationStatus === 'error' ? 'border-red-500 bg-red-500/5' :
+                                    'border-primary/30 bg-primary/5'
+                                )}>
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn(
+                                            'w-16 h-16 rounded-2xl flex items-center justify-center',
+                                            locationStatus === 'found' ? 'bg-green-500/20' :
+                                            locationStatus === 'error' ? 'bg-red-500/20' :
+                                            'bg-primary/20'
+                                        )}>
+                                            {gettingLocation ? (
+                                                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                                            ) : locationStatus === 'found' ? (
+                                                <Navigation className="w-8 h-8 text-green-500" />
+                                            ) : (
+                                                <Navigation className="w-8 h-8 text-primary" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-lg">
+                                                {gettingLocation ? 'Detecting location...' :
+                                                 locationStatus === 'found' ? 'Location detected!' :
+                                                 locationStatus === 'error' ? 'Detection failed' :
+                                                 'Tap to detect'}
+                                            </h3>
+                                            {formData.latitude && (
+                                                <p className="text-sm font-mono text-green-400 mt-1">
+                                                    {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+                                                </p>
+                                            )}
+                                            {formData.location && locationStatus === 'found' && (
+                                                <p className="text-sm text-foreground-muted mt-1">{formData.location}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        type="button"
+                                        variant={locationStatus === 'found' ? 'outline' : 'primary'}
+                                        onClick={getCurrentLocation}
+                                        disabled={gettingLocation}
+                                        className="w-full mt-4"
+                                    >
+                                        {gettingLocation ? (
+                                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Detecting...</>
+                                        ) : locationStatus === 'found' ? (
+                                            <><Navigation className="w-4 h-4 mr-2" /> Re-detect Location</>
+                                        ) : (
+                                            <><Navigation className="w-4 h-4 mr-2" /> Detect My Location</>
+                                        )}
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="h-[300px] w-full rounded-2xl overflow-hidden border-2 border-card-border relative z-0">
+                                        <MapContainer
+                                            center={[formData.latitude || 28.6139, formData.longitude || 77.2090]}
+                                            zoom={13}
+                                            style={{ height: '100%', width: '100%' }}
+                                        >
+                                            <TileLayer
+                                                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                            />
+                                            <LocationPicker
+                                                position={formData.latitude ? { lat: formData.latitude, lng: formData.longitude } : null}
+                                                setPosition={async (pos) => {
+                                                    setFormData(prev => ({ ...prev, latitude: pos.lat, longitude: pos.lng }));
+                                                    try {
+                                                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&format=json`);
+                                                        const data = await res.json();
+                                                        const addr = data.address || {};
+                                                        const parts = [
+                                                            addr.building || addr.house_number,
+                                                            addr.road,
+                                                            addr.neighbourhood || addr.suburb,
+                                                            addr.city || addr.town || addr.village
+                                                        ].filter(Boolean);
+                                                        setFormData(prev => ({ ...prev, location: parts.join(', ') || `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}` }));
+                                                    } catch {
+                                                        setFormData(prev => ({ ...prev, location: `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}` }));
+                                                    }
+                                                }}
+                                            />
+                                        </MapContainer>
+                                    </div>
+                                    <p className="text-sm text-foreground-muted mt-2 text-center">Tap anywhere on the map to drop a pin</p>
+                                    
+                                    {formData.location && (
+                                        <div className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-start gap-3">
+                                            <Check className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="font-medium text-sm text-foreground">{formData.location}</p>
+                                                <p className="text-xs text-foreground-muted font-mono mt-1">
+                                                    {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </motion.div>
                     )}
 

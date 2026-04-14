@@ -31,6 +31,7 @@ const categories = [
     { id: 'all', label: 'All', icon: Package },
     { id: 'job', label: 'Jobs', icon: Briefcase },
     { id: 'sell', label: 'For Sale', icon: Tag },
+    { id: 'rent', label: 'For Rent', icon: Key },
     { id: 'request', label: 'Requests', icon: Wrench }
 ];
 

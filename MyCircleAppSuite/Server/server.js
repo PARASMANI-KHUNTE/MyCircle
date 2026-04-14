@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
 const pino = require('pino');
 const jwt = require('jsonwebtoken');
@@ -224,12 +225,23 @@ if (isProduction) {
     });
     app.use('/auth/', authLimiter);
     app.use('/api/auth/', authLimiter);
+    
+    // Stricter rate limiting for AI routes
+    const aiLimiter = rateLimit({
+        windowMs: 60 * 1000,
+        max: 20,
+        message: 'Too many AI requests, please try again later.',
+    });
+    app.use('/api/ai/', aiLimiter);
     logger.info('Rate limiting enabled');
 } else {
     logger.info('Rate limiting disabled (development mode)');
 }
 
 app.use(express.json({ limit: '10mb' }));
+
+// Prevent NoSQL injection
+app.use(mongoSanitize());
 
 app.use((req, res, next) => {
     const requestId = req.header('x-request-id') || crypto.randomUUID();
@@ -262,6 +274,7 @@ startCronJobs(io);
 
 app.use(passport.initialize());
 
+app.use('/', require('./src/routes/healthRoutes'));
 app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api/posts', require('./src/routes/postRoutes'));
 app.use('/api/contacts', require('./src/routes/contactRoutes'));

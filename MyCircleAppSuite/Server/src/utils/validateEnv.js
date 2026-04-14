@@ -7,6 +7,23 @@ const { cleanEnv, str, port, url } = require('envalid');
 const validateEnv = () => {
     const isProduction = process.env.NODE_ENV === 'production';
     
+    // Validate JWT_SECRET strength
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+        console.error('❌ JWT_SECRET is required but not set');
+        process.exit(1);
+    }
+    if (jwtSecret.length < 32) {
+        console.error(`❌ JWT_SECRET must be at least 32 characters. Current: ${jwtSecret.length}`);
+        console.error('   Generate with: openssl rand -hex 32');
+        process.exit(1);
+    }
+    if (jwtSecret === 'supersecretkey' || jwtSecret === 'your-secret-key') {
+        console.error('❌ JWT_SECRET cannot be a default/weak value');
+        console.error('   Generate with: openssl rand -hex 32');
+        process.exit(1);
+    }
+    
     try {
         cleanEnv(process.env, {
             NODE_ENV: str({ choices: ['development', 'production', 'test'], default: 'development' }),
@@ -29,6 +46,7 @@ const validateEnv = () => {
         });
         
         console.log('✅ Environment variables validated successfully');
+        console.log(`   JWT_SECRET: ${'*'.repeat(20)} (length: ${jwtSecret.length})`);
     } catch (err) {
         console.error('❌ Environment validation failed:', err.message);
         process.exit(1);

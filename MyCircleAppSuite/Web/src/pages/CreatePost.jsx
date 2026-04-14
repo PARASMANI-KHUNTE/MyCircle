@@ -18,18 +18,28 @@ L.Icon.Default.mergeOptions({
 });
 
 const LocationPicker = ({ position, setPosition }) => {
-    const map = useMapEvents({
+    const map = useMap();
+    
+    useMapEvents({
         click(e) {
-            setPosition(e.latlng);
-            map.flyTo(e.latlng, map.getZoom());
+            if (e?.latlng) {
+                setPosition(e.latlng);
+            }
         },
     });
 
     React.useEffect(() => {
-        if (position) {
-            map.flyTo(position, map.getZoom());
+        if (map && position) {
+            try {
+                const zoom = map.getZoom();
+                if (zoom > 0) {
+                    map.flyTo(position, Math.max(zoom, 13));
+                }
+            } catch (e) {
+                // Ignore flyTo errors
+            }
         }
-    }, [position, map]);
+    }, [map, position]);
 
     return position === null ? null : (
         <Marker position={position} />

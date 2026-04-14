@@ -13,11 +13,13 @@ const PostSchema = new mongoose.Schema({
     },
     jobType: {
         type: String,
-        enum: ['full-time', 'part-time', 'contractual', 'gig-based', 'freelance', 'internship'],
+        enum: ['', 'full-time', 'part-time', 'contractual', 'gig-based', 'freelance', 'internship'],
+        default: '',
     },
     itemCategory: {
         type: String,
-        enum: ['electronics', 'other'],
+        enum: ['', 'electronics', 'other'],
+        default: '',
     },
     title: {
         type: String,

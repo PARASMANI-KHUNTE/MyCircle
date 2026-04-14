@@ -71,8 +71,8 @@ exports.createPost = asyncHandler(async (req, res) => {
     const newPost = new Post({
         user: req.user.id,
         type,
-        jobType: jobType || undefined,
-        itemCategory: itemCategory || undefined,
+        ...(jobType && { jobType }),
+        ...(itemCategory && { itemCategory }),
         title,
         description,
         location,

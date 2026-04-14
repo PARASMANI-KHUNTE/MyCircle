@@ -9,7 +9,6 @@ const crypto = require('crypto');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
 const pino = require('pino');
 const jwt = require('jsonwebtoken');
@@ -239,9 +238,6 @@ if (isProduction) {
 }
 
 app.use(express.json({ limit: '10mb' }));
-
-// Prevent NoSQL injection
-app.use(mongoSanitize());
 
 app.use((req, res, next) => {
     const requestId = req.header('x-request-id') || crypto.randomUUID();

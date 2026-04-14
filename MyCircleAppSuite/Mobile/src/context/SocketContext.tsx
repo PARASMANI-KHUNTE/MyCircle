@@ -126,7 +126,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }, [handleNotificationPress, user]);
 
     useEffect(() => {
-        if (!user || !token) {
+        if (!user?.id || !token) {
             if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current = null;
@@ -221,7 +221,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 socketRef.current = null;
             }
         };
-    }, [user, user?.id, token, getNotificationTitle, generateNotificationBody, handleNotificationPress]);
+    }, [user?.id, token, getNotificationTitle, generateNotificationBody, handleNotificationPress]);
 
     return (
         <SocketContext.Provider value={{ socket, connected }}>

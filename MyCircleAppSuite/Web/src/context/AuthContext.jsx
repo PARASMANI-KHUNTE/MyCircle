@@ -45,29 +45,37 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const checkAuth = async () => {
             try {
-                // Check for token in URL hash fragment (new method) or query params (legacy)
                 let tokenFromUrl = null;
                 
-                // Check hash fragment first (new method - token not sent to server)
                 const hash = window.location.hash;
                 if (hash && hash.includes('token=')) {
-                    const tokenPart = hash.split('token=')[1];
-                    // Extract token until next param or end
-                    tokenFromUrl = tokenPart ? tokenPart.split('&')[0] : null;
+                    const tokenPart = hash.split('token=')[1]?.split('&')[0];
+                    if (tokenPart && tokenPart.length >= 50) {
+                        tokenFromUrl = tokenPart;
+                    }
                 } else {
-                    // Fallback to query params for backward compatibility
                     const params = new URLSearchParams(window.location.search);
-                    tokenFromUrl = params.get('token');
+                    const queryToken = params.get('token');
+                    if (queryToken && queryToken.length >= 50) {
+                        tokenFromUrl = queryToken;
+                    }
                 }
 
-                if (tokenFromUrl && tokenFromUrl.length >= 50) {
+                if (tokenFromUrl) {
                     localStorage.setItem('token', tokenFromUrl);
                     setToken(tokenFromUrl);
-                    // Clean URL without reloading
                     window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-                    const userData = await fetchUserProfile();
-                    if (userData) {
-                        navigate('/feed', { replace: true });
+                    try {
+                        const userData = await fetchUserProfile();
+                        if (userData) {
+                            navigate('/feed', { replace: true });
+                        } else {
+                            localStorage.removeItem('token');
+                            setToken(null);
+                        }
+                    } catch (error) {
+                        localStorage.removeItem('token');
+                        setToken(null);
                     }
                     setLoading(false);
                 } else {
@@ -84,10 +92,8 @@ export const AuthProvider = ({ children }) => {
             }
         };
 
-        // Small delay to ensure DOM is ready
         const timer = setTimeout(checkAuth, 100);
         
-        // Fallback timeout - if auth check hangs, stop loading
         const timeoutId = setTimeout(() => {
             setLoading(false);
         }, 10000);

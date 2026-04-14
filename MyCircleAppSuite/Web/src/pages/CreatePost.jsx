@@ -41,6 +41,7 @@ const CreatePost = () => {
     const [error, setError] = useState(null);
     const [gettingLocation, setGettingLocation] = useState(false);
     const [locationStatus, setLocationStatus] = useState('idle');
+    const hasAutoDetected = React.useRef(false);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -180,6 +181,14 @@ const CreatePost = () => {
         if (step > 1) setStep(step - 1);
     };
 
+    // Auto-detect location when entering step 3
+    React.useEffect(() => {
+        if (step === 3 && locationStatus === 'idle' && !hasAutoDetected.current) {
+            hasAutoDetected.current = true;
+            getCurrentLocation();
+        }
+    }, [step, locationStatus]);
+
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
@@ -314,8 +323,8 @@ const CreatePost = () => {
                         >
                             <div className="text-center py-4">
                                 <MapPin className="w-12 h-12 mx-auto mb-4 text-primary" />
-                                <h2 className="text-2xl font-bold mb-2">Your Location</h2>
-                                <p className="text-foreground-muted">Share your exact location so others can find you</p>
+                                <h2 className="text-2xl font-bold mb-2">Detect Your Location</h2>
+                                <p className="text-foreground-muted">We'll automatically detect your current location</p>
                             </div>
 
                             <div className={cn(
@@ -334,17 +343,17 @@ const CreatePost = () => {
                                         {gettingLocation ? (
                                             <Loader2 className="w-8 h-8 text-primary animate-spin" />
                                         ) : locationStatus === 'found' ? (
-                                            <MapPin className="w-8 h-8 text-green-500" />
+                                            <Navigation className="w-8 h-8 text-green-500" />
                                         ) : (
                                             <Navigation className="w-8 h-8 text-primary" />
                                         )}
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="font-semibold text-lg">
-                                            {gettingLocation ? 'Finding location...' :
-                                             locationStatus === 'found' ? 'Location set!' :
-                                             locationStatus === 'error' ? 'Failed' :
-                                             'Tap to share'}
+                                            {gettingLocation ? 'Detecting location...' :
+                                             locationStatus === 'found' ? 'Location detected!' :
+                                             locationStatus === 'error' ? 'Detection failed' :
+                                             'Tap to detect'}
                                         </h3>
                                         {formData.latitude && (
                                             <p className="text-sm font-mono text-green-400 mt-1">
@@ -365,11 +374,11 @@ const CreatePost = () => {
                                     className="w-full mt-4"
                                 >
                                     {gettingLocation ? (
-                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Getting...</>
+                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Detecting...</>
                                     ) : locationStatus === 'found' ? (
-                                        <><MapPin className="w-4 h-4 mr-2" /> Update Location</>
+                                        <><Navigation className="w-4 h-4 mr-2" /> Re-detect Location</>
                                     ) : (
-                                        <><Navigation className="w-4 h-4 mr-2" /> Share My Location</>
+                                        <><Navigation className="w-4 h-4 mr-2" /> Detect My Location</>
                                     )}
                                 </Button>
                             </div>

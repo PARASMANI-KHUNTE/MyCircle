@@ -5,7 +5,7 @@ import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { getAvatarUrl } from '../utils/avatar';
-import { Check, X, Clock, MessageCircle, ArrowRight, Layers, User, Package, Trash2, Star, BadgeCheck } from 'lucide-react';
+import { Check, X, Clock, MessageCircle, ArrowRight, Layers, User, Package, Trash2, Star, BadgeCheck, Phone, MessageSquare } from 'lucide-react';
 
 const Requests = () => {
     const { success, error: showError } = useToast();
@@ -42,6 +42,22 @@ const Requests = () => {
             console.error(err);
             showError("Failed to start chat");
         }
+    };
+
+    const handleStartText = (phone) => {
+        if (!phone) {
+            showError('Phone number not available');
+            return;
+        }
+        window.open(`sms:${phone}`, '_blank');
+    };
+
+    const handleCall = (phone) => {
+        if (!phone) {
+            showError('Phone number not available');
+            return;
+        }
+        window.open(`tel:${phone}`, '_blank');
     };
 
     const handleAction = async (requestId, status) => {
@@ -256,6 +272,26 @@ const Requests = () => {
                                                     >
                                                         <MessageCircle className="w-5 h-5" />
                                                     </Button>
+                                                    {(req.requester?.contactPhone || req.requester?.contactWhatsapp) && (
+                                                        <>
+                                                            <Button
+                                                                variant="ghost"
+                                                                className="text-green-400 hover:bg-green-500/10 p-2.5 h-auto rounded-xl"
+                                                                onClick={() => handleCall(req.requester?.contactPhone || req.requester?.contactWhatsapp)}
+                                                                title="Call"
+                                                            >
+                                                                <Phone className="w-5 h-5" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                className="text-blue-400 hover:bg-blue-500/10 p-2.5 h-auto rounded-xl"
+                                                                onClick={() => handleStartText(req.requester?.contactWhatsapp || req.requester?.contactPhone)}
+                                                                title="Text Message"
+                                                            >
+                                                                <MessageSquare className="w-5 h-5" />
+                                                            </Button>
+                                                        </>
+                                                    )}
                                                     {req.status === 'accepted' && (
                                                         <Button
                                                             variant="ghost"
@@ -372,21 +408,41 @@ const Requests = () => {
                                 {/* Contact Reveal */}
                                 {(req.status === 'accepted' || req.status === 'completed') && req.post && (
                                     <div className="bg-card/5 p-4 rounded-xl border border-card-border flex flex-col gap-4 mt-2">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
                                             <p className="text-green-500 text-sm font-medium">
                                                 {req.status === 'completed'
                                                     ? 'Work completed. Finish the loop by rating each other.'
                                                     : 'Request accepted. You can now coordinate and complete the work.'}
                                             </p>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <Button
                                                     variant="primary"
                                                     className="py-1.5 px-3 text-sm"
                                                     onClick={() => handleMessage(req.recipient?._id)}
                                                 >
                                                     <MessageCircle className="w-4 h-4 mr-2" />
-                                                    Message
+                                                    Chat
                                                 </Button>
+                                                {(req.recipient?.contactPhone || req.recipient?.contactWhatsapp) && (
+                                                    <>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="py-1.5 px-3 text-sm border-green-500/20 text-green-400 hover:bg-green-500/10"
+                                                            onClick={() => handleCall(req.recipient?.contactPhone || req.recipient?.contactWhatsapp)}
+                                                        >
+                                                            <Phone className="w-4 h-4 mr-2" />
+                                                            Call
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="py-1.5 px-3 text-sm border-blue-500/20 text-blue-400 hover:bg-blue-500/10"
+                                                            onClick={() => handleStartText(req.recipient?.contactWhatsapp || req.recipient?.contactPhone)}
+                                                        >
+                                                            <MessageSquare className="w-4 h-4 mr-2" />
+                                                            Text
+                                                        </Button>
+                                                    </>
+                                                )}
                                                 {req.status === 'accepted' && (
                                                     <Button
                                                         variant="outline"

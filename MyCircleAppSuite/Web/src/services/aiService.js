@@ -42,9 +42,9 @@ export const getPostExplanation = async (post) => {
         const data = response.data || {};
         return {
             ...data,
-            explanation: data.summary || data.explanation || 'Explanation unavailable',
+            explanation: data.summary || data.explanation || data.context || JSON.stringify(data.interestingFacts) || 'AI summary unavailable',
         };
     } catch {
-        return { explanation: 'Explanation unavailable', summary: 'Explanation unavailable', context: '', interestingFacts: [] };
+        return { explanation: 'AI summary unavailable', summary: 'Explanation unavailable', context: '', interestingFacts: [] };
     }
 };

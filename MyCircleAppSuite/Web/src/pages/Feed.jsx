@@ -67,6 +67,15 @@ const Feed = () => {
     const serverCategory = filter === 'service' ? 'all' : filter;
     const serverSort = sortOrder === 'latest' || sortOrder === 'oldest' ? sortOrder : 'latest';
 
+    // Initial fetch on mount
+    React.useEffect(() => {
+        if (filter === 'service') {
+            fetchServices();
+        } else {
+            fetchPosts();
+        }
+    }, []);
+
     const fetchPosts = useCallback(async () => {
         setLoading(true);
         try {
@@ -84,7 +93,8 @@ const Feed = () => {
         } finally {
             setLoading(false);
         }
-    }, [locationFilter, searchTerm, serverCategory, serverSort]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const fetchServices = useCallback(async () => {
         setLoading(true);
@@ -95,11 +105,12 @@ const Feed = () => {
             const res = await api.get(`/user/services?${params.toString()}`);
             setServices(res.data);
         } catch (err) {
-            showError('Search failed. Please try again.');
+            console.error('Search failed:', err);
         } finally {
             setLoading(false);
         }
-    }, [searchTerm, showError, sortOrder]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (!socket) return;
@@ -117,13 +128,13 @@ const Feed = () => {
         } else {
             void fetchPosts();
         }
-    }, [fetchPosts, fetchServices, filter]);
+    }, [filter]);
 
     useEffect(() => {
-        if (filter === 'service') {
+        if (filter === 'service' && searchTerm) {
             void fetchServices();
         }
-    }, [fetchServices, filter, searchTerm, sortOrder]);
+    }, [filter, searchTerm, sortOrder]);
 
     const availableLocations = React.useMemo(() => {
         const locations = Array.from(new Set(posts.map(p => p.location).filter(Boolean)));

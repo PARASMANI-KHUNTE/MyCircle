@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../components/ui/Button';
+import { cn } from '../utils/cn';
 import { 
     ArrowRight, Zap, Shield, Globe, Users, 
     Star, CheckCircle, ArrowUpRight, Sparkles,

@@ -12,7 +12,7 @@ import { getPostInsights, getPostExplanation } from '../services/aiService';
 import {
     ArrowLeft, MapPin, DollarSign, Clock, MessageCircle,
     Share2, Heart, Repeat, Phone, UserPlus, UserCheck,
-    Check, Copy, Edit2, Trash2, Sparkles, Navigation
+    Check, Copy, Edit2, Trash2, Sparkles, Navigation, MessageSquare
 } from 'lucide-react';
 import { useDialog } from '../hooks/useDialog';
 import { useTheme } from '../context/ThemeContext';
@@ -102,6 +102,24 @@ const PostDetails = () => {
                 showError('Failed to start chat. Please try again.');
             }
         }
+    };
+
+    const handleCall = () => {
+        if (!post.user?.contactPhone && !post.user?.contactWhatsapp) {
+            showError('Phone number not available');
+            return;
+        }
+        const phone = post.user.contactPhone || post.user.contactWhatsapp;
+        window.open(`tel:${phone}`, '_blank');
+    };
+
+    const handleText = () => {
+        if (!post.user?.contactPhone && !post.user?.contactWhatsapp) {
+            showError('Phone number not available');
+            return;
+        }
+        const phone = post.user.contactWhatsapp || post.user.contactPhone;
+        window.open(`sms:${phone}`, '_blank');
     };
 
     useEffect(() => {
@@ -755,8 +773,27 @@ const PostDetails = () => {
                                     )}
                                 >
                                     <MessageCircle className="w-5 h-5" />
-                                    <span>{contactRequestStatus === 'approved' ? 'Open Channel' : 'Channel Locked'}</span>
+                                    <span>{contactRequestStatus === 'approved' ? 'Open Chat' : 'Chat Locked'}</span>
                                 </button>
+
+                                {contactRequestStatus === 'approved' && (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={handleCall}
+                                            className="py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-card-border bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                        >
+                                            <Phone className="w-4 h-4" />
+                                            Call
+                                        </button>
+                                        <button
+                                            onClick={handleText}
+                                            className="py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-card-border bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                                        >
+                                            <MessageSquare className="w-4 h-4" />
+                                            Text
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
 

@@ -10,8 +10,28 @@ import Button from '../components/ui/Button';
 import StatsCard from '../components/ui/StatsCard';
 import { getAvatarUrl } from '../utils/avatar';
 import PostCard from '../components/ui/PostCard';
-import EditPostModal from '../components/ui/EditPostModal';
 import { useToast } from '../components/ui/Toast';
+import { useDialog } from '../hooks/useDialog';
+
+const REPORT_REASON_OPTIONS = [
+    'Spam or scam',
+    'Harassment or abuse',
+    'Impersonation',
+    'Hate speech',
+    'Explicit or unsafe content',
+    'Other'
+];
+
+const mapReportCategory = (reasonText) => {
+    const normalized = reasonText.toLowerCase();
+    if (normalized.includes('spam') || normalized.includes('scam')) return 'spam';
+    if (normalized.includes('harass') || normalized.includes('abuse') || normalized.includes('threat')) return 'harassment';
+    if (normalized.includes('impersonat')) return 'impersonation';
+    if (normalized.includes('hate')) return 'hate_speech';
+    if (normalized.includes('explicit') || normalized.includes('unsafe') || normalized.includes('nudity')) return 'nudity';
+    if (normalized.includes('violence')) return 'violence';
+    return 'other';
+};
 
 const Profile = () => {
     const { user: authUser, logout } = useAuth();
@@ -19,8 +39,8 @@ const Profile = () => {
     const [loading, setLoading] = React.useState(true);
     const [posts, setPosts] = React.useState([]);
     const [postsLoading, setPostsLoading] = React.useState(true);
-    const [editingPost, setEditingPost] = React.useState(null);
     const { success, error: showError } = useToast();
+    const dialog = useDialog();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -109,15 +129,19 @@ const Profile = () => {
     };
 
     const handleBlock = async () => {
-        if (window.confirm('Are you sure you want to block this user?')) {
-            try {
-                await api.post(`/user/block/${userId}`);
-                alert('User blocked');
-                navigate('/');
-            } catch (err) {
-                console.error(err);
-                alert('Failed to block user');
-            }
+        const confirmed = await dialog.confirm(
+            `Block ${profile.displayName}? This removes current request links and prevents new messages until you unblock them.`,
+            'Block User'
+        );
+        if (!confirmed) return;
+
+        try {
+            const res = await api.post(`/user/block/${userId}`);
+            success(res.data?.msg || 'User blocked');
+            navigate('/');
+        } catch (err) {
+            console.error(err);
+            showError(err.response?.data?.msg || 'Failed to block user');
         }
     };
 
@@ -125,6 +149,35 @@ const Profile = () => {
         // Find or create conversation logic is handled in Chat.jsx/ChatWindow.jsx
         // For now, we move to chat with a recipient hint
         navigate(`/chat?recipientId=${userId}`);
+    };
+
+    const handleReport = async () => {
+        const confirmed = await dialog.confirm(
+            `Report ${profile.displayName}? Please report only genuine safety or policy concerns.`,
+            'Report User'
+        );
+        if (!confirmed) return;
+
+        const reason = await dialog.prompt(
+            `Choose a reason and add useful detail.\nExamples: ${REPORT_REASON_OPTIONS.join(', ')}`,
+            'Report User',
+            ''
+        );
+        const trimmedReason = reason?.trim();
+        if (!trimmedReason) return;
+
+        try {
+            const res = await api.post('/user/report', {
+                reportedUserId: userId,
+                reason: trimmedReason,
+                category: mapReportCategory(trimmedReason),
+                contentType: 'user'
+            });
+            success(res.data?.msg || 'Report submitted');
+        } catch (err) {
+            console.error(err);
+            showError(err.response?.data?.msg || 'Failed to report user');
+        }
     };
 
     const handleEndorse = async (skill) => {
@@ -142,18 +195,18 @@ const Profile = () => {
 
     if (!authUser && !userId) {
         return (
-            <div className="min-h-screen flex items-center justify-center text-text-heading">
+            <div className="min-h-screen flex items-center justify-center text-foreground">
                 <p>Please sign in to view your profile.</p>
             </div>
         );
     }
 
     if (loading || !profile) {
-        return <div className="min-h-screen flex items-center justify-center text-text-heading">Loading profile...</div>;
+        return <div className="min-h-screen flex items-center justify-center text-foreground">Loading profile...</div>;
     }
 
     return (
-        <div className="container mx-auto px-6 py-24 text-foreground">
+        <div className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 text-foreground">
             <div className="max-w-4xl mx-auto">
                 {/* Header Card */}
                 <div className="glass-panel p-8 mb-8 relative overflow-hidden">
@@ -169,8 +222,8 @@ const Profile = () => {
                         </div>
 
                         <div className="flex-1 mb-2">
-                            <h1 className="text-3xl font-bold font-display text-text-heading">{profile.displayName}</h1>
-                            <div className="flex items-center gap-4 text-text-muted mt-2 text-sm">
+                            <h1 className="text-2xl sm:text-3xl font-bold font-display text-foreground">{profile.displayName}</h1>
+                            <div className="flex items-center gap-4 text-foreground-muted mt-2 text-sm">
                                 <span className="flex items-center gap-1">
                                     <MapPin className="w-4 h-4" /> {profile.location}
                                 </span>
@@ -200,6 +253,10 @@ const Profile = () => {
                                         <Mail className="w-4 h-4 mr-2" />
                                         Message
                                     </Button>
+                                    <Button variant="outline" onClick={handleReport}>
+                                        <Shield className="w-4 h-4 mr-2" />
+                                        Report User
+                                    </Button>
                                     <Button variant="danger" onClick={handleBlock}>
                                         Block User
                                     </Button>
@@ -208,7 +265,7 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    <p className="mt-8 text-muted-foreground leading-relaxed max-w-2xl">
+                    <p className="mt-6 text-foreground-muted leading-relaxed max-w-2xl text-sm">
                         {profile.bio}
                     </p>
 
@@ -230,7 +287,7 @@ const Profile = () => {
                                         <button
                                             onClick={() => handleEndorse(skill)}
                                             disabled={isEndorsedByMe}
-                                            className={`ml-1 hover:scale-110 transition-transform ${isEndorsedByMe ? 'text-yellow-400 opacity-50 cursor-default' : 'text-text-muted hover:text-yellow-400'}`}
+                                            className={`ml-1 hover:scale-110 transition-transform ${isEndorsedByMe ? 'text-warning opacity-50 cursor-default' : 'text-foreground-muted hover:text-warning'}`}
                                             title={isEndorsedByMe ? "You endorsed this" : "Endorse this skill"}
                                         >
                                             <Award className="w-3.5 h-3.5" />
@@ -261,7 +318,7 @@ const Profile = () => {
                 {postsLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {[1, 2].map(i => (
-                            <div key={i} className="glass-panel h-64 rounded-2xl animate-pulse bg-hover-bg" />
+                            <div key={i} className="glass-panel h-64 rounded-2xl skeleton border-transparent" />
                         ))}
                     </div>
                 ) : posts.length > 0 ? (
@@ -273,7 +330,7 @@ const Profile = () => {
                                 isOwnPost={isOwnProfile}
                                 onDelete={() => handleDeletePost(post._id)}
                                 onStatusChange={(status) => handleStatusChange(post._id, status)}
-                                onEdit={() => setEditingPost(post)}
+                                onEdit={() => navigate(`/edit-post/${post._id}`)}
                                 currentUserId={authUser?._id}
                                 onRequestContact={() => navigate(`/post/${post._id}`)}
                             />
@@ -281,20 +338,11 @@ const Profile = () => {
                     </div>
                 ) : (
                     <div className="glass-panel rounded-2xl p-12 text-center">
-                        <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                        <p className="text-muted-foreground">No posts found yet.</p>
+                        <Package className="w-12 h-12 text-foreground-muted mx-auto mb-4 opacity-20" />
+                        <p className="text-foreground-muted">No posts found yet.</p>
                     </div>
                 )}
             </div>
-
-            {editingPost && (
-                <EditPostModal
-                    post={editingPost}
-                    isOpen={!!editingPost}
-                    onClose={() => setEditingPost(null)}
-                    onUpdate={handleUpdatePost}
-                />
-            )}
         </div>
     );
 };

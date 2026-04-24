@@ -57,16 +57,40 @@ const askGroq = async (prompt, systemPrompt = 'You are a helpful assistant. Alwa
 
 /**
  * 1. Text Safety Check (Hybrid: Groq -> Local Library Fallback)
+ * Focuses on truly harmful content: spam, scams, illegal, explicit,Harassment
  */
+const BLOCKED_PATTERNS = [
+    /buy.*followers/i,
+    /fake.*review/i,
+    /hack.*account/i,
+    /essay.*writing/i,
+    /homework.*help/i,
+    /exam.*cheating/i,
+    /contract.*cheating/i,
+];
+
 const checkContentSafety = async (text) => {
     if (!text || text.trim().length === 0) return { safe: true };
 
-    // Try Groq first
+    // Quick local check first for obvious blocked terms
+    for (const pattern of BLOCKED_PATTERNS) {
+        if (pattern.test(text)) {
+            return { safe: false, reason: 'This type of content is not allowed on our platform' };
+        }
+    }
+
+    // Try Groq for nuanced content
     if (isKeyValid()) {
         try {
-            const prompt = `Analyze this text for safety on a public social media platform. Return JSON: {"safe": boolean, "reason": "brief reason"}. Text: "${text}"`;
+            const prompt = `Classify this marketplace post. Return JSON: {"safe": boolean, "reason": "brief reason"}.
+Blocked categories: spam, scam, fraud, illegal services, explicit content, harassment.
+Allowed: jobs, services for sale, rentals, barter, legitimate requests.
+Text: "${text.substring(0, 500)}"`;
             const result = await askGroq(prompt);
             if (result && typeof result.safe === 'boolean') {
+                if (!result.safe && result.reason) {
+                    result.reason = 'This content is not allowed on our platform';
+                }
                 return result;
             }
         } catch (err) {
@@ -77,7 +101,7 @@ const checkContentSafety = async (text) => {
     // Fallback: Local Profanity Filter
     const isProfane = profanityFilter.isProfane(text);
     if (isProfane) {
-        return { safe: false, reason: 'Contains profanity (Local Filter)' };
+        return { safe: false, reason: 'Post contains inappropriate language' };
     }
     return { safe: true };
 };

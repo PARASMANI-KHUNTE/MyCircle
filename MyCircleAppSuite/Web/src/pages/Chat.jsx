@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../utils/api';
-import { Plus } from 'lucide-react';
+import { Plus, MessageCircle } from 'lucide-react';
 import NewMessageModal from '../components/chat/NewMessageModal';
-
-const getParticipantId = (participant) => participant?._id?.toString?.() || participant?.id?.toString?.();
 
 const Chat = () => {
     const { user } = useAuth();
@@ -18,9 +16,16 @@ const Chat = () => {
     const [loading, setLoading] = useState(true);
     const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
     const [typingUsers, setTypingUsers] = useState({});
+    const [initialized, setInitialized] = useState(false);
     const location = useLocation();
+    const currentUserId = user?._id || user?.id;
 
-    const fetchConversations = async () => {
+    const normalizeSenderId = (message) => {
+        const sender = message?.sender;
+        return sender?._id || sender?.id || sender || null;
+    };
+
+    const fetchConversations = useCallback(async () => {
         try {
             const res = await api.get('/chat/conversations');
             setConversations(res.data);
@@ -29,20 +34,40 @@ const Chat = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
+        if (!user || initialized) return;
+        setInitialized(true);
+
         const initChat = async () => {
-            await fetchConversations();
+            try {
+                const res = await api.get('/chat/conversations');
+                setConversations(res.data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
 
             const queryParams = new URLSearchParams(location.search);
+            const conversationId = queryParams.get('conversationId');
             const recipientId = queryParams.get('recipientId');
+
+            if (conversationId) {
+                try {
+                    const res = await api.get(`/chat/conversations/${conversationId}`);
+                    setSelectedConversation(res.data);
+                    return;
+                } catch (err) {
+                    console.error('Failed to open conversation:', err);
+                }
+            }
 
             if (recipientId) {
                 try {
                     const res = await api.post(`/chat/init/${recipientId}`);
                     setSelectedConversation(res.data);
-                    // Refresh conversations to make sure the new/clicked one is in the list
                     const updatedRes = await api.get('/chat/conversations');
                     setConversations(updatedRes.data);
                 } catch (err) {
@@ -51,8 +76,8 @@ const Chat = () => {
             }
         };
 
-        if (user) initChat();
-    }, [location.search, user]);
+        void initChat();
+    }, [user, location.search, initialized]);
 
     // Listen for new messages to update conversation list order/preview
     useEffect(() => {
@@ -80,7 +105,7 @@ const Chat = () => {
                         ...current,
                         lastMessage: data.message,
                         updatedAt: new Date().toISOString(),
-                        unreadCount: data.message.sender === (user?._id || user?.id)
+                        unreadCount: normalizeSenderId(data.message)?.toString() === currentUserId?.toString()
                             ? current.unreadCount
                             : (current.unreadCount || 0) + 1
                     }, ...other];
@@ -109,25 +134,44 @@ const Chat = () => {
             socket.off('user_typing', handleTypingStart);
             socket.off('user_stop_typing', handleTypingStop);
         };
-    }, [socket, user?._id, user?.id]);
+    }, [currentUserId, socket, user?._id, user?.id]);
 
+// Layout (sidebar + chat window or only list)
     return (
-        <div className="flex flex-col h-[calc(100vh-7rem)] min-h-[600px] w-full max-w-6xl mx-auto pb-4 text-foreground">
-            <div className="flex-1 glass-panel overflow-hidden flex shadow-2xl bg-card/50 backdrop-blur-md">
-                {/* Chat List Sidebar */}
-                <div className={`w-full md:w-1/3 border-r border-card-border bg-card/30 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
-                    <div className="p-4 border-b border-card-border flex items-center justify-between bg-hover-bg/30">
-                        <h2 className="text-xl font-bold text-text-heading">Messages</h2>
-                        <button
-                            onClick={() => setIsNewMessageModalOpen(true)}
-                            className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-lg shadow-primary/20"
-                            title="New Message"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
+        <div className="flex h-[calc(100vh-64px)]">
+            {/* Sidebar - always visible on mobile */}
+            <div className={`w-full md:w-1/3 flex flex-col bg-background ${selectedConversation ? 'hidden md:flex' : 'flex'} border-r border-border`}>
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                    <h2 className="text-lg font-bold">Messages</h2>
+                    <button
+                        onClick={() => setIsNewMessageModalOpen(true)}
+                        className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-lg shadow-primary/20"
+                        title="New Message"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
+                </div>
 
-                    <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto">
+                    {loading ? (
+                        <div className="p-8 text-center text-text-muted">
+                            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2"></div>
+                            Loading...
+                        </div>
+                    ) : conversations.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                                <MessageCircle className="w-8 h-8 text-primary" />
+                            </div>
+                            <p className="text-text-muted font-medium mb-4">No conversations yet</p>
+                            <button
+                                onClick={() => setIsNewMessageModalOpen(true)}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                            >
+                                Start New Chat
+                            </button>
+                        </div>
+                    ) : (
                         <ChatList
                             conversations={conversations}
                             selectedId={selectedConversation?._id}
@@ -142,40 +186,43 @@ const Chat = () => {
                                 }
                             }}
                         />
-                    </div>
-                </div>
-
-                {/* Chat Window */}
-                <div className={`w-full md:w-2/3 flex flex-col bg-card/60 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
-                    {selectedConversation ? (
-                        <ChatWindow
-                            conversation={selectedConversation}
-                            socket={socket}
-                            currentUser={user}
-                            onBack={() => setSelectedConversation(null)}
-                            onMessagesRead={(convoId) => {
-                                setConversations(prev => prev.map(c => {
-                                    if (c._id === convoId && c.lastMessage) {
-                                        return {
-                                            ...c,
-                                            lastMessage: { ...c.lastMessage, status: 'read' },
-                                            unreadCount: 0
-                                        };
-                                    }
-                                    return c;
-                                }));
-                            }}
-                        />
-                    ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-text-muted">
-                            <div className="w-20 h-20 rounded-full bg-card/10 flex items-center justify-center mb-4">
-                                <span className="text-4xl opacity-80">💬</span>
-                            </div>
-                            <p className="text-lg font-medium opacity-60">Select a conversation to start messaging</p>
-                        </div>
                     )}
                 </div>
             </div>
+
+            {/* Chat Window */}
+            <div className={`w-full md:w-2/3 flex flex-col bg-card/60 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+                {selectedConversation ? (
+                    <ChatWindow
+                        conversation={selectedConversation}
+                        socket={socket}
+                        currentUser={user}
+                        onBack={() => setSelectedConversation(null)}
+                        onMessagesRead={(convoId) => {
+                            setConversations(prev => prev.map(c => {
+                                if (c._id === convoId && c.lastMessage) {
+                                    return {
+                                        ...c,
+                                        lastMessage: { ...c.lastMessage, status: 'read' },
+                                        unreadCount: 0
+                                    };
+                                }
+                                return c;
+                            }));
+                        }}
+                    />
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-text-muted p-8 text-center">
+                        <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                            <MessageCircle className="w-12 h-12 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">Your Messages</h3>
+                        <p className="text-text-muted max-w-xs">
+                            Connect with people through contact requests to start chatting
+                        </p>
+                    </div>
+                )}
+</div>
 
             <NewMessageModal
                 isOpen={isNewMessageModalOpen}

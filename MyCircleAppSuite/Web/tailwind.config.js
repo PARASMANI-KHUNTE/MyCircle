@@ -69,8 +69,19 @@ export default {
                 },
             },
             fontFamily: {
-                sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-                display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+                sans: ['Inter', 'system-ui', 'sans-serif'],
+                display: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            },
+            zIndex: {
+                'dropdown': '10',
+                'sticky': '20',
+                'modal': '30',
+                'toast': '40',
+                'tooltip': '50',
+            },
+            transitionTimingFunction: {
+                'bounce': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                'smooth': 'cubic-bezier(0.16, 1, 0.3, 1)',
             },
             borderRadius: {
                 '2xl': '1rem',

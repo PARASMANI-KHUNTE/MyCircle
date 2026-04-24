@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const normalizeBaseUrl = (value) => {
-    if (!value) return 'http://localhost:5000';
+    if (!value) return '';
 
     let normalized = value.trim();
     if (normalized.startsWith(':')) {
@@ -16,17 +16,21 @@ const normalizeBaseUrl = (value) => {
 
 const isProduction = import.meta.env.PROD;
 let rawApiURL = isProduction
-    ? (import.meta.env.VITE_API_URL || '')
+    ? import.meta.env.VITE_API_URL
     : (import.meta.env.VITE_API_URL_DEV || 'http://localhost:5000');
 
 const apiURL = normalizeBaseUrl(rawApiURL);
+
+if (isProduction && !apiURL) {
+    throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
+}
 
 const api = axios.create({
     baseURL: `${apiURL}/api`,
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 10000,
+    timeout: 30000,
 });
 
 export const getSocketBaseUrl = () => apiURL;
@@ -34,6 +38,25 @@ export const getSocketBaseUrl = () => apiURL;
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(
     (config) => {
+        const isFormData = typeof FormData !== 'undefined' && config?.data instanceof FormData;
+        if (isFormData && config.headers) {
+            // Let the browser set the correct multipart boundary.
+            try {
+                if (typeof config.headers.delete === 'function') {
+                    config.headers.delete('Content-Type');
+                    config.headers.delete('content-type');
+                }
+            } catch {
+                // ignore
+            }
+            try {
+                delete config.headers['Content-Type'];
+                delete config.headers['content-type'];
+            } catch {
+                // ignore
+            }
+        }
+
         const token = localStorage.getItem('token');
         if (token) {
             config.headers['x-auth-token'] = token;
@@ -53,7 +76,7 @@ api.interceptors.response.use(
             try {
                 localStorage.removeItem('token');
             } catch {
-                // ignore storage errors
+                // localStorage unavailable (private browsing, etc.)
             }
 
             // Simple notification or redirect

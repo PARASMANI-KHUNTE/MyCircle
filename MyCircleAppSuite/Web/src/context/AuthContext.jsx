@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
         const checkAuth = async () => {
             try {
                 let tokenFromUrl = null;
-                
+
                 const hash = window.location.hash;
                 if (hash && hash.includes('token=')) {
                     const tokenPart = hash.split('token=')[1]?.split('&')[0];
@@ -79,33 +79,31 @@ export const AuthProvider = ({ children }) => {
                             localStorage.removeItem('token');
                             setToken(null);
                         }
-                    } catch (error) {
+                    } catch {
                         localStorage.removeItem('token');
                         setToken(null);
                     }
-                    setLoading(false);
                 } else {
                     const storedToken = localStorage.getItem('token');
                     if (storedToken) {
                         setToken(storedToken);
                         await fetchUserProfile();
                     }
-                    setLoading(false);
                 }
             } catch (error) {
                 console.error('Auth check failed:', error);
+            } finally {
                 setLoading(false);
             }
         };
 
-        const timer = setTimeout(checkAuth, 100);
-        
+        void checkAuth();
+
         const timeoutId = setTimeout(() => {
             setLoading(false);
         }, 10000);
-        
+
         return () => {
-            clearTimeout(timer);
             clearTimeout(timeoutId);
         };
     }, [fetchUserProfile, navigate]);
@@ -118,7 +116,7 @@ export const AuthProvider = ({ children }) => {
                 setToken(res.data.token);
                 await fetchUserProfile();
             } catch (err) {
-                console.error("Dev login failed:", err.message);
+                console.error('Dev login failed:', err.message);
                 throw err;
             }
         } else if (tokenOrEmail) {
@@ -181,3 +179,4 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+

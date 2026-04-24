@@ -84,7 +84,7 @@ const Home = () => {
                 <div className="absolute inset-0 overflow-hidden">
                     <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
                     <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[400px] md:w-[500px] lg:w-[600px] h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-accent/10 rounded-full blur-3xl" />
                 </div>
 
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -114,12 +114,12 @@ const Home = () => {
 
                             {/* Heading */}
                             <div className="space-y-4">
-                                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
+                                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
                                     Your neighborhood,
                                     <br />
                                     <span className="gradient-text">connected.</span>
                                 </h1>
-                                <p className="text-xl text-foreground-muted max-w-lg leading-relaxed">
+                                <p className="text-base sm:text-lg lg:text-xl text-foreground-muted max-w-lg leading-relaxed">
                                     Find trusted professionals, unique items, and genuine connections right in your community. No middlemen, no hassle.
                                 </p>
                             </div>
@@ -265,7 +265,7 @@ const Home = () => {
                                 transition={{ delay: index * 0.1 }}
                                 className="text-center"
                             >
-                                <p className="text-4xl md:text-5xl font-bold gradient-text mb-2">{stat.value}</p>
+                                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold gradient-text mb-2">{stat.value}</p>
                                 <p className="text-foreground-muted font-medium">{stat.label}</p>
                             </motion.div>
                         ))}
@@ -282,7 +282,7 @@ const Home = () => {
                         viewport={{ once: true }}
                         className="text-center max-w-3xl mx-auto mb-16"
                     >
-                        <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6">
                             Why choose <span className="gradient-text">MyCircle</span>?
                         </h2>
                         <p className="text-xl text-foreground-muted">

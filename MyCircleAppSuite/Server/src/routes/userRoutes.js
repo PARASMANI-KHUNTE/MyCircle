@@ -7,6 +7,7 @@ const userController = require('../controllers/userController');
 const { validate, schemas } = require('../middleware/validation');
 
 router.get('/profile', auth, userController.getUserProfile);
+router.get('/firebase-token', auth, userController.getFirebaseToken);
 router.put('/profile', [auth, upload.single('avatar'), validateProfileContent], userController.updateUserProfile);
 router.get('/stats', auth, userController.getUserStats);
 router.put('/settings', auth, userController.updateUserSettings);

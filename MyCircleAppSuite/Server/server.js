@@ -43,7 +43,9 @@ const corsOrigins = rawCorsOrigins
 
 const io = new Server(server, {
     cors: {
-        origin: isProduction ? corsOrigins : true,
+        origin: isProduction 
+            ? corsOrigins 
+            : (process.env.CLIENT_URL_DEV || 'http://localhost:5173'),
         methods: ['GET', 'POST'],
         credentials: true
     },

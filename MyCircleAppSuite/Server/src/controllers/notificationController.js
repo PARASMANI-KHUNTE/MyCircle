@@ -135,14 +135,25 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
             relatedId,
             conversationId
         });
-        await notification.save();
+await notification.save();
+        await notification.populate('sender', 'displayName avatar');
 
         if (io) {
             const emittedNotification = notification.toObject();
             if (relatedId) {
                 emittedNotification.postId = relatedId.toString();
             }
-            io.to(`user:${recipientIdStr}`).emit('new_notification', emittedNotification);
+            if (conversationId) {
+                emittedNotification.conversationId = conversationId.toString();
+            }
+            
+            // Emit to the specific user's room
+            const userRoom = `user:${recipientIdStr}`;
+            io.to(userRoom).emit('new_notification', emittedNotification);
+            
+            console.log(`[Notification] Emitted to room ${userRoom}:`, emittedNotification.title);
+        } else {
+            console.log('[Notification] No io instance, notification saved but not emitted');
         }
     } catch (err) {
         console.error("Notification creation failed:", err);

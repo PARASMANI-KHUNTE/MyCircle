@@ -26,6 +26,7 @@ const serializeRequest = (request, viewerId) => {
     return {
         ...requestObject,
         status: normalizedStatus,
+        conversationId: requestObject.conversationId || null,
         viewerRole,
         counterparty,
         canMarkComplete: normalizedStatus === 'accepted',
@@ -204,8 +205,12 @@ exports.updateRequestStatus = async (req, res, next) => {
             return res.status(404).json({ msg: 'Request not found' });
         }
 
-        const isRecipient = request.recipient.toString() === req.user.id;
-        const isRequester = request.requester.toString() === req.user.id;
+        const requesterId = request.requester;
+        const recipientId = request.recipient;
+        const postId = request.post;
+
+        const isRecipient = recipientId.toString() === req.user.id;
+        const isRequester = requesterId.toString() === req.user.id;
 
         if (!isRecipient && !isRequester) {
             return res.status(401).json({ msg: 'Not authorized' });
@@ -232,6 +237,16 @@ exports.updateRequestStatus = async (req, res, next) => {
             if (!request.completionMarkedBy.some((userId) => userId.toString() === req.user.id)) {
                 request.completionMarkedBy.push(req.user.id);
             }
+            
+            // Update linked post to completed
+            if (request.post) {
+                const post = await Post.findById(request.post);
+                if (post) {
+                    post.status = 'completed';
+                    post.completedAt = new Date();
+                    await post.save();
+                }
+            }
         }
         await request.save();
 
@@ -243,18 +258,20 @@ exports.updateRequestStatus = async (req, res, next) => {
         // If approved, ensure a conversation exists
         let conversationId = null;
         if (requestedStatus === 'accepted') {
+            const participants = [requesterId, recipientId];
             let conversation = await Conversation.findOne({
-                participants: { $all: [request.requester, req.user.id] }
+                participants: { $all: participants }
             });
 
             if (!conversation) {
                 conversation = new Conversation({
-                    participants: [request.requester, req.user.id],
-                    postId: request.post // Link the conversation to the post
+                    participants,
+                    postId // Link the conversation to the post
                 });
                 await conversation.save();
             }
             conversationId = conversation._id;
+            request.conversationId = conversationId;
         }
 
         if (requestedStatus === 'completed') {
@@ -273,7 +290,7 @@ exports.updateRequestStatus = async (req, res, next) => {
         try {
             const isPositive = requestedStatus === 'accepted' || requestedStatus === 'completed';
             await createNotification(io, {
-                recipient: isRecipient ? request.requester : request.recipient,
+                recipient: isRecipient ? requesterId : recipientId,
                 sender: req.user.id,
                 type: requestedStatus === 'accepted' ? 'approval' : 'info',
                 title: requestedStatus === 'accepted'
@@ -285,14 +302,19 @@ exports.updateRequestStatus = async (req, res, next) => {
                             : 'Request Rejected',
                 message: `${isRecipient ? request.recipient?.displayName : request.requester?.displayName || 'User'} has ${requestedStatus} this request.`,
                 link: '/requests',
-                relatedId: request.post,
+                relatedId: postId,
                 conversationId: conversationId
             });
         } catch (notifErr) {
             console.error('Failed to send notification for request status update:', notifErr);
         }
 
-        res.json(serializeRequest(request, req.user.id));
+        const serializedRequest = serializeRequest(request, req.user.id);
+        if (conversationId) {
+            serializedRequest.conversationId = conversationId;
+        }
+
+        res.json(serializedRequest);
     } catch (err) {
         return next(err);
     }

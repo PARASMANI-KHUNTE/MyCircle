@@ -88,7 +88,7 @@ const EditProfile = () => {
     };
 
     return (
-        <div className="container mx-auto px-6 py-24 text-text-body max-w-2xl">
+        <div className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 text-text-body max-w-2xl">
             <Button variant="ghost" className="mb-6 pl-0 text-text-muted hover:text-text-heading" onClick={() => navigate('/profile')}>
                 <ArrowLeft className="w-5 h-5 mr-2" /> Back to Profile
             </Button>
@@ -154,7 +154,7 @@ const EditProfile = () => {
                         onChange={handleChange}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Input
                             label="Phone"
                             name="contactPhone"

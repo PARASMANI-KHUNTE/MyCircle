@@ -5,9 +5,23 @@ import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/ui/Toast';
 
-const NotificationContext = createContext();
+const noopAsync = async () => {};
+const noop = () => {};
 
-export const useNotifications = () => useContext(NotificationContext);
+const defaultNotificationContext = {
+    notifications: [],
+    unreadCount: 0,
+    loading: false,
+    markAsRead: noopAsync,
+    markAllRead: noopAsync,
+    clearAll: noopAsync,
+    refresh: noopAsync,
+    handleNotificationClick: noop,
+};
+
+const NotificationContext = createContext(defaultNotificationContext);
+
+export const useNotifications = () => useContext(NotificationContext) || defaultNotificationContext;
 
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
@@ -61,6 +75,10 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         if (isAuthenticated) {
             void fetchNotifications();
+        } else {
+            setNotifications([]);
+            setUnreadCount(0);
+            setLoading(false);
         }
     }, [fetchNotifications, isAuthenticated]);
 
@@ -68,8 +86,14 @@ export const NotificationProvider = ({ children }) => {
         if (!socket) return;
 
         const handleNewNotification = (notification) => {
-            setNotifications(prev => [notification, ...prev]);
-            setUnreadCount(prev => prev + 1);
+            setNotifications((prev) => {
+                const existing = prev.find((item) => item._id === notification._id);
+                const filtered = prev.filter((item) => item._id !== notification._id);
+                if (!notification.read && (!existing || existing.read)) {
+                    setUnreadCount((count) => count + 1);
+                }
+                return [notification, ...filtered];
+            });
 
             // Play notification sound
             playNotificationSound();
@@ -89,8 +113,14 @@ export const NotificationProvider = ({ children }) => {
     const markAsRead = async (id) => {
         try {
             await api.put(`/notifications/${id}/read`);
-            setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
-            setUnreadCount(prev => Math.max(0, prev - 1));
+            const wasUnread = notifications.some((n) => n._id === id && !n.read);
+            setNotifications(prev => prev.map((n) => {
+                if (n._id !== id) return n;
+                return { ...n, read: true };
+            }));
+            if (wasUnread) {
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
         } catch (err) {
             console.error(err);
         }
@@ -123,30 +153,45 @@ export const NotificationProvider = ({ children }) => {
         }
 
         // Navigate based on notification type
+        if (notification.type === 'approval' && notification.conversationId) {
+            navigate(`/chat?conversationId=${notification.conversationId}`);
+            return;
+        }
+
+        if (notification.type === 'message') {
+            navigate(notification.conversationId ? `/chat?conversationId=${notification.conversationId}` : '/chat');
+            return;
+        }
+
         if (notification.relatedId) {
             if (notification.type === 'like') {
                 navigate(`/post/${notification.relatedId}`);
             } else if (notification.type === 'comment' || notification.type === 'reply') {
                 navigate(`/post/${notification.relatedId}#comments`);
-            } else if (notification.type === 'message') {
-                navigate('/chat');
-            } else if (notification.type === 'request') {
+            } else if (notification.type === 'request' || notification.type === 'approval' || notification.type === 'info') {
                 navigate('/requests');
             }
+            return;
+        }
+
+        if (notification.link) {
+            navigate(notification.link);
         }
     };
 
     return (
-        <NotificationContext.Provider value={{
-            notifications,
-            unreadCount,
-            loading,
-            markAsRead,
-            markAllRead,
-            clearAll,
-            refresh: fetchNotifications,
-            handleNotificationClick
-        }}>
+        <NotificationContext.Provider
+            value={{
+                notifications,
+                unreadCount,
+                loading,
+                markAsRead,
+                markAllRead,
+                clearAll,
+                refresh: fetchNotifications,
+                handleNotificationClick,
+            }}
+        >
             {children}
         </NotificationContext.Provider>
     );

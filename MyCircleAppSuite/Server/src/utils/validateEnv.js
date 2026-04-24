@@ -24,6 +24,13 @@ const validateEnv = () => {
         process.exit(1);
     }
     
+    // Validate JWT_EXPIRY format
+    const jwtExpiry = process.env.JWT_EXPIRY;
+    if (jwtExpiry && !/^\d+[dhms]$/.test(jwtExpiry)) {
+        console.error(`❌ JWT_EXPIRY must be a valid duration (e.g., 30d, 1h, 60m). Got: ${jwtExpiry}`);
+        process.exit(1);
+    }
+    
     try {
         cleanEnv(process.env, {
             NODE_ENV: str({ choices: ['development', 'production', 'test'], default: 'development' }),

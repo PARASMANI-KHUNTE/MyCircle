@@ -18,41 +18,43 @@ router.get('/google', passport.authenticate('google', {
 
 // @desc    Google auth callback
 // @route   GET /auth/google/callback
-router.get(
-    '/google/callback',
-    passport.authenticate('google', {
-        failureRedirect: '/',
-        session: false  // Disable sessions, we're using JWT
-    }),
-    asyncHandler(async (req, res) => {
-        // Successful authentication
+router.get('/google/callback', (req, res, next) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const clientUrl = isProduction
+        ? process.env.CLIENT_URL
+        : process.env.CLIENT_URL_DEV;
+
+    passport.authenticate('google', { session: false }, (err, user) => {
+        if (!clientUrl) {
+            return next(new ApiError(500, 'Client URL not configured'));
+        }
+
+        if (err || !user) {
+            return res.redirect(`${clientUrl}/login?error=oauth`);
+        }
+
         const payload = {
             user: {
-                id: req.user.id,
-                email: req.user.email,
-                role: req.user.role,
+                id: user.id,
+                email: user.email,
+                role: user.role,
             },
         };
 
-        jwt.sign(
+jwt.sign(
             payload,
             process.env.JWT_SECRET,
-            { expiresIn: '30d' },
-            (err, token) => {
-                if (err) {
-                    throw new ApiError(500, 'Error generating authentication token');
+            { expiresIn: process.env.JWT_EXPIRY || '30d' },
+            (signErr, token) => {
+                if (signErr) {
+                    return next(new ApiError(500, 'Error generating authentication token'));
                 }
-                const isProduction = process.env.NODE_ENV === 'production';
-                const clientUrl = isProduction
-                    ? process.env.CLIENT_URL
-                    : process.env.CLIENT_URL_DEV;
-
                 // Use hash fragment instead of query params to prevent token leakage in logs/referrer
-                res.redirect(`${clientUrl}/login/success#token=${token}`);
+                return res.redirect(`${clientUrl}/login/success#token=${token}`);
             }
         );
-    })
-);
+    })(req, res, next);
+});
 
 // @desc    Logout user
 // @route   GET /auth/logout
@@ -81,7 +83,7 @@ const signAuthToken = (user) => new Promise((resolve, reject) => {
     jwt.sign(
         payload,
         process.env.JWT_SECRET,
-        { expiresIn: '30d' },
+        { expiresIn: process.env.JWT_EXPIRY || '30d' },
         (err, token) => {
             if (err) return reject(err);
             resolve(token);

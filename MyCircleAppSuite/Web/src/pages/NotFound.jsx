@@ -1,37 +1,60 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Rocket, ArrowLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Compass, ArrowLeft, Home } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 const NotFound = () => {
     return (
-        <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-6">
+        <div className="min-h-[90vh] flex flex-col items-center justify-center text-center px-6">
+            {/* Ambient blobs */}
+            <div aria-hidden="true" className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full blur-3xl opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, rgb(245 158 11), transparent 70%)' }} />
+            <div aria-hidden="true" className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full blur-3xl opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, rgb(16 185 129), transparent 70%)' }} />
+
+            {/* Big number backdrop */}
             <div className="relative mb-8">
-                <div className="text-[12rem] font-bold text-text-heading/5 select-none leading-none">404</div>
+                <div className="text-[10rem] sm:text-[14rem] font-black text-foreground/5 select-none leading-none tracking-tight">
+                    404
+                </div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center animate-bounce shadow-2xl shadow-primary/20">
-                        <Rocket className="text-primary-foreground w-12 h-12" />
-                    </div>
+                    <motion.div
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                        className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center shadow-2xl"
+                        style={{ boxShadow: '0 16px 48px rgb(245 158 11 / 0.35)' }}
+                    >
+                        <Compass className="text-primary-foreground w-11 h-11" />
+                    </motion.div>
                 </div>
             </div>
 
-            <h1 className="text-4xl font-black text-text-heading mb-4 font-display uppercase tracking-tight">Lost in Space?</h1>
-            <p className="text-text-muted max-w-md mx-auto mb-10 text-lg font-medium">
-                The page you are looking for has drifted away or never existed in this circle.
-            </p>
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.4 }}
+            >
+                <h1 className="text-3xl sm:text-4xl font-bold font-display tracking-tight mb-3">
+                    Lost in the Circle?
+                </h1>
+                <p className="text-foreground-muted max-w-md mx-auto mb-10 leading-relaxed">
+                    The page you're looking for has drifted away or never existed in this circle.
+                </p>
 
-            <div className="flex gap-4">
-                <Link to="/">
-                    <Button variant="primary">
-                        Back to Orbit (Home)
-                    </Button>
-                </Link>
-                <Link to="/">
-                    <Button variant="outline">
-                        <ArrowLeft className="w-4 h-4 mr-2" /> Explore Feed
-                    </Button>
-                </Link>
-            </div>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Link to="/">
+                        <Button size="lg" className="gap-2">
+                            <Home className="w-4 h-4" />
+                            Back to Home
+                        </Button>
+                    </Link>
+                    <Link to="/explore">
+                        <Button variant="outline" size="lg" className="gap-2">
+                            <ArrowLeft className="w-4 h-4" />
+                            Explore Feed
+                        </Button>
+                    </Link>
+                </div>
+            </motion.div>
         </div>
     );
 };

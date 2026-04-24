@@ -78,8 +78,13 @@ const UserSchema = new mongoose.Schema({
     },
     reports: [{
         reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        category: {
+            type: String,
+            enum: ['spam', 'harassment', 'scam', 'impersonation', 'hate_speech', 'nudity', 'violence', 'other'],
+            default: 'other'
+        },
         reason: String,
-        contentType: { type: String, enum: ['post', 'comment', 'chat', 'user'] },
+        contentType: { type: String, enum: ['post', 'comment', 'chat', 'user', 'profile', 'image'] },
         contentId: mongoose.Schema.Types.ObjectId,
         createdAt: { type: Date, default: Date.now }
     }],

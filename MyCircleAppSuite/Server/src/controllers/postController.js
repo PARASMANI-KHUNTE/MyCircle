@@ -10,6 +10,7 @@ const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
 const { addImageJob } = require('../utils/queue');
 const mongoose = require('mongoose');
+const { containsProfanity } = require('../utils/profanityFilter');
 
 const REDACTABLE_CONTACT_FIELDS = ['contactPhone', 'contactWhatsapp'];
 
@@ -185,6 +186,10 @@ exports.getPosts = async (req, res, next) => {
         if (type && type !== 'all') {
             if (type === 'barter') {
                 pipeline.push({ $match: { acceptsBarter: true } });
+            } else if (type === 'hire') {
+                pipeline.push({ $match: { type: { $in: ['job', 'request'] } } });
+            } else if (type === 'trade') {
+                pipeline.push({ $match: { type: { $in: ['sell', 'barter'] } } });
             } else {
                 pipeline.push({ $match: { type: type } });
             }
@@ -347,7 +352,9 @@ exports.getPostById = async (req, res, next) => {
                         post: post._id
                     });
                     hasRequested = !!existingRequest;
-                    contactRequestStatus = existingRequest?.status || 'none';
+                    // Normalize status for frontend: 'accepted' -> 'approved'
+                    const rawStatus = existingRequest?.status || 'none';
+                    contactRequestStatus = rawStatus === 'accepted' ? 'approved' : rawStatus;
                     canViewContact = isPostOwner(post, requesterId) || contactRequestStatus === 'approved';
                 }
             } catch (err) {
@@ -536,6 +543,8 @@ exports.updatePost = async (req, res, next) => {
 
         const {
             type,
+            jobType,
+            itemCategory,
             title,
             description,
             price,
@@ -551,6 +560,7 @@ exports.updatePost = async (req, res, next) => {
             isUrgent,
             acceptsBarter,
             availability,
+            status,
         } = req.body;
 
         // Validation for price
@@ -567,6 +577,8 @@ exports.updatePost = async (req, res, next) => {
 
         // Update fields
         if (type) post.type = type;
+        if (jobType !== undefined) post.jobType = jobType;
+        if (itemCategory !== undefined) post.itemCategory = itemCategory;
         if (title !== undefined) post.title = title;
         if (description !== undefined) post.description = description;
         post.price = numericPrice;
@@ -581,6 +593,11 @@ exports.updatePost = async (req, res, next) => {
         }
         if (acceptsBarter !== undefined) {
             post.acceptsBarter = acceptsBarter === true || acceptsBarter === 'true';
+        } else if (exchangePreference !== undefined) {
+            post.acceptsBarter = exchangePreference === 'barter' || exchangePreference === 'flexible';
+        }
+        if (status !== undefined) {
+            post.status = status;
         }
 
         const latitude = parseFloat(req.body.latitude);
@@ -603,7 +620,9 @@ exports.updatePost = async (req, res, next) => {
             }
         }
 
-        if (budgetMin !== undefined && budgetMin !== '') {
+        if (budgetMin === '') {
+            post.budgetMin = undefined;
+        } else if (budgetMin !== undefined && budgetMin !== '') {
             const parsedBudgetMin = parseFloat(budgetMin);
             if (isNaN(parsedBudgetMin)) {
                 return res.status(400).json({ msg: 'budgetMin must be a valid number' });
@@ -611,7 +630,9 @@ exports.updatePost = async (req, res, next) => {
             post.budgetMin = parsedBudgetMin;
         }
 
-        if (budgetMax !== undefined && budgetMax !== '') {
+        if (budgetMax === '') {
+            post.budgetMax = undefined;
+        } else if (budgetMax !== undefined && budgetMax !== '') {
             const parsedBudgetMax = parseFloat(budgetMax);
             if (isNaN(parsedBudgetMax)) {
                 return res.status(400).json({ msg: 'budgetMax must be a valid number' });
@@ -659,50 +680,66 @@ exports.likePost = async (req, res, next) => {
 
         // Check if already liked
         const likeIndex = post.likes.indexOf(req.user.id);
+        const isFirstLike = likeIndex === -1;
 
         // Check block status (only if liking, unliking is always allowed)
-        if (likeIndex === -1 && post.user.toString() !== req.user.id) {
+        if (isFirstLike && post.user.toString() !== req.user.id) {
             // Check if post owner blocked current user
             const postOwner = await User.findById(post.user);
             if (postOwner.blockedUsers.includes(req.user.id)) {
                 return res.status(403).json({ msg: 'You cannot interact with this post' });
             }
-            // Check if current user blocked post owner (optional, but good for consistency)
+            // Check if current user blocked post owner
             const currentUser = await User.findById(req.user.id);
             if (currentUser.blockedUsers.includes(post.user)) {
                 return res.status(403).json({ msg: 'You have blocked this user' });
             }
         }
 
+        let action = '';
         if (likeIndex > -1) {
             // Unlike
             post.likes.splice(likeIndex, 1);
+            action = 'unliked';
         } else {
             // Like
             post.likes.push(req.user.id);
+            action = 'liked';
         }
 
         await post.save();
 
-        // Notify if liked and not self
-        if (likeIndex === -1 && post.user.toString() !== req.user.id) {
+        // Notify ONLY on first like (not on unlike) and not self-like
+        if (action === 'liked' && post.user.toString() !== req.user.id) {
             const sender = await User.findById(req.user.id);
             const senderName = sender ? sender.displayName : 'Someone';
             const postTitle = post.title.length > 25 ? post.title.substring(0, 25) + '...' : post.title;
 
             const io = req.app.get('io');
-            await createNotification(io, {
+            
+            // Check if notification already sent recently (prevent spam)
+            const recentNotification = await Notification.findOne({
                 recipient: post.user,
                 sender: req.user.id,
                 type: 'like',
-                title: 'New Like',
-                message: `${senderName} liked your post: "${postTitle}"`,
-                link: `/post/${post._id}`,
-                relatedId: post._id
+                relatedId: post._id,
+                createdAt: { $gt: new Date(Date.now() - 60000) } // last 60 seconds
             });
+
+            if (!recentNotification) {
+                await createNotification(io, {
+                    recipient: post.user,
+                    sender: req.user.id,
+                    type: 'like',
+                    title: 'New Like',
+                    message: `${senderName} liked your post: "${postTitle}"`,
+                    link: `/post/${post._id}`,
+                    relatedId: post._id
+                });
+            }
         }
 
-        res.json({ likes: post.likes.length, isLiked: likeIndex === -1 });
+        res.json({ likes: post.likes.length, isLiked: action === 'liked' });
     } catch (err) {
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Post not found' });

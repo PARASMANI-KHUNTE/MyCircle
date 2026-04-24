@@ -6,10 +6,10 @@ import PostCard from '../components/ui/PostCard';
 import PostSkeleton from '../components/ui/PostSkeleton';
 import Button from '../components/ui/Button';
 import {
-    Search, Map as MapIcon, List as ListIcon, MapPin, Package,
+    Search, Map as MapIcon, MapPin, Package,
     Briefcase, Wrench, Tag, Key, Sparkles, Plus, X,
-    Filter, Navigation, ZoomIn, ZoomOut, Layers, Crosshair, ChevronRight,
-    Bell, User, Loader2, RefreshCw, SlidersHorizontal, Clock,
+    Filter, Navigation, ZoomIn, ZoomOut, Crosshair, ChevronRight,
+    Bell, User, Loader2, RefreshCw, SlidersHorizontal, Clock, List as ListIcon,
     CheckCircle2, AlertCircle, ChevronLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -109,26 +109,21 @@ const Explore = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { isDark } = useTheme();
-    const { success, error: showError } = useToast();
-    const { socket } = useSocket();
-    const searchTimeoutRef = useRef(null);
-    const mapRef = useRef(null);
+    const { success } = useToast();
+const { socket } = useSocket();
 
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('all');
+const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortOrder, setSortOrder] = useState('latest');
-    const [viewMode, setViewMode] = useState('split');
+    const [sortOrder, _setSortOrder] = useState('latest');
     const [userLocation, setUserLocation] = useState(null);
     const [locationStatus, setLocationStatus] = useState('idle'); // idle, loading, denied, success
     const [mapZoom, setMapZoom] = useState(13);
-    const [selectedMarkerId, setSelectedMarkerId] = useState(null);
     const [radius, setRadius] = useState(10);
-    const [timeFilter, setTimeFilter] = useState('latest');
-    const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
-    const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+    const [timeFilter, _setTimeFilter] = useState('latest');
     const [quickViewPost, setQuickViewPost] = useState(null);
+    const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
     const fallbackUserLocation = useMemo(
         () => toValidCoords(user?.latitude, user?.longitude),
@@ -197,12 +192,17 @@ const Explore = () => {
         }
     }, [userLocation, locationStatus, fallbackUserLocation]);
 
-    // Debounced search
-    useEffect(() => {
-        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-        searchTimeoutRef.current = setTimeout(() => fetchPosts(), 300);
-        return () => clearTimeout(searchTimeoutRef.current);
-    }, [searchTerm, radius, timeFilter, sortOrder]);
+    const handleFilterChange = (newFilter) => {
+        setFilter(newFilter);
+    };
+
+useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            void fetchPosts();
+        }, 100);
+
+        return () => clearTimeout(timeoutId);
+    }, [fetchPosts, filter, radius, searchTerm, sortOrder, timeFilter, userLocation]);
 
     // Socket real-time updates
     useEffect(() => {
@@ -214,8 +214,6 @@ const Explore = () => {
         socket.on('new_post', handleNewPost);
         return () => socket.off('new_post', handleNewPost);
     }, [socket, success]);
-
-    useEffect(() => { fetchPosts(); }, []);
 
     const mapPosts = useMemo(() => 
         posts
@@ -238,8 +236,12 @@ const Explore = () => {
             .filter(Boolean),
     [posts, safeUserLocation]);
 
-    const handlePostClick = (postId) => navigate(`/post/${postId}`);
-    const handleMarkerClick = (postId) => setSelectedMarkerId(postId);
+const handlePostClick = (postId) => navigate(`/post/${postId}`);
+
+    const openMapForPost = useCallback((postId) => {
+        const post = mapPosts.find(p => p._id === postId);
+        if (post) setQuickViewPost(post);
+    }, [mapPosts]);
 
     // Filter posts by radius
     const filteredMapPosts = useMemo(() => 
@@ -262,13 +264,24 @@ const Explore = () => {
                                     placeholder="Search posts..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-card border border-card-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                    className="w-full pl-10 pr-24 py-2.5 rounded-xl bg-card border border-card-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                                 />
-                                {searchTerm && (
-                                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-card-hover rounded-full">
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                )}
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                    {searchTerm && (
+                                        <button onClick={() => setSearchTerm('')} className="p-1 hover:bg-card-hover rounded-full">
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                    <select 
+                                        value={timeFilter}
+                                        onChange={(e) => _setTimeFilter(e.target.value)}
+                                        className="text-xs bg-card-hover rounded px-1.5 py-1 border-0 focus:outline-none"
+                                    >
+                                        {TIME_FILTERS.map(f => (
+                                            <option key={f.id} value={f.id}>{f.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             
                             {/* Location Status */}
@@ -309,7 +322,7 @@ const Explore = () => {
                             {CATEGORIES.map((cat) => (
                                 <button
                                     key={cat.id}
-                                    onClick={() => setFilter(cat.id)}
+                                    onClick={() => handleFilterChange(cat.id)}
                                     className={cn(
                                         'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all duration-200',
                                         filter === cat.id
@@ -322,7 +335,22 @@ const Explore = () => {
                                 </button>
                             ))}
                             
-                            <div className="flex items-center gap-2 ml-auto pl-2 border-l border-card-border">
+<div className="flex items-center gap-2 ml-auto pl-2 border-l border-card-border">
+                                <button
+                                    onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+                                    className={cn(
+                                        'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors',
+                                        viewMode === 'map' 
+                                            ? 'bg-primary text-primary-foreground' 
+                                            : 'bg-card border border-card-border'
+                                    )}
+                                >
+                                    {viewMode === 'list' ? (
+                                        <><MapIcon className="w-4 h-4" /> Map</>
+                                    ) : (
+                                        <><ListIcon className="w-4 h-4" /> List</>
+                                    )}
+                                </button>
                                 <Navigation className="w-3.5 h-3.5 text-foreground-muted" />
                                 <input
                                     type="range"
@@ -336,248 +364,158 @@ const Explore = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            </header>
+</div>
+</header>
 
-            {/* View Toggle */}
-            <div className="flex bg-card-border/50 border-b border-card-border">
-                <button onClick={() => setViewMode('split')} className={cn('flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5', viewMode === 'split' ? 'bg-background border-b-2 border-primary text-primary' : '')}>
-                    <Layers className="w-4 h-4" /> Split
-                </button>
-                <button onClick={() => setViewMode('list')} className={cn('flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5', viewMode === 'list' ? 'bg-background border-b-2 border-primary text-primary' : '')}>
-                    <ListIcon className="w-4 h-4" /> List
-                </button>
-                <button onClick={() => setViewMode('map')} className={cn('flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5', viewMode === 'map' ? 'bg-background border-b-2 border-primary text-primary' : '')}>
-                    <MapIcon className="w-4 h-4" /> Map
-                </button>
-            </div>
-
-            {/* Main Content */}
-            <div className="container mx-auto">
-                <div className={cn('flex', viewMode === 'split' ? 'flex-col lg:flex-row' : 'flex-col')}>
-                    
-                    {/* Post Feed */}
-                    <div className={cn('p-3', viewMode === 'split' ? 'lg:w-1/2 lg:border-r' : 'w-full', viewMode === 'map' ? 'hidden' : '')}>
-                        <div className="flex items-center justify-between mb-3">
-                            <p className="text-sm font-medium text-foreground-muted">
-                                {loading ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</span> : `${filteredMapPosts.length} results`}
-                            </p>
-                            {userLocation && (
-                                <span className="text-xs text-foreground-muted flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> Within {radius}km
-                                </span>
-                            )}
-                        </div>
-
-                        {loading ? (
-                            <div className={cn('grid gap-3', viewMode === 'list' ? 'grid-cols-3' : 'grid-cols-2')}>
-                                {[1,2,3,4,5,6].map(i => <PostSkeleton key={i} />)}
-                            </div>
-                        ) : filteredMapPosts.length === 0 ? (
-                            <EmptyState onClear={() => { setSearchTerm(''); setFilter('all'); setRadius(10); fetchPosts(); }} />
-                        ) : (
-                            <div className={cn('grid gap-3', viewMode === 'list' ? 'grid-cols-3' : 'grid-cols-2')}>
-                                {filteredMapPosts.map((post) => (
-                                    <motion.div
-                                        key={post._id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="group"
-                                    >
-                                        <PostCard 
-                                            post={post} 
-                                            currentUserId={user?._id} 
-                                            onClick={() => handlePostClick(post._id)}
-                                            onMarkerClick={() => {
-                                                setSelectedMarkerId(post._id);
-                                                setViewMode('map');
-                                            }}
-                                        />
-                                    </motion.div>
-                                ))}
-                            </div>
+            {/* Main Content - List or Map */}
+            {viewMode === 'list' ? (
+                <div className="container mx-auto p-3">
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-medium text-foreground-muted">
+                            {loading ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</span> : `${filteredMapPosts.length} results`}
+                        </p>
+                        {userLocation && (
+                            <span className="text-xs text-foreground-muted flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> Within {radius}km
+                            </span>
                         )}
                     </div>
 
-                    {/* Map */}
-                    <div className={cn('w-full', viewMode === 'map' ? 'h-[calc(100vh-280px)]' : 'hidden lg:block lg:min-h-[50vh]', viewMode === 'split' ? 'lg:h-[calc(100vh-120px)] lg:sticky lg:top-[120px]' : '')}>
-                        <div className={cn('h-full', viewMode === 'map' ? 'sticky top-[120px]' : '')}>
-                            <MapContainer
-                                ref={mapRef}
-                                center={mapCenter}
-                                zoom={mapZoom}
-                                scrollWheelZoom={true}
-                                className="w-full h-full"
-                                zoomControl={false}
-                            >
-                                <MapUpdater center={safeUserLocation ? [safeUserLocation.lat, safeUserLocation.lng] : null} zoom={mapZoom} />
-                                <TileLayer
-                                    attribution='&copy; OpenStreetMap'
-                                    url={isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
+                    {loading ? (
+                        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                            {[1,2,3,4,5,6].map(i => <PostSkeleton key={i} />)}
+                        </div>
+                    ) : filteredMapPosts.length === 0 ? (
+                        <EmptyState onClear={() => { setSearchTerm(''); handleFilterChange('all'); setRadius(10); }} />
+                    ) : (
+                        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                            {filteredMapPosts.map((post) => (
+                                <motion.div
+                                    key={post._id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="group"
+                                >
+                                    <PostCard 
+                                        post={post} 
+                                        currentUserId={user?._id} 
+                                        onClick={() => handlePostClick(post._id)}
+                                        onMarkerClick={() => openMapForPost(post._id)}
+                                    />
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* Map View - Full screen */
+                <div className="flex-1 relative z-0">
+                    <MapContainer
+                        center={mapCenter}
+                        zoom={mapZoom}
+                        scrollWheelZoom={true}
+                        className="w-full h-[calc(100vh-150px)] sm:h-[calc(100vh-180px)] z-0"
+                    >
+                        <MapUpdater center={safeUserLocation ? [safeUserLocation.lat, safeUserLocation.lng] : null} zoom={mapZoom} />
+                        <TileLayer
+                            attribution='&copy; OpenStreetMap'
+                            url={isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
+                        />
+                        
+                        {safeUserLocation && (
+                            <>
+                                <Circle
+                                    center={[safeUserLocation.lat, safeUserLocation.lng]}
+                                    radius={radius * 1000}
+                                    pathOptions={{ color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.1, weight: 1 }}
                                 />
-                                
-                                {/* User Location with Pulse */}
-                                {safeUserLocation && (
-                                    <>
-                                        <Circle
-                                            center={[safeUserLocation.lat, safeUserLocation.lng]}
-                                            radius={radius * 1000}
-                                            path={{ color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.1, weight: 1, dashArray: '5, 10' }}
-                                        />
-                                        <Marker position={[safeUserLocation.lat, safeUserLocation.lng]} icon={L.divIcon({
-                                            className: 'user-marker',
-                                            html: `
-                                                <div class="relative">
-                                                    <div class="w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg"></div>
-                                                    <div class="absolute -inset-2 bg-blue-500/30 rounded-full animate-ping"></div>
+                                <CircleMarker
+                                    center={[safeUserLocation.lat, safeUserLocation.lng]}
+                                    radius={8}
+                                    pathOptions={{ color: '#6366f1', fillColor: '#6366f1', fillOpacity: 1 }}
+                                >
+                                    <Popup>
+                                        <div className="text-xs font-medium">You are here</div>
+                                    </Popup>
+                                </CircleMarker>
+                            </>
+                        )}
+
+                        {filteredMapPosts.map((post) => {
+                            const cat = CATEGORIES.find(c => c.id === post.type) || CATEGORIES[0];
+                            const markerColor = cat?.color || '#6366f1';
+                            return (
+                                <Marker
+                                    key={post._id}
+                                    position={[post.displayLat, post.displayLng]}
+                                    eventHandlers={{
+                                        click: () => setQuickViewPost(post),
+                                    }}
+                                    icon={L.divIcon({
+                                        className: 'custom-marker',
+                                        html: `
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-lg" style="background: ${markerColor}; color: white;">
+                                                <span>${cat?.emoji || '📍'}</span>
+                                            </div>
+                                        `,
+                                        iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -40]
+                                    })}
+                                >
+                                    <Popup>
+                                        <div className="w-52 p-0!">
+                                            {post.images?.[0] ? (
+                                                <img src={post.images[0]} alt={post.title} className="w-full h-24 object-cover" />
+                                            ) : (
+                                                <div className="w-full h-24 flex items-center justify-center text-4xl" style={{ background: `${markerColor}20` }}>
+                                                    {cat?.emoji || '📍'}
                                                 </div>
-                                            `,
-                                            iconSize: [16, 16], iconAnchor: [8, 8]
-                                        })} />
-                                    </>
-                                )}
-
-                                {/* Post Markers */}
-                                {filteredMapPosts.map(post => {
-                                    const cat = CATEGORIES.find(c => c.id === post.type);
-                                    const isSelected = selectedMarkerId === post._id;
-                                    const markerColor = post.type === 'job' ? '#22c55e' : post.type === 'sell' ? '#f97316' : post.type === 'rent' ? '#a855f7' : '#3b82f6';
-                                    return (
-                                        <Marker 
-                                            key={post._id}
-                                            position={[post.displayLat, post.displayLng]}
-                                            eventHandlers={{ click: () => setSelectedMarkerId(post._id) }}
-                                            icon={L.divIcon({
-                                                className: 'post-marker',
-                                                html: `
-                                                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-lg cursor-pointer transform transition-all ${isSelected ? 'scale-125 ring-4 ring-white ring-offset-2 z-50' : 'hover:scale-110'}" style="background: ${markerColor};">
-                                                        <span>${cat?.emoji || '📍'}</span>
-                                                    </div>
-                                                `,
-                                                iconSize: [40, 40], iconAnchor: [20, 20]
-                                            })}
-                                        >
-                                            <Popup>
-                                                <div className="w-56 p-0! rounded-xl overflow-hidden shadow-lg">
-                                                    ${post.images?.[0] ? `<img src="${post.images[0]}" alt="${post.title}" class="w-full h-24 object-cover" />` : `
-                                                    <div class="w-full h-24 flex items-center justify-center text-4xl" style="background: linear-gradient(135deg, ${markerColor}20, ${markerColor}40);">
-                                                        ${cat?.emoji || '📍'}
-                                                    </div>
-                                                    `}
-                                                    <div className="p-3">
-                                                        <span className="text-[10px] font-bold px-2 py-1 rounded-full" style="background: ${markerColor}20; color: ${markerColor};">
-                                                            ${cat?.label}
-                                                        </span>
-                                                        <h3 className="font-bold text-sm mt-2 leading-tight line-clamp-2">${post.title}</h3>
-                                                        ${post.price > 0 ? `<p class="text-lg font-bold text-primary mt-1">₹${post.price.toLocaleString()}</p>` : ''}
-                                                        <div className="flex items-center justify-between mt-2 text-[10px] text-foreground-muted">
-                                                            ${post.distance ? `<span>📍 ${post.distance.toFixed(1)}km</span>` : ''}
-                                                            <span>${timeAgo(post.createdAt)}</span>
-                                                        </div>
-                                                        <button onclick="window.dispatchEvent(new CustomEvent('openQuickView', { detail: '${post._id}' }))" className="w-full mt-2 py-2 bg-primary text-primary-foreground text-xs rounded-xl font-semibold flex items-center justify-center gap-1">
-                                                            View Details <ChevronRight className="w-3 h-3" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </Popup>
-                                        </Marker>
-                                    );
-                                })}
-                            </MapContainer>
-
-                            {/* Map Controls */}
-                            <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5">
-                                <button onClick={() => setMapZoom(z => Math.min(z + 1, 18))} className="p-2 bg-card border border-card-border rounded-lg shadow-sm hover:bg-card-hover">
-                                    <ZoomIn className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setMapZoom(z => Math.max(z - 1, 5))} className="p-2 bg-card border border-card-border rounded-lg shadow-sm hover:bg-card-hover">
-                                    <ZoomOut className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => navigator.geolocation.getCurrentPosition((p) => {
-                                    const coords = toValidCoords(p.coords.latitude, p.coords.longitude);
-                                    if (!coords) {
-                                        showError('Invalid location coordinates');
-                                        return;
-                                    }
-                                    setUserLocation(coords);
-                                    setMapZoom(14);
-                                }, () => showError('Location denied'))} className="p-2 bg-card border border-card-border rounded-lg shadow-sm hover:bg-card-hover">
-                                    <Crosshair className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            {/* Floating Chip - Selected Marker */}
-                            <AnimatePresence>
-                                {selectedMarkerId && (() => {
-                                    const selected = filteredMapPosts.find(p => p._id === selectedMarkerId);
-                                    if (!selected) return null;
-                                    return (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                                            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                                            className="absolute bottom-4 left-4 right-4 z-[1000] max-w-md mx-auto"
-                                        >
-                                            <div 
-                                                onClick={() => setQuickViewPost(selected)}
-                                                className="flex items-center gap-3 px-4 py-3 bg-card rounded-2xl shadow-lg cursor-pointer transition-all border border-card-border hover:border-card-border-hover"
-                                            >
-                                                {selected.images?.[0] ? (
-                                                    <img src={selected.images[0]} alt={selected.title} className="w-14 h-14 rounded-xl object-cover" />
-                                                ) : (
-                                                    <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl bg-gradient-to-br from-primary/20 to-accent/20">
-                                                        {selected.type === 'job' ? '💼' : selected.type === 'sell' ? '🛒' : selected.type === 'rent' ? '🏠' : '🙋'}
-                                                    </div>
+                                            )}
+                                            <div className="p-3">
+                                                <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: `${markerColor}20`, color: markerColor }}>
+                                                    {cat?.label}
+                                                </span>
+                                                <h3 className="font-bold text-sm mt-2 leading-tight line-clamp-2">{post.title}</h3>
+                                                {post.price > 0 && (
+                                                    <p className="text-lg font-bold text-primary mt-1">₹{post.price.toLocaleString()}</p>
                                                 )}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: CATEGORIES.find(c => c.id === selected.type)?.color + '20', color: CATEGORIES.find(c => c.id === selected.type)?.color }}>
-                                                            {CATEGORIES.find(c => c.id === selected.type)?.label}
-                                                        </span>
-                                                    </div>
-                                                    <p className="font-bold text-sm truncate mt-0.5">{selected.title}</p>
-                                                    {selected.price > 0 && <p className="text-sm font-bold text-primary">₹{selected.price.toLocaleString()}</p>}
-                                                    <p className="text-xs text-foreground-muted flex items-center gap-1">
-                                                        {selected.distance && <>📍 {selected.distance.toFixed(1)}km</>}
-                                                        <span>•</span>
-                                                        {timeAgo(selected.createdAt)}
-                                                    </p>
+                                                <div className="flex items-center justify-between mt-2 text-[10px] text-gray-500">
+                                                    {post.distance && <span>📍 {post.distance.toFixed(1)}km</span>}
+                                                    <span>{timeAgo(post.createdAt)}</span>
                                                 </div>
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); setSelectedMarkerId(null); }}
-                                                    className="p-2 rounded-full bg-card-hover hover:bg-background-tertiary transition-colors"
+                                                    onClick={() => handlePostClick(post._id)}
+                                                    className="w-full mt-2 py-2 bg-primary text-white text-xs rounded-lg font-semibold"
                                                 >
-                                                    <X className="w-4 h-4" />
+                                                    View Details
                                                 </button>
                                             </div>
-                                        </motion.div>
-                                    );
-                                })()}
-                            </AnimatePresence>
-                        </div>
-                    </div>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            );
+                        })}
+</MapContainer>
                 </div>
-            </div>
+            )}
 
-            {/* Quick View Modal */}
+            {/* FAB */}
             <AnimatePresence>
                 {quickViewPost && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
+                        className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4"
                         onClick={() => setQuickViewPost(null)}
                     >
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <div className="absolute inset-0 z-0 bg-black/60 backdrop-blur-sm" />
                         <motion.div
                             initial={{ y: '100%', opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: '100%', opacity: 0 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
+                            className="relative z-10 w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
                         >
                             {/* Header with Image */}
                             <div className="relative h-40 sm:h-48">
@@ -600,9 +538,17 @@ const Explore = () => {
                             {/* Content */}
                             <div className="p-4 sm:p-5 -mt-8 relative">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: CATEGORIES.find(c => c.id === quickViewPost.type)?.color + '20', color: CATEGORIES.find(c => c.id === quickViewPost.type)?.color }}>
-                                        {CATEGORIES.find(c => c.id === quickViewPost.type)?.label}
-                                    </span>
+                                    {(cat => {
+                                        const color = cat?.color || '#6366f1';
+                                        return (
+                                            <span 
+                                                className="text-xs font-bold px-2.5 py-1 rounded-full" 
+                                                style={{ backgroundColor: `${color}33`, color }}
+                                            >
+                                                {cat?.label}
+                                            </span>
+                                        );
+                                    })(CATEGORIES.find(c => c.id === quickViewPost.type))}
                                     {quickViewPost.isVerified && (
                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-500 flex items-center gap-1">
                                             <CheckCircle2 className="w-3 h-3" /> Verified

@@ -1,10 +1,23 @@
-﻿const User = require('../models/User');
+const User = require('../models/User');
 const Post = require('../models/Post');
 const ContactRequest = require('../models/ContactRequest');
+const Conversation = require('../models/Conversation');
+const { admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
+const mongoose = require('mongoose');
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const buildUserPairQuery = (firstUserId, secondUserId) => ({
+    $or: [
+        { requester: firstUserId, recipient: secondUserId },
+        { requester: secondUserId, recipient: firstUserId }
+    ]
+});
+
+const normalizeText = (value) => typeof value === 'string'
+    ? value.replace(/\s+/g, ' ').trim()
+    : '';
 
 // @desc    Get current user profile
 // @route   GET /api/user/profile
@@ -15,6 +28,20 @@ exports.getUserProfile = asyncHandler(async (req, res, next) => {
         throw new ApiError(404, 'User not found');
     }
     res.json(user);
+});
+
+// @desc    Get Firebase Custom Token for authenticated user
+// @route   GET /api/user/firebase-token
+// @access  Private
+exports.getFirebaseToken = asyncHandler(async (req, res, next) => {
+    if (!admin) {
+        throw new ApiError(500, 'Firebase Admin SDK not initialized');
+    }
+    
+    // Create a custom token for the user using their MongoDB ID
+    const customToken = await admin.auth().createCustomToken(req.user.id.toString());
+    
+    res.json({ token: customToken });
 });
 
 // @desc    Update user profile
@@ -133,17 +160,84 @@ exports.updateUserSettings = async (req, res, next) => {
 exports.blockUser = async (req, res, next) => {
     try {
         const userToBlockId = req.params.userId;
+        if (!mongoose.Types.ObjectId.isValid(userToBlockId)) {
+            return res.status(400).json({ msg: 'Invalid user ID' });
+        }
         if (userToBlockId === req.user.id) {
             return res.status(400).json({ msg: 'You cannot block yourself' });
         }
-        const user = await User.findById(req.user.id);
+        const [user, userToBlock] = await Promise.all([
+            User.findById(req.user.id),
+            User.findById(userToBlockId).select('displayName')
+        ]);
 
-        if (!user.blockedUsers.some(id => id.toString() === userToBlockId)) {
-            user.blockedUsers.push(userToBlockId);
-            await user.save();
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        if (!userToBlock) {
+            return res.status(404).json({ msg: 'User not found' });
         }
 
-        res.json({ msg: 'User blocked' });
+        const alreadyBlocked = user.blockedUsers.some(id => id.toString() === userToBlockId);
+
+        if (!alreadyBlocked) {
+            user.blockedUsers.push(userToBlockId);
+        }
+
+        user.following = (user.following || []).filter(id => id.toString() !== userToBlockId);
+        user.followers = (user.followers || []).filter(id => id.toString() !== userToBlockId);
+        if (user.stats) {
+            user.stats.followingCount = user.following.length;
+            user.stats.followersCount = user.followers.length;
+        }
+
+        await Promise.all([
+            user.save(),
+            User.findByIdAndUpdate(userToBlockId, [
+                {
+                    $set: {
+                        following: {
+                            $filter: {
+                                input: '$following',
+                                as: 'followedUser',
+                                cond: { $ne: ['$$followedUser', new mongoose.Types.ObjectId(req.user.id)] }
+                            }
+                        },
+                        followers: {
+                            $filter: {
+                                input: '$followers',
+                                as: 'followerUser',
+                                cond: { $ne: ['$$followerUser', new mongoose.Types.ObjectId(req.user.id)] }
+                            }
+                        }
+                    }
+                },
+                {
+                    $set: {
+                        'stats.followingCount': { $size: '$following' },
+                        'stats.followersCount': { $size: '$followers' }
+                    }
+                }
+            ]),
+        ]);
+
+        const [deletedRequestsResult] = await Promise.all([
+            ContactRequest.deleteMany(buildUserPairQuery(req.user.id, userToBlockId)),
+            Conversation.updateMany(
+                { participants: { $all: [req.user.id, userToBlockId] } },
+                { $addToSet: { deletedBy: req.user.id } }
+            )
+        ]);
+
+        res.json({
+            msg: alreadyBlocked
+                ? `${userToBlock.displayName} was already blocked. Existing chat and request links were cleaned up.`
+                : `${userToBlock.displayName} has been blocked. You will no longer be able to message each other.`,
+            blockedUserId: userToBlockId,
+            alreadyBlocked,
+            requestsRemoved: deletedRequestsResult.deletedCount || 0,
+            conversationsHidden: true
+        });
     } catch (err) {
         return next(err);
     }
@@ -155,12 +249,31 @@ exports.blockUser = async (req, res, next) => {
 exports.unblockUser = async (req, res, next) => {
     try {
         const userToUnblockId = req.params.userId;
+        if (!mongoose.Types.ObjectId.isValid(userToUnblockId)) {
+            return res.status(400).json({ msg: 'Invalid user ID' });
+        }
         const user = await User.findById(req.user.id);
+        const userToUnblock = await User.findById(userToUnblockId).select('displayName');
+
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        if (!userToUnblock) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        const wasBlocked = user.blockedUsers.some(id => id.toString() === userToUnblockId);
 
         user.blockedUsers = user.blockedUsers.filter(id => id.toString() !== userToUnblockId);
         await user.save();
 
-        res.json({ msg: 'User unblocked' });
+        res.json({
+            msg: wasBlocked
+                ? `${userToUnblock.displayName} has been unblocked. They can contact you again if a valid connection exists.`
+                : `${userToUnblock.displayName} was not blocked.`,
+            unblockedUserId: userToUnblockId,
+            wasBlocked
+        });
     } catch (err) {
         return next(err);
     }
@@ -171,7 +284,7 @@ exports.unblockUser = async (req, res, next) => {
 // @access  Private
 exports.getBlockedUsers = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id).populate('blockedUsers', 'displayName avatar');
+        const user = await User.findById(req.user.id).populate('blockedUsers', 'displayName avatar bio location');
         res.json(user.blockedUsers || []);
     } catch (err) {
         return next(err);
@@ -183,24 +296,52 @@ exports.getBlockedUsers = async (req, res, next) => {
 // @access  Private
 exports.reportUser = async (req, res, next) => {
     try {
-        const { reason, contentType, contentId, reportedUserId } = req.body;
+        const { reason, category = 'other', contentType = 'user', contentId, reportedUserId } = req.body;
+        const normalizedReason = normalizeText(reason);
 
         if (reportedUserId === req.user.id) {
             return res.status(400).json({ msg: 'You cannot report yourself' });
+        }
+        if (!mongoose.Types.ObjectId.isValid(reportedUserId)) {
+            return res.status(400).json({ msg: 'Invalid reported user ID' });
+        }
+        if (normalizedReason.length < 3) {
+            return res.status(400).json({ msg: 'Please provide a little more detail for the report.' });
         }
 
         const reportedUser = await User.findById(reportedUserId);
         if (!reportedUser) return res.status(404).json({ msg: 'User not found' });
 
+        const normalizedContentId = contentId && mongoose.Types.ObjectId.isValid(contentId)
+            ? new mongoose.Types.ObjectId(contentId)
+            : undefined;
+        const duplicateReport = (reportedUser.reports || []).find((report) => (
+            report.reporter?.toString() === req.user.id &&
+            report.contentType === contentType &&
+            String(report.contentId || '') === String(normalizedContentId || '') &&
+            Date.now() - new Date(report.createdAt).getTime() < 24 * 60 * 60 * 1000
+        ));
+
+        if (duplicateReport) {
+            return res.status(409).json({
+                msg: 'You already reported this recently. Our team will review the existing report.'
+            });
+        }
+
         reportedUser.reports.push({
             reporter: req.user.id,
-            reason,
+            category,
+            reason: normalizedReason,
             contentType,
-            contentId
+            ...(normalizedContentId ? { contentId: normalizedContentId } : {})
         });
         await reportedUser.save();
 
-        res.json({ msg: 'Report submitted' });
+        res.status(201).json({
+            msg: 'Report submitted. Our team will review it and take action if needed.',
+            category,
+            contentType
+        });
     } catch (err) {
         return next(err);
     }
@@ -216,8 +357,8 @@ exports.getConnections = async (req, res, next) => {
         // Find all approved contact requests involving the user
         const connections = await ContactRequest.find({
             $or: [
-                { requester: userId, status: 'approved' },
-                { recipient: userId, status: 'approved' }
+                { requester: userId, status: { $in: ['accepted', 'approved'] } },
+                { recipient: userId, status: { $in: ['accepted', 'approved'] } }
             ]
         }).populate('requester recipient', 'displayName avatar profile');
 

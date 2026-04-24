@@ -9,7 +9,7 @@ import { getAvatarUrl } from '../../utils/avatar';
 import { getPostInsights, getPostExplanation } from '../../services/aiService';
 import {
     Sparkles, X, Edit2, Trash2, Eye, Heart, Share2, MessageCircle, MapPin,
-    Clock, Repeat, BarChart2, Check, Shield, Star, DollarSign, Calendar
+    Clock, Repeat, BarChart2, Check, Shield, Star, IndianRupee, Calendar
 } from 'lucide-react';
 
 const typeStyles = {
@@ -373,7 +373,7 @@ const PostCard = ({
                     <div className="flex flex-wrap gap-2 mt-4">
                         {budgetLabel && (
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary">
-                                <DollarSign className="w-3.5 h-3.5" />
+                                <IndianRupee className="w-3.5 h-3.5" />
                                 {budgetLabel}
                             </span>
                         )}
@@ -521,7 +521,11 @@ const PostCard = ({
                             className="flex-1 gap-1.5"
                             onClick={(e) => {
                                 e?.stopPropagation();
-                                onEdit();
+                                if (typeof onEdit === 'function') {
+                                    onEdit();
+                                } else {
+                                    navigate(`/edit-post/${post._id}`);
+                                }
                             }}
                         >
                             <Edit2 className="w-4 h-4" />

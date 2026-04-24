@@ -29,7 +29,7 @@ const schemas = {
     createPost: z.object({
         title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
         description: z.string().max(5000, 'Description too long').optional(),
-        type: z.enum(['job', 'service', 'sell', 'rent', 'barter']).optional(),
+        type: z.enum(['job', 'service', 'sell', 'rent', 'barter', 'request']).optional(),
         price: z.number().min(0).optional(),
         location: z.string().optional(),
         images: z.array(z.string()).optional(),
@@ -56,8 +56,9 @@ const schemas = {
 
     reportUser: z.object({
         reportedUserId: z.string().min(1, 'Reported user ID is required'),
-        reason: z.string().min(1, 'Reason is required').max(1000, 'Reason too long'),
-        contentType: z.enum(['post', 'comment', 'chat', 'profile', 'image']).optional(),
+        reason: z.string().min(3, 'Reason is required').max(1000, 'Reason too long'),
+        category: z.enum(['spam', 'harassment', 'scam', 'impersonation', 'hate_speech', 'nudity', 'violence', 'other']).optional(),
+        contentType: z.enum(['post', 'comment', 'chat', 'profile', 'image', 'user']).optional(),
         contentId: z.string().optional(),
     }),
 

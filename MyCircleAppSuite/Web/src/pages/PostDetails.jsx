@@ -10,7 +10,7 @@ import { useToast } from '../components/ui/Toast';
 import { getAvatarUrl } from '../utils/avatar';
 import { getPostInsights, getPostExplanation } from '../services/aiService';
 import {
-    ArrowLeft, MapPin, DollarSign, Clock, MessageCircle,
+    ArrowLeft, MapPin, Clock, MessageCircle,
     Share2, Heart, Repeat, Phone, UserPlus, UserCheck,
     Check, Copy, Edit2, Trash2, Sparkles, Navigation, MessageSquare
 } from 'lucide-react';
@@ -170,6 +170,18 @@ const PostDetails = () => {
         }
     };
 
+    const getTimeRemaining = () => {
+        if (!post?.expiresAt) return null;
+        const diff = new Date(post.expiresAt) - new Date();
+        if (diff <= 0) return { expired: true, text: 'Expired' };
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        if (days > 0) return { expired: false, text: `${days}d ${hours}h left`, urgent: days < 1 };
+        if (hours > 0) return { expired: false, text: `${hours}h ${mins}m left`, urgent: hours < 3 };
+        return { expired: false, text: `${mins}m left`, urgent: true };
+    };
+
     // Handle Deep Linking Scroll
     useEffect(() => {
         if (!loading && post && window.location.hash === '#comments') {
@@ -300,7 +312,6 @@ const PostDetails = () => {
         try {
             await api.delete(`/posts/${id}/comment/${commentId}`);
 
-            // Update UI
             setPost(prev => ({
                 ...prev,
                 comments: prev.comments.filter(c => c._id !== commentId)
@@ -313,6 +324,20 @@ const PostDetails = () => {
         }
     };
 
+    const handleDeletePost = async () => {
+        const confirmed = await dialog.confirm('Are you sure you want to delete this post?', 'Delete Post');
+        if (!confirmed) return;
+
+        try {
+            await api.delete(`/posts/${id}`);
+            success('Post deleted!');
+            navigate('/my-posts');
+        } catch (err) {
+            console.error(err);
+            showError('Failed to delete post.');
+        }
+    };
+
     if (loading) return <div className="text-foreground text-center py-20">Loading details...</div>;
     if (!post) return <div className="text-foreground text-center py-20">Post not found</div>;
 
@@ -322,7 +347,7 @@ const PostDetails = () => {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="container mx-auto px-6 py-24 min-h-screen text-foreground"
+            className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 min-h-screen text-foreground"
         >
             <button
                 className="group mb-10 flex items-center gap-2 text-text-muted hover:text-primary transition-all font-black text-[10px] uppercase tracking-[0.2em]"
@@ -332,11 +357,30 @@ const PostDetails = () => {
                 <span>Back to Orbit</span>
             </button>
 
+            {isOwnPost && (
+                <div className="flex items-center gap-2 mb-8">
+                    <button
+                        onClick={() => navigate(`/edit-post/${id}`)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold"
+                    >
+                        <Edit2 className="w-4 h-4" />
+                        Edit Post
+                    </button>
+                    <button
+                        onClick={handleDeletePost}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-semibold"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                    </button>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Hero Image */}
-                    <div className="rounded-[2.5rem] overflow-hidden aspect-video relative group shadow-2xl border border-card-border">
+                    <div className="rounded-2xl sm:rounded-[2.5rem] overflow-hidden aspect-video relative group shadow-2xl border border-card-border">
                         {post.images && post.images.length > 0 ? (
                             <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
                         ) : (
@@ -365,7 +409,7 @@ const PostDetails = () => {
                         </div>
 
                         <div className="flex justify-between items-start gap-6">
-                            <h1 className="text-5xl md:text-6xl font-black text-text-heading tracking-tight leading-[0.9]">
+                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-text-heading tracking-tight leading-[0.9]">
                                 {post.title}
                             </h1>
                             <div className="flex gap-2 shrink-0">
@@ -406,14 +450,23 @@ const PostDetails = () => {
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-primary" /> {post.location}
                             </div>
+                            {post.expiresAt && (() => {
+                                const remaining = getTimeRemaining();
+                                if (!remaining) return null;
+                                return (
+                                    <div className={cn("flex items-center gap-2", remaining.expired && "text-red-500", remaining.urgent && !remaining.expired && "text-orange-500")}>
+                                        <Clock className="w-4 h-4" /> {remaining.text}
+                                    </div>
+                                );
+                            })()}
+                            {post.duration ? (
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-primary" /> {post.duration} min
+                                </div>
+                            ) : null}
                             <div className="flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-primary" /> {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
-                            {post.duration ? (
-                                <div className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-primary" /> {post.duration} min duration
-                                </div>
-                            ) : null}
                             <div className="flex items-center gap-2 text-pink-500">
                                 <Heart className="w-4 h-4 fill-current opacity-50" /> {likes.length} Interactions
                             </div>
@@ -511,7 +564,7 @@ const PostDetails = () => {
                                 <h2 className="text-xl font-bold text-text-heading mb-4 flex items-center gap-2">
                                     <Navigation className="w-5 h-5 text-primary" /> Location
                                 </h2>
-                                <div className="w-full h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl border border-card-border">
+                                <div className="w-full h-[250px] sm:h-[300px] lg:h-[400px] rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-2xl border border-card-border">
                                     <MapContainer
                                         center={[post.locationCoords.coordinates[1], post.locationCoords.coordinates[0]]}
                                         zoom={14}
@@ -711,7 +764,7 @@ const PostDetails = () => {
 
                 {/* Sidebar */}
                 <aside className="lg:col-span-1">
-                    <div className="glass-panel p-10 sticky top-24 shadow-2xl space-y-8">
+                    <div className="glass-panel p-6 sm:p-8 lg:p-10 sticky top-24 shadow-2xl space-y-8">
                         <div>
                             <label className="text-[10px] font-black tracking-widest text-text-muted uppercase mb-2 block">Value Orbit</label>
                             <div className="text-5xl font-black text-text-heading tracking-tight">

@@ -1,10 +1,30 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../utils/api';
 import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
 import { getAvatarUrl } from '../../utils/avatar';
+
+const REPORT_REASON_OPTIONS = [
+    'Spam or scam',
+    'Harassment or abuse',
+    'Impersonation',
+    'Hate speech',
+    'Explicit or unsafe content',
+    'Other'
+];
+
+const mapReportCategory = (reasonText) => {
+    const normalized = reasonText.toLowerCase();
+    if (normalized.includes('spam') || normalized.includes('scam')) return 'spam';
+    if (normalized.includes('harass') || normalized.includes('abuse') || normalized.includes('threat')) return 'harassment';
+    if (normalized.includes('impersonat')) return 'impersonation';
+    if (normalized.includes('hate')) return 'hate_speech';
+    if (normalized.includes('explicit') || normalized.includes('unsafe') || normalized.includes('nudity')) return 'nudity';
+    if (normalized.includes('violence')) return 'violence';
+    return 'other';
+};
 
 const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead }) => {
     const { success, error: showError } = useToast();
@@ -14,63 +34,25 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     const [loading, setLoading] = useState(true);
     const [messagesError, setMessagesError] = useState('');
     const [suggestions, setSuggestions] = useState([]);
-    const messagesEndRef = useRef(null);
     const [isTyping, setIsTyping] = useState(false);
+    const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const typingStartEmitted = useRef(false);
+    const markReadInFlightRef = useRef(false);
+    const markReadTimeoutRef = useRef(null);
+    const initializedRef = useRef(false);
 
     const currentUserId = currentUser?._id || currentUser?.id;
-    const strUserId = currentUserId?.toString();
-    const otherParticipant = conversation.participants?.find(p => {
-        const pId = p._id || p.id;
-        return pId?.toString() !== strUserId;
-    }) || conversation.participants?.[0];
-
-    const fetchMessages = useCallback(async () => {
-        try {
-            setLoading(true);
-            setMessagesError('');
-            const res = await api.get(`/chat/messages/${conversation._id}`);
-            setMessages(res.data);
-            scrollToBottom();
-
-            if (res.data.length > 0) {
-                const lastMsg = res.data[res.data.length - 1];
-                if (lastMsg.sender !== currentUserId) {
-                    generateSuggestions(lastMsg.text);
-                }
-            }
-        } catch (err) {
-            const status = err?.response?.status;
-            if (status === 401 || status === 403) {
-                setMessagesError('You are not authorized to view this conversation.');
-            } else {
-                setMessagesError('Failed to load messages. Please try again.');
-            }
-        } finally {
-            setLoading(false);
-        }
-    }, [conversation._id, currentUserId]);
-
-    const markAsRead = useCallback(async () => {
-        try {
-            await api.put(`/chat/read/${conversation._id}`);
-            if (onMessagesRead) {
-                onMessagesRead(conversation._id);
-            }
-        } catch {
-            // Silent fail for mark as read
-        }
-    }, [conversation._id, onMessagesRead]);
-
-    const generateSuggestions = (lastMessageText = '') => {
-        const newSuggestions = getSmartSuggestions(lastMessageText);
-        setSuggestions(newSuggestions.slice(0, 3));
-    };
 
     const normalizeSenderId = (message) => {
-        return message?.sender?._id || message?.sender?.id || message?.sender;
+        const sender = message?.sender;
+        return sender?._id || sender?.id || sender || null;
     };
+
+    const otherParticipant = conversation.participants?.find(p => {
+        const pId = p._id || p.id;
+        return pId?.toString() !== currentUserId?.toString();
+    }) || conversation.participants?.[0];
 
     const scrollToBottom = () => {
         setTimeout(() => {
@@ -78,38 +60,105 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         }, 100);
     };
 
+    const markAsRead = async () => {
+        if (markReadInFlightRef.current || !conversation._id) return;
+
+        markReadInFlightRef.current = true;
+        try {
+            await api.put(`/chat/read/${conversation._id}`);
+            if (onMessagesRead) {
+                onMessagesRead(conversation._id);
+            }
+        } catch {
+            // Silent fail
+        } finally {
+            markReadInFlightRef.current = false;
+        }
+    };
+
+    const generateSuggestions = (lastMessageText = '') => {
+        const newSuggestions = getSmartSuggestions(lastMessageText);
+        setSuggestions(newSuggestions.slice(0, 3));
+    };
+
+    useEffect(() => {
+        if (!conversation._id || initializedRef.current) return;
+        
+        const runInit = async () => {
+            initializedRef.current = true;
+            setMessages([]);
+            setLoading(true);
+            setMessagesError('');
+            
+            try {
+                const res = await api.get(`/chat/messages/${conversation._id}`);
+                setMessages(res.data);
+                scrollToBottom();
+
+                if (res.data.length > 0) {
+                    const lastMsg = res.data[res.data.length - 1];
+                    if (normalizeSenderId(lastMsg)?.toString() !== currentUserId?.toString()) {
+                        generateSuggestions(lastMsg.text);
+                    }
+                    const hasUnread = res.data.some((msg) => (
+                        normalizeSenderId(msg)?.toString() !== currentUserId?.toString() &&
+                        msg.status !== 'read'
+                    ));
+                    if (hasUnread) {
+                        markReadTimeoutRef.current = window.setTimeout(() => {
+                            void markAsRead();
+                        }, 150);
+                    }
+                }
+            } catch (err) {
+                const status = err?.response?.status;
+                if (status === 401 || status === 403) {
+                    setMessagesError('You are not authorized.');
+                } else {
+                    setMessagesError('Failed to load messages.');
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void runInit();
+    }, [conversation._id]);
+
     useEffect(() => {
         if (!conversation._id) return;
-        setMessages([]);
-        const lastMsgText = conversation.lastMessage?.text || '';
-        generateSuggestions(lastMsgText);
-        typingStartEmitted.current = false;
-        void fetchMessages();
-        void markAsRead();
-    }, [conversation._id, conversation.lastMessage?.text, fetchMessages, markAsRead]);
+        generateSuggestions(conversation.lastMessage?.text || '');
+    }, [conversation._id, conversation.lastMessage?.text]);
 
     useEffect(() => {
         if (!socket || !conversation._id) return;
 
         const handleReceiveMessage = (data) => {
-            if (data.conversationId === conversation._id) {
-                setMessages(prev => {
-                    if (prev.find(m => m._id === data.message._id)) return prev;
-                    return [...prev, data.message];
-                });
-                scrollToBottom();
+            if (data.conversationId?.toString() !== conversation._id.toString()) return;
 
-                if (normalizeSenderId(data.message)?.toString() !== currentUserId?.toString()) {
-                    generateSuggestions(data.message.text);
+            const incomingMessage = data.message;
+            setMessages((prev) => {
+                if (prev.find((msg) => msg._id === incomingMessage._id)) return prev;
+                return [...prev, incomingMessage];
+            });
+
+            scrollToBottom();
+
+            if (normalizeSenderId(incomingMessage)?.toString() !== currentUserId?.toString()) {
+                generateSuggestions(incomingMessage.text);
+                window.clearTimeout(markReadTimeoutRef.current);
+                markReadTimeoutRef.current = window.setTimeout(() => {
                     void markAsRead();
-                }
+                }, 150);
             }
         };
 
         const handleReadReceipt = (data) => {
-            if (data.conversationId === conversation._id && data.readerId !== currentUser?._id) {
+            if (data.conversationId === conversation._id && data.readerId !== currentUserId) {
                 setMessages(prev => prev.map(msg =>
-                    msg.sender === currentUserId ? { ...msg, status: 'read' } : msg
+                    normalizeSenderId(msg)?.toString() === currentUserId?.toString()
+                        ? { ...msg, status: 'read' }
+                        : msg
                 ));
             }
         };
@@ -128,7 +177,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
 
         const handleConversationDeleted = (data) => {
             if (data.conversationId === conversation._id) {
-                dialog.alert('This conversation has been closed because the post is no longer available.', 'Chat Closed');
+                dialog.alert('This conversation has been closed.', 'Chat Closed');
                 onBack();
             }
         };
@@ -146,7 +195,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             socket.off('user_stop_typing', handleUserStopTyping);
             socket.off('conversation_deleted', handleConversationDeleted);
         };
-    }, [socket, conversation._id, currentUser?._id, currentUser?.id, currentUserId, dialog, markAsRead, onBack]);
+    }, [socket, conversation._id, currentUserId, dialog, onBack]);
 
     const handleInputChange = (e) => {
         setNewMessage(e.target.value);
@@ -179,14 +228,13 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         e.preventDefault();
         if (!newMessage.trim() || !otherParticipant?._id) return;
 
-        let tempMessage; // Define outside try block
+        let tempMessage;
         try {
-            // Optimistic update
             const tempId = `temp-${Date.now()}`;
             tempMessage = {
                 _id: tempId,
                 conversationId: conversation._id,
-                sender: currentUser?._id || currentUser?.id,
+                sender: currentUserId,
                 text: newMessage,
                 status: 'sent',
                 createdAt: new Date().toISOString()
@@ -194,7 +242,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             setMessages(prev => [...prev, tempMessage]);
             setNewMessage('');
             scrollToBottom();
-            generateSuggestions(); // Refresh suggestions
+            generateSuggestions();
 
             const response = await api.post('/chat/message', {
                 recipientId: otherParticipant._id,
@@ -205,10 +253,8 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             setMessages(prev => prev.map((message) =>
                 message._id === tempId ? response.data : message
             ));
-
         } catch (err) {
             console.error("Failed to send", err);
-            // Remove optimistic message on error
             if (tempMessage) {
                 setMessages(prev => prev.filter(m => m._id !== tempMessage._id));
             }
@@ -225,53 +271,62 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
 
     const handleBlock = async () => {
         const confirmed = await dialog.confirm(
-            `Are you sure you want to block ${otherParticipant.displayName}? You will no longer be able to message each other.`,
+            `Block ${otherParticipant.displayName}? This hides the conversation, removes request links between you, and stops future messaging until you unblock them.`,
             'Block User'
         );
         if (!confirmed) return;
 
         try {
-            await api.post(`/user/block/${otherParticipant._id}`);
-            success('User blocked');
+            const res = await api.post(`/user/block/${otherParticipant._id}`);
+            success(res.data?.msg || 'User blocked');
             onBack();
-        } catch {
-            showError('Failed to block user');
+        } catch (err) {
+            showError(err.response?.data?.msg || 'Failed to block user');
         }
     };
 
     const handleReport = async () => {
+        const confirmed = await dialog.confirm(
+            `Report ${otherParticipant.displayName}? Please report only genuine safety or policy concerns.`,
+            'Report User'
+        );
+        if (!confirmed) return;
+
         const reason = await dialog.prompt(
-            'Please describe the reason for reporting this user:',
+            `Choose a reason and add useful detail.\nExamples: ${REPORT_REASON_OPTIONS.join(', ')}`,
             'Report User',
             ''
         );
-        if (!reason) return;
+        const trimmedReason = reason?.trim();
+        if (!trimmedReason) return;
 
         try {
-            await api.post('/user/report', {
+            const res = await api.post('/user/report', {
                 reportedUserId: otherParticipant._id,
-                reason,
+                reason: trimmedReason,
+                category: mapReportCategory(trimmedReason),
                 contentType: 'chat',
                 contentId: conversation._id
             });
-            success('Report submitted');
-        } catch {
-            showError('Failed to report');
+            success(res.data?.msg || 'Report submitted');
+        } catch (err) {
+            showError(err.response?.data?.msg || 'Failed to report');
         }
     };
 
+    if (!otherParticipant) {
+        return (
+            <div className="flex-1 flex items-center justify-center text-text-muted">
+                Conversation not found
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-full">
-            {!otherParticipant ? (
-                <div className="flex-1 flex items-center justify-center text-text-muted">
-                    Conversation not found
-                </div>
-            ) : (
-            <>
-            {/* Header */}
             <div className="p-4 border-b border-card-border flex items-center justify-between bg-hover-bg/30">
                 <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="text-text-muted hover:text-text-heading mr-2">
+                    <button onClick={onBack} className="text-text-muted hover:text-text-heading">
                         <ArrowLeft className="w-6 h-6" />
                     </button>
                     <div className="w-10 h-10 rounded-full bg-background-section overflow-hidden border border-card-border">
@@ -296,23 +351,16 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                 </div>
             </div>
 
-            {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background-section/10">
                 {loading ? (
                     <div className="text-center text-text-muted mt-10 font-medium animate-pulse">Loading messages...</div>
                 ) : messagesError ? (
                     <div className="text-center mt-10">
                         <p className="text-sm text-error font-medium">{messagesError}</p>
-                        <button
-                            onClick={() => void fetchMessages()}
-                            className="mt-3 px-4 py-2 rounded-lg border border-card-border text-sm text-foreground hover:bg-card-hover transition-colors"
-                        >
-                            Retry
-                        </button>
                     </div>
                 ) : (
                     messages.map((msg) => {
-                        const isOwn = msg.sender === currentUserId;
+                        const isOwn = normalizeSenderId(msg)?.toString() === currentUserId?.toString();
                         return (
                             <div key={msg._id || `temp-${msg.createdAt}`} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${isOwn
@@ -336,11 +384,10 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* AI Suggestions */}
             {suggestions.length > 0 && (
                 <div className="px-4 py-2 flex gap-2 overflow-x-auto">
                     <div className="flex items-center text-xs text-primary font-medium mr-1">
-                        <Sparkles className="w-3 h-3 mr-1" /> AI Suggestions:
+                        <Sparkles className="w-3 h-3 mr-1" /> AI:
                     </div>
                     {suggestions.map((s, i) => (
                         <button
@@ -354,14 +401,12 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                 </div>
             )}
 
-            {/* Typing Indicator */}
             {isTyping && (
                 <div className="px-4 py-2 text-xs text-text-muted italic animate-pulse">
                     {otherParticipant?.displayName} is typing...
                 </div>
             )}
 
-            {/* Input Area */}
             <form onSubmit={handleSend} className="p-4 bg-hover-bg/20 border-t border-card-border flex gap-2">
                 <input
                     type="text"
@@ -378,8 +423,6 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                     <Send className="w-5 h-5" />
                 </button>
             </form>
-            </>
-            )}
         </div>
     );
 };

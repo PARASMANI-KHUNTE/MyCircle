@@ -26,8 +26,33 @@ const ConversationSchema = new mongoose.Schema({
 
 ConversationSchema.index({ participants: 1 });
 ConversationSchema.index({ participants: 1, updatedAt: -1 });
-ConversationSchema.index({ participants: 1, deletedBy: 1, updatedAt: -1 });
+ConversationSchema.index({ deletedBy: 1, updatedAt: -1 });
 ConversationSchema.index({ updatedAt: -1 });
 ConversationSchema.index({ postId: 1 });
+const Conversation = mongoose.models.Conversation || mongoose.model('Conversation', ConversationSchema);
 
-module.exports = mongoose.model('Conversation', ConversationSchema);
+let cleanupRegistered = false;
+
+if (!cleanupRegistered) {
+    cleanupRegistered = true;
+    mongoose.connection.on('open', async () => {
+        try {
+            const collection = mongoose.connection.db.collection('conversations');
+            const indexes = await collection.indexes();
+            const invalidIndex = indexes.find((index) => {
+                const keyFields = Object.keys(index.key || {});
+                return keyFields.includes('participants') && keyFields.includes('deletedBy');
+            });
+
+            if (invalidIndex?.name) {
+                await collection.dropIndex(invalidIndex.name);
+            }
+        } catch (error) {
+            if (error?.codeName !== 'IndexNotFound') {
+                console.error('[Conversation Index Cleanup] Failed to drop invalid index:', error.message);
+            }
+        }
+    });
+}
+
+module.exports = Conversation;

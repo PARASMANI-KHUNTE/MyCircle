@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Maximize2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
 import { useAuth } from '../../context/AuthContext';
@@ -10,11 +11,18 @@ import api from '../../utils/api';
 const ChatDrawer = ({ isOpen, onClose }) => {
     const { user } = useAuth();
     const { socket } = useSocket();
+    const navigate = useNavigate();
     const [conversations, setConversations] = useState([]);
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const [typingUsers, setTypingUsers] = useState({});
+    const currentUserId = user?._id || user?.id;
+
+    const normalizeSenderId = (message) => {
+        const sender = message?.sender;
+        return sender?._id || sender?.id || sender || null;
+    };
 
     const fetchConversations = async () => {
         try {
@@ -48,7 +56,9 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                     const updated = {
                         ...current,
                         lastMessage: data.message,
-                        unreadCount: (current.unreadCount || 0) + 1,
+                        unreadCount: normalizeSenderId(data.message)?.toString() === currentUserId?.toString()
+                            ? (current.unreadCount || 0)
+                            : (current.unreadCount || 0) + 1,
                         updatedAt: new Date().toISOString()
                     };
                     return [updated, ...other];
@@ -100,10 +110,19 @@ const ChatDrawer = ({ isOpen, onClose }) => {
             socket.off('user_typing', handleTypingStart);
             socket.off('user_stop_typing', handleTypingStop);
         };
-    }, [socket]);
+    }, [currentUserId, socket]);
 
     const handleConversationDeleted = (deletedId) => {
         setConversations(prev => prev.filter(c => c._id !== deletedId));
+    };
+
+    const handleOpenFullChat = () => {
+        const targetPath = selectedConversation?._id
+            ? `/chat?conversationId=${selectedConversation._id}`
+            : '/chat';
+
+        onClose();
+        navigate(targetPath);
     };
 
     return (
@@ -132,12 +151,22 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                             <h2 className="text-xl font-bold text-text-heading">
                                 {selectedConversation ? 'Chat' : 'Messages'}
                             </h2>
-                            <button
-                                onClick={onClose}
-                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-text-muted hover:text-text-heading"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleOpenFullChat}
+                                    className="inline-flex items-center gap-2 rounded-full border border-card-border px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-black/5 hover:text-text-heading"
+                                    title="Open full chat page"
+                                >
+                                    <Maximize2 className="w-4 h-4" />
+                                    <span>{selectedConversation ? 'Expand' : 'Open Chat'}</span>
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-black/5 rounded-full transition-colors text-text-muted hover:text-text-heading"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Drawer Content */}

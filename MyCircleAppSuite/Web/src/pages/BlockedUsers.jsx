@@ -44,7 +44,7 @@ const BlockedUsers = () => {
     };
 
     return (
-        <div className="container mx-auto px-6 py-24 min-h-screen">
+        <div className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 min-h-screen">
             <div className="max-w-4xl mx-auto">
                 <Link to="/settings" className="inline-flex items-center gap-2 text-text-muted hover:text-text-heading mb-6 transition-colors font-medium">
                     <ArrowLeft className="w-4 h-4" />
@@ -56,7 +56,7 @@ const BlockedUsers = () => {
                         <UserX className="w-6 h-6" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-text-heading">Blocked Users</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-text-heading">Blocked Users</h1>
                         <p className="text-text-muted">Manage users you've blocked</p>
                     </div>
                 </div>

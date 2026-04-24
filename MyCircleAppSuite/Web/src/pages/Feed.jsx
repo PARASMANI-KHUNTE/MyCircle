@@ -29,10 +29,10 @@ L.Icon.Default.mergeOptions({
 
 const categories = [
     { id: 'all', label: 'All', icon: Package },
-    { id: 'job', label: 'Jobs', icon: Briefcase },
-    { id: 'sell', label: 'For Sale', icon: Tag },
-    { id: 'rent', label: 'For Rent', icon: Key },
-    { id: 'request', label: 'Requests', icon: Wrench }
+    { id: 'service', label: 'Earn', icon: Briefcase },
+    { id: 'hire', label: 'Hire', icon: Wrench },
+    { id: 'trade', label: 'Trade', icon: Tag },
+    { id: 'rent', label: 'Rent', icon: Key }
 ];
 
 const MapUpdater = ({ center, zoom }) => {
@@ -51,7 +51,6 @@ const Feed = () => {
     const { isDark } = useTheme();
     const { success, error: showError } = useToast();
     const [posts, setPosts] = useState([]);
-    const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
@@ -64,7 +63,6 @@ const Feed = () => {
 
     const { socket } = useSocket();
 
-    const serverCategory = filter === 'service' ? 'all' : filter;
     const serverSort = sortOrder === 'latest' || sortOrder === 'oldest' ? sortOrder : 'latest';
 
     const fetchPosts = useCallback(async () => {
@@ -72,7 +70,7 @@ const Feed = () => {
         try {
             const params = {
                 limit: 50,
-                type: serverCategory !== 'all' ? serverCategory : undefined,
+                type: filter !== 'all' ? filter : undefined,
                 q: searchTerm.trim() || undefined,
                 location: locationFilter !== 'all' ? locationFilter : undefined,
                 sort: serverSort,
@@ -84,22 +82,7 @@ const Feed = () => {
         } finally {
             setLoading(false);
         }
-    }, [serverCategory, searchTerm, locationFilter, serverSort]);
-
-    const fetchServices = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams();
-            if (searchTerm) params.append('skill', searchTerm);
-            params.append('sort', sortOrder === 'latest' ? 'rating' : 'endorsements');
-            const res = await api.get(`/user/services?${params.toString()}`);
-            setServices(res.data);
-        } catch (err) {
-            console.error('Search failed:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [searchTerm, sortOrder]);
+    }, [filter, searchTerm, locationFilter, serverSort]);
 
     useEffect(() => {
         if (!socket) return;
@@ -112,30 +95,21 @@ const Feed = () => {
     }, [socket, success]);
 
     useEffect(() => {
-        // Debounce search/filter changes to avoid API spam
         const delayBounceFn = setTimeout(() => {
-            if (filter === 'service') {
-                void fetchServices();
-            } else {
-                void fetchPosts();
-            }
-        }, 400);
+            void fetchPosts();
+        }, 300);
 
         return () => clearTimeout(delayBounceFn);
-    }, [filter, fetchPosts, fetchServices]);
+    }, [filter, fetchPosts]);
 
     const availableLocations = React.useMemo(() => {
         const locations = Array.from(new Set(posts.map(p => p.location).filter(Boolean)));
         return locations.sort();
     }, [posts]);
 
-    const filteredPosts = React.useMemo(() => {
-        if (filter === 'service') return services;
-        return posts;
-    }, [posts, services, filter]);
+    const filteredPosts = React.useMemo(() => posts, [posts]);
 
     const mapPosts = React.useMemo(() => {
-        if (filter === 'service') return [];
         return filteredPosts
             .filter(p => p.locationCoords?.coordinates)
             .map(p => ({
@@ -143,13 +117,9 @@ const Feed = () => {
                 displayLat: p.locationCoords.coordinates[1] + (Math.random() - 0.5) * 0.005,
                 displayLng: p.locationCoords.coordinates[0] + (Math.random() - 0.5) * 0.005
             }));
-    }, [filteredPosts, filter]);
+    }, [filteredPosts]);
 
     const toggleViewMode = () => {
-        if (filter === 'service') {
-            showError('Map view not available for Services.');
-            return;
-        }
         if (viewMode === 'list' && !userLocation) {
             setLoadingLocation(true);
             navigator.geolocation.getCurrentPosition(
@@ -254,7 +224,7 @@ const Feed = () => {
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
                             <input
                                 type="text"
-                                placeholder={filter === 'service' ? "Search skills..." : "What are you looking for?"}
+                                placeholder="What are you looking for?"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-card-border bg-card text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
@@ -318,7 +288,6 @@ const Feed = () => {
                                         <select
                                             value={locationFilter}
                                             onChange={(e) => setLocationFilter(e.target.value)}
-                                            disabled={filter === 'service'}
                                             className="w-full px-4 py-3 rounded-xl border border-card-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                                         >
                                             <option value="all">All Locations</option>
@@ -370,11 +339,11 @@ const Feed = () => {
                             <PostSkeleton key={idx} />
                         ))}
                     </div>
-                ) : viewMode === 'map' && filter !== 'service' ? (
+                ) : viewMode === 'map' ? (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="relative z-10 rounded-2xl overflow-hidden border border-card-border shadow-xl h-[600px]"
+                        className="relative z-10 rounded-2xl overflow-hidden border border-card-border shadow-xl h-[350px] sm:h-[450px] md:h-[600px]"
                     >
                         <MapContainer
                             center={userLocation ? [userLocation.lat, userLocation.lng] : [20.5937, 78.9629]}
@@ -405,7 +374,7 @@ const Feed = () => {
                                                 background: rgba(255, 255, 255, 0.1);
                                                 backdrop-filter: blur(8px);
                                                 border: 1px solid rgba(255,255,255,0.2);
-                                                border-bottom: 2px solid ${post.type === 'job' ? '#3b82f6' : post.type === 'service' ? '#06b6d4' : post.type === 'rent' ? '#8b5cf6' : '#ec4899'};
+                                                border-bottom: 2px solid ${['job', 'request'].includes(post.type) ? '#3b82f6' : post.type === 'service' ? '#06b6d4' : post.type === 'rent' ? '#8b5cf6' : '#ec4899'};
                                                 padding: 4px 10px;
                                                 border-radius: 12px;
                                                 color: white;
@@ -423,7 +392,7 @@ const Feed = () => {
                                                     transform: translateX(-50%);
                                                     border-left: 6px solid transparent;
                                                     border-right: 6px solid transparent;
-                                                    border-top: 6px solid ${post.type === 'job' ? '#3b82f6' : post.type === 'service' ? '#06b6d4' : post.type === 'rent' ? '#8b5cf6' : '#ec4899'};
+                                                    border-top: 6px solid ${['job', 'request'].includes(post.type) ? '#3b82f6' : post.type === 'service' ? '#06b6d4' : post.type === 'rent' ? '#8b5cf6' : '#ec4899'};
                                                 "></div>
                                             </div>
                                         `,
@@ -471,17 +440,7 @@ const Feed = () => {
                         }}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
-                        {filter === 'service' ? (
-                            filteredPosts.length > 0 ? (
-                                filteredPosts.map((service) => (
-                                    <motion.div key={service._id} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
-                                        <ServiceCard user={service} searchedSkill={searchTerm} />
-                                    </motion.div>
-                                ))
-                            ) : (
-                                <EmptyState message="No professionals found" submessage="Try a different skill or keyword" />
-                            )
-                        ) : filteredPosts.length > 0 ? (
+                        {filteredPosts.length > 0 ? (
                             filteredPosts.map((post, index) => (
                                 <motion.div
                                     key={post._id}

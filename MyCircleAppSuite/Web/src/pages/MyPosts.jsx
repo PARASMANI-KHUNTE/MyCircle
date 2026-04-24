@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import { useDialog } from '../hooks/useDialog';
@@ -7,6 +8,7 @@ import PostCard from '../components/ui/PostCard';
 import { Filter, LayoutGrid, List as ListIcon } from 'lucide-react';
 
 const MyPosts = () => {
+    const navigate = useNavigate();
     const { isAuthenticated, loading: authLoading } = useAuth();
     const { success, error: showError } = useToast();
     const dialog = useDialog();
@@ -66,13 +68,7 @@ const MyPosts = () => {
     if (loading) return <div className="text-white text-center py-20">Loading posts...</div>;
 
     return (
-        <div className="container mx-auto px-6 py-24 min-h-screen">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-text-heading mb-2">My Posts</h1>
-                    <p className="text-text-muted">Manage your listings and services</p>
-                </div>
-            </div>
+        <div className="min-h-screen pt-6 md:pt-8">
 
             {/* Filters & Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-card p-4 rounded-xl border border-card-border mb-8 gap-4 shadow-card">
@@ -121,6 +117,7 @@ const MyPosts = () => {
                             isOwnPost={true}
                             onStatusChange={(newStatus) => handleStatusChange(post._id, newStatus)}
                             onDelete={() => handleDelete(post._id)}
+                            onEdit={() => navigate(`/edit-post/${post._id}`)}
                         />
                     ))}
                 </div>

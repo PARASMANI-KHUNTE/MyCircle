@@ -2,6 +2,80 @@ const Post = require('../models/Post');
 const User = require('../models/User');
 const ContactRequest = require('../models/ContactRequest');
 const { createNotification } = require('../controllers/notificationController');
+const cloudinary = require('../config/cloudinary');
+
+/**
+ * Delete old images from Cloudinary that are no longer referenced
+ */
+const cleanupOrphanedImages = async () => {
+    try {
+        // Get all active post image URLs
+        const activePosts = await Post.find({ 
+            images: { $exists: true, $ne: [] } 
+        }).select('images');
+        
+        // Collect all referenced image URLs
+        const referencedUrls = new Set();
+        for (const post of activePosts) {
+            if (post.images) {
+                post.images.forEach(url => {
+                    if (url && url.includes('cloudinary')) {
+                        referencedUrls.add(url);
+                    }
+                });
+            }
+        }
+        
+        // Note: Full Cloudinary cleanup requires listing all resources
+        // This is just a placeholder - in production you'd compare against Cloudinary folder
+        console.log(`[Cron] Found ${referencedUrls.size} active images`);
+        
+    } catch (error) {
+        console.error('[Cron] Error cleaning up images:', error);
+    }
+};
+
+/**
+ * Auto-archive completed posts after 7 days of completion
+ */
+const checkCompletedPosts = async (io) => {
+    try {
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        // Find completed posts that were completed > 7 days ago
+        const oldCompletedPosts = await Post.find({
+            status: 'completed',
+            completedAt: { $lt: sevenDaysAgo }
+        });
+        
+        for (const post of oldCompletedPosts) {
+            post.status = 'archived';
+            await post.save();
+            
+            if (io) {
+                try {
+                    await createNotification(io, {
+                        recipient: post.user,
+                        type: 'info',
+                        title: 'Post Archived',
+                        message: `Your completed post "${post.title}" has been archived.`,
+                        link: '/my-posts'
+                    });
+                } catch (nErr) {
+                    console.error(`[Cron] Notification failed:`, nErr.message);
+                }
+            }
+        }
+        
+        if (oldCompletedPosts.length > 0) {
+            console.log(`[Cron] Auto-archived ${oldCompletedPosts.length} completed posts`);
+        }
+        
+    } catch (error) {
+        console.error('[Cron] Error checking completed posts:', error);
+    }
+};
 
 /**
  * Auto-expires pending contact requests older than 7 days.
@@ -169,9 +243,15 @@ const startCronJobs = (io) => {
         checkExpiredRequests(io);
     }, 60 * 1000);
 
+    // Check completed posts every hour
+    setInterval(() => {
+        checkCompletedPosts(io);
+    }, 60 * 60 * 1000);
+
     // Also run once on startup
     checkExpiredPosts(io);
     checkExpiredRequests(io);
+    checkCompletedPosts(io);
 };
 
 module.exports = { startCronJobs };

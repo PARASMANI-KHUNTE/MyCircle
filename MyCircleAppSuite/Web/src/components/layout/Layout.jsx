@@ -57,7 +57,7 @@ const Layout = () => {
                         transition={pageTransition}
                         className={cn(
                             'container mx-auto px-4 sm:px-6 lg:px-8 pb-24',
-                            !isExplorePage && 'pt-3'
+                            !isExplorePage && 'pt-6 md:pt-8'
                         )}
                     >
                         <Outlet />

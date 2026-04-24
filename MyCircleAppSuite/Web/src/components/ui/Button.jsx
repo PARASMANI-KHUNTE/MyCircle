@@ -24,11 +24,11 @@ const Button = ({
     };
 
     const sizes = {
-        xs: 'px-3 py-1.5 text-xs font-semibold rounded-lg gap-1.5',
-        sm: 'px-4 py-2 text-sm font-semibold rounded-xl gap-2',
-        md: 'px-5 py-2.5 text-sm font-semibold rounded-xl gap-2',
-        lg: 'px-8 py-3.5 text-base font-semibold rounded-2xl gap-2.5',
-        xl: 'px-10 py-4 text-lg font-semibold rounded-2xl gap-3',
+        xs: 'px-3 py-1.5 text-xs font-semibold rounded-lg gap-1.5 min-h-[32px]',
+        sm: 'px-4 py-2 text-sm font-semibold rounded-xl gap-2 min-h-[36px]',
+        md: 'px-5 py-2.5 text-sm font-semibold rounded-xl gap-2 min-h-[44px]',
+        lg: 'px-8 py-3.5 text-base font-semibold rounded-2xl gap-2.5 min-h-[52px]',
+        xl: 'px-10 py-4 text-lg font-semibold rounded-2xl gap-3 min-h-[60px]',
     };
 
     const Component = props.href ? motion.a : motion.button;
@@ -38,9 +38,9 @@ const Button = ({
             whileHover={!disabled && !loading ? { scale: 1.02 } : {}}
             whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
             className={cn(
-                'inline-flex items-center justify-center font-semibold transition-all duration-200',
+                'inline-flex items-center justify-center font-semibold transition-all duration-300 ease-smooth',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
-                'focus-visible:ring-2 focus-visible:ring-primary/20',
+                'focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
                 variants[variant],
                 sizes[size],
                 className

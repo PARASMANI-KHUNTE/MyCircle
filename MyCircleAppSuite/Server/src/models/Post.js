@@ -8,7 +8,7 @@ const PostSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['job', 'sell', 'rent', 'request'],
+        enum: ['job', 'sell', 'rent', 'barter', 'service', 'request'],
         required: true,
     },
     jobType: {

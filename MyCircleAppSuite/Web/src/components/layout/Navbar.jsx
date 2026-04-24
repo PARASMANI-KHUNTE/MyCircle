@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell, Search, Settings, LogOut, User, CircleDot } from 'lucide-react';
+import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell, Settings, LogOut, User, CircleDot, Inbox } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
@@ -15,7 +15,7 @@ import ChatDrawer from '../chat/ChatDrawer';
 const Navbar = () => {
     const { user, isAuthenticated, logout } = useAuth();
     const { toggleTheme, isDark } = useTheme();
-    const { unreadCount } = useNotifications();
+    const { unreadCount = 0 } = useNotifications() || {};
     const { socket } = useSocket();
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -23,6 +23,9 @@ const Navbar = () => {
     const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const unreadRequestInFlightRef = useRef(false);
+    const unreadRefreshQueuedRef = useRef(false);
+    const unreadRefreshTimeoutRef = useRef(null);
     const location = useLocation();
 
     const apiURL = getSocketBaseUrl();
@@ -31,33 +34,56 @@ const Navbar = () => {
         window.location.href = `${apiURL}/auth/google`;
     };
 
-    const fetchUnreadMsgCount = async () => {
+    const fetchUnreadMsgCount = useCallback(async () => {
+        if (unreadRequestInFlightRef.current) {
+            unreadRefreshQueuedRef.current = true;
+            return;
+        }
+
+        unreadRequestInFlightRef.current = true;
         try {
             const res = await api.get('/chat/unread/count');
-            setUnreadMsgCount(res.data.count);
+            setUnreadMsgCount(res.data.count || 0);
         } catch {
             // Silent fail
+        } finally {
+            unreadRequestInFlightRef.current = false;
+            if (unreadRefreshQueuedRef.current) {
+                unreadRefreshQueuedRef.current = false;
+                window.clearTimeout(unreadRefreshTimeoutRef.current);
+                unreadRefreshTimeoutRef.current = window.setTimeout(() => {
+                    void fetchUnreadMsgCount();
+                }, 150);
+            }
         }
-    };
+    }, []);
 
     useEffect(() => {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 20);
         };
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.clearTimeout(unreadRefreshTimeoutRef.current);
+        };
     }, []);
 
     useEffect(() => {
         if (isAuthenticated) {
             fetchUnreadMsgCount();
         }
-    }, [isAuthenticated]);
+    }, [fetchUnreadMsgCount, isAuthenticated]);
 
     useEffect(() => {
         if (!socket || !isAuthenticated) return;
 
-        const handleUpdate = () => fetchUnreadMsgCount();
+        const handleUpdate = () => {
+            window.clearTimeout(unreadRefreshTimeoutRef.current);
+            unreadRefreshTimeoutRef.current = window.setTimeout(() => {
+                void fetchUnreadMsgCount();
+            }, 150);
+        };
         
         socket.on('receive_message', handleUpdate);
         socket.on('messages_read', handleUpdate);
@@ -68,7 +94,7 @@ const Navbar = () => {
             socket.off('messages_read', handleUpdate);
             socket.off('unread_count_update', handleUpdate);
         };
-    }, [socket, isAuthenticated]);
+    }, [fetchUnreadMsgCount, socket, isAuthenticated]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -86,6 +112,7 @@ const Navbar = () => {
     }, [location.pathname]);
 
     const navLinks = [
+        { name: 'Requests', path: '/requests', icon: Inbox, auth: true },
         { name: 'My Posts', path: '/my-posts', icon: User, auth: true },
     ];
 
@@ -107,10 +134,10 @@ const Navbar = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 md:h-20">
                         <Link to="/" className="flex items-center gap-3 group">
-                            <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition-all duration-300">
+                            <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition-all duration-300 shadow-md" style={{ boxShadow: '0 4px 12px rgb(245 158 11 / 0.35)' }}>
                                 <CircleDot className="w-4 h-4" />
                             </div>
-                            <span className="text-xl font-semibold tracking-tight hidden sm:block">
+                            <span className="text-xl font-semibold tracking-tight hidden sm:block font-display">
                                 MyCircle
                             </span>
                         </Link>
@@ -121,9 +148,9 @@ const Navbar = () => {
                                     key={link.path}
                                     to={link.path}
                                     className={cn(
-                                        'relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
-                                        location.pathname === link.path 
-                                            ? 'text-foreground bg-card border border-card-border' 
+                                        'relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 min-h-[44px]',
+                                        location.pathname === link.path
+                                            ? 'text-primary bg-primary/10 border border-primary/20'
                                             : 'text-foreground-muted hover:text-foreground hover:bg-card-hover'
                                     )}
                                 >
@@ -132,7 +159,7 @@ const Navbar = () => {
                                     {location.pathname === link.path && (
                                         <motion.div
                                             layoutId="navbar-indicator"
-                                            className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-7 h-0.5 bg-foreground rounded-full"
+                                            className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-7 h-0.5 bg-primary rounded-full"
                                         />
                                     )}
                                 </Link>
@@ -145,29 +172,22 @@ const Navbar = () => {
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
-                                        className="icon-btn"
-                                    >
-                                        <Search className="w-5 h-5" />
-                                    </motion.button>
-
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
                                         onClick={() => setIsChatDrawerOpen(true)}
                                         className="icon-btn relative"
+                                        aria-label="Open messages"
                                     >
                                         <MessageCircle className="w-5 h-5" />
                                         {unreadMsgCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-foreground text-background text-[10px] font-bold rounded-full flex items-center justify-center">
+                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
                                                 {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
                                             </span>
                                         )}
                                     </motion.button>
 
-                                    <Link to="/notifications" className="icon-btn relative">
+                                    <Link to="/notifications" className="icon-btn relative" aria-label="Notifications">
                                         <Bell className="w-5 h-5" />
                                         {unreadCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-foreground text-background text-[10px] font-bold rounded-full flex items-center justify-center">
+                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
                                                 {unreadCount > 9 ? '9+' : unreadCount}
                                             </span>
                                         )}

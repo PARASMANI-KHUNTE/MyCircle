@@ -161,6 +161,8 @@ exports.getOrCreateConversation = asyncHandler(async (req, res, next) => {
         // Verify user is connected before returning conversation details
         const connection = await ContactRequest.findOne({
             $or: [
+                { requester: req.user.id, recipient: recipientId, status: 'accepted' },
+                { requester: recipientId, recipient: req.user.id, status: 'accepted' },
                 { requester: req.user.id, recipient: recipientId, status: 'approved' },
                 { requester: recipientId, recipient: req.user.id, status: 'approved' }
             ]
@@ -230,6 +232,8 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
     if (!conversation) {
         const connection = await ContactRequest.findOne({
             $or: [
+                { requester: req.user.id, recipient: recipientId, status: 'accepted' },
+                { requester: recipientId, recipient: req.user.id, status: 'accepted' },
                 { requester: req.user.id, recipient: recipientId, status: 'approved' },
                 { requester: recipientId, recipient: req.user.id, status: 'approved' }
             ]
@@ -358,12 +362,14 @@ exports.initChat = asyncHandler(async (req, res, next) => {
     let conversation = await Conversation.findOne({
         participants: { $all: [req.user.id, recipientId] }
     })
-        .populate('participants', ['displayName', 'avatar', 'isOnline'])
-        .populate('lastMessage');
+    .populate('participants', ['displayName', 'avatar', 'isOnline'])
+    .populate('lastMessage');
 
-    // Connectivity Check
+    // Connectivity Check - accept both 'accepted' (DB) and 'approved' (frontend)
     const connection = await ContactRequest.findOne({
         $or: [
+            { requester: req.user.id, recipient: recipientId, status: 'accepted' },
+            { requester: recipientId, recipient: req.user.id, status: 'accepted' },
             { requester: req.user.id, recipient: recipientId, status: 'approved' },
             { requester: recipientId, recipient: req.user.id, status: 'approved' }
         ]

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useRef, useState } from 'react';
 
 const DialogContext = createContext();
 
@@ -11,6 +11,7 @@ export const useDialog = () => {
 };
 
 export const DialogProvider = ({ children }) => {
+    const promptValueRef = useRef('');
     const [dialogState, setDialogState] = useState({
         isOpen: false,
         type: 'alert',
@@ -24,6 +25,7 @@ export const DialogProvider = ({ children }) => {
     });
 
     const openDialog = (config) => {
+        promptValueRef.current = config.defaultValue || '';
         setDialogState({
             isOpen: true,
             type: config.type || 'alert',
@@ -47,6 +49,7 @@ export const DialogProvider = ({ children }) => {
     };
 
     const setInputValue = (value) => {
+        promptValueRef.current = value;
         setDialogState(prev => ({ ...prev, inputValue: value }));
     };
 
@@ -94,7 +97,7 @@ export const DialogProvider = ({ children }) => {
                 confirmText: 'Submit',
                 cancelText: 'Cancel',
                 onConfirm: () => {
-                    const value = dialogState.inputValue;
+                    const value = promptValueRef.current;
                     closeDialog();
                     resolve(value);
                 },

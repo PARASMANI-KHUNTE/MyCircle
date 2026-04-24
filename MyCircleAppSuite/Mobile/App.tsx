@@ -9,11 +9,15 @@ import { SocketProvider } from './src/context/SocketContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { ToastProvider } from './src/components/ui/Toast';
 import { ThemeProvider } from './src/context/ThemeContext';
+import { useTheme } from './src/context/ThemeContext';
 import { navigationRef } from './src/services/navigationService';
 import StartupAnimation from './src/components/animations/StartupAnimation';
+import { getNavigationTheme } from './src/theme/theme';
+import { RootStackParamList } from './src/navigation/types';
 
 // Screen Placeholders
 import LandingScreen from './src/screens/LandingScreen';
+import HomeScreen from './src/screens/HomeScreen';
 import MainTabs from './src/navigation/MainTabs';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import PostDetailsScreen from './src/screens/PostDetailsScreen';
@@ -29,17 +33,20 @@ import EditPostScreen from './src/screens/EditPostScreen';
 import WalletScreen from './src/screens/WalletScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
+import LoginSuccessScreen from './src/screens/LoginSuccessScreen';
+import NotFoundScreen from './src/screens/NotFoundScreen';
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
 
 const RootNavigator = () => {
     const { isAuthenticated, isLoading } = useAuth();
+    const { colors } = useTheme();
 
     if (isLoading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#3B82F6" />
+            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         );
     }
@@ -54,12 +61,16 @@ const RootNavigator = () => {
             {!isAuthenticated ? (
                 <>
                     <Stack.Screen name="Landing" component={LandingScreen} />
+                    <Stack.Screen name="Welcome" component={HomeScreen} />
                     <Stack.Screen name="Login" component={LoginScreen} />
                     <Stack.Screen name="Register" component={RegisterScreen} />
+                    <Stack.Screen name="LoginSuccess" component={LoginSuccessScreen} />
+                    <Stack.Screen name="NotFound" component={NotFoundScreen} />
                 </>
             ) : (
                 <>
                     <Stack.Screen name="MainTabs" component={MainTabs} />
+                    <Stack.Screen name="Welcome" component={HomeScreen} />
                     <Stack.Screen name="Notifications" component={NotificationsScreen} />
                     <Stack.Screen name="PostDetails" component={PostDetailsScreen} />
                     <Stack.Screen name="ChatList" component={ChatListScreen} />
@@ -72,6 +83,8 @@ const RootNavigator = () => {
                     <Stack.Screen name="UserProfile" component={ProfileScreen} />
                     <Stack.Screen name="EditPost" component={EditPostScreen} />
                     <Stack.Screen name="Wallet" component={WalletScreen} />
+                    <Stack.Screen name="LoginSuccess" component={LoginSuccessScreen} />
+                    <Stack.Screen name="NotFound" component={NotFoundScreen} />
                 </>
             )}
         </Stack.Navigator>
@@ -80,6 +93,7 @@ const RootNavigator = () => {
 
 const MainContent = () => {
     const [showStartup, setShowStartup] = useState(true);
+    const { appTheme } = useTheme();
 
     if (showStartup) {
         return (
@@ -90,7 +104,7 @@ const MainContent = () => {
     }
 
     return (
-        <NavigationContainer ref={navigationRef}>
+        <NavigationContainer ref={navigationRef} theme={getNavigationTheme(appTheme)}>
             <RootNavigator />
         </NavigationContainer>
     );
@@ -121,7 +135,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#0F172A'
     }
 });
 

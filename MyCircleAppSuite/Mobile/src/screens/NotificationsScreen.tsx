@@ -1,12 +1,14 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet, Alert, Dimensions, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Bell, CheckCircle, CheckSquare, Heart, Info, MessageSquare, Square, Trash2, X } from 'lucide-react-native';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+import AppScreen from '../components/layout/AppScreen';
+import ScreenHeader from '../components/layout/ScreenHeader';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Bell, MessageSquare, CheckCircle, Heart, Info, Trash2, X, CheckSquare, Square, ArrowLeft } from 'lucide-react-native';
 import api from '../services/api';
-import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const NotificationsScreen = ({ navigation }: any) => {
     const { notifications, loading, refresh, markAllRead, handleNotificationClick } = useNotifications();
@@ -14,27 +16,19 @@ const NotificationsScreen = ({ navigation }: any) => {
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
 
-    const themeStyles = {
-        container: { backgroundColor: colors.background },
-        text: { color: colors.text },
-        textSecondary: { color: colors.textSecondary },
-        card: { backgroundColor: colors.card, borderColor: colors.border },
-        border: { borderColor: colors.border },
-        highlight: { backgroundColor: colors.primary + '10' },
-        unreadCard: { backgroundColor: colors.card }, // Or slightly different?
-        readCard: { backgroundColor: colors.background },
-        selectedCard: { backgroundColor: colors.primary + '15' },
-        icon: colors.text
-    };
-
     const getIcon = (type: string) => {
         const size = 20;
         switch (type) {
-            case 'request': return <MessageSquare size={size} color="#60a5fa" />;
-            case 'approval': return <CheckCircle size={size} color="#4ade80" />;
-            case 'like': return <Heart size={size} color="#f472b6" />;
-            case 'info': return <Info size={size} color="#c084fc" />;
-            default: return <Bell size={size} color={colors.textSecondary} />;
+            case 'request':
+                return <MessageSquare size={size} color={colors.info} />;
+            case 'approval':
+                return <CheckCircle size={size} color={colors.success} />;
+            case 'like':
+                return <Heart size={size} color={colors.accent} />;
+            case 'info':
+                return <Info size={size} color={colors.primary} />;
+            default:
+                return <Bell size={size} color={colors.textSecondary} />;
         }
     };
 
@@ -48,42 +42,34 @@ const NotificationsScreen = ({ navigation }: any) => {
     };
 
     const handleBulkDelete = async () => {
-        Alert.alert(
-            "Delete Notifications",
-            `Are you sure you want to delete ${selectedItems.size} notifications?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            // Ideally, backend should support bulk delete. For now, we loop.
-                            // Better approach: POST /notifications/bulk-delete { ids: [...] }
-                            // Implementing loop for now to be safe with current API
-                            await Promise.all(Array.from(selectedItems).map(id => api.delete(`/notifications/${id}`)));
-                            refresh();
-                            setIsSelectionMode(false);
-                            setSelectedItems(new Set());
-                        } catch (err) {
-                            Alert.alert("Error", "Failed to delete some notifications");
-                        }
+        Alert.alert('Delete Notifications', `Are you sure you want to delete ${selectedItems.size} notifications?`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await Promise.all(Array.from(selectedItems).map(id => api.delete(`/notifications/${id}`)));
+                        refresh();
+                        setIsSelectionMode(false);
+                        setSelectedItems(new Set());
+                    } catch {
+                        Alert.alert('Error', 'Failed to delete some notifications');
                     }
-                }
-            ]
-        );
+                },
+            },
+        ]);
     };
 
     const toggleSelection = (id: string) => {
-        const newSelected = new Set(selectedItems);
-        if (newSelected.has(id)) {
-            newSelected.delete(id);
+        const next = new Set(selectedItems);
+        if (next.has(id)) {
+            next.delete(id);
         } else {
-            newSelected.add(id);
+            next.add(id);
         }
-        setSelectedItems(newSelected);
-
-        if (newSelected.size === 0) {
+        setSelectedItems(next);
+        if (next.size === 0) {
             setIsSelectionMode(false);
         }
     };
@@ -93,29 +79,22 @@ const NotificationsScreen = ({ navigation }: any) => {
         setSelectedItems(new Set([id]));
     };
 
-    // Grouping Logic
     const groupedNotifications = useCallback(() => {
-        const groups: { [key: string]: any[] } = {
-            'Today': [],
-            'Yesterday': [],
-            'Earlier': []
-        };
-
+        const groups: Record<string, any[]> = { Today: [], Yesterday: [], Earlier: [] };
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
 
-        notifications.forEach(item => {
+        notifications.forEach((item) => {
             const itemDate = new Date(item.createdAt);
             itemDate.setHours(0, 0, 0, 0);
-
             if (itemDate.getTime() === today.getTime()) {
-                groups['Today'].push(item);
+                groups.Today.push(item);
             } else if (itemDate.getTime() === yesterday.getTime()) {
-                groups['Yesterday'].push(item);
+                groups.Yesterday.push(item);
             } else {
-                groups['Earlier'].push(item);
+                groups.Earlier.push(item);
             }
         });
 
@@ -124,24 +103,20 @@ const NotificationsScreen = ({ navigation }: any) => {
             .map(key => ({ title: key, data: groups[key] }));
     }, [notifications]);
 
-    const renderRightActions = (id: string) => {
-        return (
-            <TouchableOpacity
-                style={styles.deleteAction}
-                onPress={() => handleDelete(id)}
-            >
-                <Trash2 size={24} color="#ffffff" />
-                <Text style={styles.deleteActionText}>Delete</Text>
-            </TouchableOpacity>
-        );
-    };
+    const renderRightActions = (id: string) => (
+        <TouchableOpacity activeOpacity={0.85} style={[styles.deleteAction, { backgroundColor: colors.danger }]} onPress={() => handleDelete(id)}>
+            <Trash2 size={24} color={colors.white} />
+            <Text style={[styles.deleteActionText, { color: colors.white }]}>Delete</Text>
+        </TouchableOpacity>
+    );
 
-    const renderItem = useCallback(({ item, index }: { item: any, index: number }) => {
+    const renderItem = useCallback(({ item, index }: { item: any; index: number }) => {
         const isSelected = selectedItems.has(item._id);
 
-        const Content = (
+        const content = (
             <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
                 <TouchableOpacity
+                    activeOpacity={0.75}
                     onPress={() => {
                         if (isSelectionMode) {
                             toggleSelection(item._id);
@@ -151,19 +126,20 @@ const NotificationsScreen = ({ navigation }: any) => {
                     }}
                     onLongPress={() => enterSelectionMode(item._id)}
                     delayLongPress={300}
-                    activeOpacity={0.7}
                     style={{ marginBottom: 1 }}
                 >
                     <View
                         style={[
                             styles.notificationCard,
-                            { borderBottomWidth: 0 },
-                            !item.read ? { borderColor: 'rgba(139, 92, 246, 0.3)', borderLeftWidth: 3, borderLeftColor: colors.primary } : {},
-                            isSelected ? { backgroundColor: colors.primary + '20', borderColor: colors.primary, borderWidth: 1 } : {}
+                            {
+                                backgroundColor: isSelected ? colors.primarySoft : colors.cardSoft,
+                                borderColor: !item.read ? colors.primary : colors.borderSoft,
+                                borderLeftWidth: !item.read ? 3 : 1,
+                            },
                         ]}
                     >
                         <View style={styles.cardInner}>
-                            {isSelectionMode && (
+                            {isSelectionMode ? (
                                 <View style={styles.checkboxContainer}>
                                     {isSelected ? (
                                         <CheckSquare size={20} color={colors.primary} />
@@ -171,28 +147,25 @@ const NotificationsScreen = ({ navigation }: any) => {
                                         <Square size={20} color={colors.textSecondary} />
                                     )}
                                 </View>
-                            )}
+                            ) : null}
 
-                            <View style={[styles.iconContainer, { backgroundColor: isSelected ? colors.primary + '40' : 'rgba(255,255,255,0.05)' }]}>
+                            <View style={[styles.iconContainer, { backgroundColor: isSelected ? colors.primarySoft : colors.backdrop }]}>
                                 {getIcon(item.type)}
                             </View>
 
                             <View style={styles.textContainer}>
                                 <View style={styles.titleRow}>
-                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                                        <Text style={[
-                                            styles.notificationTitle,
-                                            { color: item.read ? '#94a3b8' : '#ffffff' }
-                                        ]} numberOfLines={1}>
+                                    <View style={styles.titleWrap}>
+                                        <Text style={[styles.notificationTitle, { color: item.read ? colors.textSecondary : colors.text }]} numberOfLines={1}>
                                             {item.title}
                                         </Text>
-                                        {!item.read && <View style={styles.unreadDot} />}
+                                        {!item.read ? <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} /> : null}
                                     </View>
-                                    <Text style={[styles.timeText, { color: '#64748b' }]}>
+                                    <Text style={[styles.timeText, { color: colors.textMuted }]}>
                                         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </Text>
                                 </View>
-                                <Text style={[styles.messageText, { color: item.read ? '#64748b' : '#94a3b8' }]} numberOfLines={2}>
+                                <Text style={[styles.messageText, { color: item.read ? colors.textMuted : colors.textSecondary }]} numberOfLines={2}>
                                     {item.message}
                                 </Text>
                             </View>
@@ -203,58 +176,47 @@ const NotificationsScreen = ({ navigation }: any) => {
         );
 
         if (isSelectionMode) {
-            return Content;
+            return content;
         }
 
-        return (
-            <Swipeable renderRightActions={() => renderRightActions(item._id)}>
-                {Content}
-            </Swipeable>
-        );
-    }, [isSelectionMode, selectedItems, handleNotificationClick, navigation, colors.primary]);
+        return <Swipeable renderRightActions={() => renderRightActions(item._id)}>{content}</Swipeable>;
+    }, [colors, handleNotificationClick, isSelectionMode, navigation, selectedItems]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-                
-                {/* Modern Gradient Background */}
-                <View style={styles.backgroundGradient}>
-                    <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                    <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                    <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
-                </View>
-
-                {/* Header */}
+            <AppScreen>
                 <View style={styles.headerContent}>
                     {isSelectionMode ? (
                         <View style={styles.selectionHeader}>
-                            <TouchableOpacity onPress={() => {
-                                setIsSelectionMode(false);
-                                setSelectedItems(new Set());
-                            }}>
-                                <X size={24} color="#ffffff" />
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setIsSelectionMode(false);
+                                    setSelectedItems(new Set());
+                                }}
+                            >
+                                <X size={24} color={colors.text} />
                             </TouchableOpacity>
-                            <Text style={styles.selectionTitle}>{selectedItems.size} Selected</Text>
+                            <Text style={[styles.selectionTitle, { color: colors.text }]}>{selectedItems.size} Selected</Text>
                             <TouchableOpacity onPress={handleBulkDelete}>
-                                <Trash2 size={24} color="#ef4444" />
+                                <Trash2 size={24} color={colors.danger} />
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <View style={styles.defaultHeader}>
-                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                                <ArrowLeft size={24} color="#ffffff" />
-                            </TouchableOpacity>
-                            <View>
-                                <Text style={styles.headerTitle}>Notifications</Text>
-                                <Text style={styles.headerSubtitle}>Updates and alerts</Text>
-                            </View>
-                            {notifications.some(n => !n.read) && (
-                                <TouchableOpacity onPress={markAllRead} style={styles.markReadBtn}>
-                                    <Text style={styles.clearAllText}>Mark all read</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
+                        <ScreenHeader
+                            title="Notifications"
+                            onBack={() => navigation.goBack()}
+                            right={
+                                notifications.some(notification => !notification.read) ? (
+                                    <TouchableOpacity
+                                        activeOpacity={0.85}
+                                        onPress={markAllRead}
+                                        style={[styles.markReadButton, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}
+                                    >
+                                        <Text style={[styles.markReadText, { color: colors.primary }]}>Mark all read</Text>
+                                    </TouchableOpacity>
+                                ) : null
+                            }
+                        />
                     )}
                 </View>
 
@@ -265,105 +227,53 @@ const NotificationsScreen = ({ navigation }: any) => {
                 ) : (
                     <SectionList
                         sections={groupedNotifications()}
-                        keyExtractor={item => item._id}
+                        keyExtractor={(item) => item._id}
                         renderItem={renderItem}
                         renderSectionHeader={({ section: { title } }) => (
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionHeaderText}>{title}</Text>
+                                <Text style={[styles.sectionHeaderText, { color: colors.textSecondary }]}>{title}</Text>
                             </View>
                         )}
-                        refreshControl={
-                            <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
-                        }
+                        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <View style={styles.emptyIconContainer}>
-                                    <Bell size={48} color="#af25f4" />
+                                <View style={[styles.emptyIconContainer, { backgroundColor: colors.primarySoft }]}>
+                                    <Bell size={48} color={colors.primary} />
                                 </View>
-                                <Text style={styles.emptyText}>
-                                    All caught up! No new notifications.
-                                </Text>
+                                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>All caught up! No new notifications.</Text>
                             </View>
                         }
                         contentContainerStyle={styles.listContent}
                     />
                 )}
-            </SafeAreaView>
+            </AppScreen>
         </GestureHandlerRootView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0a0a0a',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gradientLayer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
     headerContent: {
-        paddingHorizontal: 20,
-        paddingVertical: 20,
         zIndex: 10,
-    },
-    defaultHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        marginRight: 16,
     },
     selectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
     },
     selectionTitle: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#ffffff',
     },
-    headerTitle: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: '#ffffff',
-        letterSpacing: -0.5,
-    },
-    headerSubtitle: {
-        color: '#94a3b8',
-        fontSize: 14,
-        marginTop: 2,
-    },
-    markReadBtn: {
+    markReadButton: {
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 12,
-        backgroundColor: 'rgba(175, 37, 244, 0.2)',
         borderWidth: 1,
-        borderColor: 'rgba(175, 37, 244, 0.4)',
     },
-    clearAllText: {
-        color: '#af25f4',
+    markReadText: {
         fontWeight: '700',
         fontSize: 12,
     },
@@ -382,7 +292,6 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     sectionHeaderText: {
-        color: '#94a3b8',
         fontSize: 12,
         fontWeight: '700',
         textTransform: 'uppercase',
@@ -393,8 +302,6 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         marginBottom: 8,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 16,
     },
     cardInner: {
@@ -421,6 +328,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 4,
     },
+    titleWrap: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     notificationTitle: {
         fontSize: 16,
         fontWeight: '700',
@@ -429,7 +341,6 @@ const styles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: '#af25f4',
         marginLeft: 8,
     },
     timeText: {
@@ -441,7 +352,6 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     deleteAction: {
-        backgroundColor: '#ef4444',
         justifyContent: 'center',
         alignItems: 'center',
         width: 80,
@@ -451,7 +361,6 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     deleteActionText: {
-        color: '#ffffff',
         fontSize: 10,
         fontWeight: '700',
         marginTop: 4,
@@ -467,13 +376,11 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: 'rgba(175, 37, 244, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
     },
     emptyText: {
-        color: '#94a3b8',
         marginTop: 16,
         fontSize: 16,
         fontWeight: '500',
@@ -481,4 +388,3 @@ const styles = StyleSheet.create({
 });
 
 export default NotificationsScreen;
-

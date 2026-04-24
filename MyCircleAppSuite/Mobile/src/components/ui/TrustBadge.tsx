@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
-import { ShieldCheck, ShieldAlert, Star } from 'lucide-react-native';
+import { StyleSheet, Text } from 'react-native';
+import { ShieldAlert, ShieldCheck, Star } from 'lucide-react-native';
+
 import { useTheme } from '../../context/ThemeContext';
 import GlassView from './GlassView';
 
@@ -15,55 +16,49 @@ const TrustBadge: React.FC<TrustBadgeProps> = ({
     score = 50,
     isVerified = false,
     size = 'medium',
-    showLabel = false
+    showLabel = false,
 }) => {
     const { colors } = useTheme();
 
-    // Determine color and icon based on score
     let badgeColor = colors.textSecondary;
     let BadgeIcon = Star;
-
     if (score >= 80) {
-        badgeColor = '#10B981'; // Emerald Green
+        badgeColor = colors.success;
         BadgeIcon = ShieldCheck;
     } else if (score >= 50) {
-        badgeColor = '#F59E0B'; // Amber
+        badgeColor = colors.warning;
         BadgeIcon = ShieldCheck;
     } else {
-        badgeColor = '#EF4444'; // Red
+        badgeColor = colors.danger;
         BadgeIcon = ShieldAlert;
     }
 
-    // Size configurations
     const sizeConfig = {
         small: { icon: 14, text: 10, padding: 4 },
         medium: { icon: 18, text: 14, padding: 6 },
-        large: { icon: 32, text: 24, padding: 12 }
+        large: { icon: 32, text: 24, padding: 12 },
     };
 
     const config = sizeConfig[size];
+    const activeColor = isVerified ? colors.success : badgeColor;
 
     return (
         <GlassView
             intensity={isVerified ? 30 : 15}
-            style={[styles.container, {
-                padding: config.padding,
-                borderColor: isVerified ? '#10B981' : badgeColor + '40',
-                borderWidth: 1.5
-            }]}
+            style={[
+                styles.container,
+                {
+                    padding: config.padding,
+                    borderColor: activeColor,
+                    borderWidth: 1.5,
+                },
+            ]}
         >
-            <BadgeIcon size={config.icon} color={isVerified ? '#10B981' : badgeColor} />
-            <Text style={[styles.score, {
-                fontSize: config.text,
-                color: isVerified ? '#10B981' : badgeColor
-            }]}>
-                {score}
-            </Text>
-            {showLabel && (
-                <Text style={[styles.label, { color: 'rgba(255,255,255,0.4)' }]}>
-                    Trust Score
-                </Text>
-            )}
+            <BadgeIcon size={config.icon} color={activeColor} />
+            <Text style={[styles.score, { fontSize: config.text, color: activeColor }]}>{score}</Text>
+            {showLabel ? (
+                <Text style={[styles.label, { color: colors.textMuted }]}>Trust Score</Text>
+            ) : null}
         </GlassView>
     );
 };
@@ -74,15 +69,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 20,
         gap: 4,
-        alignSelf: 'flex-start'
+        alignSelf: 'flex-start',
     },
     score: {
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
     label: {
         fontSize: 10,
-        marginLeft: 4
-    }
+        marginLeft: 4,
+    },
 });
 
 export default TrustBadge;

@@ -254,11 +254,7 @@ const Feed = () => {
                             )}
                         </button>
 
-                        {/* Create Post Button */}
-                        <Button onClick={() => navigate('/create-post')} className="gap-2">
-                            <Plus className="w-4 h-4" />
-                            Create Post
-                        </Button>
+                        
                     </div>
 
                     {/* Expanded Filters */}

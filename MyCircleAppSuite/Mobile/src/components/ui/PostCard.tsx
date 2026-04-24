@@ -19,6 +19,7 @@ import { useToast } from '../../components/ui/Toast';
 import { useTheme } from '../../context/ThemeContext';
 import api, { BASE_URL } from '../../services/api';
 import { getPlaceholderSuggestions } from '../../services/aiService';
+import { formatDurationMinutesCompact } from '../../utils/formatDuration';
 import GlassView from './GlassView';
 
 import GenerativePlaceholder from './GenerativePlaceholder';
@@ -284,7 +285,7 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
                                 )}
                                 {post.duration ? (
                                     <View style={styles.metaChip}>
-                                        <Text style={styles.metaChipText}>{post.duration} mins</Text>
+                                        <Text style={styles.metaChipText}>{formatDurationMinutesCompact(post.duration)}</Text>
                                     </View>
                                 ) : null}
                                 {post.availability ? (

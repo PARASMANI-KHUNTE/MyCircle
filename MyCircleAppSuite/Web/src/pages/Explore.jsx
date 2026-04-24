@@ -470,7 +470,7 @@ const handlePostClick = (postId) => navigate(`/post/${postId}`);
                                                     {cat?.emoji || '📍'}
                                                 </div>
                                             )}
-                                            <div className="p-3">
+<div className="p-3">
                                                 <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: `${markerColor}20`, color: markerColor }}>
                                                     {cat?.label}
                                                 </span>
@@ -478,8 +478,11 @@ const handlePostClick = (postId) => navigate(`/post/${postId}`);
                                                 {post.price > 0 && (
                                                     <p className="text-lg font-bold text-primary mt-1">₹{post.price.toLocaleString()}</p>
                                                 )}
+                                                <p className="text-[10px] text-gray-500 mt-2 truncate">
+                                                    {post.user?.displayName || 'Anonymous'} • {post.location || 'Unknown'}
+                                                </p>
                                                 <div className="flex items-center justify-between mt-2 text-[10px] text-gray-500">
-                                                    {post.distance && <span>📍 {post.distance.toFixed(1)}km</span>}
+                                                    {post.distance != null && post.distance > 0 && <span>📍 {post.distance < 1 ? `${Math.round(post.distance * 1000)}m` : `${post.distance.toFixed(1)}km`}</span>}
                                                     <span>{timeAgo(post.createdAt)}</span>
                                                 </div>
                                                 <button 
@@ -562,9 +565,9 @@ const handlePostClick = (postId) => navigate(`/post/${postId}`);
                                 )}
                                 
                                 <div className="flex items-center gap-3 mt-3 text-sm text-foreground-muted">
-                                    {quickViewPost.distance && (
+                                    {quickViewPost.distance != null && quickViewPost.distance > 0 && (
                                         <span className="flex items-center gap-1">
-                                            <MapPin className="w-4 h-4" /> {quickViewPost.distance.toFixed(1)} km away
+                                            <MapPin className="w-4 h-4" /> {quickViewPost.distance < 1 ? `${Math.round(quickViewPost.distance * 1000)}m` : `${quickViewPost.distance.toFixed(1)}km`}
                                         </span>
                                     )}
                                     <span className="flex items-center gap-1">
@@ -582,14 +585,14 @@ const handlePostClick = (postId) => navigate(`/post/${postId}`);
                                         <p className="text-xs text-foreground-muted">Posted by</p>
                                         <div className="flex items-center gap-2 mt-1">
                                             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                                                {quickViewPost.author?.displayName?.[0] || '?'}
+                                                {(quickViewPost.user?.displayName || 'Anonymous')[0]?.toUpperCase() || '?'}
                                             </div>
-                                            <p className="text-sm font-medium truncate">{quickViewPost.author?.displayName || 'Anonymous'}</p>
+                                            <p className="text-sm font-medium truncate">{quickViewPost.user?.displayName || 'Anonymous'}</p>
                                         </div>
                                     </div>
                                     <div className="p-3 bg-card rounded-xl border border-card-border">
                                         <p className="text-xs text-foreground-muted">Location</p>
-                                        <p className="text-sm font-medium mt-1 truncate">{quickViewPost.locationName || 'Unknown'}</p>
+                                        <p className="text-sm font-medium mt-1 truncate">{quickViewPost.location || 'Unknown'}</p>
                                     </div>
                                 </div>
                                 
@@ -615,17 +618,7 @@ const handlePostClick = (postId) => navigate(`/post/${postId}`);
                     </motion.div>
                 )}
             </AnimatePresence>
-            <motion.button
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/create-post')}
-                className="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full shadow-md font-semibold text-sm hover:bg-primary-hover transition-colors"
-            >
-                <Plus className="w-4 h-4" />
-                <span>Create</span>
-            </motion.button>
+
         </div>
     );
 };

@@ -308,11 +308,7 @@ const Profile = () => {
                     <h2 className="text-2xl font-bold font-display">
                         {isOwnProfile ? 'My Posts' : `${profile.displayName}'s Posts`}
                     </h2>
-                    {isOwnProfile && (
-                        <Button variant="primary" size="sm" onClick={() => navigate('/create-post')}>
-                            Create New
-                        </Button>
-                    )}
+                    
                 </div>
 
                 {postsLoading ? (

@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { ITEM_CATEGORIES, JOB_TYPES } from '../constants';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -58,24 +59,9 @@ const CATEGORIES = [
     { id: 'rent', emoji: '🏠', label: 'Rent', desc: 'Rentals & spaces' },
 ];
 
-const JOB_TYPES = [
-    { id: 'full-time', label: 'Full-time' },
-    { id: 'part-time', label: 'Part-time' },
-    { id: 'contractual', label: 'Contractual' },
-    { id: 'gig-based', label: 'Gig-based' },
-    { id: 'freelance', label: 'Freelance' },
-    { id: 'internship', label: 'Internship' },
-];
+const JOB_TYPES_LIST = JOB_TYPES.map(id => ({ id, label: id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }));
 
-const ITEM_CATEGORIES = [
-    { id: 'electronics', label: 'Electronics' },
-    { id: 'vehicles', label: 'Vehicles' },
-    { id: 'furniture', label: 'Furniture' },
-    { id: 'clothing', label: 'Clothing' },
-    { id: 'home', label: 'Home & Garden' },
-    { id: 'sports', label: 'Sports' },
-    { id: 'other', label: 'Other' },
-];
+const ITEM_CATEGORIES_LIST = ITEM_CATEGORIES.map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
 
 const DURATIONS = [
     { id: 15, label: '15 min', desc: 'Quick task' },
@@ -372,7 +358,7 @@ const CreatePost = () => {
                                         className="w-full mt-1.5 px-4 py-3 rounded-xl border border-card-border bg-card text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                     >
                                         <option value="">Select type</option>
-                                        {JOB_TYPES.map(type => (
+                                        {JOB_TYPES_LIST.map(type => (
                                             <option key={type.id} value={type.id}>{type.label}</option>
                                         ))}
                                     </select>
@@ -389,7 +375,7 @@ const CreatePost = () => {
                                         className="w-full mt-1.5 px-4 py-3 rounded-xl border border-card-border bg-card text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                     >
                                         <option value="">Select category</option>
-                                        {ITEM_CATEGORIES.map(cat => (
+                                        {ITEM_CATEGORIES_LIST.map(cat => (
                                             <option key={cat.id} value={cat.id}>{cat.label}</option>
                                         ))}
                                     </select>

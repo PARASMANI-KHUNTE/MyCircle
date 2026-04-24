@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet, Dimensions, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
-import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withTiming, withDelay } from 'react-native-reanimated';
-import { ArrowLeft, Eye, EyeOff, User, Mail, Lock } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-const { width, height } = Dimensions.get('window');
+import AppScreen from '../components/layout/AppScreen';
+import ScreenHeader from '../components/layout/ScreenHeader';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import api from '../services/api';
 
 const RegisterScreen = ({ navigation }: any) => {
+    const { colors } = useTheme();
+    const auth = useAuth() as any;
     const [displayName, setDisplayName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,14 +20,12 @@ const RegisterScreen = ({ navigation }: any) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [focusedInput, setFocusedInput] = useState<'displayName' | 'email' | 'password' | 'confirmPassword' | null>(null);
-    const auth = useAuth() as any;
 
     const handleRegister = async () => {
         if (!displayName || !email || !password) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
-
         if (password !== confirmPassword) {
             Alert.alert('Error', 'Passwords do not match');
             return;
@@ -45,411 +46,242 @@ const RegisterScreen = ({ navigation }: any) => {
         }
     };
 
-    const handleBack = () => {
-        navigation.goBack();
-    };
-
-    const handleGoogleLogin = () => {
-        Alert.alert('Google Sign In', 'Google registration will be available soon.');
-    };
+    const renderInput = ({
+        field,
+        label,
+        value,
+        onChangeText,
+        placeholder,
+        icon,
+        secureTextEntry,
+        showToggle,
+        onToggle,
+        keyboardType,
+        autoCapitalize,
+    }: {
+        field: 'displayName' | 'email' | 'password' | 'confirmPassword';
+        label: string;
+        value: string;
+        onChangeText: (value: string) => void;
+        placeholder: string;
+        icon: React.ReactNode;
+        secureTextEntry?: boolean;
+        showToggle?: boolean;
+        onToggle?: () => void;
+        keyboardType?: 'default' | 'email-address';
+        autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+    }) => (
+        <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
+            <View
+                style={[
+                    styles.inputContainer,
+                    {
+                        backgroundColor: colors.backdrop,
+                        borderColor: focusedInput === field ? colors.primary : colors.borderSoft,
+                    },
+                ]}
+            >
+                {icon}
+                <TextInput
+                    style={[styles.input, { color: colors.text }]}
+                    placeholder={placeholder}
+                    placeholderTextColor={colors.placeholder}
+                    value={value}
+                    onChangeText={onChangeText}
+                    secureTextEntry={secureTextEntry}
+                    keyboardType={keyboardType}
+                    autoCapitalize={autoCapitalize}
+                    onFocus={() => setFocusedInput(field)}
+                    onBlur={() => setFocusedInput(null)}
+                />
+                {showToggle ? (
+                    <TouchableOpacity style={styles.passwordToggle} onPress={onToggle}>
+                        {secureTextEntry ? (
+                            <Eye size={20} color={colors.textSecondary} />
+                        ) : (
+                            <EyeOff size={20} color={colors.textSecondary} />
+                        )}
+                    </TouchableOpacity>
+                ) : null}
+            </View>
+        </View>
+    );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <AppScreen>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
+                        <ScreenHeader title="Create Account" onBack={() => navigation.goBack()} />
+                    </Animated.View>
 
-            {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
-            </View>
+                    <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.hero}>
+                        <Text style={[styles.title, { color: colors.text }]}>Join MyCircle</Text>
+                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Create your profile and start connecting locally.</Text>
+                    </Animated.View>
 
-            {/* Subtle Grid Pattern */}
-            <View style={styles.gridPattern}>
-                {[...Array(12)].map((_, i) => (
-                    <View
-                        key={i}
-                        style={[
-                            styles.gridLine,
-                            {
-                                left: (i % 4) * (width / 4),
-                                top: Math.floor(i / 4) * (height / 3),
-                                width: 1,
-                                height: height / 3,
-                            }
-                        ]}
-                    />
-                ))}
-            </View>
+                    <Animated.View entering={FadeInDown.delay(400).duration(800).springify()}>
+                        <View style={[styles.formCard, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                            {renderInput({
+                                field: 'displayName',
+                                label: 'Display Name',
+                                value: displayName,
+                                onChangeText: setDisplayName,
+                                placeholder: 'Your name',
+                                icon: <User size={20} color={colors.textSecondary} style={styles.inputIcon} />,
+                                autoCapitalize: 'words',
+                            })}
+                            {renderInput({
+                                field: 'email',
+                                label: 'Email Address',
+                                value: email,
+                                onChangeText: setEmail,
+                                placeholder: 'Enter your email',
+                                icon: <Mail size={20} color={colors.textSecondary} style={styles.inputIcon} />,
+                                keyboardType: 'email-address',
+                                autoCapitalize: 'none',
+                            })}
+                            {renderInput({
+                                field: 'password',
+                                label: 'Password',
+                                value: password,
+                                onChangeText: setPassword,
+                                placeholder: 'Create a password',
+                                icon: <Lock size={20} color={colors.textSecondary} style={styles.inputIcon} />,
+                                secureTextEntry: !showPassword,
+                                showToggle: true,
+                                onToggle: () => setShowPassword(prev => !prev),
+                            })}
+                            {renderInput({
+                                field: 'confirmPassword',
+                                label: 'Confirm Password',
+                                value: confirmPassword,
+                                onChangeText: setConfirmPassword,
+                                placeholder: 'Confirm your password',
+                                icon: <Lock size={20} color={colors.textSecondary} style={styles.inputIcon} />,
+                                secureTextEntry: !showConfirmPassword,
+                                showToggle: true,
+                                onToggle: () => setShowConfirmPassword(prev => !prev),
+                            })}
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.container}
-            >
-                <ScrollView
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {/* Header */}
-                    <Animated.View
-                        entering={FadeInDown.delay(200).duration(600).springify()}
-                        style={styles.headerSection}
-                    >
-                        <TouchableOpacity
-                            onPress={handleBack}
-                            style={styles.backButton}
-                            activeOpacity={0.8}
-                        >
-                            <ArrowLeft size={20} color="#ffffff" />
-                        </TouchableOpacity>
-
-                        <View style={styles.headerContent}>
-                            <Text style={styles.welcomeText}>Join Circle</Text>
-                            <Text style={styles.subtitleText}>Create your professional profile</Text>
+                            <TouchableOpacity activeOpacity={0.9} style={[styles.primaryButton, { backgroundColor: colors.primary }, loading && styles.disabled]} onPress={handleRegister} disabled={loading}>
+                                <Text style={[styles.primaryButtonText, { color: colors.white }]}>{loading ? 'Creating...' : 'Sign Up'}</Text>
+                            </TouchableOpacity>
                         </View>
                     </Animated.View>
 
-                    {/* Form Section */}
-                    <Animated.View
-                        entering={FadeInDown.delay(400).duration(800).springify()}
-                        style={styles.formSection}
-                    >
-                        <View style={styles.formCard}>
-                            <View style={styles.formContent}>
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Display Name</Text>
-                                    <View style={[
-                                        styles.inputContainer,
-                                        focusedInput === 'displayName' && styles.inputFocused
-                                    ]}>
-                                        <User size={20} color="#94a3b8" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="Your Name"
-                                            placeholderTextColor="#94a3b8"
-                                            value={displayName}
-                                            onChangeText={setDisplayName}
-                                            onFocus={() => setFocusedInput('displayName')}
-                                            onBlur={() => setFocusedInput(null)}
-                                        />
-                                    </View>
-                                </View>
-
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Email Address</Text>
-                                    <View style={[
-                                        styles.inputContainer,
-                                        focusedInput === 'email' && styles.inputFocused
-                                    ]}>
-                                        <Mail size={20} color="#94a3b8" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="Enter your email"
-                                            placeholderTextColor="#94a3b8"
-                                            value={email}
-                                            onChangeText={setEmail}
-                                            autoCapitalize="none"
-                                            keyboardType="email-address"
-                                            onFocus={() => setFocusedInput('email')}
-                                            onBlur={() => setFocusedInput(null)}
-                                        />
-                                    </View>
-                                </View>
-
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Password</Text>
-                                    <View style={[
-                                        styles.inputContainer,
-                                        focusedInput === 'password' && styles.inputFocused
-                                    ]}>
-                                        <Lock size={20} color="#94a3b8" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="Create a password"
-                                            placeholderTextColor="#94a3b8"
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            secureTextEntry={!showPassword}
-                                            onFocus={() => setFocusedInput('password')}
-                                            onBlur={() => setFocusedInput(null)}
-                                        />
-                                        <TouchableOpacity
-                                            style={styles.passwordToggle}
-                                            onPress={() => setShowPassword(!showPassword)}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff size={20} color="#94a3b8" />
-                                            ) : (
-                                                <Eye size={20} color="#94a3b8" />
-                                            )}
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Confirm Password</Text>
-                                    <View style={[
-                                        styles.inputContainer,
-                                        focusedInput === 'confirmPassword' && styles.inputFocused
-                                    ]}>
-                                        <Lock size={20} color="#94a3b8" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="Confirm your password"
-                                            placeholderTextColor="#94a3b8"
-                                            value={confirmPassword}
-                                            onChangeText={setConfirmPassword}
-                                            secureTextEntry={!showConfirmPassword}
-                                            onFocus={() => setFocusedInput('confirmPassword')}
-                                            onBlur={() => setFocusedInput(null)}
-                                        />
-                                        <TouchableOpacity
-                                            style={styles.passwordToggle}
-                                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        >
-                                            {showConfirmPassword ? (
-                                                <EyeOff size={20} color="#94a3b8" />
-                                            ) : (
-                                                <Eye size={20} color="#94a3b8" />
-                                            )}
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-
-                                <TouchableOpacity
-                                    style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-                                    onPress={handleRegister}
-                                    disabled={loading}
-                                    activeOpacity={0.9}
-                                >
-                                    <Text style={styles.registerButtonText}>
-                                        {loading ? 'Creating...' : 'Sign Up'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </Animated.View>
-
-                    {/* Footer */}
-                    <Animated.View
-                        entering={FadeInUp.delay(600).duration(800).springify()}
-                        style={styles.footerSection}
-                    >
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Login')}
-                            style={styles.loginLink}
-                        >
-                            <Text style={styles.loginText}>Already have an account?</Text>
-                            <Text style={styles.loginLinkText}>Sign In</Text>
+                    <Animated.View entering={FadeInUp.delay(600).duration(800).springify()} style={styles.footer}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkRow}>
+                            <Text style={[styles.linkLabel, { color: colors.textMuted }]}>Already have an account?</Text>
+                            <Text style={[styles.linkValue, { color: colors.primary }]}>Sign In</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            onPress={handleGoogleLogin}
-                            style={styles.googleLink}
-                        >
-                            <Text style={styles.googleLinkText}>Or use Google Sign In</Text>
+                        <TouchableOpacity onPress={() => Alert.alert('Google Sign In', 'Google registration will be available soon.')} style={styles.linkOnly}>
+                            <Text style={[styles.linkLabel, { color: colors.textMuted }]}>Or use Google Sign In</Text>
                         </TouchableOpacity>
 
-                        <View style={styles.divider} />
-
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Landing')}
-                            style={styles.backToLandingLink}
-                        >
-                            <Text style={styles.backToLandingText}>← Back to Landing</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={styles.linkOnly}>
+                            <Text style={[styles.backText, { color: colors.textSecondary }]}>← Back to Landing</Text>
                         </TouchableOpacity>
                     </Animated.View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </AppScreen>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0a0a0a',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gradientLayer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gridPattern: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.1,
-    },
-    gridLine: {
-        position: 'absolute',
-        backgroundColor: '#af25f4',
-    },
+    flex: { flex: 1 },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: 24,
-        paddingTop: 40,
         paddingBottom: 40,
     },
-    headerSection: {
-        marginBottom: 40,
+    hero: {
+        marginTop: 12,
+        marginBottom: 32,
     },
-    backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    headerContent: {
-        marginLeft: 16,
-        flex: 1,
-    },
-    welcomeText: {
+    title: {
         fontSize: 32,
         fontWeight: '800',
-        color: '#ffffff',
-        fontFamily: 'System',
         letterSpacing: -0.5,
     },
-    subtitleText: {
+    subtitle: {
         fontSize: 16,
-        color: '#94a3b8',
         marginTop: 8,
-    },
-    formSection: {
-        marginBottom: 40,
+        lineHeight: 24,
     },
     formCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 24,
         padding: 32,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    formContent: {
-        flex: 1,
     },
     inputGroup: {
         marginBottom: 24,
     },
-    inputLabel: {
+    label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#94a3b8',
         marginBottom: 8,
         marginLeft: 4,
     },
     inputContainer: {
         position: 'relative',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 16,
     },
-    inputFocused: {
-        borderColor: '#af25f4',
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    },
     inputIcon: {
         marginRight: 12,
     },
-    textInput: {
+    input: {
         fontSize: 16,
-        color: '#ffffff',
         flex: 1,
     },
     passwordToggle: {
         position: 'absolute',
         right: 12,
     },
-    registerButton: {
-        backgroundColor: '#af25f4',
+    primaryButton: {
         borderRadius: 16,
         paddingVertical: 18,
         alignItems: 'center',
-        shadowColor: '#af25f4',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
         marginTop: 16,
     },
-    registerButtonDisabled: {
+    disabled: {
         opacity: 0.6,
     },
-    registerButtonText: {
+    primaryButtonText: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#ffffff',
     },
-    footerSection: {
+    footer: {
         alignItems: 'center',
+        marginTop: 32,
         marginBottom: 20,
     },
-    loginLink: {
+    linkRow: {
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
     },
-    loginText: {
+    linkLabel: {
         fontSize: 14,
-        color: '#64748b',
         marginRight: 6,
     },
-    loginLinkText: {
+    linkValue: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#af25f4',
     },
-    googleLink: {
+    linkOnly: {
         marginBottom: 16,
     },
-    googleLinkText: {
+    backText: {
         fontSize: 14,
-        color: '#64748b',
-        textDecorationLine: 'underline',
-    },
-    divider: {
-        width: 40,
-        height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        marginVertical: 8,
-    },
-    backToLandingLink: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 16,
-    },
-    backToLandingText: {
-        fontSize: 14,
-        color: '#94a3b8',
         fontWeight: '500',
     },
 });

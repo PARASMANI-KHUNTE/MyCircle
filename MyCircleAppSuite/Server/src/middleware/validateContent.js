@@ -2,8 +2,9 @@ const { checkContentSafety, checkImageSafety } = require('../config/groq');
 const { containsProfanity } = require('../utils/profanityFilter');
 const fs = require('fs').promises;
 const ApiError = require('../utils/ApiError');
+const { POST_TYPES } = require('../constants/postTypes');
 
-const POST_TYPES = new Set(['job', 'service', 'sell', 'rent', 'barter']);
+const VALID_POST_TYPES = new Set(POST_TYPES);
 
 function normalizeStringArray(value) {
     if (value === undefined) return undefined;
@@ -45,7 +46,7 @@ async function validatePostContent(req, res, next) {
         if (!trimmedLocation) {
             return res.status(400).json({ msg: 'Location is required' });
         }
-        if (!POST_TYPES.has(trimmedType)) {
+        if (!VALID_POST_TYPES.has(trimmedType)) {
             return res.status(400).json({ msg: 'Invalid post type' });
         }
         if (req.body.price !== undefined && req.body.price !== '') {

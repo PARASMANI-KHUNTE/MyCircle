@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { POST_TYPES, EXCHANGE_PREFERENCES } = require('../constants/postTypes');
 
 const validate = (schema) => (req, res, next) => {
     try {
@@ -29,13 +30,13 @@ const schemas = {
     createPost: z.object({
         title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
         description: z.string().max(5000, 'Description too long').optional(),
-        type: z.enum(['job', 'service', 'sell', 'rent', 'barter', 'request']).optional(),
+        type: z.enum(POST_TYPES).optional(),
         price: z.number().min(0).optional(),
         location: z.string().optional(),
         images: z.array(z.string()).optional(),
         duration: z.number().optional(),
         isUrgent: z.boolean().optional(),
-        exchangePreference: z.enum(['money', 'barter', 'flexible']).optional(),
+        exchangePreference: z.enum(EXCHANGE_PREFERENCES).optional(),
         acceptsBarter: z.boolean().optional(),
     }),
 

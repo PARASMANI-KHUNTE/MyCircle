@@ -6,6 +6,7 @@ import Button from './Button';
 import api from '../../utils/api';
 import { cn } from '../../utils/cn';
 import { getAvatarUrl } from '../../utils/avatar';
+import { formatDuration } from '../../utils/time';
 import { getPostInsights, getPostExplanation } from '../../services/aiService';
 import {
     Sparkles, X, Edit2, Trash2, Eye, Heart, Share2, MessageCircle, MapPin,
@@ -380,7 +381,7 @@ const PostCard = ({
                         {post.duration && (
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 border border-info/20 px-3 py-1.5 text-xs font-semibold text-info">
                                 <Clock className="w-3.5 h-3.5" />
-                                {post.duration} mins
+                                {formatDuration(post.duration)}
                             </span>
                         )}
                         {post.availability && (

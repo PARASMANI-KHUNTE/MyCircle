@@ -289,7 +289,7 @@ const Requests = () => {
 
                                         {/* User Info */}
                                         <div className="p-4 flex items-start gap-4">
-                                            <Link to={`/profile/${otherUser?._id}`} className="shrink-0">
+                                            <Link to={`/profile?userId=${otherUser?._id}`} className="shrink-0">
                                                 <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10">
                                                     <img 
                                                         src={getAvatarUrl(otherUser)} 
@@ -301,7 +301,7 @@ const Requests = () => {
                                             
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <Link to={`/profile/${otherUser?._id}`} className="font-semibold hover:text-primary">
+                                                    <Link to={`/profile?userId=${otherUser?._id}`} className="font-semibold hover:text-primary">
                                                         {otherUser?.displayName || 'User'}
                                                     </Link>
                                                     {otherUser?.isVerified && (

@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
 import Sound from 'react-native-sound';
+import { MainTabParamList } from './types';
 
 import FeedScreen from '../screens/FeedScreen';
 import RequestsScreen from '../screens/RequestsScreen';
@@ -10,7 +11,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import ModernTabBar from './ModernTabBar';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 // Enable playback in silent mode
 Sound.setCategory('Playback');

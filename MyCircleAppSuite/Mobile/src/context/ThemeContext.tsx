@@ -2,69 +2,35 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Palette } from '../constants/design';
+import { appThemes, themeTokens, ThemeMode, AppColors, AppTheme } from '../theme/theme';
 
-// Define Color Palette
-export const Colors = {
-    dark: {
-        background: Palette.dark.bg,
-        card: Palette.dark.surface,
-        text: '#f8fafc',
-        textSecondary: '#94a3b8',
-        border: Palette.dark.elevator,
-        input: Palette.dark.elevator,
-        placeholder: '#64748b',
-
-        primary: Palette.violet[500],
-        secondary: Palette.cyan[500],
-        accent: Palette.pink[500],
-
-        danger: Palette.error,
-        success: Palette.success,
-        warning: Palette.warning,
-
-        // Custom additions
-        glass: Palette.dark.glass,
-        neon: Palette.violet.neon,
-    },
-    light: {
-        background: Palette.light.bg,
-        card: Palette.light.surface,
-        text: '#0f172a',
-        textSecondary: '#64748b',
-        border: Palette.light.elevator,
-        input: Palette.light.elevator,
-        placeholder: '#94a3b8',
-
-        primary: Palette.violet[600],
-        secondary: Palette.cyan[500],
-        accent: Palette.pink[500],
-
-        danger: Palette.error,
-        success: Palette.success,
-        warning: Palette.warning,
-
-        // Custom additions
-        glass: Palette.light.glass,
-        neon: Palette.violet[500],
-    }
+type ThemeContextColors = AppColors & {
+    input: string;
+    neon: string;
 };
 
 type ThemeContextType = {
-    theme: 'dark' | 'light';
-    colors: typeof Colors.dark;
+    theme: ThemeMode;
+    colors: ThemeContextColors;
+    appTheme: AppTheme;
+    isDark: boolean;
+    tokens: typeof themeTokens;
+    typography: AppTheme['typography'];
+    spacing: AppTheme['spacing'];
+    radius: AppTheme['radius'];
+    shadow: AppTheme['shadow'];
     toggleTheme: () => void;
-    setTheme: (theme: 'dark' | 'light') => void;
+    setTheme: (theme: ThemeMode) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const systemScheme = useColorScheme();
-    const [theme, setThemeState] = useState<'dark' | 'light'>(systemScheme === 'dark' ? 'dark' : 'light');
+    const [theme, setThemeState] = useState<ThemeMode>(systemScheme === 'dark' ? 'dark' : 'light');
 
     useEffect(() => {
-        loadTheme();
+        void loadTheme();
     }, []);
 
     const loadTheme = async () => {
@@ -78,7 +44,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    const setTheme = async (newTheme: 'dark' | 'light') => {
+    const setTheme = async (newTheme: ThemeMode) => {
         setThemeState(newTheme);
         try {
             await AsyncStorage.setItem('app_theme', newTheme);
@@ -88,13 +54,32 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const toggleTheme = () => {
-        setTheme(theme === 'dark' ? 'light' : 'dark');
+        void setTheme(theme === 'dark' ? 'light' : 'dark');
     };
 
-    const colors = Colors[theme];
+    const appTheme = appThemes[theme];
+    const colors: ThemeContextColors = {
+        ...appTheme.colors,
+        input: appTheme.colors.elevated,
+        neon: appTheme.colors.primary,
+    };
 
     return (
-        <ThemeContext.Provider value={{ theme, colors, toggleTheme, setTheme }}>
+        <ThemeContext.Provider
+            value={{
+                theme,
+                colors,
+                appTheme,
+                isDark: appTheme.isDark,
+                tokens: themeTokens,
+                typography: appTheme.typography,
+                spacing: appTheme.spacing,
+                radius: appTheme.radius,
+                shadow: appTheme.shadow,
+                toggleTheme,
+                setTheme,
+            }}
+        >
             {children}
         </ThemeContext.Provider>
     );

@@ -1,37 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Switch, ScrollView, StyleSheet, StatusBar, Dimensions } from 'react-native';
-import ThemedAlert from '../components/ui/ThemedAlert';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Bell, Lock, Eye, Trash2, ChevronRight, UserX, Moon, Sun, Info } from 'lucide-react-native';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Bell, ChevronRight, Moon, Sun, Trash2, UserX } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import AppScreen from '../components/layout/AppScreen';
+import ScreenHeader from '../components/layout/ScreenHeader';
+import ThemedAlert from '../components/ui/ThemedAlert';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const SettingsScreen = ({ navigation }: any) => {
     const { logout } = useAuth() as any;
     const { theme, toggleTheme, colors } = useTheme();
-
-    // Dynamic styles based on theme
-    const themeStyles = {
-        container: { backgroundColor: colors.background },
-        text: { color: colors.text },
-        textSecondary: { color: colors.textSecondary },
-        card: { backgroundColor: colors.card },
-        border: { borderColor: colors.border },
-        iconContainer: { backgroundColor: colors.card, borderColor: colors.border }
-    };
-
-    const [notifications, setNotifications] = useState({
-        push: true,
-        email: true,
-        activity: true
-    });
-    const [privacy, setPrivacy] = useState({
-        publicProfile: true,
-        showLocation: true
-    });
+    const [notifications, setNotifications] = useState({ push: true });
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
         title: string;
@@ -51,72 +32,80 @@ const SettingsScreen = ({ navigation }: any) => {
     const handleDeleteAccount = () => {
         setAlertConfig({
             visible: true,
-            title: "Delete Account",
-            message: "This action is permanent. All your posts and messages will be removed.",
+            title: 'Delete Account',
+            message: 'This action is permanent. All your posts and messages will be removed.',
             confirmText: 'Delete',
             isDestructive: true,
             onConfirm: () => {
                 setAlertConfig({
                     visible: true,
-                    title: "Account Deleted",
-                    message: "Your account has been successfully removed.",
+                    title: 'Account Deleted',
+                    message: 'Your account has been successfully removed.',
                     confirmText: 'OK',
                     isDestructive: false,
                     onConfirm: () => {
                         setAlertConfig(prev => ({ ...prev, visible: false }));
-                        logout();
-                    }
+                        void logout();
+                    },
                 });
-            }
+            },
         });
     };
 
-    const SettingItem = ({ icon: Icon, label, value, onValueChange, type = 'switch' }: any) => (
-        <View style={[styles.settingItem, themeStyles.border]}>
+    const SettingItem = ({
+        icon: Icon,
+        label,
+        value,
+        onValueChange,
+        onPress,
+    }: {
+        icon: typeof Bell;
+        label: string;
+        value?: boolean;
+        onValueChange?: (value: boolean) => void;
+        onPress?: () => void;
+    }) => (
+        <TouchableOpacity
+            activeOpacity={onPress ? 0.85 : 1}
+            onPress={onPress}
+            disabled={!onPress}
+            style={[styles.settingItem, { borderColor: colors.borderSoft }]}
+        >
             <View style={styles.settingLeft}>
-                <View style={[styles.iconContainer, themeStyles.iconContainer]}>
+                <View style={[styles.iconContainer, { backgroundColor: colors.backdrop, borderColor: colors.borderSoft }]}>
                     <Icon size={20} color={colors.textSecondary} />
                 </View>
-                <Text style={[styles.settingLabel, themeStyles.text]}>{label}</Text>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>{label}</Text>
             </View>
-            {type === 'switch' ? (
+            {typeof value === 'boolean' && onValueChange ? (
                 <Switch
                     value={value}
                     onValueChange={onValueChange}
-                    trackColor={{ false: colors.card, true: colors.primary }}
-                    thumbColor="#fff"
+                    trackColor={{ false: colors.elevated, true: colors.primary }}
+                    thumbColor={colors.white}
                 />
             ) : (
                 <ChevronRight size={20} color={colors.textSecondary} />
             )}
-        </View>
+        </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-            
-            {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
-            </View>
-
-            {/* Header */}
-            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#ffffff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Settings</Text>
+        <AppScreen>
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()}>
+                <ScreenHeader title="Settings" onBack={() => navigation.goBack()} />
             </Animated.View>
 
-            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
                 <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Appearance</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Appearance</Text>
                 </Animated.View>
                 <Animated.View entering={FadeInDown.delay(250).duration(800).springify()}>
-                    <View style={styles.settingsGroup}>
+                    <View style={[styles.group, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
                         <SettingItem
                             icon={theme === 'dark' ? Moon : Sun}
                             label="Dark Mode"
@@ -127,62 +116,54 @@ const SettingsScreen = ({ navigation }: any) => {
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Notifications</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Notifications</Text>
                 </Animated.View>
                 <Animated.View entering={FadeInDown.delay(350).duration(800).springify()}>
-                    <View style={styles.settingsGroup}>
+                    <View style={[styles.group, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
                         <SettingItem
                             icon={Bell}
                             label="Push Notifications"
                             value={notifications.push}
-                            onValueChange={(val: boolean) => setNotifications(prev => ({ ...prev, push: val }))}
+                            onValueChange={(value) => setNotifications({ push: value })}
                         />
                     </View>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(400).duration(800).springify()} style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Privacy</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Privacy</Text>
                 </Animated.View>
                 <Animated.View entering={FadeInDown.delay(450).duration(800).springify()}>
-                    <View style={styles.settingsGroup}>
-                        <TouchableOpacity
-                            style={[styles.settingItem, { borderBottomWidth: 0 }]}
+                    <View style={[styles.group, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <SettingItem
+                            icon={UserX}
+                            label="Blocked Users"
                             onPress={() => navigation.navigate('BlockedUsers')}
-                        >
-                            <View style={styles.settingLeft}>
-                                <View style={[styles.iconContainer, { borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
-                                    <UserX size={20} color="#ef4444" />
-                                </View>
-                                <Text style={styles.settingLabel}>Blocked Users</Text>
-                            </View>
-                            <ChevronRight size={20} color="#94a3b8" />
-                        </TouchableOpacity>
+                        />
                     </View>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Danger Zone</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Danger Zone</Text>
                 </Animated.View>
                 <Animated.View entering={FadeInDown.delay(550).duration(800).springify()}>
-                    <View style={[styles.settingsGroup, { borderColor: 'rgba(239, 68, 68, 0.2)' }]}>
-                        <TouchableOpacity
-                            onPress={handleDeleteAccount}
-                            style={styles.deleteRow}
-                        >
-                            <View style={styles.settingLeft}>
-                                <View style={styles.deleteIconContainer}>
-                                    <Trash2 size={20} color="#ef4444" />
-                                </View>
-                                <Text style={styles.deleteText}>Delete Account</Text>
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={handleDeleteAccount}
+                        style={[styles.group, styles.deleteRow, { backgroundColor: colors.cardSoft, borderColor: colors.dangerSoft }]}
+                    >
+                        <View style={styles.settingLeft}>
+                            <View style={[styles.iconContainer, { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft }]}>
+                                <Trash2 size={20} color={colors.danger} />
                             </View>
-                            <ChevronRight size={20} color="#ef4444" />
-                        </TouchableOpacity>
-                    </View>
+                            <Text style={[styles.settingLabel, { color: colors.danger }]}>Delete Account</Text>
+                        </View>
+                        <ChevronRight size={20} color={colors.danger} />
+                    </TouchableOpacity>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(600).duration(800).springify()} style={styles.footer}>
-                    <Text style={styles.versionText}>MyCircle v1.0.0</Text>
-                    <Text style={styles.copyrightText}>© 2026 Antigravity Technologies</Text>
+                    <Text style={[styles.versionText, { color: colors.textSecondary }]}>MyCircle v1.0.0</Text>
+                    <Text style={[styles.copyrightText, { color: colors.textMuted }]}>© 2026 Antigravity Technologies</Text>
                 </Animated.View>
             </ScrollView>
 
@@ -195,57 +176,17 @@ const SettingsScreen = ({ navigation }: any) => {
                 onCancel={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
                 onConfirm={alertConfig.onConfirm}
             />
-        </SafeAreaView>
+        </AppScreen>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0a0a0a',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gradientLayer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 16,
-        zIndex: 10,
-    },
-    backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        marginRight: 16,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: '#ffffff',
-        letterSpacing: -0.5,
-    },
     scrollView: {
         flex: 1,
         paddingHorizontal: 20,
+    },
+    scrollContent: {
+        paddingBottom: 40,
     },
     sectionHeader: {
         marginTop: 32,
@@ -253,17 +194,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     sectionTitle: {
-        color: '#94a3b8',
         fontWeight: '700',
         textTransform: 'uppercase',
         fontSize: 12,
         letterSpacing: 2,
     },
-    settingsGroup: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    group: {
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
         overflow: 'hidden',
     },
     settingItem: {
@@ -280,15 +218,12 @@ const styles = StyleSheet.create({
     iconContainer: {
         width: 42,
         height: 42,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     settingLabel: {
-        color: '#ffffff',
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 14,
@@ -300,34 +235,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 18,
     },
-    deleteIconContainer: {
-        width: 42,
-        height: 42,
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(239, 68, 68, 0.2)',
-    },
-    deleteText: {
-        color: '#ef4444',
-        fontSize: 16,
-        fontWeight: '700',
-        marginLeft: 14,
-    },
     footer: {
         marginTop: 40,
         paddingVertical: 40,
         alignItems: 'center',
     },
     versionText: {
-        color: '#94a3b8',
         fontSize: 13,
         fontWeight: '600',
     },
     copyrightText: {
-        color: '#64748b',
         fontSize: 11,
         marginTop: 6,
     },

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 import { useTheme } from '../../context/ThemeContext';
 
 interface ThemedAlertProps {
@@ -21,37 +22,29 @@ const ThemedAlert = ({
     onConfirm,
     confirmText = 'Confirm',
     cancelText = 'Cancel',
-    isDestructive = false
+    isDestructive = false,
 }: ThemedAlertProps) => {
-    const { colors } = useTheme();
+    const { colors, shadow } = useTheme();
 
     return (
-        <Modal
-            transparent
-            visible={visible}
-            animationType="fade"
-            onRequestClose={onCancel}
-        >
-            <Pressable style={styles.overlay} onPress={onCancel}>
-                <Pressable style={[styles.alertContainer, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={(e) => e.stopPropagation()}>
+        <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
+            <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={onCancel}>
+                <Pressable
+                    style={[styles.alertContainer, shadow.md, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}
+                    onPress={(event) => event.stopPropagation()}
+                >
                     <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
                     <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
 
                     <View style={styles.buttonContainer}>
-                        <TouchableOpacity
-                            onPress={onCancel}
-                            style={styles.cancelButton}
-                        >
+                        <TouchableOpacity onPress={onCancel} style={styles.cancelButton}>
                             <Text style={[styles.cancelText, { color: colors.text }]}>{cancelText}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={onConfirm}
-                            style={[
-                                styles.confirmButton,
-                                { backgroundColor: isDestructive ? colors.danger : colors.primary }
-                            ]}
+                            style={[styles.confirmButton, { backgroundColor: isDestructive ? colors.danger : colors.primary }]}
                         >
-                            <Text style={styles.confirmText}>{confirmText}</Text>
+                            <Text style={[styles.confirmText, { color: colors.white }]}>{confirmText}</Text>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
@@ -63,7 +56,6 @@ const ThemedAlert = ({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
@@ -74,15 +66,10 @@ const styles = StyleSheet.create({
         padding: 24,
         borderRadius: 24,
         borderWidth: 1,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
     },
     title: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontWeight: '700',
         marginBottom: 12,
     },
     message: {
@@ -108,14 +95,13 @@ const styles = StyleSheet.create({
         minWidth: 120,
     },
     confirmText: {
-        color: '#ffffff',
-        fontWeight: 'bold',
+        fontWeight: '700',
         fontSize: 16,
     },
     cancelText: {
         fontWeight: '600',
         fontSize: 16,
-    }
+    },
 });
 
 export default ThemedAlert;

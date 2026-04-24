@@ -9,32 +9,23 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
+import { POST_TYPES, ITEM_CATEGORIES as ITEM_CATEGORIES_IDS, JOB_TYPES as JOB_TYPE_IDS } from '../constants';
 
-const CATEGORIES = [
-    { id: 'job', emoji: '💼', label: 'Job' },
-    { id: 'sell', emoji: '🛒', label: 'For Sale' },
-    { id: 'rent', emoji: '🏠', label: 'For Rent' },
-    { id: 'barter', emoji: '🔄', label: 'Barter' },
-];
+const CATEGORIES = POST_TYPES.map(id => {
+    const configs = {
+        service: { emoji: '💼', label: 'Earn', desc: 'Offer your skills/services' },
+        job: { emoji: '🤝', label: 'Hire', desc: 'Post a job or task' },
+        sell: { emoji: '🛒', label: 'Trade', desc: 'Sell or barter items' },
+        rent: { emoji: '🏠', label: 'Rent', desc: 'Rentals & spaces' },
+        barter: { emoji: '🔄', label: 'Barter', desc: 'Exchange items or services' },
+        request: { emoji: '📝', label: 'Request', desc: 'Request an item or service' },
+    };
+    return { id, ...(configs[id] || { label: id, desc: '' }) };
+});
 
-const JOB_TYPES = [
-    { id: 'full-time', label: 'Full-time' },
-    { id: 'part-time', label: 'Part-time' },
-    { id: 'contractual', label: 'Contractual' },
-    { id: 'gig-based', label: 'Gig-based' },
-    { id: 'freelance', label: 'Freelance' },
-    { id: 'internship', label: 'Internship' },
-];
+const JOB_TYPES_LIST = JOB_TYPE_IDS.map(id => ({ id, label: id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }));
 
-const ITEM_CATEGORIES = [
-    { id: 'electronics', label: 'Electronics' },
-    { id: 'vehicles', label: 'Vehicles' },
-    { id: 'furniture', label: 'Furniture' },
-    { id: 'clothing', label: 'Clothing' },
-    { id: 'home', label: 'Home & Garden' },
-    { id: 'sports', label: 'Sports' },
-    { id: 'other', label: 'Other' },
-];
+const ITEM_CATEGORIES_LIST = ITEM_CATEGORIES_IDS.map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
 
 const DURATIONS = [
     { id: 15, label: '15 min' },
@@ -340,7 +331,7 @@ const EditPost = () => {
                             className="w-full mt-1.5 px-3 py-2.5 rounded-lg border border-border bg-card text-sm focus:border-primary outline-none"
                         >
                             <option value="">Select type</option>
-                            {JOB_TYPES.map(type => (
+                            {JOB_TYPES_LIST.map(type => (
                                 <option key={type.id} value={type.id}>{type.label}</option>
                             ))}
                         </select>
@@ -355,7 +346,7 @@ const EditPost = () => {
                             className="w-full mt-1.5 px-3 py-2.5 rounded-lg border border-border bg-card text-sm focus:border-primary outline-none"
                         >
                             <option value="">Select category</option>
-                            {ITEM_CATEGORIES.map(cat => (
+                            {ITEM_CATEGORIES_LIST.map(cat => (
                                 <option key={cat.id} value={cat.id}>{cat.label}</option>
                             ))}
                         </select>

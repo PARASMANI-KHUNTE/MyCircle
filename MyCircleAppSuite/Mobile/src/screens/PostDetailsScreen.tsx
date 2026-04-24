@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles, X } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
+import { formatDurationMinutesLong } from '../utils/formatDuration';
 import api, { BASE_URL } from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
@@ -351,7 +352,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                     {post.duration && (
                                         <View className="p-4 bg-white/5 rounded-2xl border border-white/10">
                                             <Text className="text-slate-400 font-bold mb-2 uppercase tracking-widest text-xs">Estimated Duration</Text>
-                                            <Text className="text-white font-semibold text-base">{post.duration} minutes</Text>
+                                            <Text className="text-white font-semibold text-base">{formatDurationMinutesLong(post.duration)}</Text>
                                         </View>
                                     )}
                                     {post.availability && (

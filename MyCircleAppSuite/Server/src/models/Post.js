@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { POST_TYPES, ITEM_CATEGORIES } = require('../constants/postTypes');
 
 const PostSchema = new mongoose.Schema({
     user: {
@@ -8,17 +9,12 @@ const PostSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['job', 'sell', 'rent', 'barter', 'service', 'request'],
+        enum: POST_TYPES,
         required: true,
-    },
-    jobType: {
-        type: String,
-        enum: ['', 'full-time', 'part-time', 'contractual', 'gig-based', 'freelance', 'internship'],
-        default: '',
     },
     itemCategory: {
         type: String,
-        enum: ['', 'electronics', 'other'],
+        enum: ['', ...ITEM_CATEGORIES],
         default: '',
     },
     title: {

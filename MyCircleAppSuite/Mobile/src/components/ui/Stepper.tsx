@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+import { StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
+
+import { useTheme } from '../../context/ThemeContext';
 
 interface StepperProps {
     currentStep: number;
@@ -12,53 +13,44 @@ const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
     const { colors } = useTheme();
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.backdrop, borderColor: colors.borderSoft }]}>
             {steps.map((label, index) => {
                 const stepNum = index + 1;
                 const isActive = stepNum === currentStep;
                 const isCompleted = stepNum < currentStep;
 
                 return (
-                    <View key={index} style={[styles.stepWrapper, !isActive && { flex: 0 }]}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            {/* Circle */}
-                            <View style={[
-                                styles.circle,
-                                isActive ? { backgroundColor: colors.primary, borderColor: colors.primary } :
-                                    isCompleted ? { backgroundColor: colors.success, borderColor: colors.success } :
-                                        { backgroundColor: 'transparent', borderColor: colors.border }
-                            ]}>
+                    <View key={label} style={[styles.stepWrapper, !isActive && { flex: 0 }]}>
+                        <View style={styles.stepRow}>
+                            <View
+                                style={[
+                                    styles.circle,
+                                    isActive
+                                        ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                                        : isCompleted
+                                            ? { backgroundColor: colors.success, borderColor: colors.success }
+                                            : { backgroundColor: 'transparent', borderColor: colors.border },
+                                ]}
+                            >
                                 {isCompleted ? (
-                                    <Check size={12} color="#ffffff" />
+                                    <Check size={12} color={colors.white} />
                                 ) : (
-                                    <Text style={[
-                                        styles.stepNum,
-                                        (isActive || isCompleted) ? { color: '#ffffff' } : { color: colors.textSecondary }
-                                    ]}>
+                                    <Text style={[styles.stepNum, { color: isActive ? colors.white : colors.textSecondary }]}>
                                         {stepNum}
                                     </Text>
                                 )}
                             </View>
 
-                            {/* Label - Only show if active or if few steps to save space */}
-                            {(isActive || steps.length <= 3) && (
-                                <Text style={[
-                                    styles.label,
-                                    isActive ? { color: colors.text, fontWeight: 'bold' } : { color: colors.textSecondary }
-                                ]} numberOfLines={1}>
+                            {isActive || steps.length <= 3 ? (
+                                <Text style={[styles.label, { color: isActive ? colors.text : colors.textSecondary }]} numberOfLines={1}>
                                     {label}
                                 </Text>
-                            )}
+                            ) : null}
                         </View>
 
-                        {/* Line connector (except for last item) */}
-                        {index < steps.length - 1 && (
-                            <View style={[
-                                styles.line,
-                                { backgroundColor: isCompleted ? colors.success : colors.border },
-                                !isActive && steps.length > 3 && { minWidth: 20 }
-                            ]} />
-                        )}
+                        {index < steps.length - 1 ? (
+                            <View style={[styles.line, { backgroundColor: isCompleted ? colors.success : colors.border }, !isActive && steps.length > 3 && { minWidth: 20 }]} />
+                        ) : null}
                     </View>
                 );
             })}
@@ -74,15 +66,17 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         marginBottom: 24,
         width: '100%',
-        backgroundColor: 'rgba(255,255,255,0.03)',
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
     },
     stepWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
+    },
+    stepRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     circle: {
         width: 28,
@@ -101,13 +95,14 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginRight: 8,
         letterSpacing: 0.5,
+        fontWeight: '700',
     },
     line: {
         height: 2,
         flex: 1,
         marginHorizontal: 8,
         borderRadius: 1,
-    }
+    },
 });
 
 export default Stepper;

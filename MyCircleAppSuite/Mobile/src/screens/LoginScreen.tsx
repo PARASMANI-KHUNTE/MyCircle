@@ -1,29 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet, Dimensions, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+
+import AppScreen from '../components/layout/AppScreen';
+import ScreenHeader from '../components/layout/ScreenHeader';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import Animated, {
-    FadeInDown,
-    FadeInUp,
-    useSharedValue,
-    useAnimatedStyle,
-    withTiming,
-    withDelay
-} from 'react-native-reanimated';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-
-const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
+    const auth = useAuth() as any;
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
-    const auth = useAuth() as any;
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -46,284 +39,141 @@ const LoginScreen = ({ navigation }: any) => {
         }
     };
 
-    const handleBack = () => {
-        navigation.goBack();
-    };
-
-    const handleForgotPassword = () => {
-        Alert.alert('Reset Password', 'Password reset functionality will be available soon.');
-    };
-
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-
-            {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
-            </View>
-
-            {/* Subtle Grid Pattern */}
-            <View style={styles.gridPattern}>
-                {[...Array(10)].map((_, i) => (
-                    <View
-                        key={i}
-                        style={[
-                            styles.gridLine,
-                            {
-                                left: (i % 4) * (width / 4),
-                                top: Math.floor(i / 4) * (height / 3),
-                                width: 1,
-                                height: height / 3,
-                            }
-                        ]}
-                    />
-                ))}
-            </View>
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.container}
-            >
-                <ScrollView
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {/* Header */}
-                    <Animated.View
-                        entering={FadeInDown.delay(200).duration(600).springify()}
-                        style={styles.headerSection}
-                    >
-                        <TouchableOpacity
-                            onPress={handleBack}
-                            style={styles.backButton}
-                            activeOpacity={0.8}
-                        >
-                            <ArrowLeft size={20} color="#ffffff" />
-                        </TouchableOpacity>
-
-                        <View style={styles.headerContent}>
-                            <Text style={styles.welcomeText}>Welcome Back</Text>
-                            <Text style={styles.subtitleText}>Sign in to your account</Text>
-                        </View>
+        <AppScreen>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
+                        <ScreenHeader title="Sign In" onBack={() => navigation.goBack()} />
                     </Animated.View>
 
-                    {/* Form Section */}
-                    <Animated.View
-                        entering={FadeInDown.delay(400).duration(800).springify()}
-                        style={styles.formSection}
-                    >
-                        <View style={styles.formCard}>
-                            <View style={styles.formContent}>
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Email Address</Text>
-                                    <View style={[
-                                        styles.inputContainer,
-                                        focusedInput === 'email' && styles.inputFocused
-                                    ]}>
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="Enter your email"
-                                            placeholderTextColor="#94a3b8"
-                                            value={email}
-                                            onChangeText={setEmail}
-                                            autoCapitalize="none"
-                                            keyboardType="email-address"
-                                            onFocus={() => setFocusedInput('email')}
-                                            onBlur={() => setFocusedInput(null)}
-                                        />
-                                    </View>
-                                </View>
+                    <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.hero}>
+                        <Text style={[styles.title, { color: colors.text }]}>Welcome Back</Text>
+                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign in to continue your MyCircle workflow.</Text>
+                    </Animated.View>
 
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Password</Text>
-                                    <View style={[
-                                        styles.inputContainer,
-                                        focusedInput === 'password' && styles.inputFocused
-                                    ]}>
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="Enter your password"
-                                            placeholderTextColor="#94a3b8"
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            secureTextEntry={!showPassword}
-                                            onFocus={() => setFocusedInput('password')}
-                                            onBlur={() => setFocusedInput(null)}
-                                        />
-                                        <TouchableOpacity
-                                            style={styles.passwordToggle}
-                                            onPress={() => setShowPassword(!showPassword)}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff size={20} color="#94a3b8" />
-                                            ) : (
-                                                <Eye size={20} color="#94a3b8" />
-                                            )}
-                                        </TouchableOpacity>
-                                    </View>
+                    <Animated.View entering={FadeInDown.delay(400).duration(800).springify()}>
+                        <View style={[styles.formCard, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.textSecondary }]}>Email Address</Text>
+                                <View style={[
+                                    styles.inputContainer,
+                                    {
+                                        backgroundColor: colors.backdrop,
+                                        borderColor: focusedInput === 'email' ? colors.primary : colors.borderSoft,
+                                    },
+                                ]}>
+                                    <TextInput
+                                        style={[styles.input, { color: colors.text }]}
+                                        placeholder="Enter your email"
+                                        placeholderTextColor={colors.placeholder}
+                                        value={email}
+                                        onChangeText={setEmail}
+                                        autoCapitalize="none"
+                                        keyboardType="email-address"
+                                        onFocus={() => setFocusedInput('email')}
+                                        onBlur={() => setFocusedInput(null)}
+                                    />
                                 </View>
-
-                                <TouchableOpacity
-                                    style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-                                    onPress={handleLogin}
-                                    disabled={loading}
-                                    activeOpacity={0.9}
-                                >
-                                    <Text style={styles.loginButtonText}>
-                                        {loading ? 'Signing In...' : 'Sign In'}
-                                    </Text>
-                                </TouchableOpacity>
                             </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
+                                <View style={[
+                                    styles.inputContainer,
+                                    {
+                                        backgroundColor: colors.backdrop,
+                                        borderColor: focusedInput === 'password' ? colors.primary : colors.borderSoft,
+                                    },
+                                ]}>
+                                    <TextInput
+                                        style={[styles.input, { color: colors.text }]}
+                                        placeholder="Enter your password"
+                                        placeholderTextColor={colors.placeholder}
+                                        value={password}
+                                        onChangeText={setPassword}
+                                        secureTextEntry={!showPassword}
+                                        onFocus={() => setFocusedInput('password')}
+                                        onBlur={() => setFocusedInput(null)}
+                                    />
+                                    <TouchableOpacity style={styles.passwordToggle} onPress={() => setShowPassword(prev => !prev)}>
+                                        {showPassword ? (
+                                            <EyeOff size={20} color={colors.textSecondary} />
+                                        ) : (
+                                            <Eye size={20} color={colors.textSecondary} />
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            <TouchableOpacity activeOpacity={0.9} style={[styles.primaryButton, { backgroundColor: colors.primary }, loading && styles.disabled]} onPress={handleLogin} disabled={loading}>
+                                <Text style={[styles.primaryButtonText, { color: colors.white }]}>{loading ? 'Signing In...' : 'Sign In'}</Text>
+                            </TouchableOpacity>
                         </View>
                     </Animated.View>
 
-                    {/* Footer */}
-                    <Animated.View
-                        entering={FadeInUp.delay(600).duration(800).springify()}
-                        style={styles.footerSection}
-                    >
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Register')}
-                            style={styles.registerLink}
-                        >
-                            <Text style={styles.registerText}>Don't have an account?</Text>
-                            <Text style={styles.registerLinkText}>Sign Up</Text>
+                    <Animated.View entering={FadeInUp.delay(600).duration(800).springify()} style={styles.footer}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.linkRow}>
+                            <Text style={[styles.linkLabel, { color: colors.textMuted }]}>Don't have an account?</Text>
+                            <Text style={[styles.linkValue, { color: colors.primary }]}>Sign Up</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            onPress={handleForgotPassword}
-                            style={styles.forgotPasswordLink}
-                        >
-                            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                        <TouchableOpacity onPress={() => Alert.alert('Reset Password', 'Password reset functionality will be available soon.')} style={styles.linkOnly}>
+                            <Text style={[styles.linkLabel, { color: colors.textMuted }]}>Forgot Password?</Text>
                         </TouchableOpacity>
 
-                        <View style={styles.divider} />
-
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Landing')}
-                            style={styles.backToLandingLink}
-                        >
-                            <Text style={styles.backToLandingText}>← Back to Landing</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={styles.linkOnly}>
+                            <Text style={[styles.backText, { color: colors.textSecondary }]}>← Back to Landing</Text>
                         </TouchableOpacity>
                     </Animated.View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </AppScreen>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0a0a0a',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gradientLayer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gridPattern: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.1,
-    },
-    gridLine: {
-        position: 'absolute',
-        backgroundColor: '#af25f4',
-    },
+    flex: { flex: 1 },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: 24,
-        paddingTop: 40,
         paddingBottom: 40,
     },
-    headerSection: {
-        marginBottom: 40,
+    hero: {
+        marginTop: 12,
+        marginBottom: 32,
     },
-    backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    headerContent: {
-        marginLeft: 16,
-        flex: 1,
-    },
-    welcomeText: {
+    title: {
         fontSize: 32,
         fontWeight: '800',
-        color: '#ffffff',
-        fontFamily: 'System',
         letterSpacing: -0.5,
     },
-    subtitleText: {
+    subtitle: {
         fontSize: 16,
-        color: '#94a3b8',
         marginTop: 8,
-    },
-    formSection: {
-        marginBottom: 40,
+        lineHeight: 24,
     },
     formCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 24,
         padding: 32,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    formContent: {
-        flex: 1,
     },
     inputGroup: {
         marginBottom: 24,
     },
-    inputLabel: {
+    label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#94a3b8',
         marginBottom: 8,
         marginLeft: 4,
     },
     inputContainer: {
         position: 'relative',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
-    inputFocused: {
-        borderColor: '#af25f4',
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    },
-    textInput: {
+    input: {
         fontSize: 16,
-        color: '#ffffff',
         paddingVertical: 16,
         paddingHorizontal: 16,
         flex: 1,
@@ -334,68 +184,41 @@ const styles = StyleSheet.create({
         top: '50%',
         transform: [{ translateY: -12 }],
     },
-    loginButton: {
-        backgroundColor: '#af25f4',
+    primaryButton: {
         borderRadius: 16,
         paddingVertical: 18,
         alignItems: 'center',
-        shadowColor: '#af25f4',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
     },
-    loginButtonDisabled: {
+    disabled: {
         opacity: 0.6,
     },
-    loginButtonText: {
+    primaryButtonText: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#ffffff',
     },
-    footerSection: {
+    footer: {
         alignItems: 'center',
+        marginTop: 32,
         marginBottom: 20,
     },
-    registerLink: {
+    linkRow: {
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
     },
-    registerText: {
+    linkLabel: {
         fontSize: 14,
-        color: '#64748b',
         marginRight: 6,
     },
-    registerLinkText: {
+    linkValue: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#af25f4',
     },
-    forgotPasswordLink: {
+    linkOnly: {
         marginBottom: 16,
     },
-    forgotPasswordText: {
+    backText: {
         fontSize: 14,
-        color: '#64748b',
-        textDecorationLine: 'underline',
-    },
-    divider: {
-        width: 40,
-        height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        marginVertical: 8,
-    },
-    backToLandingLink: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 16,
-    },
-    backToLandingText: {
-        fontSize: 14,
-        color: '#94a3b8',
         fontWeight: '500',
     },
 });

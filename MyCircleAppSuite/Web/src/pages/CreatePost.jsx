@@ -412,29 +412,6 @@ const CreatePost = () => {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium">Photos (Max 5)</label>
-                                {previews.length > 0 && (
-                                    <div className="flex gap-2 overflow-x-auto py-2 mb-2">
-                                        {previews.map((preview, index) => (
-                                            <div key={index} className="w-16 h-16 rounded-lg overflow-hidden shrink-0 relative border border-border">
-                                                <img src={preview} alt="" className="w-full h-full object-cover" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeImage(index)}
-                                                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
-                                                    title="Remove photo"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            multiple
-                                            accept="image/*"
-                                            onChange={handleImageChange}
-                                        />
-                                    </label>
-                                )}
-                            </div>
-
-                            <div>
                                 <label className="text-sm font-medium">Price (₹)</label>
                                 <input
                                     name="price"

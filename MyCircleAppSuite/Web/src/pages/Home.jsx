@@ -121,7 +121,7 @@ const Home = () => {
                             <div className="flex flex-wrap gap-4">
                                 <Button
                                     size="xl"
-                                    onClick={() => navigate('/feed')}
+                                    onClick={() => navigate('/')}
                                     className="gap-3"
                                 >
                                     <span>Get Started</span>
@@ -130,7 +130,7 @@ const Home = () => {
                                 <Button
                                     variant="outline"
                                     size="xl"
-                                    onClick={() => navigate('/feed')}
+                                    onClick={() => navigate('/')}
                                     className="gap-3"
                                 >
                                     <span>Explore Feed</span>
@@ -423,7 +423,7 @@ const Home = () => {
                             <div className="flex flex-wrap justify-center gap-4">
                                 <Button
                                     size="xl"
-                                    onClick={() => navigate('/feed')}
+                                    onClick={() => navigate('/')}
                                     className="bg-white text-primary hover:bg-white/90 gap-3"
                                 >
                                     <span>Get Started Free</span>

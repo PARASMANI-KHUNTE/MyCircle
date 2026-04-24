@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import { AlertCircle, Upload, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 

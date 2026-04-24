@@ -67,15 +67,6 @@ const Feed = () => {
     const serverCategory = filter === 'service' ? 'all' : filter;
     const serverSort = sortOrder === 'latest' || sortOrder === 'oldest' ? sortOrder : 'latest';
 
-    // Initial fetch on mount
-    React.useEffect(() => {
-        if (filter === 'service') {
-            fetchServices();
-        } else {
-            fetchPosts();
-        }
-    }, []);
-
     const fetchPosts = useCallback(async () => {
         setLoading(true);
         try {
@@ -93,8 +84,7 @@ const Feed = () => {
         } finally {
             setLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [serverCategory, searchTerm, locationFilter, serverSort]);
 
     const fetchServices = useCallback(async () => {
         setLoading(true);
@@ -109,8 +99,7 @@ const Feed = () => {
         } finally {
             setLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [searchTerm, sortOrder]);
 
     useEffect(() => {
         if (!socket) return;
@@ -123,18 +112,17 @@ const Feed = () => {
     }, [socket, success]);
 
     useEffect(() => {
-        if (filter === 'service') {
-            void fetchServices();
-        } else {
-            void fetchPosts();
-        }
-    }, [filter]);
+        // Debounce search/filter changes to avoid API spam
+        const delayBounceFn = setTimeout(() => {
+            if (filter === 'service') {
+                void fetchServices();
+            } else {
+                void fetchPosts();
+            }
+        }, 400);
 
-    useEffect(() => {
-        if (filter === 'service' && searchTerm) {
-            void fetchServices();
-        }
-    }, [filter, searchTerm, sortOrder]);
+        return () => clearTimeout(delayBounceFn);
+    }, [filter, fetchPosts, fetchServices]);
 
     const availableLocations = React.useMemo(() => {
         const locations = Array.from(new Set(posts.map(p => p.location).filter(Boolean)));
@@ -238,7 +226,7 @@ const Feed = () => {
                                 onClick={() => setViewMode('list')}
                                 className={cn(
                                     'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                                    viewMode === 'list' ? 'bg-primary text-white' : 'text-foreground-muted hover:text-foreground'
+                                    viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-foreground-muted hover:text-foreground'
                                 )}
                             >
                                 <ListIcon className="w-4 h-4" />
@@ -247,7 +235,7 @@ const Feed = () => {
                                 onClick={toggleViewMode}
                                 className={cn(
                                     'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                                    viewMode === 'map' ? 'bg-primary text-white' : 'text-foreground-muted hover:text-foreground'
+                                    viewMode === 'map' ? 'bg-primary text-primary-foreground' : 'text-foreground-muted hover:text-foreground'
                                 )}
                             >
                                 <MapIcon className="w-4 h-4" />
@@ -286,13 +274,13 @@ const Feed = () => {
                             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
                             className={cn(
                                 'flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all border',
-                                isFilterExpanded ? 'bg-primary text-white border-primary' : 'bg-card border-card-border text-foreground hover:border-primary'
+                                isFilterExpanded ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-card-border text-foreground hover:border-primary'
                             )}
                         >
                             <SlidersHorizontal className="w-4 h-4" />
                             <span>Filters</span>
                             {(locationFilter !== 'all' || sortOrder !== 'latest') && (
-                                <span className="w-5 h-5 rounded-full bg-white/20 text-xs flex items-center justify-center">2</span>
+                                <span className="w-5 h-5 rounded-full bg-primary-foreground/20 text-xs flex items-center justify-center">2</span>
                             )}
                         </button>
 
@@ -359,13 +347,13 @@ const Feed = () => {
                             <button
                                 key={cat.id}
                                 onClick={() => setFilter(cat.id)}
-                                className={cn(
-                                    'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
-                                    filter === cat.id
-                                        ? 'bg-primary text-white shadow-glow'
-                                        : 'bg-card border border-card-border text-foreground-muted hover:border-primary hover:text-foreground'
-                                )}
-                            >
+                                    className={cn(
+                                        'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
+                                        filter === cat.id
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'bg-card border border-card-border text-foreground-muted hover:border-primary hover:text-foreground'
+                                    )}
+                                >
                                 <cat.icon className="w-4 h-4" />
                                 {cat.label}
                             </button>
@@ -407,7 +395,42 @@ const Feed = () => {
                                 </Marker>
                             )}
                             {mapPosts.map(post => (
-                                <Marker key={post._id} position={[post.displayLat, post.displayLng]}>
+                                <Marker 
+                                    key={post._id} 
+                                    position={[post.displayLat, post.displayLng]}
+                                    icon={L.divIcon({
+                                        className: 'custom-map-marker',
+                                        html: `
+                                            <div style="
+                                                background: rgba(255, 255, 255, 0.1);
+                                                backdrop-filter: blur(8px);
+                                                border: 1px solid rgba(255,255,255,0.2);
+                                                border-bottom: 2px solid ${post.type === 'job' ? '#3b82f6' : post.type === 'service' ? '#06b6d4' : post.type === 'rent' ? '#8b5cf6' : '#ec4899'};
+                                                padding: 4px 10px;
+                                                border-radius: 12px;
+                                                color: white;
+                                                font-weight: bold;
+                                                font-size: 12px;
+                                                white-space: nowrap;
+                                                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                                                transform: translate(-50%, -100%);
+                                            ">
+                                                <span style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">₹${post.price || 0}</span>
+                                                <div style="
+                                                    position: absolute;
+                                                    bottom: -6px;
+                                                    left: 50%;
+                                                    transform: translateX(-50%);
+                                                    border-left: 6px solid transparent;
+                                                    border-right: 6px solid transparent;
+                                                    border-top: 6px solid ${post.type === 'job' ? '#3b82f6' : post.type === 'service' ? '#06b6d4' : post.type === 'rent' ? '#8b5cf6' : '#ec4899'};
+                                                "></div>
+                                            </div>
+                                        `,
+                                        iconSize: [0, 0],
+                                        iconAnchor: [0, 0]
+                                    })}
+                                >
                                     <Popup>
                                         <div className="min-w-[240px] p-2">
                                             {post.images?.[0] && (
@@ -416,11 +439,11 @@ const Feed = () => {
                                             <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
                                                 {post.type}
                                             </span>
-                                            <h3 className="font-bold mt-2">{post.title}</h3>
+                                            <h3 className="font-bold mt-2 text-foreground">{post.title}</h3>
                                             <p className="text-sm text-foreground-muted line-clamp-2 mt-1">{post.description}</p>
                                             <button
                                                 onClick={() => handlePostClick(post._id)}
-                                                className="w-full mt-3 py-2 bg-primary text-white rounded-lg text-sm font-semibold"
+                                                className="w-full mt-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors"
                                             >
                                                 View Details
                                             </button>

@@ -328,7 +328,7 @@ const Requests = () => {
                             <Button
                                 variant="outline"
                                 className="mt-4 border-primary/20 text-primary hover:bg-primary/10"
-                                onClick={() => navigate('/feed')}
+                                onClick={() => navigate('/')}
                             >
                                 Explore Feed
                             </Button>

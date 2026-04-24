@@ -1,40 +1,38 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 const PostSkeleton = () => {
     return (
-        <div className="glass-panel p-6 flex flex-col h-full space-y-4 animate-pulse shadow-card">
-            {/* Header Skeleton */}
-            <div className="flex justify-between items-start">
+        <div className="bg-card border border-card-border rounded-2xl overflow-hidden animate-pulse">
+            <div className="aspect-[16/10] bg-background-tertiary" />
+
+            <div className="p-4 sm:p-5 space-y-4">
+                <div className="space-y-2">
+                    <div className="h-5 w-5/6 rounded-lg bg-background-tertiary" />
+                    <div className="h-4 w-2/3 rounded-lg bg-background-tertiary" />
+                </div>
+
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-hover-bg ring-1 ring-card-border" />
-                    <div className="space-y-2">
-                        <div className="w-32 h-4 bg-hover-bg rounded-full" />
-                        <div className="w-24 h-3 bg-card/20 rounded-full" />
+                    <div className="w-9 h-9 rounded-full bg-background-tertiary" />
+                    <div className="space-y-2 flex-1">
+                        <div className="h-3.5 w-40 rounded-full bg-background-tertiary" />
+                        <div className="h-3 w-24 rounded-full bg-background-tertiary" />
                     </div>
                 </div>
-                <div className="w-16 h-6 bg-card/20 rounded-lg" />
-            </div>
 
-            {/* Description Skeleton */}
-            <div className="space-y-2">
-                <div className="w-full h-3 bg-card/20 rounded-full" />
-                <div className="w-5/6 h-3 bg-card/20 rounded-full" />
-            </div>
+                <div className="h-12 rounded-xl bg-background-tertiary" />
 
-            {/* Image Skeleton */}
-            <div className="w-full aspect-video bg-card/20 rounded-[2.5rem]" />
-
-            {/* Footer Skeleton */}
-            <div className="mt-auto pt-4 border-t border-card-border flex justify-between items-end">
-                <div className="space-y-2">
-                    <div className="w-20 h-2 bg-card/20 rounded-full" />
-                    <div className="w-16 h-5 bg-hover-bg rounded-full" />
-                </div>
                 <div className="flex gap-2">
-                    <div className="w-10 h-10 bg-hover-bg rounded-xl" />
-                    <div className="w-10 h-10 bg-hover-bg rounded-xl" />
-                    <div className="w-10 h-10 bg-hover-bg rounded-xl" />
+                    <div className="h-7 w-24 rounded-full bg-background-tertiary" />
+                    <div className="h-7 w-20 rounded-full bg-background-tertiary" />
+                </div>
+
+                <div className="pt-4 border-t border-card-border flex items-center justify-between">
+                    <div className="h-3.5 w-32 rounded-full bg-background-tertiary" />
+                    <div className="flex gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-background-tertiary" />
+                        <div className="w-9 h-9 rounded-xl bg-background-tertiary" />
+                        <div className="w-9 h-9 rounded-xl bg-background-tertiary" />
+                    </div>
                 </div>
             </div>
         </div>

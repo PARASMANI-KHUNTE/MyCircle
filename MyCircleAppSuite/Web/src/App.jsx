@@ -34,8 +34,7 @@ function AppContent() {
               <Layout>
                 <Suspense fallback={<Loading fullscreen text="Loading page..." />}>
                   <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/feed" element={<Feed />} />
+                    <Route path="/" element={<Explore />} />
                     <Route path="/explore" element={<Explore />} />
                     <Route path="/create-post" element={<CreatePost />} />
                     <Route path="/my-posts" element={<MyPosts />} />

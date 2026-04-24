@@ -113,7 +113,7 @@ const Profile = () => {
             try {
                 await api.post(`/user/block/${userId}`);
                 alert('User blocked');
-                navigate('/feed');
+                navigate('/');
             } catch (err) {
                 console.error(err);
                 alert('Failed to block user');

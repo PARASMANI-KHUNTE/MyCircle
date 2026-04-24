@@ -330,15 +330,19 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
         });
 
         // Send notification inline since io cannot be serialized for queue
-        await createNotification(io, {
-            recipient: recipientId,
-            sender: req.user.id,
-            type: 'message',
-            title: 'New Message',
-            message: `${currentUser.displayName || 'Someone'}: ${getNotificationMessagePreview(text)}`,
-            link: '/chat',
-            conversationId: conversation._id.toString()
-        });
+        try {
+            await createNotification(io, {
+                recipient: recipientId,
+                sender: req.user.id,
+                type: 'message',
+                title: 'New Message',
+                message: `${currentUser.displayName || 'Someone'}: ${getNotificationMessagePreview(text)}`,
+                link: '/chat',
+                conversationId: conversation._id.toString()
+            });
+        } catch (notificationError) {
+            console.error('[Notification Error] Failed to create message notification:', notificationError.message);
+        }
     }
 
     res.json(savedMessage);
@@ -465,15 +469,13 @@ exports.markRead = asyncHandler(async (req, res, next) => {
 // @desc    Get total unread message count
 // @route   GET /api/chat/unread/count
 // @access  Private
-exports.getTotalUnreadCount = async (req, res, next) => {
-    try {
-        const count = await Message.countDocuments({
-            sender: { $ne: req.user.id },
-            readBy: { $ne: req.user.id },
-            conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') }
-        });
-        res.json({ count });
-    } catch (err) {
-        return next(err);
-    }
-};
+exports.getTotalUnreadCount = asyncHandler(async (req, res) => {
+    const conversationIds = await Conversation.find({ participants: req.user.id }).distinct('_id');
+    const count = await Message.countDocuments({
+        sender: { $ne: req.user.id },
+        status: { $ne: 'read' },
+        readBy: { $ne: req.user.id },
+        conversationId: { $in: conversationIds }
+    });
+    res.json({ count });
+});

@@ -26,7 +26,7 @@ const NotFound = () => {
                         Back to Orbit (Home)
                     </Button>
                 </Link>
-                <Link to="/feed">
+                <Link to="/">
                     <Button variant="outline">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Explore Feed
                     </Button>

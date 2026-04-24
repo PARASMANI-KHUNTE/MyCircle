@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell, Search, Settings, LogOut, User, Zap, Compass, Home } from 'lucide-react';
+import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell, Search, Settings, LogOut, User, CircleDot } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
@@ -86,14 +86,10 @@ const Navbar = () => {
     }, [location.pathname]);
 
     const navLinks = [
-        { name: 'Feed', path: '/feed', icon: Home },
-        { name: 'Explore', path: '/explore', icon: Compass },
         { name: 'My Posts', path: '/my-posts', icon: User, auth: true },
     ];
 
     const visibleLinks = navLinks.filter(link => !link.auth || !!user);
-
-    const totalUnread = unreadCount + unreadMsgCount;
 
     return (
         <>
@@ -104,23 +100,21 @@ const Navbar = () => {
                 className={cn(
                     'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
                     isScrolled 
-                        ? 'bg-background/80 backdrop-blur-xl border-b border-card-border shadow-sm' 
-                        : 'bg-transparent'
+                        ? 'bg-background/90 backdrop-blur-xl border-b border-card-border shadow-sm' 
+                        : 'bg-background/70 backdrop-blur-lg border-b border-transparent'
                 )}
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 md:h-20">
-                        {/* Logo */}
                         <Link to="/" className="flex items-center gap-3 group">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-all duration-300">
-                                <Zap className="w-5 h-5 text-white" />
+                            <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition-all duration-300">
+                                <CircleDot className="w-4 h-4" />
                             </div>
-                            <span className="text-xl font-bold tracking-tight hidden sm:block">
-                                My<span className="gradient-text">Circle</span>
+                            <span className="text-xl font-semibold tracking-tight hidden sm:block">
+                                MyCircle
                             </span>
                         </Link>
 
-                        {/* Desktop Navigation */}
                         <div className="hidden md:flex items-center gap-1">
                             {visibleLinks.map((link) => (
                                 <Link
@@ -129,7 +123,7 @@ const Navbar = () => {
                                     className={cn(
                                         'relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
                                         location.pathname === link.path 
-                                            ? 'text-primary bg-primary/10' 
+                                            ? 'text-foreground bg-card border border-card-border' 
                                             : 'text-foreground-muted hover:text-foreground hover:bg-card-hover'
                                     )}
                                 >
@@ -138,18 +132,16 @@ const Navbar = () => {
                                     {location.pathname === link.path && (
                                         <motion.div
                                             layoutId="navbar-indicator"
-                                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full"
+                                            className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-7 h-0.5 bg-foreground rounded-full"
                                         />
                                     )}
                                 </Link>
                             ))}
                         </div>
 
-                        {/* Right Actions */}
                         <div className="flex items-center gap-2">
                             {isAuthenticated ? (
                                 <>
-                                    {/* Search Button */}
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
@@ -158,7 +150,6 @@ const Navbar = () => {
                                         <Search className="w-5 h-5" />
                                     </motion.button>
 
-                                    {/* Messages */}
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
@@ -167,23 +158,21 @@ const Navbar = () => {
                                     >
                                         <MessageCircle className="w-5 h-5" />
                                         {unreadMsgCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-foreground text-background text-[10px] font-bold rounded-full flex items-center justify-center">
                                                 {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
                                             </span>
                                         )}
                                     </motion.button>
 
-                                    {/* Notifications */}
                                     <Link to="/notifications" className="icon-btn relative">
                                         <Bell className="w-5 h-5" />
                                         {unreadCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-foreground text-background text-[10px] font-bold rounded-full flex items-center justify-center">
                                                 {unreadCount > 9 ? '9+' : unreadCount}
                                             </span>
                                         )}
                                     </Link>
 
-                                    {/* Theme Toggle */}
                                     <button onClick={toggleTheme} className="icon-btn">
                                         {isDark ? (
                                             <Sun className="w-5 h-5" />
@@ -192,15 +181,13 @@ const Navbar = () => {
                                         )}
                                     </button>
 
-                                    {/* Create Post Button */}
                                     <Link to="/create-post">
-                                        <Button size="sm" className="gap-2">
+                                        <Button size="sm" className="gap-2 shadow-none">
                                             <PlusCircle className="w-4 h-4" />
                                             <span className="hidden sm:inline">Create</span>
                                         </Button>
                                     </Link>
 
-                                    {/* Profile Dropdown */}
                                     <div className="relative" ref={dropdownRef}>
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
@@ -222,7 +209,7 @@ const Navbar = () => {
                                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                                     transition={{ duration: 0.2 }}
-                                                    className="absolute right-0 top-full mt-2 w-64 bg-card rounded-2xl border border-card-border shadow-xl overflow-hidden"
+                                                    className="absolute right-0 top-full mt-2 w-64 bg-card rounded-2xl border border-card-border shadow-lg overflow-hidden"
                                                 >
                                                     <div className="p-4 border-b border-card-border">
                                                         <p className="font-semibold text-foreground">{user?.displayName}</p>
@@ -263,7 +250,6 @@ const Navbar = () => {
                                 </>
                             )}
 
-                            {/* Mobile Menu Toggle */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                                 className="md:hidden icon-btn"
@@ -274,14 +260,13 @@ const Navbar = () => {
                     </div>
                 </div>
 
-                {/* Mobile Menu */}
                 <AnimatePresence>
                     {isMobileMenuOpen && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="md:hidden bg-card border-t border-card-border"
+                            className="md:hidden bg-background/95 backdrop-blur-xl border-t border-card-border"
                         >
                             <div className="px-4 py-4 space-y-1">
                                 {visibleLinks.map((link) => (
@@ -291,7 +276,7 @@ const Navbar = () => {
                                         className={cn(
                                             'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors',
                                             location.pathname === link.path
-                                                ? 'text-primary bg-primary/10'
+                                                ? 'text-foreground bg-card border border-card-border'
                                                 : 'text-foreground-muted hover:text-foreground hover:bg-card-hover'
                                         )}
                                     >
@@ -310,7 +295,6 @@ const Navbar = () => {
                 </AnimatePresence>
             </motion.nav>
 
-            {/* Chat Drawer */}
             <ChatDrawer isOpen={isChatDrawerOpen} onClose={() => setIsChatDrawerOpen(false)} />
         </>
     );

@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
                     try {
                         const userData = await fetchUserProfile();
                         if (userData) {
-                            navigate('/feed', { replace: true });
+                            navigate('/', { replace: true });
                         } else {
                             localStorage.removeItem('token');
                             setToken(null);

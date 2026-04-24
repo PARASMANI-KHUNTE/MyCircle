@@ -12,6 +12,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const [messagesError, setMessagesError] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const messagesEndRef = useRef(null);
     const [isTyping, setIsTyping] = useState(false);
@@ -28,6 +29,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
     const fetchMessages = useCallback(async () => {
         try {
             setLoading(true);
+            setMessagesError('');
             const res = await api.get(`/chat/messages/${conversation._id}`);
             setMessages(res.data);
             scrollToBottom();
@@ -38,8 +40,13 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                     generateSuggestions(lastMsg.text);
                 }
             }
-        } catch {
-            // Silent fail handled by UI state
+        } catch (err) {
+            const status = err?.response?.status;
+            if (status === 401 || status === 403) {
+                setMessagesError('You are not authorized to view this conversation.');
+            } else {
+                setMessagesError('Failed to load messages. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -293,6 +300,16 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background-section/10">
                 {loading ? (
                     <div className="text-center text-text-muted mt-10 font-medium animate-pulse">Loading messages...</div>
+                ) : messagesError ? (
+                    <div className="text-center mt-10">
+                        <p className="text-sm text-error font-medium">{messagesError}</p>
+                        <button
+                            onClick={() => void fetchMessages()}
+                            className="mt-3 px-4 py-2 rounded-lg border border-card-border text-sm text-foreground hover:bg-card-hover transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
                 ) : (
                     messages.map((msg) => {
                         const isOwn = msg.sender === currentUserId;

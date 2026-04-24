@@ -14,10 +14,10 @@ const Button = ({
     ...props 
 }) => {
     const variants = {
-        primary: 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-glow hover:shadow-glow-lg',
+        primary: 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary-hover',
         accent: 'bg-accent text-accent-foreground hover:bg-accent-hover',
-        outline: 'border-2 border-card-border bg-transparent text-foreground hover:border-primary hover:text-primary hover:bg-primary/5',
+        outline: 'border border-card-border bg-transparent text-foreground hover:border-card-border-hover hover:bg-card-hover',
         ghost: 'bg-transparent text-foreground-muted hover:text-foreground hover:bg-card-hover',
         danger: 'bg-error text-white hover:bg-error/90',
         success: 'bg-success text-white hover:bg-success/90',
@@ -26,7 +26,7 @@ const Button = ({
     const sizes = {
         xs: 'px-3 py-1.5 text-xs font-semibold rounded-lg gap-1.5',
         sm: 'px-4 py-2 text-sm font-semibold rounded-xl gap-2',
-        md: 'px-6 py-2.5 text-sm font-semibold rounded-xl gap-2',
+        md: 'px-5 py-2.5 text-sm font-semibold rounded-xl gap-2',
         lg: 'px-8 py-3.5 text-base font-semibold rounded-2xl gap-2.5',
         xl: 'px-10 py-4 text-lg font-semibold rounded-2xl gap-3',
     };
@@ -40,6 +40,7 @@ const Button = ({
             className={cn(
                 'inline-flex items-center justify-center font-semibold transition-all duration-200',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
+                'focus-visible:ring-2 focus-visible:ring-primary/20',
                 variants[variant],
                 sizes[size],
                 className

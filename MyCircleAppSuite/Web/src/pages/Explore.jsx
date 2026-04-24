@@ -1,27 +1,23 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import PostCard from '../components/ui/PostCard';
-import ServiceCard from '../components/ui/ServiceCard';
 import PostSkeleton from '../components/ui/PostSkeleton';
 import Button from '../components/ui/Button';
-import { getAvatarUrl } from '../utils/avatar';
 import {
-    Filter, Search, Map as MapIcon,
-    List as ListIcon, MapPin, Package,
-    Briefcase, Wrench, Tag, Key,
-    Sparkles, Plus, X, SlidersHorizontal,
-    Clock, Heart, Star, Zap, Shield, Trophy,
-    Navigation, Crosshair, Eye, MessageCircle,
-    ChevronLeft, ZoomIn, ZoomOut, Layers
+    Search, Map as MapIcon, List as ListIcon, MapPin, Package,
+    Briefcase, Wrench, Tag, Key, Sparkles, Plus, X,
+    Filter, Navigation, ZoomIn, ZoomOut, Layers, Crosshair, ChevronRight,
+    Bell, User, Loader2, RefreshCw, SlidersHorizontal, Clock,
+    CheckCircle2, AlertCircle, ChevronLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import { cn } from '../utils/cn';
-import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -31,39 +27,65 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const categories = [
-    { id: 'all', label: 'All', icon: Package, color: '#8b5cf6' },
-    { id: 'job', label: 'Jobs', icon: Briefcase, color: '#22c55e' },
-    { id: 'service', label: 'Services', icon: Wrench, color: '#3b82f6' },
-    { id: 'sell', label: 'For Sale', icon: Tag, color: '#f97316' },
-    { id: 'rent', label: 'For Rent', icon: Key, color: '#a855f7' }
+const CATEGORIES = [
+    { id: 'all', label: 'All', icon: Package, color: '#6366f1' },
+    { id: 'job', label: 'Jobs', icon: Briefcase, color: '#22c55e', emoji: '💼' },
+    { id: 'sell', label: 'For Sale', icon: Tag, color: '#f97316', emoji: '🛒' },
+    { id: 'rent', label: 'For Rent', icon: Key, color: '#a855f7', emoji: '🏠' },
+    { id: 'request', label: 'Requests', icon: Wrench, color: '#3b82f6', emoji: '🙋' }
 ];
 
-const typeEmojis = {
-    job: '💼',
-    service: '⚔️',
-    sell: '💰',
-    rent: '🏠',
-    barter: '🔄'
+const RADIUS_OPTIONS = [
+    { id: 1, label: '1 km' },
+    { id: 5, label: '5 km' },
+    { id: 10, label: '10 km' },
+    { id: 25, label: '25 km' },
+    { id: 50, label: '50 km' }
+];
+
+const TIME_FILTERS = [
+    { id: 'latest', label: 'Latest' },
+    { id: 'today', label: 'Today' },
+    { id: 'week', label: 'This Week' },
+    { id: 'month', label: 'This Month' }
+];
+
+const toValidCoords = (lat, lng) => {
+    const parsedLat = Number(lat);
+    const parsedLng = Number(lng);
+    if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null;
+    if (parsedLat < -90 || parsedLat > 90) return null;
+    if (parsedLng < -180 || parsedLng > 180) return null;
+    return { lat: parsedLat, lng: parsedLng };
 };
 
-const typeLabels = {
-    job: 'Quest',
-    service: 'Adventure',
-    sell: 'Treasure',
-    rent: 'Sanctuary',
-    barter: 'Exchange'
-};
+const MapUpdater = ({ center, zoom }) => {
+    const map = useMap();
+    const lastTargetRef = useRef('');
 
-const getRarity = (post) => {
-    if (post.isUrgent) return { tier: 'legendary', color: '#f59e0b', label: 'Legendary', icon: '🔥' };
-    if (post.likes?.length > 10) return { tier: 'epic', color: '#a855f7', label: 'Epic', icon: '⭐' };
-    if (post.likes?.length > 5) return { tier: 'rare', color: '#3b82f6', label: 'Rare', icon: '✨' };
-    return { tier: 'common', color: '#6b7280', label: 'Common', icon: '📍' };
+    useEffect(() => {
+        const parsedCenter = Array.isArray(center) && center.length === 2
+            ? toValidCoords(center[0], center[1])
+            : null;
+        const parsedZoom = Number(zoom);
+        const normalizedZoom = Number.isFinite(parsedZoom) ? Math.max(1, Math.min(parsedZoom, 18)) : null;
+        if (!parsedCenter || normalizedZoom === null) return;
+
+        const mapSize = map.getSize?.();
+        if (!mapSize || !Number.isFinite(mapSize.x) || !Number.isFinite(mapSize.y) || mapSize.x <= 0 || mapSize.y <= 0) {
+            return;
+        }
+
+        const targetKey = `${parsedCenter.lat.toFixed(6)}:${parsedCenter.lng.toFixed(6)}:${normalizedZoom}`;
+        if (lastTargetRef.current === targetKey) return;
+
+        lastTargetRef.current = targetKey;
+        map.setView([parsedCenter.lat, parsedCenter.lng], normalizedZoom, { animate: false });
+    }, [center, zoom, map]);
+    return null;
 };
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -71,805 +93,610 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
         Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return (R * c).toFixed(1);
+    return R * c;
 };
 
-const createQuestIcon = (type, rarity, isSelected) => {
-    const emoji = typeEmojis[type] || '📍';
-    const color = rarity.color;
-    const size = isSelected ? 56 : 44;
-    const innerSize = size - 8;
-    
-    return L.divIcon({
-        html: `
-            <div style="
-                width: ${size}px;
-                height: ${size}px;
-                position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            ">
-                ${isSelected ? `<div style="
-                    position: absolute;
-                    width: ${size + 16}px;
-                    height: ${size + 16}px;
-                    border: 3px solid ${color};
-                    border-radius: 50%;
-                    animation: pulse-ring 1.5s ease-out infinite;
-                "></div>` : ''}
-                <div style="
-                    width: ${innerSize}px;
-                    height: ${innerSize}px;
-                    background: linear-gradient(145deg, ${color}, ${color}aa);
-                    border-radius: 50%;
-                    border: 3px solid white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: ${innerSize * 0.45}px;
-                    box-shadow: 0 4px 16px ${color}66;
-                    animation: ${isSelected ? 'bounce-selected 1s infinite' : 'bounce 2s infinite'};
-                    position: relative;
-                    z-index: 1;
-                ">
-                    ${emoji}
-                </div>
-                ${rarity.tier !== 'common' ? `<div style="
-                    position: absolute;
-                    top: -2px;
-                    right: -2px;
-                    font-size: 14px;
-                    z-index: 2;
-                    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-                ">${rarity.icon}</div>` : ''}
-            </div>
-        `,
-        className: 'quest-icon',
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2]
-    });
+const timeAgo = (date) => {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return new Date(date).toLocaleDateString();
 };
-
-const userIcon = L.divIcon({
-    html: `
-        <div style="
-            width: 36px;
-            height: 36px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        ">
-            <div style="
-                position: absolute;
-                width: 52px;
-                height: 52px;
-                border: 2px solid rgba(236, 72, 153, 0.3);
-                border-radius: 50%;
-                animation: radar-pulse 2s ease-out infinite;
-            "></div>
-            <div style="
-                width: 36px;
-                height: 36px;
-                background: linear-gradient(135deg, #ec4899, #f472b6);
-                border-radius: 50%;
-                border: 3px solid white;
-                box-shadow: 0 4px 16px rgba(236, 72, 153, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                z-index: 1;
-            ">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(-45deg);">
-                    <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-                </svg>
-            </div>
-        </div>
-    `,
-    className: 'user-icon',
-    iconSize: [36, 36],
-    iconAnchor: [18, 18]
-});
-
-function MapController({ center, zoom, posts }) {
-    const map = useMap();
-    
-    useEffect(() => {
-        if (center) {
-            map.setView(center, zoom, { animate: true });
-        }
-    }, [center, zoom, map]);
-    
-    useEffect(() => {
-        if (posts && posts.length > 0) {
-            const coords = posts.map(p => [p.displayLat, p.displayLng]).filter(c => c[0] && c[1]);
-            if (coords.length > 0) {
-                const bounds = L.latLngBounds(coords);
-                if (bounds.isValid()) {
-                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-                }
-            }
-        }
-    }, [posts, map]);
-    
-    useEffect(() => {
-        const handleZoomIn = () => map.zoomIn();
-        const handleZoomOut = () => map.zoomOut();
-        
-        window.mapZoomIn = handleZoomIn;
-        window.mapZoomOut = handleZoomOut;
-        
-        return () => {
-            delete window.mapZoomIn;
-            delete window.mapZoomOut;
-        };
-    }, [map]);
-    
-    return null;
-}
 
 const Explore = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { isDark } = useTheme();
     const { success, error: showError } = useToast();
-    const mapInstanceRef = useRef(null);
-    
+    const { socket } = useSocket();
+    const searchTimeoutRef = useRef(null);
+    const mapRef = useRef(null);
+
     const [posts, setPosts] = useState([]);
-    const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortOrder] = useState('distance');
-    const [locationFilter] = useState('all');
-    const [viewMode, setViewMode] = useState('map');
+    const [sortOrder, setSortOrder] = useState('latest');
+    const [viewMode, setViewMode] = useState('split');
     const [userLocation, setUserLocation] = useState(null);
-    const [loadingLocation, setLoadingLocation] = useState(false);
-    const [selectedQuest, setSelectedQuest] = useState(null);
-    const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]);
-    const [mapZoom, setMapZoom] = useState(4);
+    const [locationStatus, setLocationStatus] = useState('idle'); // idle, loading, denied, success
+    const [mapZoom, setMapZoom] = useState(13);
+    const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+    const [radius, setRadius] = useState(10);
+    const [timeFilter, setTimeFilter] = useState('latest');
+    const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
+    const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+    const [quickViewPost, setQuickViewPost] = useState(null);
 
-    const { socket } = useSocket();
+    const fallbackUserLocation = useMemo(
+        () => toValidCoords(user?.latitude, user?.longitude),
+        [user?.latitude, user?.longitude]
+    );
 
-    const serverCategory = filter === 'service' ? 'all' : filter;
+    const safeUserLocation = useMemo(
+        () => (userLocation ? toValidCoords(userLocation.lat, userLocation.lng) : null),
+        [userLocation]
+    );
+
+    const mapCenter = useMemo(() => {
+        if (safeUserLocation) return [safeUserLocation.lat, safeUserLocation.lng];
+        if (fallbackUserLocation) return [fallbackUserLocation.lat, fallbackUserLocation.lng];
+        const defaultCenter = toValidCoords(20.5937, 78.9629);
+        return defaultCenter ? [defaultCenter.lat, defaultCenter.lng] : [20, 78];
+    }, [safeUserLocation, fallbackUserLocation]);
+
+    const serverCategory = filter === 'all' ? undefined : filter;
 
     const fetchPosts = useCallback(async () => {
         setLoading(true);
         try {
             const params = {
                 limit: 100,
-                type: serverCategory !== 'all' ? serverCategory : undefined,
+                type: serverCategory,
                 q: searchTerm.trim() || undefined,
-                location: locationFilter !== 'all' ? locationFilter : undefined,
-                sort: sortOrder === 'distance' ? 'latest' : sortOrder,
+                sort: sortOrder,
+                distance: radius,
+                ...(userLocation && { lat: userLocation.lat, lng: userLocation.lng }),
+                time: timeFilter !== 'latest' ? timeFilter : undefined,
             };
             const res = await api.get('/posts', { params });
-            const activePosts = res.data.filter(p => p.isActive !== false);
-            setPosts(activePosts);
+            setPosts(res.data);
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, [locationFilter, searchTerm, serverCategory, sortOrder]);
+    }, [serverCategory, searchTerm, sortOrder, radius, timeFilter, userLocation]);
 
-    const fetchServices = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams();
-            if (searchTerm) params.append('skill', searchTerm);
-            params.append('sort', 'rating');
-            const res = await api.get(`/user/services?${params.toString()}`);
-            setServices(res.data);
-        } catch {
-            showError('Search failed. Please try again.');
-        } finally {
-            setLoading(false);
+    // Detect user location
+    useEffect(() => {
+        if (!userLocation && locationStatus === 'idle') {
+            setLocationStatus('loading');
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const coords = toValidCoords(pos.coords.latitude, pos.coords.longitude);
+                    if (coords) {
+                        setUserLocation(coords);
+                        setMapZoom(13);
+                        setLocationStatus('success');
+                        return;
+                    }
+                    setLocationStatus('denied');
+                },
+                () => {
+                    if (fallbackUserLocation) {
+                        setUserLocation(fallbackUserLocation);
+                        setLocationStatus('success');
+                    } else {
+                        setLocationStatus('denied');
+                    }
+                }
+            );
         }
-    }, [searchTerm, showError]);
+    }, [userLocation, locationStatus, fallbackUserLocation]);
 
+    // Debounced search
+    useEffect(() => {
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = setTimeout(() => fetchPosts(), 300);
+        return () => clearTimeout(searchTimeoutRef.current);
+    }, [searchTerm, radius, timeFilter, sortOrder]);
+
+    // Socket real-time updates
     useEffect(() => {
         if (!socket) return;
         const handleNewPost = (newPost) => {
-            if (newPost.isActive !== false) {
-                setPosts(prev => {
-                    if (prev.find(p => p._id === newPost._id)) return prev;
-                    return [newPost, ...prev];
-                });
-                success('New quest appeared!');
-            }
+            setPosts(prev => [newPost, ...prev]);
+            success('New post nearby!');
         };
         socket.on('new_post', handleNewPost);
         return () => socket.off('new_post', handleNewPost);
     }, [socket, success]);
 
-    useEffect(() => {
-        if (filter === 'service') {
-            void fetchServices();
-        } else {
-            void fetchPosts();
-        }
-    }, [fetchPosts, fetchServices, filter]);
+    useEffect(() => { fetchPosts(); }, []);
 
-    useEffect(() => {
-        if (filter === 'service') {
-            void fetchServices();
-        }
-    }, [fetchServices, filter, searchTerm, sortOrder]);
-
-    useEffect(() => {
-        if (navigator.geolocation) {
-            setLoadingLocation(true);
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                    setUserLocation(loc);
-                    setMapCenter([loc.lat, loc.lng]);
-                    setMapZoom(12);
-                    setLoadingLocation(false);
-                },
-                () => {
-                    setLoadingLocation(false);
-                }
-            );
-        }
-    }, []);
-
-    const filteredPosts = useMemo(() => {
-        if (filter === 'service') return services;
-        let result = posts;
-        
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            result = result.filter(p => 
-                p.title?.toLowerCase().includes(term) || 
-                p.description?.toLowerCase().includes(term)
-            );
-        }
-        
-        if (locationFilter !== 'all') {
-            result = result.filter(p => p.location === locationFilter);
-        }
-        
-        if (sortOrder === 'distance' && userLocation) {
-            result = result
-                .map(p => ({
-                    ...p,
-                    _distance: calculateDistance(
-                        userLocation.lat, userLocation.lng,
-                        p.locationCoords?.coordinates?.[1],
-                        p.locationCoords?.coordinates?.[0]
-                    )
-                }))
-                .filter(p => p._distance !== null)
-                .sort((a, b) => parseFloat(a._distance) - parseFloat(b._distance));
-        }
-        
-        return result;
-    }, [posts, services, filter, searchTerm, locationFilter, sortOrder, userLocation]);
-
-    const mapPosts = useMemo(() => {
-        if (filter === 'service') return [];
-        
-        const postsWithCoords = filteredPosts.filter(p => p.locationCoords?.coordinates?.length === 2);
-        const postsWithoutCoords = filteredPosts.filter(p => !p.locationCoords?.coordinates?.length === 2);
-        
-        const jitter = 0.02;
-        
-        return [
-            ...postsWithCoords.map(p => {
-                const coords = p.locationCoords.coordinates;
+    const mapPosts = useMemo(() => 
+        posts
+            .filter((p) => p.locationCoords?.coordinates)
+            .map((p) => {
+                const coords = toValidCoords(p.locationCoords.coordinates[1], p.locationCoords.coordinates[0]);
+                if (!coords) return null;
                 return {
                     ...p,
-                    displayLat: coords[1] + (Math.random() - 0.5) * jitter,
-                    displayLng: coords[0] + (Math.random() - 0.5) * jitter,
-                    hasCoords: true,
-                    rarity: getRarity(p),
-                    distance: userLocation ? calculateDistance(
-                        userLocation.lat, userLocation.lng,
-                        coords[1], coords[0]
+                    displayLat: coords.lat,
+                    displayLng: coords.lng,
+                    distance: safeUserLocation ? calculateDistance(
+                        safeUserLocation.lat,
+                        safeUserLocation.lng,
+                        coords.lat,
+                        coords.lng
                     ) : null
                 };
-            }),
-            ...postsWithoutCoords.map((p) => {
-                const baseLat = 20.5937 + (Math.random() - 0.5) * 30;
-                const baseLng = 78.9629 + (Math.random() - 0.5) * 60;
-                return {
-                    ...p,
-                    displayLat: baseLat,
-                    displayLng: baseLng,
-                    hasCoords: false,
-                    rarity: getRarity(p),
-                    distance: null
-                };
             })
-        ];
-    }, [filteredPosts, filter, userLocation]);
+            .filter(Boolean),
+    [posts, safeUserLocation]);
 
-    const stats = useMemo(() => ({
-        total: mapPosts.length,
-        jobs: mapPosts.filter(p => p.type === 'job').length,
-        forSale: mapPosts.filter(p => p.type === 'sell').length,
-        nearby: userLocation ? mapPosts.filter(p => p.distance && parseFloat(p.distance) < 10).length : 0
-    }), [mapPosts, userLocation]);
+    const handlePostClick = (postId) => navigate(`/post/${postId}`);
+    const handleMarkerClick = (postId) => setSelectedMarkerId(postId);
 
-    const toggleViewMode = () => {
-        if (filter === 'service') {
-            showError('Map view not available for Services.');
-            return;
-        }
-        if (viewMode === 'list' && !userLocation) {
-            setLoadingLocation(true);
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    setLoadingLocation(false);
-                },
-                () => {
-                    setLoadingLocation(false);
-                    showError('Could not access your location.');
-                }
-            );
-        }
-        setViewMode(viewMode === 'list' ? 'map' : 'list');
-    };
-
-    const handleLocateMe = () => {
-        setLoadingLocation(true);
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                setUserLocation(loc);
-                setMapCenter([loc.lat, loc.lng]);
-                setMapZoom(13);
-                setLoadingLocation(false);
-            },
-            () => {
-                setLoadingLocation(false);
-                showError('Could not access your location.');
-            }
-        );
-    };
-
-    const handlePostClick = (postId) => {
-        navigate(`/post/${postId}`);
-    };
-
-    const handleQuestClick = (quest) => {
-        setSelectedQuest(quest);
-        setMapCenter([quest.displayLat, quest.displayLng]);
-        setMapZoom(15);
-    };
-
-    const handleZoomIn = () => window.mapZoomIn?.();
-    const handleZoomOut = () => window.mapZoomOut?.();
+    // Filter posts by radius
+    const filteredMapPosts = useMemo(() => 
+        mapPosts.filter(p => !p.distance || p.distance <= radius),
+    [mapPosts, radius]);
 
     return (
-        <div className="min-h-screen">
-            {/* Header */}
-            <div className="relative py-6 md:py-8 overflow-hidden bg-gradient-to-b from-primary/5 to-transparent">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="space-y-2">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold">
-                                <Crosshair className="w-4 h-4" />
-                                <span>Quest Map</span>
+        <div className="min-h-screen bg-background">
+            {/* Sticky Header */}
+            <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-card-border">
+                <div className="container mx-auto px-3 py-3">
+                    <div className="flex flex-col gap-3">
+                        
+                        {/* Search and Location Row */}
+                        <div className="flex gap-2 items-center">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted" />
+                                <input
+                                    type="text"
+                                    placeholder="Search posts..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-card border border-card-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                />
+                                {searchTerm && (
+                                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-card-hover rounded-full">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
                             </div>
-                            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                                Explore <span className="gradient-text">Adventures</span>
-                            </h1>
-                            <p className="text-foreground-muted">
-                                Discover quests and treasures near you
-                            </p>
-                        </div>
-
-                        {/* Quick Stats */}
-                        <div className="flex items-center gap-3">
-                            {[
-                                { label: 'Total', value: stats.total, color: 'text-primary' },
-                                { label: 'Nearby', value: stats.nearby, color: 'text-accent' },
-                            ].map(stat => (
-                                <div key={stat.label} className="px-4 py-2 rounded-xl bg-card border border-card-border">
-                                    <div className={`text-xs font-medium ${stat.color}`}>{stat.label}</div>
-                                    <div className="text-xl font-bold">{stat.value}</div>
+                            
+                            {/* Location Status */}
+                            {locationStatus === 'success' ? (
+                                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-green-500/10 text-green-500 rounded-xl text-xs font-medium">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                    <MapPin className="w-3 h-3" />
                                 </div>
-                            ))}
+                            ) : locationStatus === 'loading' ? (
+                                <div className="flex items-center gap-1.5 px-3 py-2.5 bg-card border border-card-border rounded-xl text-xs font-medium">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                </div>
+                            ) : (
+                                <button onClick={() => {
+                                    setLocationStatus('loading');
+                                    navigator.geolocation.getCurrentPosition(
+                                        (pos) => {
+                                            const coords = toValidCoords(pos.coords.latitude, pos.coords.longitude);
+                                            if (!coords) {
+                                                setLocationStatus('denied');
+                                                return;
+                                            }
+                                            setUserLocation(coords);
+                                            setMapZoom(13);
+                                            setLocationStatus('success');
+                                        },
+                                        () => setLocationStatus('denied')
+                                    );
+                                }} className="flex items-center gap-1.5 px-3 py-2.5 bg-red-500/10 text-red-500 rounded-xl text-xs font-medium">
+                                    <AlertCircle className="w-3 h-3" />
+                                </button>
+                            )}
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Search & Controls Bar */}
-            <div className="sticky top-16 md:top-20 z-30 bg-background/95 backdrop-blur-md border-b border-card-border py-3">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center gap-3">
-                        {/* Search */}
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted" />
-                            <input
-                                type="text"
-                                placeholder="Search quests..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-card-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-
-                        {/* Category Pills */}
-                        <div className="hidden md:flex items-center gap-1">
-                            {categories.map((cat) => (
+                        
+                        {/* Category Pills and Radius Slider */}
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1 items-center">
+                            {CATEGORIES.map((cat) => (
                                 <button
                                     key={cat.id}
                                     onClick={() => setFilter(cat.id)}
                                     className={cn(
-                                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                                        'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all duration-200',
                                         filter === cat.id
-                                            ? 'text-white'
-                                            : 'bg-card border border-card-border text-foreground-muted hover:border-primary'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'bg-card border border-card-border hover:border-primary/50'
                                     )}
-                                    style={filter === cat.id ? { backgroundColor: cat.color } : {}}
                                 >
                                     <cat.icon className="w-3.5 h-3.5" />
-                                    <span>{cat.label}</span>
+                                    {cat.label}
                                 </button>
                             ))}
+                            
+                            <div className="flex items-center gap-2 ml-auto pl-2 border-l border-card-border">
+                                <Navigation className="w-3.5 h-3.5 text-foreground-muted" />
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="50"
+                                    value={radius}
+                                    onChange={(e) => setRadius(Number(e.target.value))}
+                                    className="w-20 h-1.5 bg-card-border rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
+                                />
+                                <span className="text-xs font-semibold text-primary min-w-[35px]">{radius}km</span>
+                            </div>
                         </div>
-
-                        {/* View Toggle */}
-                        <div className="flex items-center gap-1 p-1 bg-card rounded-lg border border-card-border">
-                            <button
-                                onClick={() => setViewMode('list')}
-                                className={cn(
-                                    'p-2 rounded-md transition-all',
-                                    viewMode === 'list' ? 'bg-primary text-white' : 'text-foreground-muted hover:bg-card-hover'
-                                )}
-                            >
-                                <ListIcon className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={toggleViewMode}
-                                className={cn(
-                                    'p-2 rounded-md transition-all',
-                                    viewMode === 'map' ? 'bg-primary text-white' : 'text-foreground-muted hover:bg-card-hover'
-                                )}
-                            >
-                                <MapIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Mobile Categories */}
-                    <div className="flex md:hidden gap-2 mt-3 overflow-x-auto pb-1 -mx-4 px-4">
-                        {categories.map((cat) => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setFilter(cat.id)}
-                                className={cn(
-                                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0',
-                                    filter === cat.id
-                                        ? 'text-white'
-                                        : 'bg-card border border-card-border text-foreground-muted'
-                                )}
-                                style={filter === cat.id ? { backgroundColor: cat.color } : {}}
-                            >
-                                <cat.icon className="w-3.5 h-3.5" />
-                                <span>{cat.label}</span>
-                            </button>
-                        ))}
                     </div>
                 </div>
+            </header>
+
+            {/* View Toggle */}
+            <div className="flex bg-card-border/50 border-b border-card-border">
+                <button onClick={() => setViewMode('split')} className={cn('flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5', viewMode === 'split' ? 'bg-background border-b-2 border-primary text-primary' : '')}>
+                    <Layers className="w-4 h-4" /> Split
+                </button>
+                <button onClick={() => setViewMode('list')} className={cn('flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5', viewMode === 'list' ? 'bg-background border-b-2 border-primary text-primary' : '')}>
+                    <ListIcon className="w-4 h-4" /> List
+                </button>
+                <button onClick={() => setViewMode('map')} className={cn('flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5', viewMode === 'map' ? 'bg-background border-b-2 border-primary text-primary' : '')}>
+                    <MapIcon className="w-4 h-4" /> Map
+                </button>
             </div>
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {[1, 2, 3, 4, 5, 6].map((idx) => <PostSkeleton key={idx} />)}
+            <div className="container mx-auto">
+                <div className={cn('flex', viewMode === 'split' ? 'flex-col lg:flex-row' : 'flex-col')}>
+                    
+                    {/* Post Feed */}
+                    <div className={cn('p-3', viewMode === 'split' ? 'lg:w-1/2 lg:border-r' : 'w-full', viewMode === 'map' ? 'hidden' : '')}>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-sm font-medium text-foreground-muted">
+                                {loading ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</span> : `${filteredMapPosts.length} results`}
+                            </p>
+                            {userLocation && (
+                                <span className="text-xs text-foreground-muted flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" /> Within {radius}km
+                                </span>
+                            )}
+                        </div>
+
+                        {loading ? (
+                            <div className={cn('grid gap-3', viewMode === 'list' ? 'grid-cols-3' : 'grid-cols-2')}>
+                                {[1,2,3,4,5,6].map(i => <PostSkeleton key={i} />)}
+                            </div>
+                        ) : filteredMapPosts.length === 0 ? (
+                            <EmptyState onClear={() => { setSearchTerm(''); setFilter('all'); setRadius(10); fetchPosts(); }} />
+                        ) : (
+                            <div className={cn('grid gap-3', viewMode === 'list' ? 'grid-cols-3' : 'grid-cols-2')}>
+                                {filteredMapPosts.map((post) => (
+                                    <motion.div
+                                        key={post._id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="group"
+                                    >
+                                        <PostCard 
+                                            post={post} 
+                                            currentUserId={user?._id} 
+                                            onClick={() => handlePostClick(post._id)}
+                                            onMarkerClick={() => {
+                                                setSelectedMarkerId(post._id);
+                                                setViewMode('map');
+                                            }}
+                                        />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                ) : viewMode === 'map' && filter !== 'service' ? (
-                    <div className="relative">
-                        {/* Map Container */}
-                        <div className="relative rounded-2xl overflow-hidden border border-card-border shadow-xl" style={{ height: 'calc(100vh - 280px)', minHeight: '450px' }}>
+
+                    {/* Map */}
+                    <div className={cn('w-full', viewMode === 'map' ? 'h-[calc(100vh-280px)]' : 'hidden lg:block lg:min-h-[50vh]', viewMode === 'split' ? 'lg:h-[calc(100vh-120px)] lg:sticky lg:top-[120px]' : '')}>
+                        <div className={cn('h-full', viewMode === 'map' ? 'sticky top-[120px]' : '')}>
                             <MapContainer
+                                ref={mapRef}
                                 center={mapCenter}
                                 zoom={mapZoom}
                                 scrollWheelZoom={true}
                                 className="w-full h-full"
                                 zoomControl={false}
-                                whenReady={(map) => {
-                                    mapInstanceRef.current = map;
-                                }}
                             >
+                                <MapUpdater center={safeUserLocation ? [safeUserLocation.lat, safeUserLocation.lng] : null} zoom={mapZoom} />
                                 <TileLayer
-                                    url={isDark
-                                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                                        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
+                                    attribution='&copy; OpenStreetMap'
+                                    url={isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
                                 />
                                 
-                                {userLocation && (
+                                {/* User Location with Pulse */}
+                                {safeUserLocation && (
                                     <>
                                         <Circle
-                                            center={[userLocation.lat, userLocation.lng]}
-                                            radius={10000}
-                                            pathOptions={{
-                                                color: '#ec4899',
-                                                fillColor: '#ec4899',
-                                                fillOpacity: 0.08,
-                                                weight: 2
-                                            }}
+                                            center={[safeUserLocation.lat, safeUserLocation.lng]}
+                                            radius={radius * 1000}
+                                            path={{ color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.1, weight: 1, dashArray: '5, 10' }}
                                         />
-                                        <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon} />
+                                        <Marker position={[safeUserLocation.lat, safeUserLocation.lng]} icon={L.divIcon({
+                                            className: 'user-marker',
+                                            html: `
+                                                <div class="relative">
+                                                    <div class="w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg"></div>
+                                                    <div class="absolute -inset-2 bg-blue-500/30 rounded-full animate-ping"></div>
+                                                </div>
+                                            `,
+                                            iconSize: [16, 16], iconAnchor: [8, 8]
+                                        })} />
                                     </>
                                 )}
-                                
-                                {mapPosts.map(post => (
-                                    <Marker 
-                                        key={post._id}
-                                        position={[post.displayLat, post.displayLng]}
-                                        icon={createQuestIcon(post.type, post.rarity, selectedQuest?._id === post._id)}
-                                        eventHandlers={{ click: () => handleQuestClick(post) }}
-                                    />
-                                ))}
-                                
-                                <MapController center={mapCenter} zoom={mapZoom} posts={mapPosts} />
-                            </MapContainer>
 
-                            {/* Map Controls - Top Right */}
-                            <div className="absolute top-3 right-3 z-[400] flex flex-col gap-2">
-                                <button
-                                    onClick={handleLocateMe}
-                                    className="w-10 h-10 rounded-xl bg-card border border-card-border shadow-lg flex items-center justify-center hover:bg-card-hover transition-colors"
-                                    title="Find my location"
-                                >
-                                    <Crosshair className="w-5 h-5 text-primary" />
-                                </button>
-                                <button
-                                    onClick={handleZoomIn}
-                                    className="w-10 h-10 rounded-xl bg-card border border-card-border shadow-lg flex items-center justify-center hover:bg-card-hover transition-colors"
-                                >
-                                    <ZoomIn className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={handleZoomOut}
-                                    className="w-10 h-10 rounded-xl bg-card border border-card-border shadow-lg flex items-center justify-center hover:bg-card-hover transition-colors"
-                                >
-                                    <ZoomOut className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            {/* Quest Counter - Top Left */}
-                            <div className="absolute top-3 left-3 z-[400]">
-                                <div className="px-3 py-2 rounded-xl bg-card/95 backdrop-blur-sm border border-card-border shadow-lg">
-                                    <div className="flex items-center gap-2">
-                                        <Trophy className="w-4 h-4 text-primary" />
-                                        <span className="text-sm font-semibold">{mapPosts.length} quests nearby</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Quest Details Panel - Left Side */}
-                            <AnimatePresence>
-                                {selectedQuest && (
-                                    <motion.div
-                                        initial={{ x: -320, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
-                                        exit={{ x: -320, opacity: 0 }}
-                                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                        className="absolute top-3 left-3 bottom-3 w-72 z-[500] flex flex-col bg-card rounded-2xl border border-card-border shadow-2xl overflow-hidden"
-                                    >
-                                        {/* Header */}
-                                        <div 
-                                            className="p-4 text-white shrink-0"
-                                            style={{ background: `linear-gradient(135deg, ${selectedQuest.rarity.color}ee 0%, ${selectedQuest.rarity.color}99 100%)` }}
+                                {/* Post Markers */}
+                                {filteredMapPosts.map(post => {
+                                    const cat = CATEGORIES.find(c => c.id === post.type);
+                                    const isSelected = selectedMarkerId === post._id;
+                                    const markerColor = post.type === 'job' ? '#22c55e' : post.type === 'sell' ? '#f97316' : post.type === 'rent' ? '#a855f7' : '#3b82f6';
+                                    return (
+                                        <Marker 
+                                            key={post._id}
+                                            position={[post.displayLat, post.displayLng]}
+                                            eventHandlers={{ click: () => setSelectedMarkerId(post._id) }}
+                                            icon={L.divIcon({
+                                                className: 'post-marker',
+                                                html: `
+                                                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-lg cursor-pointer transform transition-all ${isSelected ? 'scale-125 ring-4 ring-white ring-offset-2 z-50' : 'hover:scale-110'}" style="background: ${markerColor};">
+                                                        <span>${cat?.emoji || '📍'}</span>
+                                                    </div>
+                                                `,
+                                                iconSize: [40, 40], iconAnchor: [20, 20]
+                                            })}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-2xl">{typeEmojis[selectedQuest.type]}</span>
-                                                    <div>
-                                                        <div className="text-xs opacity-80">{typeLabels[selectedQuest.type]}</div>
-                                                        <div className="font-bold">{selectedQuest.rarity.label}</div>
+                                            <Popup>
+                                                <div className="w-56 p-0! rounded-xl overflow-hidden shadow-lg">
+                                                    ${post.images?.[0] ? `<img src="${post.images[0]}" alt="${post.title}" class="w-full h-24 object-cover" />` : `
+                                                    <div class="w-full h-24 flex items-center justify-center text-4xl" style="background: linear-gradient(135deg, ${markerColor}20, ${markerColor}40);">
+                                                        ${cat?.emoji || '📍'}
+                                                    </div>
+                                                    `}
+                                                    <div className="p-3">
+                                                        <span className="text-[10px] font-bold px-2 py-1 rounded-full" style="background: ${markerColor}20; color: ${markerColor};">
+                                                            ${cat?.label}
+                                                        </span>
+                                                        <h3 className="font-bold text-sm mt-2 leading-tight line-clamp-2">${post.title}</h3>
+                                                        ${post.price > 0 ? `<p class="text-lg font-bold text-primary mt-1">₹${post.price.toLocaleString()}</p>` : ''}
+                                                        <div className="flex items-center justify-between mt-2 text-[10px] text-foreground-muted">
+                                                            ${post.distance ? `<span>📍 ${post.distance.toFixed(1)}km</span>` : ''}
+                                                            <span>${timeAgo(post.createdAt)}</span>
+                                                        </div>
+                                                        <button onclick="window.dispatchEvent(new CustomEvent('openQuickView', { detail: '${post._id}' }))" className="w-full mt-2 py-2 bg-primary text-primary-foreground text-xs rounded-xl font-semibold flex items-center justify-center gap-1">
+                                                            View Details <ChevronRight className="w-3 h-3" />
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => setSelectedQuest(null)}
-                                                    className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"
+                                            </Popup>
+                                        </Marker>
+                                    );
+                                })}
+                            </MapContainer>
+
+                            {/* Map Controls */}
+                            <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5">
+                                <button onClick={() => setMapZoom(z => Math.min(z + 1, 18))} className="p-2 bg-card border border-card-border rounded-lg shadow-sm hover:bg-card-hover">
+                                    <ZoomIn className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setMapZoom(z => Math.max(z - 1, 5))} className="p-2 bg-card border border-card-border rounded-lg shadow-sm hover:bg-card-hover">
+                                    <ZoomOut className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => navigator.geolocation.getCurrentPosition((p) => {
+                                    const coords = toValidCoords(p.coords.latitude, p.coords.longitude);
+                                    if (!coords) {
+                                        showError('Invalid location coordinates');
+                                        return;
+                                    }
+                                    setUserLocation(coords);
+                                    setMapZoom(14);
+                                }, () => showError('Location denied'))} className="p-2 bg-card border border-card-border rounded-lg shadow-sm hover:bg-card-hover">
+                                    <Crosshair className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Floating Chip - Selected Marker */}
+                            <AnimatePresence>
+                                {selectedMarkerId && (() => {
+                                    const selected = filteredMapPosts.find(p => p._id === selectedMarkerId);
+                                    if (!selected) return null;
+                                    return (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                                            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                                            className="absolute bottom-4 left-4 right-4 z-[1000] max-w-md mx-auto"
+                                        >
+                                            <div 
+                                                onClick={() => setQuickViewPost(selected)}
+                                                className="flex items-center gap-3 px-4 py-3 bg-card rounded-2xl shadow-lg cursor-pointer transition-all border border-card-border hover:border-card-border-hover"
+                                            >
+                                                {selected.images?.[0] ? (
+                                                    <img src={selected.images[0]} alt={selected.title} className="w-14 h-14 rounded-xl object-cover" />
+                                                ) : (
+                                                    <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl bg-gradient-to-br from-primary/20 to-accent/20">
+                                                        {selected.type === 'job' ? '💼' : selected.type === 'sell' ? '🛒' : selected.type === 'rent' ? '🏠' : '🙋'}
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: CATEGORIES.find(c => c.id === selected.type)?.color + '20', color: CATEGORIES.find(c => c.id === selected.type)?.color }}>
+                                                            {CATEGORIES.find(c => c.id === selected.type)?.label}
+                                                        </span>
+                                                    </div>
+                                                    <p className="font-bold text-sm truncate mt-0.5">{selected.title}</p>
+                                                    {selected.price > 0 && <p className="text-sm font-bold text-primary">₹{selected.price.toLocaleString()}</p>}
+                                                    <p className="text-xs text-foreground-muted flex items-center gap-1">
+                                                        {selected.distance && <>📍 {selected.distance.toFixed(1)}km</>}
+                                                        <span>•</span>
+                                                        {timeAgo(selected.createdAt)}
+                                                    </p>
+                                                </div>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedMarkerId(null); }}
+                                                    className="p-2 rounded-full bg-card-hover hover:bg-background-tertiary transition-colors"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                        </div>
-
-                                        {/* Scrollable Content */}
-                                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                            <div>
-                                                <h3 className="text-lg font-bold">{selectedQuest.title}</h3>
-                                                
-                                                {selectedQuest.images?.[0] && (
-                                                    <img 
-                                                        src={selectedQuest.images[0]} 
-                                                        alt={selectedQuest.title}
-                                                        className="w-full h-32 object-cover rounded-xl mt-2"
-                                                    />
-                                                )}
-                                            </div>
-
-                                            {/* Mini Stats */}
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <div className="bg-card-hover rounded-xl p-2 text-center">
-                                                    <Heart className="w-4 h-4 mx-auto text-red-400" />
-                                                    <div className="text-sm font-bold">{selectedQuest.likes?.length || 0}</div>
-                                                </div>
-                                                <div className="bg-card-hover rounded-xl p-2 text-center">
-                                                    <Eye className="w-4 h-4 mx-auto text-blue-400" />
-                                                    <div className="text-sm font-bold">{selectedQuest.views || 0}</div>
-                                                </div>
-                                                <div className="bg-card-hover rounded-xl p-2 text-center">
-                                                    <Clock className="w-4 h-4 mx-auto text-green-400" />
-                                                    <div className="text-sm font-bold">{selectedQuest.shares || 0}</div>
-                                                </div>
-                                            </div>
-
-                                            {/* Description */}
-                                            <p className="text-sm text-foreground-muted line-clamp-3">
-                                                {selectedQuest.description}
-                                            </p>
-
-                                            {/* Poster */}
-                                            {selectedQuest.user && (
-                                                <div className="flex items-center gap-3 p-3 bg-card-hover rounded-xl">
-                                                    <img
-                                                        src={getAvatarUrl(selectedQuest.user)}
-                                                        alt={selectedQuest.user.displayName}
-                                                        className="w-10 h-10 rounded-full border-2 border-primary"
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="font-semibold text-sm truncate">{selectedQuest.user.displayName}</div>
-                                                        {selectedQuest.user.rating > 0 && (
-                                                            <div className="flex items-center gap-1 text-xs">
-                                                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                                                                <span>{selectedQuest.user.rating.toFixed(1)}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Location */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <MapPin className="w-4 h-4 text-primary" />
-                                                    <span>{selectedQuest.location}</span>
-                                                </div>
-                                                {selectedQuest.distance && (
-                                                    <div className="flex items-center gap-2 text-sm text-accent font-semibold">
-                                                        <Navigation className="w-4 h-4" />
-                                                        <span>{selectedQuest.distance} km away</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Price */}
-                                            {selectedQuest.price && (
-                                                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl">
-                                                    <span className="text-sm text-foreground-muted">Reward</span>
-                                                    <span className="text-xl font-bold gradient-text">${selectedQuest.price.toLocaleString()}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Urgent */}
-                                            {selectedQuest.isUrgent && (
-                                                <div className="flex items-center gap-2 p-3 bg-orange-500/10 rounded-xl border border-orange-500/20">
-                                                    <Zap className="w-5 h-5 text-orange-500" />
-                                                    <span className="font-bold text-orange-500 text-sm">URGENT</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Action */}
-                                        <div className="p-4 border-t border-card-border shrink-0">
-                                            <button
-                                                onClick={() => handlePostClick(selectedQuest._id)}
-                                                className="w-full py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
-                                            >
-                                                <Shield className="w-5 h-5" />
-                                                Accept Quest
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                )}
+                                        </motion.div>
+                                    );
+                                })()}
                             </AnimatePresence>
-
-                            {/* Quest Chips - Bottom */}
-                            {mapPosts.length > 0 && (
-                                <div className="absolute bottom-3 left-3 right-3 z-[400]">
-                                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                                        {mapPosts.slice(0, 8).map(post => (
-                                            <button
-                                                key={post._id}
-                                                onClick={() => handleQuestClick(post)}
-                                                className={cn(
-                                                    'shrink-0 px-3 py-2 rounded-xl border transition-all flex items-center gap-2 backdrop-blur-sm',
-                                                    selectedQuest?._id === post._id
-                                                        ? 'bg-primary text-white border-primary'
-                                                        : 'bg-card/95 border-card-border hover:border-primary'
-                                                )}
-                                            >
-                                                <span>{typeEmojis[post.type]}</span>
-                                                <span className="text-xs font-medium whitespace-nowrap max-w-[100px] truncate">
-                                                    {post.title}
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Loading */}
-                            {loadingLocation && (
-                                <div className="absolute inset-0 z-[600] bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                                    <div className="bg-card rounded-2xl p-6 shadow-2xl text-center">
-                                        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                                        <p className="font-semibold">Finding your location...</p>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
-                ) : (
+                </div>
+            </div>
+
+            {/* Quick View Modal */}
+            <AnimatePresence>
+                {quickViewPost && (
                     <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
+                        onClick={() => setQuickViewPost(null)}
                     >
-                        {filter === 'service' ? (
-                            filteredPosts.length > 0 ? (
-                                filteredPosts.map((service) => (
-                                    <motion.div key={service._id} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
-                                        <ServiceCard user={service} searchedSkill={searchTerm} />
-                                    </motion.div>
-                                ))
-                            ) : (
-                                <EmptyState message="No adventurers found" submessage="Try a different skill" />
-                            )
-                        ) : filteredPosts.length > 0 ? (
-                            filteredPosts.map((post, index) => (
-                                <motion.div
-                                    key={post._id}
-                                    variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                                    onClick={() => handlePostClick(post._id)}
-                                    className="cursor-pointer"
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <motion.div
+                            initial={{ y: '100%', opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: '100%', opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
+                        >
+                            {/* Header with Image */}
+                            <div className="relative h-40 sm:h-48">
+                                {quickViewPost.images?.[0] ? (
+                                    <img src={quickViewPost.images[0]} alt={quickViewPost.title} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20">
+                                        {quickViewPost.type === 'job' ? '💼' : quickViewPost.type === 'sell' ? '🛒' : quickViewPost.type === 'rent' ? '🏠' : '🙋'}
+                                    </div>
+                                )}
+                                <button 
+                                    onClick={() => setQuickViewPost(null)}
+                                    className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur rounded-full hover:bg-black/60 transition-colors"
                                 >
-                                    <PostCard post={post} currentUserId={user?._id} index={index} />
-                                </motion.div>
-                            ))
-                        ) : (
-                            <EmptyState message="No quests found" submessage="Be the first to post!" showCreate />
-                        )}
+                                    <X className="w-5 h-5 text-primary-foreground" />
+                                </button>
+                                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="p-4 sm:p-5 -mt-8 relative">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: CATEGORIES.find(c => c.id === quickViewPost.type)?.color + '20', color: CATEGORIES.find(c => c.id === quickViewPost.type)?.color }}>
+                                        {CATEGORIES.find(c => c.id === quickViewPost.type)?.label}
+                                    </span>
+                                    {quickViewPost.isVerified && (
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-500 flex items-center gap-1">
+                                            <CheckCircle2 className="w-3 h-3" /> Verified
+                                        </span>
+                                    )}
+                                </div>
+                                
+                                <h2 className="text-xl font-bold">{quickViewPost.title}</h2>
+                                {quickViewPost.price > 0 && (
+                                    <p className="text-2xl font-bold text-primary mt-1">₹{quickViewPost.price.toLocaleString()}</p>
+                                )}
+                                
+                                <div className="flex items-center gap-3 mt-3 text-sm text-foreground-muted">
+                                    {quickViewPost.distance && (
+                                        <span className="flex items-center gap-1">
+                                            <MapPin className="w-4 h-4" /> {quickViewPost.distance.toFixed(1)} km away
+                                        </span>
+                                    )}
+                                    <span className="flex items-center gap-1">
+                                        <Clock className="w-4 h-4" /> {timeAgo(quickViewPost.createdAt)}
+                                    </span>
+                                </div>
+                                
+                                {quickViewPost.description && (
+                                    <p className="mt-3 text-sm text-foreground-muted line-clamp-3">{quickViewPost.description}</p>
+                                )}
+                                
+                                {/* Quick Info Grid */}
+                                <div className="grid grid-cols-2 gap-2 mt-4">
+                                    <div className="p-3 bg-card rounded-xl border border-card-border">
+                                        <p className="text-xs text-foreground-muted">Posted by</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                                                {quickViewPost.author?.displayName?.[0] || '?'}
+                                            </div>
+                                            <p className="text-sm font-medium truncate">{quickViewPost.author?.displayName || 'Anonymous'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 bg-card rounded-xl border border-card-border">
+                                        <p className="text-xs text-foreground-muted">Location</p>
+                                        <p className="text-sm font-medium mt-1 truncate">{quickViewPost.locationName || 'Unknown'}</p>
+                                    </div>
+                                </div>
+                                
+                                {/* Action Buttons */}
+                                <div className="flex gap-3 mt-5">
+                                    <Button 
+                                        variant="outline" 
+                                        className="flex-1"
+                                        onClick={() => setQuickViewPost(null)}
+                                    >
+                                        Close
+                                    </Button>
+                                    <Button 
+                                        className="flex-1 gap-2"
+                                        onClick={() => { setQuickViewPost(null); navigate(`/post/${quickViewPost._id}`); }}
+                                    >
+                                        View Full Post
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
-            </div>
+            </AnimatePresence>
+            <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/create-post')}
+                className="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full shadow-md font-semibold text-sm hover:bg-primary-hover transition-colors"
+            >
+                <Plus className="w-4 h-4" />
+                <span>Create</span>
+            </motion.button>
         </div>
     );
 };
 
-const EmptyState = ({ message, submessage, showCreate }) => {
+const EmptyState = ({ onClear }) => {
     const navigate = useNavigate();
     return (
-        <div className="col-span-full py-20 flex flex-col items-center text-center">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <Trophy className="w-8 h-8 text-primary" />
+                <MapIcon className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-lg font-bold mb-1">{message}</h3>
-            <p className="text-foreground-muted mb-4">{submessage}</p>
-            {showCreate && (
-                <Button onClick={() => navigate('/create-post')} className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Create Quest
-                </Button>
-            )}
+            <h3 className="text-base font-bold mb-1">No results found</h3>
+            <p className="text-sm text-foreground-muted mb-4">Try increasing the search radius or changing filters</p>
+            <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={onClear}>Clear Filters</Button>
+                <Button size="sm" onClick={() => navigate('/create-post')}>Create Post</Button>
+            </div>
         </div>
     );
 };

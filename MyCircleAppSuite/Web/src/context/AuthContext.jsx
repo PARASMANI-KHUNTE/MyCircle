@@ -124,7 +124,8 @@ export const AuthProvider = ({ children }) => {
             setToken(tokenOrEmail);
             await fetchUserProfile();
         } else {
-            window.location.href = `${authBaseUrl}/auth/google`;
+            const returnTo = encodeURIComponent(window.location.origin);
+            window.location.href = `${authBaseUrl}/auth/google?returnTo=${returnTo}`;
         }
     }, [fetchUserProfile]);
 
@@ -179,4 +180,3 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-

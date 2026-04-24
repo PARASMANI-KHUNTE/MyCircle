@@ -8,21 +8,53 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { hashPassword, verifyPassword } = require('../utils/password');
 
+const normalizeUrl = (value) => {
+    if (!value) return null;
+
+    try {
+        const url = new URL(String(value).trim());
+        return url.origin;
+    } catch {
+        return null;
+    }
+};
+
+const getConfiguredClientUrl = () => {
+    return normalizeUrl(process.env.CLIENT_URL)
+        || normalizeUrl(process.env.CLIENT_URL_DEV);
+};
+
+const resolveClientUrl = (req) => {
+    const requestedOrigin = normalizeUrl(req.query.state);
+
+    if (requestedOrigin) {
+        return requestedOrigin;
+    }
+
+    return getConfiguredClientUrl();
+};
+
 // @desc    Auth with Google
 // @route   GET /auth/google
-router.get('/google', passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    prompt: 'select_account', // Forces account picker to allow switching accounts
-    session: false  // Disable sessions, we're using JWT
-}));
+router.get('/google', (req, res, next) => {
+    const requestedOrigin = normalizeUrl(req.query.returnTo);
+    const referrerOrigin = normalizeUrl(req.get('referer'));
+    const state = requestedOrigin && requestedOrigin === referrerOrigin
+        ? requestedOrigin
+        : referrerOrigin;
+
+    passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        prompt: 'select_account', // Forces account picker to allow switching accounts
+        session: false,  // Disable sessions, we're using JWT
+        ...(state ? { state } : {}),
+    })(req, res, next);
+});
 
 // @desc    Google auth callback
 // @route   GET /auth/google/callback
 router.get('/google/callback', (req, res, next) => {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const clientUrl = isProduction
-        ? process.env.CLIENT_URL
-        : process.env.CLIENT_URL_DEV;
+    const clientUrl = resolveClientUrl(req);
 
     passport.authenticate('google', { session: false }, (err, user) => {
         if (!clientUrl) {

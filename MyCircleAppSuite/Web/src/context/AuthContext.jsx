@@ -1,22 +1,28 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import api, { getSocketBaseUrl } from '../utils/api';
 import axios from 'axios';
 
-const isProduction = import.meta.env.PROD;
-const apiURL = isProduction
-    ? (import.meta.env.VITE_API_URL || '')
-    : (import.meta.env.VITE_API_URL_DEV || '');
-
-if (isProduction && !apiURL) {
-    throw new Error('VITE_API_URL is not set. Please configure it in your web .env file.');
-}
-
-if (!isProduction && !apiURL) {
-    throw new Error('VITE_API_URL_DEV is not set. Please configure it in your web .env file.');
-}
-
 const AuthContext = createContext();
+
+const authBaseUrl = getSocketBaseUrl();
+
+const stripAuthFromUrl = () => {
+    try {
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.search);
+        params.delete('token');
+        url.search = params.toString() ? `?${params.toString()}` : '';
+
+        if (url.hash && url.hash.includes('token=')) {
+            url.hash = '';
+        }
+
+        window.history.replaceState({}, document.title, url.pathname + url.search);
+    } catch {
+        // ignore URL parsing errors
+    }
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -64,7 +70,7 @@ export const AuthProvider = ({ children }) => {
                 if (tokenFromUrl) {
                     localStorage.setItem('token', tokenFromUrl);
                     setToken(tokenFromUrl);
-                    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+                    stripAuthFromUrl();
                     try {
                         const userData = await fetchUserProfile();
                         if (userData) {
@@ -107,7 +113,7 @@ export const AuthProvider = ({ children }) => {
     const login = useCallback(async (tokenOrEmail, isEmail = false) => {
         if (isEmail) {
             try {
-                const res = await axios.post(`${apiURL}/auth/dev-login`, { email: tokenOrEmail });
+                const res = await axios.post(`${authBaseUrl}/auth/dev-login`, { email: tokenOrEmail });
                 localStorage.setItem('token', res.data.token);
                 setToken(res.data.token);
                 await fetchUserProfile();
@@ -120,7 +126,7 @@ export const AuthProvider = ({ children }) => {
             setToken(tokenOrEmail);
             await fetchUserProfile();
         } else {
-            window.location.href = `${apiURL}/auth/google`;
+            window.location.href = `${authBaseUrl}/auth/google`;
         }
     }, [fetchUserProfile]);
 

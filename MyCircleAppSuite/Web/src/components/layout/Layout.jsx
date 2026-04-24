@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 
 const pageVariants = {
@@ -26,7 +26,7 @@ const pageTransition = {
     duration: 0.4,
 };
 
-const Layout = ({ children }) => {
+const Layout = () => {
     const location = useLocation();
     const isExplorePage = location.pathname === '/' || location.pathname === '/explore';
 
@@ -60,7 +60,7 @@ const Layout = ({ children }) => {
                             !isExplorePage && 'pt-3'
                         )}
                     >
-                        {children}
+                        <Outlet />
                     </motion.div>
                 </AnimatePresence>
             </main>

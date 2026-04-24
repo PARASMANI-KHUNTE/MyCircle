@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useNotifications } from '../../context/NotificationContext';
 import { useSocket } from '../../context/SocketContext';
-import api from '../../utils/api';
+import api, { getSocketBaseUrl } from '../../utils/api';
 import ChatDrawer from '../chat/ChatDrawer';
 
 const Navbar = () => {
@@ -25,7 +25,7 @@ const Navbar = () => {
     const dropdownRef = useRef(null);
     const location = useLocation();
 
-    const apiURL = import.meta.env.VITE_API_URL_DEV || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const apiURL = getSocketBaseUrl();
 
     const handleGoogleLogin = () => {
         window.location.href = `${apiURL}/auth/google`;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../components/ui/Button';
 import { cn } from '../utils/cn';
@@ -11,6 +11,8 @@ import {
 
 const Home = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isExpired = new URLSearchParams(location.search).get('expired') === 'true';
 
     const features = [
         {
@@ -86,6 +88,11 @@ const Home = () => {
                 </div>
 
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    {isExpired && (
+                        <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+                            Your session expired. Please sign in again to continue.
+                        </div>
+                    )}
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         {/* Left Content */}
                         <motion.div
@@ -121,7 +128,7 @@ const Home = () => {
                             <div className="flex flex-wrap gap-4">
                                 <Button
                                     size="xl"
-                                    onClick={() => navigate('/')}
+                                    onClick={() => navigate('/login')}
                                     className="gap-3"
                                 >
                                     <span>Get Started</span>
@@ -130,7 +137,7 @@ const Home = () => {
                                 <Button
                                     variant="outline"
                                     size="xl"
-                                    onClick={() => navigate('/')}
+                                    onClick={() => navigate('/login')}
                                     className="gap-3"
                                 >
                                     <span>Explore Feed</span>
@@ -423,7 +430,7 @@ const Home = () => {
                             <div className="flex flex-wrap justify-center gap-4">
                                 <Button
                                     size="xl"
-                                    onClick={() => navigate('/')}
+                                    onClick={() => navigate('/login')}
                                     className="bg-white text-primary hover:bg-white/90 gap-3"
                                 >
                                     <span>Get Started Free</span>

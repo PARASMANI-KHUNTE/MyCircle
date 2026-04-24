@@ -57,9 +57,8 @@ api.interceptors.response.use(
             }
 
             // Simple notification or redirect
-            if (typeof window !== 'undefined' && (window.location?.pathname !== '/' && window.location?.pathname !== '/login')) {
-                // Redirect to landing page with a message
-                window.location.href = '/?expired=true';
+            if (typeof window !== 'undefined' && window.location?.pathname !== '/login') {
+                window.location.href = '/login?expired=true';
             }
         }
 

@@ -8,6 +8,22 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { hashPassword, verifyPassword } = require('../utils/password');
 
+const getJwtExpiry = () => {
+    const value = process.env.JWT_EXPIRY || '30d';
+
+    if (/^\d+$/.test(value)) {
+        return Number(value);
+    }
+
+    if (/^\d+[dhms]$/.test(value)) {
+        return /** @type {import('jsonwebtoken').SignOptions['expiresIn']} */ (value);
+    }
+
+    return '30d';
+};
+
+const jwtExpiry = getJwtExpiry();
+
 const normalizeUrl = (value) => {
     if (!value) return null;
 
@@ -19,19 +35,38 @@ const normalizeUrl = (value) => {
     }
 };
 
+const getAllowedClientOrigins = () => {
+    const configuredOrigins = [
+        process.env.CLIENT_URL,
+        process.env.CLIENT_URL_DEV,
+        ...(process.env.CORS_ORIGINS || '').split(','),
+    ];
+
+    return [...new Set(
+        configuredOrigins
+            .map((origin) => normalizeUrl(origin))
+            .filter(Boolean)
+    )];
+};
+
 const getConfiguredClientUrl = () => {
-    return normalizeUrl(process.env.CLIENT_URL)
-        || normalizeUrl(process.env.CLIENT_URL_DEV);
+    if (process.env.NODE_ENV === 'production') {
+        return normalizeUrl(process.env.CLIENT_URL);
+    }
+
+    return normalizeUrl(process.env.CLIENT_URL_DEV)
+        || normalizeUrl(process.env.CLIENT_URL);
 };
 
 const resolveClientUrl = (req) => {
     const requestedOrigin = normalizeUrl(req.query.state);
+    const allowedOrigins = getAllowedClientOrigins();
 
-    if (requestedOrigin) {
+    if (requestedOrigin && allowedOrigins.includes(requestedOrigin)) {
         return requestedOrigin;
     }
 
-    return getConfiguredClientUrl();
+    return getConfiguredClientUrl() || allowedOrigins[0] || null;
 };
 
 // @desc    Auth with Google
@@ -39,9 +74,11 @@ const resolveClientUrl = (req) => {
 router.get('/google', (req, res, next) => {
     const requestedOrigin = normalizeUrl(req.query.returnTo);
     const referrerOrigin = normalizeUrl(req.get('referer'));
-    const state = requestedOrigin && requestedOrigin === referrerOrigin
-        ? requestedOrigin
-        : referrerOrigin;
+    const allowedOrigins = getAllowedClientOrigins();
+    const preferredOrigin = requestedOrigin || referrerOrigin;
+    const state = preferredOrigin && allowedOrigins.includes(preferredOrigin)
+        ? preferredOrigin
+        : undefined;
 
     passport.authenticate('google', {
         scope: ['profile', 'email'],
@@ -76,7 +113,7 @@ router.get('/google/callback', (req, res, next) => {
 jwt.sign(
             payload,
             process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRY || '30d' },
+            { expiresIn: jwtExpiry },
             (signErr, token) => {
                 if (signErr) {
                     return next(new ApiError(500, 'Error generating authentication token'));
@@ -115,7 +152,7 @@ const signAuthToken = (user) => new Promise((resolve, reject) => {
     jwt.sign(
         payload,
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRY || '30d' },
+        { expiresIn: jwtExpiry },
         (err, token) => {
             if (err) return reject(err);
             resolve(token);

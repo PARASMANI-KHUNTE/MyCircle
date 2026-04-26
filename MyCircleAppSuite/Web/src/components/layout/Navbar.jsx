@@ -31,7 +31,8 @@ const Navbar = () => {
     const apiURL = getSocketBaseUrl();
 
     const handleGoogleLogin = () => {
-        window.location.href = `${apiURL}/auth/google`;
+        const returnTo = encodeURIComponent(window.location.origin);
+        window.location.href = `${apiURL}/auth/google?returnTo=${returnTo}`;
     };
 
     const fetchUnreadMsgCount = useCallback(async () => {

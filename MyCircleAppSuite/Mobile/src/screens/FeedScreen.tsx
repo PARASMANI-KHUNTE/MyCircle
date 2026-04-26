@@ -566,7 +566,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                         L.marker([userLoc.lat, userLoc.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
 
                         L.circle([userLoc.lat, userLoc.lng], {
-                            radius: 100,
+                            radius: ${distanceRadius * 1000},
                             fillColor: '#8b5cf6',
                             color: '#8b5cf6',
                             weight: 1,

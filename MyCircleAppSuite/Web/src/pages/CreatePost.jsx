@@ -11,6 +11,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ITEM_CATEGORIES, JOB_TYPES } from '../constants';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
+import { useAuth } from '../context/AuthContext';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -81,6 +82,7 @@ const CreatePost = () => {
     const navigate = useNavigate();
     const { success, error: showError } = useToast();
     const { currencySymbol } = useCurrencySymbol();
+    const { user } = useAuth();
 
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
@@ -606,7 +608,7 @@ const CreatePost = () => {
                                 <div>
                                     <div className="h-[250px] sm:h-[300px] w-full rounded-2xl overflow-hidden border border-card-border">
                                         <MapContainer
-                                            center={[formData.latitude || 28.6139, formData.longitude || 77.2090]}
+                                            center={[formData.latitude || user?.latitude || 28.6139, formData.longitude || user?.longitude || 77.2090]}
                                             zoom={13}
                                             style={{ height: '100%', width: '100%' }}
                                         >

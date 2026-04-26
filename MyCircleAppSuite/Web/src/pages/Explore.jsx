@@ -571,34 +571,38 @@ const Explore = () => {
                         </div>
 
                         
-                        {/* Category Pills and Radius Slider */}
-                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1 items-center">
-                            {CATEGORIES.map((cat) => {
-                                const isSelected = selectedCategories.includes(cat.id);
-                                const count = selectedCategories.length;
-                                return (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => toggleCategory(cat.id)}
-                                        className={cn(
-                                            'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all duration-200',
-                                            isSelected
-                                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                                : 'bg-card border border-card-border hover:border-primary/50'
-                                        )}
-                                    >
-                                        <cat.icon className="w-3.5 h-3.5" />
-                                        {cat.label}
-                                        {isSelected && count > 1 && count < 5 && (
-                                            <span className="w-4 h-4 rounded-full bg-primary-foreground/20 text-[10px] flex items-center justify-center">
-                                                {count}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
+                        {/* Category Pills and Controls Container */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            {/* Category Pills */}
+                            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1 items-center flex-1">
+                                {CATEGORIES.map((cat) => {
+                                    const isSelected = selectedCategories.includes(cat.id);
+                                    const count = selectedCategories.length;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => toggleCategory(cat.id)}
+                                            className={cn(
+                                                'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all duration-200',
+                                                isSelected
+                                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                                    : 'bg-card border border-card-border hover:border-primary/50'
+                                            )}
+                                        >
+                                            <cat.icon className="w-3.5 h-3.5" />
+                                            {cat.label}
+                                            {isSelected && count > 1 && count < 5 && (
+                                                <span className="w-4 h-4 rounded-full bg-primary-foreground/20 text-[10px] flex items-center justify-center">
+                                                    {count}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                             
-                    <div className="flex items-center gap-2 ml-auto pl-2 border-l border-card-border">
+                            {/* Map & Radius Controls */}
+                            <div className="flex items-center gap-2 sm:border-l sm:border-card-border sm:pl-3 w-full sm:w-auto justify-between sm:justify-start">
                                 <button
                                     onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
                                     className={cn(
@@ -614,26 +618,27 @@ const Explore = () => {
                                         <><ListIcon className="w-4 h-4" /> List</>
                                     )}
                                 </button>
-                                <Navigation className="w-3.5 h-3.5 text-foreground-muted" />
-                                <button
-                                    onClick={() => setShowRadiusCircle(!showRadiusCircle)}
-                                    className={cn(
-                                        "p-2.5 rounded-xl shadow-xl transition-all active:scale-95",
-                                        showRadiusCircle ? "bg-accent text-accent-foreground" : "bg-background/80 backdrop-blur-md border border-card-border"
-                                    )}
-                                    title="Toggle Radius"
-                                >
-                                    <Sparkles className="w-4 h-4" />
-                                </button>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="50"
-                                    value={radius}
-                                    onChange={(e) => setRadius(Number(e.target.value))}
-                                    className="w-20 h-1.5 bg-card-border rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
-                                />
-                                <span className="text-xs font-semibold text-primary min-w-[35px]">{radius}km</span>
+                                <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                                    <button
+                                        onClick={() => setShowRadiusCircle(!showRadiusCircle)}
+                                        className={cn(
+                                            "p-2.5 rounded-xl shadow-xl transition-all active:scale-95 flex items-center justify-center",
+                                            showRadiusCircle ? "bg-accent text-accent-foreground" : "bg-background/80 backdrop-blur-md border border-card-border"
+                                        )}
+                                        title="Toggle Radius Circle"
+                                    >
+                                        <Target className="w-4 h-4" />
+                                    </button>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="50"
+                                        value={radius}
+                                        onChange={(e) => setRadius(Number(e.target.value))}
+                                        className="w-24 sm:w-20 h-1.5 bg-card-border rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
+                                    />
+                                    <span className="text-xs font-semibold text-primary min-w-[35px]">{radius}km</span>
+                                </div>
                             </div>
                         </div>
 
@@ -724,7 +729,7 @@ const Explore = () => {
                         scrollWheelZoom={true}
                         zoomControl={false}
                         className="w-full h-[calc(100vh-150px)] sm:h-[calc(100vh-180px)] z-0"
-                        whenCreated={setMapRef}
+                        whenCreated={(map) => { mapRef.current = map; }}
                     >
                         <MapUpdater center={safeUserLocation ? [safeUserLocation.lat, safeUserLocation.lng] : null} zoom={mapZoom} />
                         <TileLayer
@@ -741,7 +746,15 @@ const Explore = () => {
                                 <ZoomOut className="w-4 h-4" />
                             </button>
                             <div className="ctrl-divider" />
-                            <button onClick={() => safeUserLocation && setMapZoom(15)} className="map-ctrl-btn" title="Locate Me">
+                            <button 
+                                onClick={() => {
+                                    if (safeUserLocation && mapRef.current) {
+                                        mapRef.current.setView([safeUserLocation.lat, safeUserLocation.lng], 15, { animate: true });
+                                        setMapZoom(15);
+                                    }
+                                }} 
+                                className="map-ctrl-btn" title="Locate Me"
+                            >
                                 <Target className="w-4 h-4" />
                             </button>
                             <button 

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useDialog } from '../hooks/useDialog';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -32,6 +33,7 @@ const PostDetails = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { isDark } = useTheme();
+    const { currencySymbol } = useCurrencySymbol();
     const { success, error: showError } = useToast();
     const dialog = useDialog();
     const [post, setPost] = useState(null);
@@ -487,7 +489,7 @@ const PostDetails = () => {
                             {post.budgetRange && (
                                 <div className="p-6 bg-card/10 border border-card-border rounded-2xl shadow-inner">
                                     <h2 className="text-lg font-black text-text-heading mb-3 uppercase tracking-wide">Budget Range</h2>
-                                    <p className="text-text-body font-medium leading-relaxed">₹{post.budgetRange.min} - ₹{post.budgetRange.max}</p>
+                                    <p className="text-text-body font-medium leading-relaxed">{currencySymbol}{post.budgetRange.min} - {currencySymbol}{post.budgetRange.max}</p>
                                 </div>
                             )}
 
@@ -763,7 +765,7 @@ const PostDetails = () => {
                                 {post.acceptsBarter ? (
                                     <span className="text-pink-500 text-3xl">EXCHANGE</span>
                                 ) : (
-                                    <>���{post.price}</>
+                                    <>{currencySymbol}{post.price}</>
                                 )}
                             </div>
                         </div>

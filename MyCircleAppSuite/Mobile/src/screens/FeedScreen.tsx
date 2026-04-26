@@ -23,6 +23,25 @@ import { useToast } from '../components/ui/Toast';
 // Enable playback in silent mode
 Sound.setCategory('Playback');
 
+const EARTH_RADIUS_KM = 6371;
+
+const toRadians = (value: number) => (value * Math.PI) / 180;
+
+const getDistanceInKm = (
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number }
+) => {
+    const latDiff = toRadians(to.lat - from.lat);
+    const lngDiff = toRadians(to.lng - from.lng);
+    const startLat = toRadians(from.lat);
+    const endLat = toRadians(to.lat);
+
+    const a = Math.sin(latDiff / 2) ** 2
+        + Math.cos(startLat) * Math.cos(endLat) * Math.sin(lngDiff / 2) ** 2;
+
+    return 2 * EARTH_RADIUS_KM * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
 const getCatColor = (catId: string, colors: any) => {
     return colors.primary; // Unified MyCircle Blue for all categories
 };
@@ -110,7 +129,67 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
     }, [initialViewMode, viewMode]);
 
+    const matchesActiveFilters = useCallback((post: any) => {
+        if (!post) return false;
+
+        if (selectedCategory !== 'all') {
+            if (selectedCategory === 'barter') {
+                if (!post.acceptsBarter && post.type !== 'barter') return false;
+            } else if (selectedCategory === 'sell') {
+                if (!['sell', 'rent'].includes(post.type)) return false;
+            } else if (post.type !== selectedCategory) {
+                return false;
+            }
+        }
+
+        if (locationFilter !== 'All' && post.location !== locationFilter) {
+            return false;
+        }
+
+        const trimmedQuery = searchQuery.trim().toLowerCase();
+        if (trimmedQuery) {
+            const searchableText = [
+                post.title,
+                post.description,
+                post.location,
+                post.type,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+
+            if (!searchableText.includes(trimmedQuery)) {
+                return false;
+            }
+        }
+
+        if (selectedDate) {
+            const postDate = new Date(post.createdAt).toISOString().split('T')[0];
+            if (postDate !== selectedDate) {
+                return false;
+            }
+        }
+
+        if (isNearby) {
+            if (!userLocation || !post.locationCoords?.coordinates?.length) {
+                return false;
+            }
+
+            const [lng, lat] = post.locationCoords.coordinates;
+            const distance = getDistanceInKm(userLocation, { lat, lng });
+            if (distance > distanceRadius) {
+                return false;
+            }
+        }
+
+        return true;
+    }, [distanceRadius, isNearby, locationFilter, searchQuery, selectedCategory, selectedDate, userLocation]);
+
     const handleNewPost = useCallback((newPost: any) => {
+        if (!matchesActiveFilters(newPost)) {
+            return;
+        }
+
         const queryKey = ['posts', {
             latitude: isNearby ? userLocation?.lat : undefined,
             longitude: isNearby ? userLocation?.lng : undefined,
@@ -123,10 +202,13 @@ const FeedScreen = ({ navigation, route }: any) => {
             barterOnly: selectedCategory === 'barter'
         }];
         queryClient.setQueryData(queryKey, (oldData: any[]) => {
-            return oldData ? [newPost, ...oldData] : [newPost];
+            if (!oldData) return [newPost];
+
+            const withoutDuplicate = oldData.filter((post: any) => post._id !== newPost._id);
+            return [newPost, ...withoutDuplicate];
         });
         success('New post added!');
-    }, [isNearby, userLocation?.lat, userLocation?.lng, distanceRadius, serverCategory, searchQuery, locationFilter, serverSort, selectedCategory, queryClient, success]);
+    }, [distanceRadius, isNearby, locationFilter, matchesActiveFilters, queryClient, searchQuery, selectedCategory, serverCategory, serverSort, success, userLocation?.lat, userLocation?.lng]);
 
     // const [refreshing, setRefreshing] = useState(false); // Managed by React Query now
 
@@ -195,14 +277,7 @@ const FeedScreen = ({ navigation, route }: any) => {
     }, []);
 
     const filterPosts = useCallback(() => {
-        let result = [...(postsData || [])];
-
-        if (selectedDate) {
-            result = result.filter((p: any) => {
-                const pDate = new Date(p.createdAt).toISOString().split('T')[0];
-                return pDate === selectedDate;
-            });
-        }
+        let result = [...(postsData || [])].filter(matchesActiveFilters);
 
         result.sort((a: any, b: any) => {
             if (sortOrder === 'nearest') {
@@ -221,7 +296,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         });
 
         setFilteredPosts(result);
-    }, [postsData, selectedDate, sortOrder]);
+    }, [matchesActiveFilters, postsData, sortOrder]);
 
     useEffect(() => {
         requestLocationPermission();

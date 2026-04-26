@@ -7,6 +7,7 @@ import { ToastProvider } from './components/ui/Toast';
 import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { CurrencySymbolProvider } from './context/CurrencySymbolContext';
 import DialogProvider from './components/ui/DialogProvider';
 import Loading from './components/ui/Loading';
 import ErrorBoundary from './components/ui/ErrorBoundary';
@@ -33,15 +34,17 @@ function AppContent() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
-        <SocketProvider>
-          <NotificationProvider>
-            <DialogProvider>
-              <Suspense fallback={<Loading fullscreen text="Loading page..." />}>
-                <AuthRoutes />
-              </Suspense>
-            </DialogProvider>
-          </NotificationProvider>
-        </SocketProvider>
+        <CurrencySymbolProvider>
+          <SocketProvider>
+            <NotificationProvider>
+              <DialogProvider>
+                <Suspense fallback={<Loading fullscreen text="Loading page..." />}>
+                  <AuthRoutes />
+                </Suspense>
+              </DialogProvider>
+            </NotificationProvider>
+          </SocketProvider>
+        </CurrencySymbolProvider>
       </AuthProvider>
     </Router>
   );

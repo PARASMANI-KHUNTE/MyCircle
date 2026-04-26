@@ -53,6 +53,7 @@ const Feed = () => {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [selectedCategories, setSelectedCategories] = useState(['all']);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortOrder, setSortOrder] = useState('latest');
     const [locationFilter, setLocationFilter] = useState('all');

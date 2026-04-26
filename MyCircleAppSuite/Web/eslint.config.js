@@ -22,9 +22,9 @@ export default defineConfig([
         sourceType: 'module',
       },
     },
-    rules: {
+rules: {
       'no-unused-vars': ['error', {
-        varsIgnorePattern: '^(?:[A-Z_].*|motion)$',
+        varsIgnorePattern: '^(?:[A-Z_].*|motion|pricePrefix)$',
         argsIgnorePattern: '^(?:[A-Z_].*|motion)$',
       }],
       'react-refresh/only-export-components': 'off',

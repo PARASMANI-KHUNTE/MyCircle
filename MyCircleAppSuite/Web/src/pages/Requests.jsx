@@ -11,9 +11,11 @@ import {
     Trash2, Star, Phone, MessageSquare, MapPin, DollarSign,
     RefreshCw, CheckCircle, XCircle, Send
 } from 'lucide-react';
+import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 
 const Requests = () => {
     const { success, error: showError } = useToast();
+    const { currencySymbol } = useCurrencySymbol();
     const { socket } = useSocket();
     const [activeTab, setActiveTab] = useState('received');
     const [receivedRequests, setReceivedRequests] = useState([]);
@@ -148,6 +150,22 @@ const Requests = () => {
         }
     };
 
+    const handleCancelRequest = async (requestId) => {
+        setActionLoading(requestId);
+        try {
+            const { data } = await api.put(`/contacts/${requestId}/status`, { status: 'canceled' });
+            setSentRequests(prev => prev.map(req =>
+                req._id === requestId ? { ...req, ...data } : req
+            ));
+            success('Request canceled');
+        } catch (err) {
+            console.error(err);
+            showError(err.response?.data?.msg || "Failed to cancel request");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
     const handleDelete = async (requestId) => {
         try {
             await api.delete(`/contacts/${requestId}`);
@@ -165,6 +183,7 @@ const Requests = () => {
             accepted: { bg: 'bg-green-500/20', text: 'text-green-400', icon: CheckCircle, label: 'Accepted' },
             completed: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: CheckCircle, label: 'Completed' },
             rejected: { bg: 'bg-red-500/20', text: 'text-red-400', icon: XCircle, label: 'Rejected' },
+            canceled: { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: XCircle, label: 'Canceled' },
         };
         const c = config[status] || config.pending;
         const Icon = c.icon;
@@ -295,7 +314,7 @@ const Requests = () => {
                                                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                         {req.post.price > 0 && (
                                                             <span className="font-medium text-green-400">
-                                                                ₹{req.post.price.toLocaleString()}
+                                                                {currencySymbol}{req.post.price.toLocaleString()}
                                                             </span>
                                                         )}
                                                         <MapPin className="w-3 h-3" />
@@ -381,6 +400,24 @@ const Requests = () => {
                                                         Reject
                                                     </Button>
                                                 </>
+                                            )}
+
+                                            {/* Cancel button for sent pending requests */}
+                                            {activeTab === 'sent' && isPending && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleCancelRequest(req._id)}
+                                                    disabled={actionLoading === req._id}
+                                                    className="gap-1.5 flex-1 sm:flex-none justify-center text-red-400 border-red-400/30 hover:bg-red-500/10"
+                                                >
+                                                    {actionLoading === req._id ? (
+                                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                                    ) : (
+                                                        <X className="w-3 h-3" />
+                                                    )}
+                                                    Cancel
+                                                </Button>
                                             )}
 
                                             {isAccepted && (

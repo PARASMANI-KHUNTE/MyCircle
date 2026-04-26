@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import Button from '../components/ui/Button';
-import { Bell, Lock, Trash2, Save, Moon, Sun, ChevronRight, UserX, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bell, Lock, Trash2, Save, Moon, Sun, ChevronRight, UserX, CheckCircle2, AlertCircle, DollarSign } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 import { cn } from '../utils/cn';
 
 const Settings = () => {
     const { toggleTheme, isDark } = useTheme();
+    const { currencySymbol, toggleCurrencySymbol } = useCurrencySymbol();
     const [preferences, setPreferences] = useState({
         emailNotifications: true,
         profileVisibility: 'public'
@@ -119,6 +121,30 @@ const Settings = () => {
                                     <span>Light</span>
                                 </>
                             )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Currency Symbol */}
+                <div className="glass-panel p-4 sm:p-6">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-9 h-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
+                            <DollarSign className="w-5 h-5" />
+                        </div>
+                        <h2 className="text-base font-bold">Currency</h2>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-semibold text-foreground">Currency Symbol</p>
+                            <p className="text-xs text-foreground-muted mt-0.5">Choose your preferred currency symbol</p>
+                        </div>
+                        <button
+                            onClick={toggleCurrencySymbol}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card-hover hover:bg-background-tertiary transition-all border border-card-border text-sm font-semibold min-h-[44px]"
+                        >
+                            <span className="text-lg font-bold">{currencySymbol}</span>
+                            <span className="text-foreground-muted">{currencySymbol === '₹' ? 'INR' : 'USD'}</span>
                         </button>
                     </div>
                 </div>

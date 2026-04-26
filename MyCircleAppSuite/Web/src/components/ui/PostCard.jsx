@@ -8,9 +8,10 @@ import { cn } from '../../utils/cn';
 import { getAvatarUrl } from '../../utils/avatar';
 import { formatDuration } from '../../utils/time';
 import { getPostInsights, getPostExplanation } from '../../services/aiService';
+import { useCurrencySymbol } from '../../context/CurrencySymbolContext';
 import {
-    Sparkles, X, Edit2, Trash2, Eye, Heart, Share2, MessageCircle, MapPin,
-    Clock, Repeat, BarChart2, Check, Shield, Star, IndianRupee, Calendar
+    Sparkles, X, Edit2, Trash2, Eye, Heart, Share2, MapPin,
+    Clock, Repeat, BarChart2, Check, Shield, Star, IndianRupee, Calendar, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 const typeStyles = {
@@ -44,10 +45,10 @@ const typeStyles = {
     }
 };
 
-const formatMoney = (value) => {
+const formatMoney = (value, symbol = '₹') => {
     const numeric = Number(value);
     if (!Number.isFinite(numeric) || numeric <= 0) return null;
-    return `₹${numeric.toLocaleString('en-IN')}`;
+    return `${symbol}${numeric.toLocaleString('en-IN')}`;
 };
 
 const formatDate = (value) => {
@@ -71,8 +72,6 @@ const formatLifecycleTime = (ms) => {
 
 const PostCard = ({
     post,
-    user: authUser = null,
-    onRequestContact = () => {},
     currentUserId = null,
     isOwnPost: propIsOwnPost = false,
     onDelete = () => {},
@@ -97,6 +96,7 @@ const PostCard = ({
     } = post;
 
     const { success } = useToast();
+    const { currencySymbol } = useCurrencySymbol();
     const navigate = useNavigate();
 
     const [likes, setLikes] = useState(initialLikes || []);
@@ -114,24 +114,21 @@ const PostCard = ({
     }, [post._id]);
 
     const postUserId = user?._id || user;
-    // Check prop first, then compare IDs as strings
     const isOwnPost = !!propIsOwnPost || (currentUserId && postUserId && String(currentUserId) === String(postUserId));
     const isLiked = currentUserId && likes.includes(currentUserId);
     const typeStyle = typeStyles[type] || typeStyles.job;
     const displayDate = formatDate(createdAt);
     const displayLocation = location || 'Location unavailable';
-    const displayPrice = formatMoney(price);
+    const displayPrice = formatMoney(price, currencySymbol);
     const budgetFloor = post.budgetMin ?? price;
     const budgetCeiling = post.budgetMax ?? price;
 
     const budgetLabel = useMemo(() => {
-        const minLabel = formatMoney(budgetFloor);
-        const maxLabel = formatMoney(budgetCeiling);
+        const minLabel = formatMoney(budgetFloor, currencySymbol);
+        const maxLabel = formatMoney(budgetCeiling, currencySymbol);
         if (minLabel && maxLabel && minLabel !== maxLabel) return `${minLabel} - ${maxLabel}`;
         return minLabel || maxLabel || null;
-    }, [budgetFloor, budgetCeiling]);
-
-    const shouldShowReadMore = description && description.length > 140;
+    }, [budgetFloor, budgetCeiling, currencySymbol]);
 
     const lifecycleMeta = useMemo(() => {
         if (!post.expiresAt) return null;
@@ -285,7 +282,6 @@ const PostCard = ({
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
                             {[
                                 { label: 'Views', value: analyticsData.views, icon: Eye, color: 'text-primary' },
@@ -302,7 +298,6 @@ const PostCard = ({
                                 </div>
                             ))}
                         </div>
-
                         <Button variant="outline" className="mt-auto" onClick={handleShowAnalytics}>
                             Close
                         </Button>
@@ -312,19 +307,8 @@ const PostCard = ({
 
             <div className="relative aspect-[16/10] overflow-hidden bg-background-secondary">
                 {images && images.length > 0 ? (
-                    <button
-                        type="button"
-                        className="w-full h-full"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/post/${post._id}`);
-                        }}
-                    >
-                        <img
-                            src={images[0]}
-                            alt={title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                        />
+                    <button type="button" className="w-full h-full" onClick={(e) => { e.stopPropagation(); navigate(`/post/${post._id}`); }}>
+                        <img src={images[0]} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
                     </button>
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -333,32 +317,22 @@ const PostCard = ({
                         </div>
                     </div>
                 )}
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-
                 <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span className={cn(
-                        'px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide border backdrop-blur-sm',
-                        typeStyle.bg,
-                        typeStyle.text,
-                        typeStyle.border
-                    )}>
+                    <span className={cn('px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide border backdrop-blur-sm', typeStyle.bg, typeStyle.text, typeStyle.border)}>
                         {typeStyle.label}
                     </span>
                     {acceptsBarter && (
                         <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-secondary/10 text-secondary border border-secondary/20 backdrop-blur-sm flex items-center gap-1">
-                            <Repeat className="w-3 h-3" />
-                            Barter
+                            <Repeat className="w-3 h-3" /> Barter
                         </span>
                     )}
                 </div>
-
                 {status && status !== 'active' && (
                     <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-black/65 text-primary-foreground backdrop-blur-sm">
                         {status}
                     </div>
                 )}
-
                 {displayPrice && (
                     <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg text-xs font-semibold bg-black/65 text-primary-foreground backdrop-blur-sm">
                         {displayPrice}
@@ -377,17 +351,10 @@ const PostCard = ({
 
                 <div className="flex items-center gap-3 mb-4">
                     <Link to={`/profile?userId=${user?._id}`} className="shrink-0">
-                        <img
-                            src={getAvatarUrl(user)}
-                            alt={user?.displayName || 'Profile'}
-                            className="w-9 h-9 rounded-full object-cover ring-2 ring-card-border"
-                        />
+                        <img src={getAvatarUrl(user)} alt={user?.displayName || 'Profile'} className="w-9 h-9 rounded-full object-cover ring-2 ring-card-border" />
                     </Link>
                     <div className="min-w-0 flex-1">
-                        <Link
-                            to={`/profile?userId=${user?._id}`}
-                            className="text-sm font-semibold hover:text-primary transition-colors truncate block"
-                        >
+                        <Link to={`/profile?userId=${user?._id}`} className="text-sm font-semibold hover:text-primary transition-colors truncate block">
                             {user?.displayName || 'Anonymous'}
                         </Link>
                         <div className="flex items-center gap-2 text-xs text-foreground-muted">
@@ -398,120 +365,99 @@ const PostCard = ({
                     </div>
                 </div>
 
-                {(user?.reputation?.trustScore || user?.reputation?.averageRating) && (
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                        {user?.reputation?.trustScore && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 border border-success/20 px-3 py-1 text-xs font-semibold text-success">
-                                <Shield className="w-3.5 h-3.5" />
-                                Trust {user.reputation.trustScore}
-                            </span>
-                        )}
-                        {user?.reputation?.averageRating && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 border border-warning/20 px-3 py-1 text-xs font-semibold text-warning">
-                                <Star className="w-3.5 h-3.5 fill-current" />
-                                {Number(user.reputation.averageRating).toFixed(1)}
-                            </span>
-                        )}
-                    </div>
-                )}
+                <AnimatePresence>
+                    {expanded && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                        >
+                            {(user?.reputation?.trustScore || user?.reputation?.averageRating) && (
+                                <div className="flex flex-wrap items-center gap-2 mb-3">
+                                    {user?.reputation?.trustScore && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 border border-success/20 px-3 py-1 text-xs font-semibold text-success">
+                                            <Shield className="w-3.5 h-3.5" /> Trust {user.reputation.trustScore}
+                                        </span>
+                                    )}
+                                    {user?.reputation?.averageRating && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 border border-warning/20 px-3 py-1 text-xs font-semibold text-warning">
+                                            <Star className="w-3.5 h-3.5 fill-current" /> {Number(user.reputation.averageRating).toFixed(1)}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                            {(budgetLabel || post.duration || post.availability) && (
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {budgetLabel && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary">
+                                            <IndianRupee className="w-3.5 h-3.5" /> {budgetLabel}
+                                        </span>
+                                    )}
+                                    {post.duration && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 border border-info/20 px-3 py-1.5 text-xs font-semibold text-info">
+                                            <Clock className="w-3.5 h-3.5" /> {formatDuration(post.duration)}
+                                        </span>
+                                    )}
+                                    {post.availability && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary/10 border border-secondary/20 px-3 py-1.5 text-xs font-semibold text-secondary">
+                                            <Check className="w-3.5 h-3.5" /> {post.availability}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                            {lifecycleMeta && (
+                                <div className="mb-4 rounded-2xl border border-card-border bg-background-secondary/70 p-3.5">
+                                    <div className="flex items-start justify-between gap-3 mb-3">
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">Post lifecycle</p>
+                                            <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                                <span className={cn('inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold', lifecycleMeta.chipClass)}>
+                                                    {lifecycleMeta.stage}
+                                                </span>
+                                                <span className="text-sm font-semibold text-foreground">{lifecycleMeta.remainingLabel}</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-lg font-semibold leading-none">{lifecycleMeta.percentLeft}%</p>
+                                            <p className="text-[11px] text-foreground-muted mt-1">time left</p>
+                                        </div>
+                                    </div>
+                                    <div className="mb-3">
+                                        <div className="flex items-center justify-between text-[11px] text-foreground-muted mb-1.5">
+                                            <span>{lifecycleMeta.summary}</span>
+                                            <span>{lifecycleMeta.percentUsed}% used</span>
+                                        </div>
+                                        <div className="h-2 rounded-full bg-card-border overflow-hidden">
+                                            <div className={cn('h-full rounded-full transition-all duration-500', lifecycleMeta.accentClass)} style={{ width: `${lifecycleMeta.percentLeft}%` }} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+                                        <div className="rounded-xl bg-card/70 px-2 py-2"><p className="text-[10px] uppercase tracking-wide text-foreground-muted">Started</p><p className="mt-1 text-xs font-semibold">{lifecycleMeta.createdLabel}</p></div>
+                                        <div className="rounded-xl bg-card/70 px-2 py-2"><p className="text-[10px] uppercase tracking-wide text-foreground-muted">Live for</p><p className="mt-1 text-xs font-semibold">{lifecycleMeta.daysLive}d</p></div>
+                                        <div className="rounded-xl bg-card/70 px-2 py-2"><p className="text-[10px] uppercase tracking-wide text-foreground-muted">Ends</p><p className="mt-1 text-xs font-semibold">{lifecycleMeta.expiresLabel}</p></div>
+                                    </div>
+                                </div>
+                            )}
+                            {isOwnPost && (
+                                <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                                    <Button variant="outline" size="sm" className="flex-1 gap-1.5 justify-center" onClick={(e) => { e?.stopPropagation(); onEdit(); }}>
+                                        <Edit2 className="w-4 h-4" /> Edit
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="flex-1 gap-1.5 justify-center text-error border-error/20 hover:bg-error/10" onClick={(e) => { e?.stopPropagation(); onDelete(); }}>
+                                        <Trash2 className="w-4 h-4" /> Delete
+                                    </Button>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {description && (
-                    <>
-                        <p className={cn(
-                            'text-sm text-foreground-secondary leading-relaxed',
-                            expanded ? '' : 'line-clamp-3'
-                        )}>
+                    <div className="mb-4">
+                        <p className={cn('text-sm text-foreground-secondary leading-relaxed', expanded ? '' : 'line-clamp-2')}>
                             {description}
                         </p>
-                        {shouldShowReadMore && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setExpanded(!expanded);
-                                }}
-                                className="mt-2 text-xs text-primary hover:underline font-semibold"
-                            >
-                                {expanded ? 'Show less' : 'Read more'}
-                            </button>
-                        )}
-                    </>
-                )}
-
-{(budgetLabel || post.duration || post.availability) && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                        {budgetLabel && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary">
-                                <IndianRupee className="w-3.5 h-3.5" />
-                                {budgetLabel}
-                            </span>
-                        )}
-                        {post.duration && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 border border-info/20 px-3 py-1.5 text-xs font-semibold text-info">
-                                <Clock className="w-3.5 h-3.5" />
-                                {formatDuration(post.duration)}
-                            </span>
-                        )}
-                        {post.availability && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary/10 border border-secondary/20 px-3 py-1.5 text-xs font-semibold text-secondary">
-                                <Check className="w-3.5 h-3.5" />
-                                {post.availability}
-                            </span>
-                        )}
-                    </div>
-                )}
-
-                {lifecycleMeta && (
-                    <div className="mt-4 rounded-2xl border border-card-border bg-background-secondary/70 p-3.5">
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
-                                    Post lifecycle
-                                </p>
-                                <div className="mt-1 flex items-center gap-2 flex-wrap">
-                                    <span className={cn(
-                                        'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold',
-                                        lifecycleMeta.chipClass
-                                    )}>
-                                        {lifecycleMeta.stage}
-                                    </span>
-                                    <span className="text-sm font-semibold text-foreground">
-                                        {lifecycleMeta.remainingLabel}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                                <p className="text-lg font-semibold leading-none">{lifecycleMeta.percentLeft}%</p>
-                                <p className="text-[11px] text-foreground-muted mt-1">time left</p>
-                            </div>
-                        </div>
-
-                        <div className="mb-3">
-                            <div className="flex items-center justify-between text-[11px] text-foreground-muted mb-1.5">
-                                <span>{lifecycleMeta.summary}</span>
-                                <span>{lifecycleMeta.percentUsed}% used</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-card-border overflow-hidden">
-                                <div
-                                    className={cn('h-full rounded-full transition-all duration-500', lifecycleMeta.accentClass)}
-                                    style={{ width: `${lifecycleMeta.percentLeft}%` }}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
-                            <div className="rounded-xl bg-card/70 px-2 py-2">
-                                <p className="text-[10px] uppercase tracking-wide text-foreground-muted">Started</p>
-                                <p className="mt-1 text-xs font-semibold">{lifecycleMeta.createdLabel}</p>
-                            </div>
-                            <div className="rounded-xl bg-card/70 px-2 py-2">
-                                <p className="text-[10px] uppercase tracking-wide text-foreground-muted">Live for</p>
-                                <p className="mt-1 text-xs font-semibold">{lifecycleMeta.daysLive}d</p>
-                            </div>
-                            <div className="rounded-xl bg-card/70 px-2 py-2">
-                                <p className="text-[10px] uppercase tracking-wide text-foreground-muted">Ends</p>
-                                <p className="mt-1 text-xs font-semibold">{lifecycleMeta.expiresLabel}</p>
-                            </div>
-                        </div>
                     </div>
                 )}
 
@@ -521,26 +467,15 @@ const PostCard = ({
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className={cn(
-                                'p-4 rounded-xl mt-4 border',
-                                aiResult?.type === 'owner' ? 'bg-success/10 border-success/20' : 'bg-primary/10 border-primary/20'
-                            )}
+                            className={cn('p-4 rounded-xl mb-4 border', aiResult?.type === 'owner' ? 'bg-success/10 border-success/20' : 'bg-primary/10 border-primary/20')}
                         >
                             {isGeneratingAI ? (
-                                <div className="flex items-center gap-3">
-                                    <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-                                    <span className="text-sm font-medium">AI analyzing...</span>
-                                </div>
+                                <div className="flex items-center gap-3"><Sparkles className="w-5 h-5 text-primary animate-pulse" /> <span className="text-sm font-medium">AI analyzing...</span></div>
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles className="w-4 h-4 text-primary" />
-                                            <span className="text-xs font-bold uppercase">AI Insights</span>
-                                        </div>
-                                        <button onClick={() => setAiResult(null)} className="icon-btn p-1">
-                                            <X className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> <span className="text-xs font-bold uppercase">AI Insights</span></div>
+                                        <button onClick={() => setAiResult(null)} className="icon-btn p-1"><X className="w-4 h-4" /></button>
                                     </div>
                                     <p className="font-semibold mb-1">{aiResult.summary}</p>
                                     <p className="text-xs opacity-80">{aiResult.details}</p>
@@ -550,124 +485,30 @@ const PostCard = ({
                     )}
                 </AnimatePresence>
 
-                <footer className="mt-4 pt-4 border-t border-card-border space-y-3">
+                <footer className="pt-4 border-t border-card-border">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 text-foreground-muted min-w-0">
-                            <MapPin className="w-4 h-4 text-primary shrink-0" />
-                            <span className="text-xs font-medium truncate">{displayLocation}</span>
-                        </div>
-                        {!displayPrice && (
-                            <span className="text-xs font-semibold text-foreground-muted">Price not specified</span>
-                        )}
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center gap-1 flex-wrap">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleGetAIInsights}
-                                className={cn(
-                                    'p-2 rounded-xl transition-all',
-                                    aiResult ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-primary/10 text-primary hover:bg-primary/20'
-                                )}
-                            >
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleGetAIInsights} className={cn('p-2 rounded-xl transition-all', aiResult ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card-hover text-primary hover:bg-primary/10')}>
                                 <Sparkles className={cn('w-4 h-4', isGeneratingAI && 'animate-spin')} />
                             </motion.button>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleLike}
-                                className={cn(
-                                    'p-2 rounded-xl transition-all flex items-center gap-1.5',
-                                    isLiked
-                                        ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20'
-                                        : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500'
-                                )}
-                            >
-                                <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} />
-                                <span className="text-xs font-bold">{likes.length}</span>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleLike} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', isLiked ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500')}>
+                                <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} /> <span className="text-xs font-bold">{likes.length}</span>
                             </motion.button>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleShare}
-                                className={cn(
-                                    'p-2 rounded-xl transition-all flex items-center gap-1.5',
-                                    hasShared
-                                        ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                                        : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500'
-                                )}
-                            >
-                                <Share2 className="w-4 h-4" />
-                                <span className="text-xs font-bold">{sharesCount}</span>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleShare} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', hasShared ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500')}>
+                                <Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{sharesCount}</span>
                             </motion.button>
-
                             {isOwnPost && (
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={(e) => {
-                                        e?.stopPropagation();
-                                        handleShowAnalytics(e);
-                                    }}
-                                    className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all"
-                                >
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleShowAnalytics} className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all">
                                     <BarChart2 className="w-4 h-4" />
                                 </motion.button>
                             )}
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', expanded ? 'bg-primary text-primary-foreground' : 'bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary')}>
+                                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                <span className="text-xs font-bold">{expanded ? 'Less' : 'More'}</span>
+                            </motion.button>
                         </div>
-
-                        {!isOwnPost && (
-                            <Button
-                                size="sm"
-                                className="w-full sm:w-auto sm:ml-2 gap-1.5 justify-center"
-                                onClick={(e) => {
-                                    e?.stopPropagation();
-                                    onRequestContact(post._id, e);
-                                }}
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                                Contact
-                            </Button>
-                        )}
                     </div>
                 </footer>
-
-                {isOwnPost && !showAnalytics && (
-                    <div className="flex flex-col sm:flex-row gap-2 mt-3 pt-3 border-t border-card-border">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 gap-1.5 justify-center"
-                            onClick={(e) => {
-                                e?.stopPropagation();
-                                if (typeof onEdit === 'function') {
-                                    onEdit();
-                                } else {
-                                    navigate(`/edit-post/${post._id}`);
-                                }
-                            }}
-                        >
-                            <Edit2 className="w-4 h-4" />
-                            Edit
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 gap-1.5 justify-center text-error border-error/20 hover:bg-error/10"
-                            onClick={(e) => {
-                                e?.stopPropagation();
-                                onDelete();
-                            }}
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                        </Button>
-                    </div>
-                )}
             </div>
         </motion.article>
     );

@@ -6,6 +6,7 @@ import { useToast } from '../ui/Toast';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
 import { getAvatarUrl } from '../../utils/avatar';
+import { useCurrencySymbol } from '../../context/CurrencySymbolContext';
 
 const REPORT_REASON_OPTIONS = [
     'Spam or scam',
@@ -29,6 +30,7 @@ const mapReportCategory = (reasonText) => {
 
 const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead, isDisabled }) => {
     const { success, error: showError } = useToast();
+    const { currencySymbol } = useCurrencySymbol();
     const dialog = useDialog();
     const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
@@ -404,7 +406,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                             )}
                             <div className="text-left">
                                 <span className="font-semibold text-foreground">{post.title}</span>
-                                {post.price && <span className="ml-2 text-primary font-semibold">₹{post.price}</span>}
+                                {post.price && <span className="ml-2 text-primary font-semibold">{currencySymbol}{post.price}</span>}
                             </div>
                         </div>
                         {postCollapsed ? (

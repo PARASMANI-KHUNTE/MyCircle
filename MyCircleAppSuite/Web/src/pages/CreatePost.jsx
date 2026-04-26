@@ -10,6 +10,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ITEM_CATEGORIES, JOB_TYPES } from '../constants';
+import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -79,6 +80,7 @@ const EXCHANGE_OPTIONS = [
 const CreatePost = () => {
     const navigate = useNavigate();
     const { success, error: showError } = useToast();
+    const { currencySymbol } = useCurrencySymbol();
 
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
@@ -412,7 +414,7 @@ const CreatePost = () => {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium">Price (₹)</label>
+                                <label className="text-sm font-medium">Price ({currencySymbol})</label>
                                 <input
                                     name="price"
                                     type="number"
@@ -667,7 +669,7 @@ const CreatePost = () => {
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 text-sm text-foreground-muted pt-1 border-t border-card-border">
                                     <span className="flex items-center gap-1 font-medium text-foreground">
-                                        ₹{formData.price || '—'}
+                                        {currencySymbol}{formData.price || '—'}
                                     </span>
                                     <span className="flex items-center gap-1">
                                         <Clock className="w-4 h-4" />

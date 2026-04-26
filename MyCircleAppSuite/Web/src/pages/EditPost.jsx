@@ -11,6 +11,7 @@ import {
 import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { POST_TYPES, ITEM_CATEGORIES as ITEM_CATEGORIES_IDS, JOB_TYPES as JOB_TYPE_IDS } from '../constants';
+import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 
 const CATEGORIES = POST_TYPES.map(id => {
     const configs = {
@@ -46,6 +47,7 @@ const EditPost = () => {
     const navigate = useNavigate();
     const { success, error: showError } = useToast();
     const { user } = useAuth();
+    const { currencySymbol } = useCurrencySymbol();
     const currentUserId = user?._id || user?.id;
 
     const [loading, setLoading] = useState(true);
@@ -402,7 +404,7 @@ const EditPost = () => {
 
                 {/* Price */}
                 <div>
-                    <label className="text-sm font-medium">Price (₹)</label>
+                    <label className="text-sm font-medium">Price ({currencySymbol})</label>
                     <input
                         name="price"
                         type="number"

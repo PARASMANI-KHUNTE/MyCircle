@@ -187,6 +187,8 @@ exports.getPosts = async (req, res, next) => {
         if (type && type !== 'all') {
             if (type === 'barter') {
                 pipeline.push({ $match: { acceptsBarter: true } });
+            } else if (type === 'sell') {
+                pipeline.push({ $match: { type: { $in: ['sell', 'rent'] } } });
             } else if (type === 'hire') {
                 pipeline.push({ $match: { type: { $in: ['job', 'request'] } } });
             } else if (type === 'trade') {

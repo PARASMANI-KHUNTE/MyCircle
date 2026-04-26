@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Package, Tag, IndianRupee, Repeat } from 'lucide-react';
+import { X, Save, Package, Tag, Repeat } from 'lucide-react';
 import Button from './Button';
 import api from '../../utils/api';
 import { useToast } from './Toast';
+import { useCurrencySymbol } from '../../context/CurrencySymbolContext';
 
 const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
     const { success, error: showError } = useToast();
+    const { currencySymbol } = useCurrencySymbol();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         title: post.title || '',
@@ -75,9 +77,9 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-black tracking-widest text-text-muted px-1">PRICE (₹)</label>
+                                <label className="text-[10px] font-black tracking-widest text-text-muted px-1">PRICE ({currencySymbol})</label>
                                 <div className="relative">
-                                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-bold text-sm">{currencySymbol}</span>
                                     <input
                                         type="number"
                                         value={formData.price}

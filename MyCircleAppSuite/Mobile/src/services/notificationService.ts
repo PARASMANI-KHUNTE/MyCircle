@@ -1,6 +1,6 @@
 import messaging, { AuthorizationStatus } from '@react-native-firebase/messaging';
 import { PermissionsAndroid, Platform } from 'react-native';
-import { Alert } from 'react-native';
+import { Alert } from '../utils/alert';
 
 const isFirebaseMessagingConfigured = () => {
     if (Platform.OS === 'ios') {

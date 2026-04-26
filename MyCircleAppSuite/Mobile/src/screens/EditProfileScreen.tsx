@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Alert, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
+import { Alert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Loader, Check } from 'lucide-react-native';

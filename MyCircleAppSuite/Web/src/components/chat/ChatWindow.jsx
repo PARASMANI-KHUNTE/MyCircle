@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles } from 'lucide-react';
+import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ExternalLink, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
@@ -26,16 +27,20 @@ const mapReportCategory = (reasonText) => {
     return 'other';
 };
 
-const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead }) => {
+const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead, isDisabled }) => {
     const { success, error: showError } = useToast();
     const dialog = useDialog();
+    const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [messagesError, setMessagesError] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
+    const [postLoading, setPostLoading] = useState(false);
+    const [postCollapsed, setPostCollapsed] = useState(true);
     const messagesEndRef = useRef(null);
+    const post = conversation.postId;
     const typingTimeoutRef = useRef(null);
     const typingStartEmitted = useRef(false);
     const markReadInFlightRef = useRef(false);
@@ -129,6 +134,12 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         if (!conversation._id) return;
         generateSuggestions(conversation.lastMessage?.text || '');
     }, [conversation._id, conversation.lastMessage?.text]);
+
+    useEffect(() => {
+        if (post) {
+            setPostCollapsed(true);
+        }
+    }, [conversation._id, post]);
 
     useEffect(() => {
         if (!socket || !conversation._id) return;
@@ -322,14 +333,35 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
         );
     }
 
+    if (isDisabled) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center text-foreground-muted p-6 sm:p-8 text-center">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                    <X className="w-7 h-7 sm:w-8 sm:h-8 text-red-500" />
+                </div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">Conversation Ended</h3>
+                <p className="text-sm mb-4 sm:mb-6 max-w-xs">This chat is no longer active because the post was deleted.</p>
+                <button 
+                    onClick={onBack}
+                    className="tap-target px-4 sm:px-6 py-2.5 sm:py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors w-full sm:w-auto"
+                >
+                    Go Back
+                </button>
+            </div>
+        );
+    }
+
     return (
-        <div className="flex flex-col h-full">
-            <div className="p-4 border-b border-card-border flex items-center justify-between bg-hover-bg/30">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="text-text-muted hover:text-text-heading">
-                        <ArrowLeft className="w-6 h-6" />
+        <div className="flex flex-col h-full min-h-0">
+            <div className="px-3 py-2.5 border-b border-card-border flex items-center justify-between bg-card/50 shrink-0">
+                <div className="flex items-center gap-2.5">
+                    <button 
+                        onClick={onBack} 
+                        className="tap-target p-2 -ml-2 rounded-lg hover:bg-card-hover text-foreground-muted transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-background-section overflow-hidden border border-card-border">
+                    <div className="w-9 h-9 rounded-full bg-background overflow-hidden border border-card-border">
                         <img
                             src={getAvatarUrl(otherParticipant)}
                             alt={otherParticipant?.displayName}
@@ -337,23 +369,80 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                         />
                     </div>
                     <div>
-                        <h3 className="font-bold text-text-heading">{otherParticipant?.displayName}</h3>
-                        {otherParticipant?.isOnline && <span className="text-xs text-green-600 font-medium">Online</span>}
+                        <h3 className="font-semibold text-foreground text-sm">{otherParticipant?.displayName}</h3>
+                        {otherParticipant?.isOnline && (
+                            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                                Online
+                            </span>
+                        )}
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <button onClick={handleBlock} className="p-2 text-text-muted hover:text-red-500 transition-colors" title="Block User">
-                        <Shield className="w-5 h-5" />
+                <div className="flex gap-1">
+                    <button onClick={handleBlock} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Block User">
+                        <Shield className="w-4 h-4" />
                     </button>
-                    <button onClick={handleReport} className="p-2 text-text-muted hover:text-yellow-600 transition-colors" title="Report User">
-                        <Flag className="w-5 h-5" />
+                    <button onClick={handleReport} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-yellow-600 hover:bg-yellow-600/10 transition-colors" title="Report User">
+                        <Flag className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background-section/10">
+            {post && (
+                <div className="border-b border-card-border bg-card/30 shrink-0">
+                    <button
+                        onClick={() => setPostCollapsed(!postCollapsed)}
+                        className="w-full px-3 py-2.5 flex items-center justify-between text-sm hover:bg-card-hover transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            {post.images?.[0] ? (
+                                <img src={post.images[0]} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                            ) : (
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm">
+                                    {post.type === 'service' ? '🔧' : post.type === 'job' ? '💼' : '🏷️'}
+                                </div>
+                            )}
+                            <div className="text-left">
+                                <span className="font-semibold text-foreground">{post.title}</span>
+                                {post.price && <span className="ml-2 text-primary font-semibold">₹{post.price}</span>}
+                            </div>
+                        </div>
+                        {postCollapsed ? (
+                            <ChevronDown className="w-4 h-4 text-foreground-muted" />
+                        ) : (
+                            <ChevronUp className="w-4 h-4 text-foreground-muted" />
+                        )}
+                    </button>
+                    {!postCollapsed && (
+                        <div className="px-3 pb-3">
+                            <div
+                                onClick={() => navigate(`/post/${post._id}`)}
+                                className="p-3 rounded-xl bg-card border border-card-border hover:border-primary/30 cursor-pointer transition-colors space-y-2"
+                            >
+                                <p className="text-sm text-foreground leading-relaxed line-clamp-3">{post.description}</p>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-xs text-foreground-muted">
+                                        <span className="capitalize">{post.type}</span>
+                                        {post.location && (
+                                            <>
+                                                <span>•</span>
+                                                <span>{post.location}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <span className="flex items-center gap-1 text-xs text-primary font-medium">
+                                        View Details <ExternalLink className="w-3 h-3" />
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-background min-h-0">
                 {loading ? (
-                    <div className="text-center text-text-muted mt-10 font-medium animate-pulse">Loading messages...</div>
+                    <div className="text-center text-foreground-muted mt-10 font-medium animate-pulse">Loading messages...</div>
                 ) : messagesError ? (
                     <div className="text-center mt-10">
                         <p className="text-sm text-error font-medium">{messagesError}</p>
@@ -361,14 +450,15 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                 ) : (
                     messages.map((msg) => {
                         const isOwn = normalizeSenderId(msg)?.toString() === currentUserId?.toString();
+                        const showPostCard = msg.isAutoMessage || msg.postId;
                         return (
                             <div key={msg._id || `temp-${msg.createdAt}`} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${isOwn
+                                <div className={`max-w-[80%] sm:max-w-[75%] rounded-2xl px-3.5 py-2 shadow-sm ${isOwn
                                     ? 'bg-primary text-primary-foreground rounded-br-none'
-                                    : 'bg-card border border-card-border text-text-body rounded-bl-none'
+                                    : 'bg-card border border-card-border text-foreground rounded-bl-none'
                                     }`}>
-                                    <p>{msg.text}</p>
-                                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-primary-foreground/80' : 'text-text-muted'}`}>
+                                    <p className="text-sm leading-relaxed">{msg.text}</p>
+                                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-primary-foreground/80' : 'text-foreground-muted'}`}>
                                         <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         {isOwn && (
                                             msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-primary-foreground" /> :
@@ -377,23 +467,40 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
                                         )}
                                     </div>
                                 </div>
+                                {showPostCard && !postLoading && post && (
+                                    <div className={`flex items-start ${isOwn ? 'order-[-1] mr-2' : 'ml-2'}`}>
+                                        <div 
+                                            onClick={() => navigate(`/post/${post._id}`)}
+                                            className="w-14 h-14 rounded-lg overflow-hidden cursor-pointer border border-card-border hover:opacity-80 transition-opacity"
+                                        >
+                                            {post.images?.[0] && (
+                                                <img 
+                                                    src={post.images[0]} 
+                                                    alt="" 
+                                                    className="w-full h-full object-cover" 
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         );
                     })
                 )}
+
                 <div ref={messagesEndRef} />
             </div>
 
             {suggestions.length > 0 && (
-                <div className="px-4 py-2 flex gap-2 overflow-x-auto">
-                    <div className="flex items-center text-xs text-primary font-medium mr-1">
+                <div className="px-3 py-2 flex gap-2 overflow-x-auto bg-card border-t border-card-border shrink-0">
+                    <div className="flex items-center text-xs text-primary font-medium mr-1 shrink-0">
                         <Sparkles className="w-3 h-3 mr-1" /> AI:
                     </div>
                     {suggestions.map((s, i) => (
                         <button
                             key={i}
                             onClick={() => setNewMessage(s)}
-                            className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
+                            className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
                         >
                             {s}
                         </button>
@@ -402,25 +509,25 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead 
             )}
 
             {isTyping && (
-                <div className="px-4 py-2 text-xs text-text-muted italic animate-pulse">
+                <div className="px-3 py-2 text-xs text-foreground-muted italic animate-pulse bg-card border-t border-card-border shrink-0">
                     {otherParticipant?.displayName} is typing...
                 </div>
             )}
 
-            <form onSubmit={handleSend} className="p-4 bg-hover-bg/20 border-t border-card-border flex gap-2">
+            <form onSubmit={handleSend} className="p-2.5 bg-card border-t border-card-border flex gap-2 items-end shrink-0">
                 <input
                     type="text"
                     value={newMessage}
                     onChange={handleInputChange}
                     placeholder="Type a message..."
-                    className="flex-1 bg-card border border-card-border rounded-xl px-4 py-3 text-text-heading placeholder:text-text-muted focus:outline-none focus:border-primary/50 transition-all shadow-inner"
+                    className="flex-1 bg-background border border-card-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50 transition-all shadow-inner min-h-[44px]"
                 />
                 <button
                     type="submit"
                     disabled={!newMessage.trim()}
-                    className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors shadow-button"
+                    className="tap-target p-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors shadow-md min-h-[44px] min-w-[44px] flex items-center justify-center"
                 >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                 </button>
             </form>
         </div>

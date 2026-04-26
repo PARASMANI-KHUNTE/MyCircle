@@ -1,8 +1,11 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
 const ContactRequest = require('../models/ContactRequest');
+const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
 const { createNotification } = require('../controllers/notificationController');
 const cloudinary = require('../config/cloudinary');
+const { db } = require('../config/firebase');
 
 /**
  * Delete old images from Cloudinary that are no longer referenced
@@ -142,6 +145,17 @@ const checkExpiredPosts = async (io) => {
             post.notifiedExpired = true;
             await post.save();
 
+            // Disable related conversations
+            try {
+                const Conversation = require('../models/Conversation');
+                await Conversation.updateMany(
+                    { postId: post._id },
+                    { $set: { isActive: false } }
+                );
+            } catch (convErr) {
+                console.error('[Cron] Failed to disable conversations:', convErr.message);
+            }
+
             if (io) {
                 try {
                     await createNotification(io, {
@@ -230,6 +244,44 @@ const checkExpiredPosts = async (io) => {
     }
 };
 
+const cleanupExpiredChats = async () => {
+    try {
+        const now = new Date();
+        const expiredConversations = await Conversation.find({
+            expiresAt: { $lt: now }
+        }).select('_id');
+
+        for (const conversation of expiredConversations) {
+            try {
+                if (db) {
+                    const conversationDoc = db.collection('conversations').doc(conversation._id.toString());
+                    const messagesRef = conversationDoc.collection('messages');
+                    const snapshot = await messagesRef.get();
+                    const batch = db.batch();
+                    snapshot.forEach((doc) => batch.delete(doc.ref));
+                    await batch.commit();
+                    await conversationDoc.delete().catch(() => {});
+                }
+            } catch (fsError) {
+                console.error('[Cron] Error deleting Firestore chat:', fsError.message);
+            }
+
+            await Message.deleteMany({ conversationId: conversation._id });
+            await ContactRequest.updateMany(
+                { conversationId: conversation._id },
+                { $set: { conversationId: null } }
+            );
+        }
+
+        if (expiredConversations.length > 0) {
+            await Conversation.deleteMany({ _id: { $in: expiredConversations.map((conversation) => conversation._id) } });
+            console.log(`[Cron] Deleted ${expiredConversations.length} expired conversations.`);
+        }
+    } catch (error) {
+        console.error('[Cron] Error cleaning expired chats:', error);
+    }
+};
+
 /**
  * Initializes and starts the background jobs.
  * @param {object} io - Socket.io instance
@@ -241,6 +293,7 @@ const startCronJobs = (io) => {
     setInterval(() => {
         checkExpiredPosts(io);
         checkExpiredRequests(io);
+        cleanupExpiredChats();
     }, 60 * 1000);
 
     // Check completed posts every hour
@@ -252,6 +305,7 @@ const startCronJobs = (io) => {
     checkExpiredPosts(io);
     checkExpiredRequests(io);
     checkCompletedPosts(io);
+    cleanupExpiredChats();
 };
 
 module.exports = { startCronJobs };

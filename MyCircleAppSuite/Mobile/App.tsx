@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import AlertProvider from './src/components/ui/AlertProvider';
 import { ToastProvider } from './src/components/ui/Toast';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { useTheme } from './src/context/ThemeContext';
@@ -115,15 +116,17 @@ const App = () => {
         <SafeAreaProvider>
             <ThemeProvider>
                 <QueryClientProvider client={queryClient}>
-                    <ToastProvider>
-                        <AuthProvider>
-                            <SocketProvider>
-                                <NotificationProvider>
-                                    <MainContent />
-                                </NotificationProvider>
-                            </SocketProvider>
-                        </AuthProvider>
-                    </ToastProvider>
+                    <AlertProvider>
+                        <ToastProvider>
+                            <AuthProvider>
+                                <SocketProvider>
+                                    <NotificationProvider>
+                                        <MainContent />
+                                    </NotificationProvider>
+                                </SocketProvider>
+                            </AuthProvider>
+                        </ToastProvider>
+                    </AlertProvider>
                 </QueryClientProvider>
             </ThemeProvider>
         </SafeAreaProvider>
@@ -135,7 +138,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    }
+    },
 });
 
 export default App;

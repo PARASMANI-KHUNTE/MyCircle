@@ -140,6 +140,30 @@ const Feed = () => {
         navigate(`/post/${postId}`);
     };
 
+    const handleContactRequest = async (e, post) => {
+        e?.stopPropagation();
+        e?.preventDefault();
+        if (!user) {
+            showError('Please sign in to send contact requests');
+            navigate('/');
+            return;
+        }
+        try {
+            await api.post('/contacts/request', {
+                postId: post._id,
+                recipientId: post.user?._id
+            });
+            success('Contact request sent!');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.response?.data?.msg || 'Failed to send request';
+            if (msg.toLowerCase().includes('already')) {
+                success('Request already sent');
+            } else {
+                showError(msg);
+            }
+        }
+    };
+
     const clearFilters = () => {
         setSearchTerm('');
         setLocationFilter('all');
@@ -446,8 +470,11 @@ const Feed = () => {
                                 >
                                     <PostCard
                                         post={post}
+                                        user={user}
                                         currentUserId={user?._id}
-                                        onRequestContact={() => handlePostClick(post._id)}
+                                        isOwnPost={String(user?._id) === String(post.user?._id || post.user)}
+                                        onEdit={() => navigate(`/edit-post/${post._id}`)}
+                                        onRequestContact={(postId, e) => handleContactRequest(e, post)}
                                         index={index}
                                     />
                                 </motion.div>

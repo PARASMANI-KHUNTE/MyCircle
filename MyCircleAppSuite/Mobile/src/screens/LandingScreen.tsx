@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Image, Dimensions, StyleSheet, StatusBar, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Image, Dimensions, StyleSheet, StatusBar, ScrollView } from 'react-native';
+import { Alert } from '../utils/alert';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert } from '../utils/alert';
 import * as Keychain from 'react-native-keychain';
 import api from '../services/api';
 import { setUnauthorizedHandler } from '../services/api';

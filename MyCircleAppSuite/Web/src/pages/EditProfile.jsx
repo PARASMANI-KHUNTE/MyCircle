@@ -88,16 +88,16 @@ const EditProfile = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 text-text-body max-w-2xl">
+        <div className="container mx-auto max-w-2xl px-3 sm:px-6 py-16 sm:py-24 text-text-body">
             <Button variant="ghost" className="mb-6 pl-0 text-text-muted hover:text-text-heading" onClick={() => navigate('/profile')}>
                 <ArrowLeft className="w-5 h-5 mr-2" /> Back to Profile
             </Button>
 
             <h1 className="text-3xl font-bold mb-8 text-text-heading">Edit Profile</h1>
 
-            <div className="glass-panel p-8 shadow-card">
+            <div className="glass-panel p-4 sm:p-8 shadow-card rounded-3xl">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                    <div className="flex items-center gap-6 mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-2 sm:mb-4">
                         <div className="w-20 h-20 rounded-full bg-background-section overflow-hidden border border-card-border">
                             <img
                                 src={avatarPreview || getAvatarUrl(user)}
@@ -110,8 +110,8 @@ const EditProfile = () => {
                                 }}
                             />
                         </div>
-                        <label className="cursor-pointer">
-                            <div className="bg-hover-bg border border-card-border hover:opacity-80 text-text-heading px-4 py-2 rounded-xl text-sm transition-all font-bold uppercase tracking-widest">
+                        <label className="cursor-pointer w-full sm:w-auto">
+                            <div className="bg-hover-bg border border-card-border hover:opacity-80 text-text-heading px-4 py-2 rounded-xl text-sm transition-all font-bold uppercase tracking-widest text-center">
                                 Change Avatar
                             </div>
                             <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
@@ -171,7 +171,7 @@ const EditProfile = () => {
                         />
                     </div>
 
-                    <Button variant="primary" type="submit" className="mt-4" disabled={loading}>
+                    <Button variant="primary" type="submit" className="mt-2 w-full justify-center" disabled={loading}>
                         <Save className="w-4 h-4 mr-2" /> {loading ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </form>

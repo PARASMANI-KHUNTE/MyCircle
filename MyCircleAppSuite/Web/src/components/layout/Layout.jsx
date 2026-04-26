@@ -31,7 +31,7 @@ const Layout = () => {
     const isExplorePage = location.pathname === '/' || location.pathname === '/explore';
 
     return (
-        <div className="min-h-screen bg-background relative">
+        <div className="min-h-screen bg-background relative overflow-x-clip">
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
                 <div className="absolute top-1/3 -right-40 w-96 h-96 bg-foreground/5 rounded-full blur-3xl" />
@@ -46,7 +46,7 @@ const Layout = () => {
 
             <Navbar />
 
-            <main className="min-h-screen relative pt-16 md:pt-20">
+            <main className="min-h-screen relative pt-16 md:pt-20 overflow-x-clip">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={location.pathname}
@@ -56,8 +56,8 @@ const Layout = () => {
                         variants={pageVariants}
                         transition={pageTransition}
                         className={cn(
-                            'container mx-auto px-4 sm:px-6 lg:px-8 pb-24',
-                            !isExplorePage && 'pt-6 md:pt-8'
+                            'container mx-auto px-0 sm:px-6 lg:px-8 pb-0',
+                            !isExplorePage && 'pt-0 md:pt-8'
                         )}
                     >
                         <Outlet />

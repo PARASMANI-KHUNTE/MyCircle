@@ -5,7 +5,8 @@ import Button from '../components/ui/Button';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import { useNotifications } from '../context/NotificationContext';
-import { getAvatarUrl } from '../utils/avatar';
+import { generateAvatar, getAvatarUrl } from '../utils/avatar';
+import { getNotificationCopy } from '../utils/notificationMessage';
 import { cn } from '../utils/cn';
 
 /* Maps notification type → icon + color tokens */
@@ -13,6 +14,7 @@ const typeConfig = {
     request: { icon: MessageCircle, class: 'text-info bg-info/10 border-info/20' },
     approval: { icon: CheckCircle2, class: 'text-success bg-success/10 border-success/20' },
     like:     { icon: Heart,         class: 'text-pink-500 bg-pink-500/10 border-pink-500/20' },
+    comment:  { icon: MessageCircle, class: 'text-primary bg-primary/10 border-primary/20' },
     info:     { icon: Info,          class: 'text-primary bg-primary/10 border-primary/20' },
 };
 
@@ -39,9 +41,9 @@ const Notifications = () => {
     const unreadCount = notifications.filter(n => !n.read).length;
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8 max-w-3xl min-h-screen">
+        <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-8 max-w-3xl min-h-screen">
             {/* Page header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
                 <div>
                     {unreadCount > 0 && (
                         <p className="text-sm text-foreground-muted mt-0.5">
@@ -49,12 +51,13 @@ const Notifications = () => {
                         </p>
                     )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     {unreadCount > 0 && (
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={markAllRead}
+                            className="w-full sm:w-auto justify-center"
                         >
                             Mark all read
                         </Button>
@@ -63,8 +66,8 @@ const Notifications = () => {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-error hover:bg-error/10 hover:text-error"
                             onClick={clearAll}
+                            className="text-error hover:bg-error/10 hover:text-error w-full sm:w-auto justify-center"
                         >
                             Clear all
                         </Button>
@@ -106,6 +109,7 @@ const Notifications = () => {
                 <AnimatePresence mode="popLayout">
                     <div className="space-y-3">
                         {notifications.map((n) => {
+                            const copy = getNotificationCopy(n);
                             const config = getTypeConfig(n.type);
                             const TypeIcon = config.icon;
 
@@ -138,6 +142,12 @@ const Notifications = () => {
                                             alt=""
                                             aria-hidden="true"
                                             className="w-12 h-12 rounded-full object-cover border-2 border-card-border"
+                                            onError={(e) => {
+                                                const target = e.currentTarget;
+                                                target.onerror = null;
+                                                const seed = n?.sender?.displayName || n?.sender?.email || 'User';
+                                                target.src = generateAvatar(seed, 96);
+                                            }}
                                         />
                                         <div className={cn(
                                             'absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-card flex items-center justify-center',
@@ -154,14 +164,14 @@ const Notifications = () => {
                                                 'text-sm font-semibold leading-snug',
                                                 n.read ? 'text-foreground-secondary' : 'text-foreground'
                                             )}>
-                                                {n.title}
+                                                {copy.title}
                                             </h3>
                                             <time className="text-[11px] text-foreground-muted shrink-0 mt-0.5">
                                                 {formatDate(n.createdAt)}
                                             </time>
                                         </div>
                                         <p className="text-sm text-foreground-muted mt-0.5 leading-relaxed line-clamp-2">
-                                            {n.message}
+                                            {copy.message}
                                         </p>
 
                                         {/* Actions */}

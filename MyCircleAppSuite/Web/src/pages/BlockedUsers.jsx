@@ -44,7 +44,7 @@ const BlockedUsers = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 min-h-screen">
+        <div className="container mx-auto px-3 sm:px-6 py-16 sm:py-24 min-h-screen">
             <div className="max-w-4xl mx-auto">
                 <Link to="/settings" className="inline-flex items-center gap-2 text-text-muted hover:text-text-heading mb-6 transition-colors font-medium">
                     <ArrowLeft className="w-4 h-4" />
@@ -76,22 +76,22 @@ const BlockedUsers = () => {
                 ) : (
                     <div className="space-y-4">
                         {blockedUsers.map(user => (
-                            <div key={user._id} className="glass-panel p-6 flex items-center justify-between shadow-sm">
-                                <div className="flex items-center gap-4">
+                            <div key={user._id} className="glass-panel p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
+                                <div className="flex items-center gap-4 min-w-0">
                                     <img
                                         src={getAvatarUrl(user)}
                                         alt={user.displayName}
                                         className="w-12 h-12 rounded-full object-cover border border-card-border"
                                     />
-                                    <div>
-                                        <h3 className="text-text-heading font-semibold">{user.displayName}</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="text-text-heading font-semibold break-words">{user.displayName}</h3>
                                         <p className="text-sm text-red-500 font-medium">Blocked</p>
                                     </div>
                                 </div>
                                 <Button
                                     variant="outline"
                                     onClick={() => handleUnblock(user._id, user.displayName)}
-                                    className="border-primary/20 text-primary hover:bg-primary/10"
+                                    className="border-primary/20 text-primary hover:bg-primary/10 w-full sm:w-auto justify-center"
                                 >
                                     Unblock
                                 </Button>

@@ -39,8 +39,8 @@ export const ToastProvider = ({ children }) => {
     return (
         <ToastContext.Provider value={value}>
             {children}
-            {/* z-toast = 40 per our z-index scale */}
-            <div className="fixed top-4 right-4 z-[40] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full">
+            {/* Keep toast layer above navbars, drawers, and fixed overlays */}
+            <div className="fixed top-20 right-3 left-3 md:top-4 md:right-4 md:left-auto z-[1300] flex flex-col gap-2.5 pointer-events-none w-auto md:w-full max-w-sm">
                 <AnimatePresence mode="popLayout">
                     {toasts.map(({ id, message, type }) => (
                         <ToastItem key={id} message={message} type={type} onClose={() => removeToast(id)} />

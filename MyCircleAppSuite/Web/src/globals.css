@@ -132,16 +132,37 @@
 }
 
 @layer base {
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
     html {
         scroll-behavior: smooth;
         text-rendering: optimizeLegibility;
         -webkit-font-smoothing: antialiased;
     }
 
+    html, body, #root {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
     body {
         @apply bg-background text-foreground overflow-x-hidden;
         font-family: 'Inter', system-ui, sans-serif;
         line-height: 1.6;
+    }
+
+    img, video, canvas, svg, iframe {
+        max-width: 100%;
+    }
+
+    input, textarea, select, button {
+        max-width: 100%;
+    }
+
+    p, h1, h2, h3, h4, h5, h6, span {
+        overflow-wrap: anywhere;
     }
 
     /* Headings use Plus Jakarta Sans for premium geometric character */

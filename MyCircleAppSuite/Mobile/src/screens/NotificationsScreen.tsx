@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert } from '../utils/alert';
 import { Bell, CheckCircle, CheckSquare, Heart, Info, MessageSquare, Square, Trash2, X } from 'lucide-react-native';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import Animated, { FadeInDown } from 'react-native-reanimated';

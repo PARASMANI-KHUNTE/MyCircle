@@ -83,9 +83,9 @@ const ServiceCard = ({ user, searchedSkill }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mt-auto">
-                <Link to={`/chat?recipientId=${user._id}`}>
+                <Link to={`/profile?userId=${user._id}`}>
                     <Button variant="outline" className="w-full py-2.5 px-0 text-sm">
-                        Message
+                        Browse Posts
                     </Button>
                 </Link>
                 <Link to={`/profile?userId=${user._id}`}>

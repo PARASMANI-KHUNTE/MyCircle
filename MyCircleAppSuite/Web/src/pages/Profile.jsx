@@ -102,14 +102,15 @@ const Profile = () => {
     };
 
     const handleDeletePost = async (postId) => {
-        if (window.confirm('Are you sure you want to delete this post?')) {
-            try {
-                await api.delete(`/posts/${postId}`);
-                setPosts(posts.filter(p => p._id !== postId));
-                success('Post deleted successfully');
-            } catch {
-                showError('Failed to delete post');
-            }
+        const confirmed = await dialog.confirm('Are you sure you want to delete this post?', 'Delete Post');
+        if (!confirmed) return;
+
+        try {
+            await api.delete(`/posts/${postId}`);
+            setPosts(posts.filter(p => p._id !== postId));
+            success('Post deleted successfully');
+        } catch {
+            showError('Failed to delete post');
         }
     };
 
@@ -146,9 +147,7 @@ const Profile = () => {
     };
 
     const handleMessage = () => {
-        // Find or create conversation logic is handled in Chat.jsx/ChatWindow.jsx
-        // For now, we move to chat with a recipient hint
-        navigate(`/chat?recipientId=${userId}`);
+        showError('Chat starts only from an accepted request on a specific post.');
     };
 
     const handleReport = async () => {
@@ -206,14 +205,14 @@ const Profile = () => {
     }
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 text-foreground">
-            <div className="max-w-4xl mx-auto">
+        <div className="container mx-auto px-3 sm:px-6 py-16 sm:py-24 text-foreground">
+            <div className="max-w-5xl mx-auto">
                 {/* Header Card */}
-                <div className="glass-panel p-8 mb-8 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
+                <div className="glass-panel p-4 sm:p-8 mb-6 sm:mb-8 relative overflow-hidden rounded-3xl">
+                    <div className="absolute top-0 left-0 w-full h-24 sm:h-32 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
 
-                    <div className="relative flex flex-col md:flex-row items-end gap-6 pt-12">
-                        <div className="w-32 h-32 rounded-full ring-4 ring-card bg-card overflow-hidden shadow-2xl">
+                    <div className="relative flex flex-col md:flex-row items-center md:items-end gap-4 sm:gap-6 pt-8 sm:pt-12 text-center md:text-left">
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full ring-4 ring-card bg-card overflow-hidden shadow-2xl shrink-0">
                             <img
                                 src={getAvatarUrl(profile)}
                                 alt={profile.displayName}
@@ -221,43 +220,43 @@ const Profile = () => {
                             />
                         </div>
 
-                        <div className="flex-1 mb-2">
-                            <h1 className="text-2xl sm:text-3xl font-bold font-display text-foreground">{profile.displayName}</h1>
-                            <div className="flex items-center gap-4 text-foreground-muted mt-2 text-sm">
-                                <span className="flex items-center gap-1">
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-2xl sm:text-3xl font-bold font-display text-foreground break-words">{profile.displayName}</h1>
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center md:items-center justify-center md:justify-start gap-2 sm:gap-4 text-foreground-muted mt-2 text-sm">
+                                <span className="flex items-center gap-1 text-center">
                                     <MapPin className="w-4 h-4" /> {profile.location}
                                 </span>
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1 text-center">
                                     <Calendar className="w-4 h-4" /> Joined {profile.joined}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="flex gap-3 mb-2 flex-wrap">
+                        <div className="flex w-full md:w-auto flex-col sm:flex-row gap-3 md:mb-2">
                             {isOwnProfile ? (
                                 <>
-                                    <Button variant="outline" onClick={() => navigate('/edit-profile')}>
+                                    <Button variant="outline" onClick={() => navigate('/edit-profile')} className="w-full sm:w-auto justify-center">
                                         <Edit2 className="w-4 h-4 mr-2" />
                                         Edit Profile
                                     </Button>
-                                    <Button variant="outline" onClick={() => navigate('/settings')}>
+                                    <Button variant="outline" onClick={() => navigate('/settings')} className="w-full sm:w-auto justify-center">
                                         Settings
                                     </Button>
-                                    <Button variant="danger" onClick={handleLogout}>
+                                    <Button variant="danger" onClick={handleLogout} className="w-full sm:w-auto justify-center">
                                         Logout
                                     </Button>
                                 </>
                             ) : (
                                 <>
-                                    <Button variant="primary" onClick={handleMessage}>
+                                    <Button variant="primary" onClick={handleMessage} className="w-full sm:w-auto justify-center">
                                         <Mail className="w-4 h-4 mr-2" />
-                                        Message
+                                        Request Via Post
                                     </Button>
-                                    <Button variant="outline" onClick={handleReport}>
+                                    <Button variant="outline" onClick={handleReport} className="w-full sm:w-auto justify-center">
                                         <Shield className="w-4 h-4 mr-2" />
                                         Report User
                                     </Button>
-                                    <Button variant="danger" onClick={handleBlock}>
+                                    <Button variant="danger" onClick={handleBlock} className="w-full sm:w-auto justify-center">
                                         Block User
                                     </Button>
                                 </>
@@ -265,18 +264,18 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    <p className="mt-6 text-foreground-muted leading-relaxed max-w-2xl text-sm">
+                    <p className="mt-5 sm:mt-6 text-foreground-muted leading-relaxed max-w-2xl text-sm text-center md:text-left">
                         {profile.bio}
                     </p>
 
-                    <div className="flex flex-wrap gap-2 mt-6">
+                    <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-5 sm:mt-6">
                         {profile.skills.map((skill, index) => {
                             const endorsement = profile.skillEndorsements?.find(e => e.skill.toLowerCase() === skill.toLowerCase());
                             const count = endorsement ? endorsement.count : 0;
                             const isEndorsedByMe = endorsement?.endorsedBy?.includes(authUser?._id);
 
                             return (
-                                <div key={index} className="flex items-center gap-1 bg-card/10 rounded-full px-3 py-1 border border-card-border group hover:border-primary/50 transition-colors">
+                                <div key={index} className="flex items-center gap-1 bg-card/10 rounded-full px-3 py-1.5 border border-card-border group hover:border-primary/50 transition-colors max-w-full">
                                     <span className="text-xs text-primary font-bold">{skill}</span>
                                     {count > 0 && (
                                         <span className="bg-primary/20 text-primary text-[10px] px-1.5 rounded-full">
@@ -303,22 +302,22 @@ const Profile = () => {
             </div>
 
             {/* My Posts Section */}
-            <div className="mt-12">
-                <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold font-display">
+            <div className="mt-8 sm:mt-12">
+                <div className="flex items-center justify-between mb-6 sm:mb-8">
+                    <h2 className="text-xl sm:text-2xl font-bold font-display">
                         {isOwnProfile ? 'My Posts' : `${profile.displayName}'s Posts`}
                     </h2>
                     
                 </div>
 
                 {postsLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         {[1, 2].map(i => (
                             <div key={i} className="glass-panel h-64 rounded-2xl skeleton border-transparent" />
                         ))}
                     </div>
                 ) : posts.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         {posts.map(post => (
                             <PostCard
                                 key={post._id}
@@ -333,7 +332,7 @@ const Profile = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="glass-panel rounded-2xl p-12 text-center">
+                    <div className="glass-panel rounded-2xl p-8 sm:p-12 text-center">
                         <Package className="w-12 h-12 text-foreground-muted mx-auto mb-4 opacity-20" />
                         <p className="text-foreground-muted">No posts found yet.</p>
                     </div>

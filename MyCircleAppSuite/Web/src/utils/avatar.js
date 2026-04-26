@@ -1,10 +1,14 @@
+import { getSocketBaseUrl } from './api';
+
 /**
  * Generate a colorful, unique avatar based on user's name
  * Uses a deterministic algorithm to create consistent avatars
  */
 export function generateAvatar(name, size = 128) {
+    const safeName = typeof name === 'string' && name.trim() ? name.trim() : 'User';
+
     // Create a hash from the name for consistent colors
-    const hash = name.split('').reduce((acc, char) => {
+    const hash = safeName.split('').reduce((acc, char) => {
         return char.charCodeAt(0) + ((acc << 5) - acc);
     }, 0);
 
@@ -17,7 +21,7 @@ export function generateAvatar(name, size = 128) {
     const textColor = lightness > 60 ? '#1a1a1a' : '#ffffff';
 
     // Get initials (max 2 characters)
-    const initials = name
+    const initials = safeName
         .split(' ')
         .map(word => word[0])
         .filter(Boolean)
@@ -42,24 +46,40 @@ export function generateAvatar(name, size = 128) {
         </svg>
     `;
 
-    // Convert to data URL
-    return `data:image/svg+xml;base64,${btoa(svg)}`;
+    // Convert to Unicode-safe inline SVG data URL
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
+
+const toAbsoluteAvatarUrl = (avatarPath) => {
+    if (typeof avatarPath !== 'string') return '';
+
+    const normalizedPath = avatarPath.trim().replace(/\\/g, '/');
+    if (!normalizedPath) return '';
+
+    if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+        return normalizedPath;
+    }
+
+    if (normalizedPath.startsWith('//')) {
+        return `https:${normalizedPath}`;
+    }
+
+    const baseUrl = getSocketBaseUrl() || '';
+    if (!baseUrl) return normalizedPath;
+
+    const safeBaseUrl = baseUrl.replace(/\/$/, '');
+    const safePath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+    return `${safeBaseUrl}${safePath}`;
+};
 
 /**
  * Get avatar URL - returns user's avatar or generates one using Dicebear
  */
 export function getAvatarUrl(user) {
-    if (user?.avatar && user.avatar.length > 0) {
-        if (user.avatar.startsWith('http')) {
-            return user.avatar;
-        }
-        if (user.avatar.startsWith('//')) {
-            return `https:${user.avatar}`;
-        }
+    if (user && typeof user === 'object' && user.avatar && typeof user.avatar === 'string' && user.avatar.length > 0) {
+        return toAbsoluteAvatarUrl(user.avatar);
     }
 
     const seed = user?.displayName || user?.email || 'User';
-    // Use Dicebear as primary fallback for a better look
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+    return generateAvatar(seed, 128);
 }

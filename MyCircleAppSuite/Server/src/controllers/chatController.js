@@ -8,6 +8,7 @@ const { db, admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const mongoose = require('mongoose');
+const { deleteConversationArtifacts } = require('../utils/chatLifecycle');
 
 const DEFAULT_CONVERSATION_LIMIT = 25;
 const MAX_CONVERSATION_LIMIT = 50;
@@ -27,6 +28,14 @@ const parsePagination = (query, defaultLimit, maxLimit) => {
 };
 
 const NOTIFICATION_MESSAGE_MAX_LENGTH = 80;
+const CHAT_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+const getChatExpiryDate = () => new Date(Date.now() + CHAT_RETENTION_MS);
+
+const buildConversationFilter = (userA, userB, postId = null) => ({
+    participants: { $all: [userA, userB] },
+    postId: postId || null
+});
 
 const getNotificationMessagePreview = (messageText) => {
     if (typeof messageText !== 'string') return '';
@@ -48,13 +57,15 @@ exports.getConversations = asyncHandler(async (req, res, next) => {
     const userObjectId = new mongoose.Types.ObjectId(req.user.id);
     const conversationFilter = {
         participants: req.user.id,
-        deletedBy: { $ne: req.user.id }
+        deletedBy: { $ne: req.user.id },
+        isActive: { $ne: false }
     };
 
     const [conversations, total] = await Promise.all([
         Conversation.find(conversationFilter)
             .populate('participants', 'displayName avatar')
             .populate('lastMessage')
+            .populate('postId', 'title images price description type location')
             .sort({ updatedAt: -1 })
             .skip(skip)
             .limit(limit)
@@ -148,25 +159,33 @@ exports.getMessages = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.getOrCreateConversation = asyncHandler(async (req, res, next) => {
     const recipientId = req.params.userId;
+    const postId = req.query.postId || null;
 
     // Check if conversation exists
-    let conversation = await Conversation.findOne({
-        participants: { $all: [req.user.id, recipientId] }
-    })
+    let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId))
         .populate('participants', ['displayName', 'avatar', 'isOnline'])
         .populate('lastMessage');
+
+    // If conversation exists, check if it's still active
+    if (conversation && conversation.isActive === false) {
+        throw new ApiError(403, 'This conversation is no longer active because the post was deleted');
+    }
 
     // If conversation doesn't exist, return conversation structure without creating
     if (!conversation) {
         // Verify user is connected before returning conversation details
-        const connection = await ContactRequest.findOne({
+        const connectionFilter = {
             $or: [
                 { requester: req.user.id, recipient: recipientId, status: 'accepted' },
                 { requester: recipientId, recipient: req.user.id, status: 'accepted' },
                 { requester: req.user.id, recipient: recipientId, status: 'approved' },
                 { requester: recipientId, recipient: req.user.id, status: 'approved' }
             ]
-        });
+        };
+        if (postId) {
+            connectionFilter.post = postId;
+        }
+        const connection = await ContactRequest.findOne(connectionFilter);
 
         if (!connection) {
             throw new ApiError(403, 'You can only access conversations with connected users');
@@ -194,10 +213,16 @@ exports.getConversationById = asyncHandler(async (req, res, next) => {
     const conversation = await Conversation.findById(req.params.conversationId)
         .populate('participants', 'displayName avatar isOnline')
         .populate('lastMessage')
+        .populate('postId', 'title images price description type location')
         .lean();
 
     if (!conversation) {
         throw new ApiError(404, 'Conversation not found');
+    }
+
+    // Check if conversation is still active
+    if (conversation.isActive === false) {
+        throw new ApiError(403, 'This conversation is no longer active because the post was deleted');
     }
 
     if (!conversation.participants.some((participant) => participant._id.toString() === req.user.id)) {
@@ -224,20 +249,26 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
     const { recipientId, text, postId } = req.body;
 
     // Check if conversation exists
-    let conversation = await Conversation.findOne({
-        participants: { $all: [req.user.id, recipientId] }
-    });
+    let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId || null));
+
+    if (!conversation && !postId) {
+        throw new ApiError(400, 'Post ID is required to start a new conversation');
+    }
 
     // Connectivity Check
     if (!conversation) {
-        const connection = await ContactRequest.findOne({
+        const connectionFilter = {
             $or: [
                 { requester: req.user.id, recipient: recipientId, status: 'accepted' },
                 { requester: recipientId, recipient: req.user.id, status: 'accepted' },
                 { requester: req.user.id, recipient: recipientId, status: 'approved' },
                 { requester: recipientId, recipient: req.user.id, status: 'approved' }
             ]
-        });
+        };
+        if (postId) {
+            connectionFilter.post = postId;
+        }
+        const connection = await ContactRequest.findOne(connectionFilter);
 
         if (!connection) {
             throw new ApiError(403, 'You can only message connected users');
@@ -248,7 +279,8 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
     if (!conversation) {
         conversation = new Conversation({
             participants: [req.user.id, recipientId],
-            postId: postId || null
+            postId: postId || null,
+            expiresAt: getChatExpiryDate()
         });
         await conversation.save();
     }
@@ -287,7 +319,9 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
         sender: req.user.id,
         text: text,
         status: 'sent',
-        readBy: [req.user.id]
+        readBy: [req.user.id],
+        postId: postId || conversation.postId || null,
+        expiresAt: getChatExpiryDate()
     });
     await mongoMessage.save();
 
@@ -299,7 +333,8 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
         createdAt: mongoMessage.createdAt.toISOString(), // Sync timestamps
         status: 'sent',
         readBy: [req.user.id],
-        expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7-day TTL
+        postId: postId || conversation.postId?.toString?.() || null,
+        expiresAt: admin.firestore.Timestamp.fromDate(getChatExpiryDate()),
         mongoId: mongoMessage._id.toString() // Link back to Mongo
     };
 
@@ -322,6 +357,7 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
     // Update MongoDB conversation last message metadata and unhide for everyone
     conversation.lastMessage = mongoMessage._id;
     conversation.updatedAt = Date.now();
+    conversation.expiresAt = getChatExpiryDate();
     conversation.deletedBy = []; // Unhide conversation for both users
     await conversation.save();
 
@@ -357,23 +393,30 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.initChat = asyncHandler(async (req, res, next) => {
     const recipientId = req.params.userId;
+    const postId = req.body?.postId || req.query?.postId || null;
+
+    if (!postId) {
+        throw new ApiError(400, 'Post ID is required to start a conversation');
+    }
 
     // Check if conversation exists
-    let conversation = await Conversation.findOne({
-        participants: { $all: [req.user.id, recipientId] }
-    })
+    let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId))
     .populate('participants', ['displayName', 'avatar', 'isOnline'])
     .populate('lastMessage');
 
     // Connectivity Check - accept both 'accepted' (DB) and 'approved' (frontend)
-    const connection = await ContactRequest.findOne({
+    const connectionFilter = {
         $or: [
             { requester: req.user.id, recipient: recipientId, status: 'accepted' },
             { requester: recipientId, recipient: req.user.id, status: 'accepted' },
             { requester: req.user.id, recipient: recipientId, status: 'approved' },
             { requester: recipientId, recipient: req.user.id, status: 'approved' }
         ]
-    });
+    };
+    if (postId) {
+        connectionFilter.post = postId;
+    }
+    const connection = await ContactRequest.findOne(connectionFilter);
 
     if (!connection) {
         throw new ApiError(403, 'You can only message connected users');
@@ -381,11 +424,17 @@ exports.initChat = asyncHandler(async (req, res, next) => {
 
     if (!conversation) {
         conversation = new Conversation({
-            participants: [req.user.id, recipientId]
+            participants: [req.user.id, recipientId],
+            postId: postId || connection.post || null,
+            expiresAt: getChatExpiryDate()
         });
         await conversation.save();
         conversation = await Conversation.findById(conversation._id)
             .populate('participants', ['displayName', 'avatar', 'isOnline']);
+    } else {
+        conversation.expiresAt = getChatExpiryDate();
+        conversation.deletedBy = [];
+        await conversation.save();
     }
 
     res.json(conversation);
@@ -402,35 +451,14 @@ exports.deleteConversation = asyncHandler(async (req, res, next) => {
         throw new ApiError(401, 'Not authorized');
     }
 
-    // Add user to deletedBy
-    if (!conversation.deletedBy.map(p => p.toString()).includes(req.user.id)) {
-        conversation.deletedBy.push(req.user.id);
-    }
+    const io = req.app.get('io');
+    await deleteConversationArtifacts({
+        conversation,
+        io,
+        reason: 'Conversation deleted by participant'
+    });
 
-    // If both users deleted it, or it was linked to a post that's gone
-    // Hard delete if all participants deleted
-    if (conversation.deletedBy.length === conversation.participants.length) {
-        // Hard delete from Firestore too
-        try {
-            if (db) {
-                const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
-                const snapshot = await messagesRef.get();
-                const batch = db.batch();
-                snapshot.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-                await db.collection('conversations').doc(conversation._id.toString()).delete();
-            }
-        } catch (fsError) {
-            console.error('Error deleting from Firestore:', fsError.message);
-            // We still proceed with MongoDB deletion as that is the source of truth for metadata
-        }
-
-        await Conversation.findByIdAndDelete(req.params.conversationId);
-        return res.json({ msg: 'Conversation permanently deleted' });
-    }
-
-    await conversation.save();
-    res.json({ msg: 'Conversation hidden for you' });
+    res.json({ msg: 'Conversation permanently deleted' });
 });
 
 // @desc    Mark messages as read

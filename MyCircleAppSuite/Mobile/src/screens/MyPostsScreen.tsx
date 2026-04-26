@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Modal, Pressable } from 'react-native';
+import { Alert } from '../utils/alert';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
 import PostCard from '../components/ui/PostCard';

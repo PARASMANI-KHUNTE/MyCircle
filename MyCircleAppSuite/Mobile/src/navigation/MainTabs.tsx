@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSocket } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import Sound from 'react-native-sound';
 import { MainTabParamList } from './types';
@@ -18,9 +19,15 @@ Sound.setCategory('Playback');
 
 const MainTabs = () => {
     const { socket } = useSocket() as any;
+    const { isAuthenticated } = useAuth();
     const [_, setUnreadMsgCount] = useState(0);
 
     const fetchUnreadMsgCount = async () => {
+        if (!isAuthenticated) {
+            setUnreadMsgCount(0);
+            return;
+        }
+
         try {
             const res = await api.get('/chat/unread/count');
             setUnreadMsgCount(res.data.count);
@@ -30,14 +37,19 @@ const MainTabs = () => {
     };
 
     useEffect(() => {
-        fetchUnreadMsgCount();
-    }, []);
+        if (!isAuthenticated) {
+            setUnreadMsgCount(0);
+            return;
+        }
+
+        void fetchUnreadMsgCount();
+    }, [isAuthenticated]);
 
     useEffect(() => {
-        if (!socket) return;
+        if (!socket || !isAuthenticated) return;
 
         const handleNewMessage = () => {
-            fetchUnreadMsgCount();
+            void fetchUnreadMsgCount();
 
             // Play notification sound
             const ding = new Sound('notification.mp3', Sound.MAIN_BUNDLE, (error) => {
@@ -54,7 +66,7 @@ const MainTabs = () => {
         };
 
         const handleMessagesRead = () => {
-            fetchUnreadMsgCount();
+            void fetchUnreadMsgCount();
         };
 
         socket.on('receive_message', handleNewMessage);
@@ -66,7 +78,7 @@ const MainTabs = () => {
             socket.off('messages_read', handleMessagesRead);
             socket.off('unread_count_update', handleMessagesRead);
         };
-    }, [socket]);
+    }, [socket, isAuthenticated]);
 
     return (
         <Tab.Navigator

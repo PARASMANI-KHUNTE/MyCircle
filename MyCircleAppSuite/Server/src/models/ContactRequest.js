@@ -25,6 +25,11 @@ const ContactRequestSchema = new mongoose.Schema({
         type: String,
         maxLength: 200,
     },
+    conversationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Conversation',
+        default: null,
+    },
     expiresAt: {
         type: Date,
         index: true, // For efficient cron queries

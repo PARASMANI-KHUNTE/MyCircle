@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert } from '../utils/alert';
 import { UserX } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 

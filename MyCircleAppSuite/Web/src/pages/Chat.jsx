@@ -5,8 +5,7 @@ import ChatWindow from '../components/chat/ChatWindow';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../utils/api';
-import { Plus, MessageCircle } from 'lucide-react';
-import NewMessageModal from '../components/chat/NewMessageModal';
+import { MessageCircle, ArrowLeft } from 'lucide-react';
 
 const Chat = () => {
     const { user } = useAuth();
@@ -14,9 +13,9 @@ const Chat = () => {
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
     const [typingUsers, setTypingUsers] = useState({});
     const [initialized, setInitialized] = useState(false);
+    const [disabledConvId, setDisabledConvId] = useState(null);
     const location = useLocation();
     const currentUserId = user?._id || user?.id;
 
@@ -52,8 +51,6 @@ const Chat = () => {
 
             const queryParams = new URLSearchParams(location.search);
             const conversationId = queryParams.get('conversationId');
-            const recipientId = queryParams.get('recipientId');
-
             if (conversationId) {
                 try {
                     const res = await api.get(`/chat/conversations/${conversationId}`);
@@ -61,17 +58,6 @@ const Chat = () => {
                     return;
                 } catch (err) {
                     console.error('Failed to open conversation:', err);
-                }
-            }
-
-            if (recipientId) {
-                try {
-                    const res = await api.post(`/chat/init/${recipientId}`);
-                    setSelectedConversation(res.data);
-                    const updatedRes = await api.get('/chat/conversations');
-                    setConversations(updatedRes.data);
-                } catch (err) {
-                    console.error('Failed to auto-init chat:', err);
                 }
             }
         };
@@ -127,118 +113,127 @@ const Chat = () => {
         socket.on('messages_read', handleReadReceipt);
         socket.on('user_typing', handleTypingStart);
         socket.on('user_stop_typing', handleTypingStop);
+        
+        const handleConversationDisabled = (data) => {
+            setDisabledConvId(data.conversationId);
+            setTimeout(() => setDisabledConvId(null), 5000);
+            if (selectedConversation?._id === data.conversationId) {
+                setSelectedConversation(null);
+            }
+            setConversations(prev => prev.filter(c => c._id !== data.conversationId));
+        };
+        socket.on('conversation_disabled', handleConversationDisabled);
 
         return () => {
             socket.off('receive_message');
             socket.off('messages_read', handleReadReceipt);
             socket.off('user_typing', handleTypingStart);
             socket.off('user_stop_typing', handleTypingStop);
+            socket.off('conversation_disabled', handleConversationDisabled);
         };
     }, [currentUserId, socket, user?._id, user?.id]);
 
 // Layout (sidebar + chat window or only list)
     return (
-        <div className="flex h-[calc(100vh-64px)]">
-            {/* Sidebar - always visible on mobile */}
-            <div className={`w-full md:w-1/3 flex flex-col bg-background ${selectedConversation ? 'hidden md:flex' : 'flex'} border-r border-border`}>
-                <div className="p-4 border-b border-border flex items-center justify-between">
-                    <h2 className="text-lg font-bold">Messages</h2>
-                    <button
-                        onClick={() => setIsNewMessageModalOpen(true)}
-                        className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-lg shadow-primary/20"
-                        title="New Message"
-                    >
-                        <Plus className="w-5 h-5" />
-                    </button>
+        <>
+            <div className="flex h-[100dvh] lg:h-[calc(100vh-80px)] overflow-hidden min-w-0">
+                {/* Sidebar - list of conversations */}
+                <div className={`
+                    w-full md:w-1/3 min-w-0 flex flex-col bg-background border-r border-card-border
+                    ${selectedConversation ? 'hidden md:flex' : 'flex'}
+                `}>
+                    <div className="px-3 py-3 border-b border-card-border flex items-center justify-between bg-card/50 shrink-0">
+                        <div className="flex items-center gap-2">
+                            {selectedConversation && (
+                                <button 
+                                    onClick={() => setSelectedConversation(null)}
+                                    className="tap-target p-2 -ml-2 rounded-lg hover:bg-card-hover text-foreground-muted transition-colors lg:hidden"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </button>
+                            )}
+                            <h2 className="text-base font-bold text-foreground">Messages</h2>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling: touch min-h-0">
+                        {loading ? (
+                            <div className="p-8 text-center">
+                                <div className="w-10 h-10 border-3 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+                                <span className="text-sm text-foreground-muted">Loading...</span>
+                            </div>
+                        ) : conversations.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center flex-1 p-6 text-center">
+                                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                                    <MessageCircle className="w-8 h-8 text-primary" />
+                                </div>
+                                <h3 className="text-base font-semibold text-foreground mb-2">No conversations yet</h3>
+                                <p className="text-sm text-foreground-muted mb-4 max-w-[240px]">
+                                    Connect with people through contact requests to start chatting
+                                </p>
+                                <p className="text-xs text-foreground-muted max-w-[260px]">
+                                    New chats start only from accepted requests on a specific post.
+                                </p>
+                            </div>
+                        ) : (
+                            <ChatList
+                                conversations={conversations}
+                                selectedId={selectedConversation?._id}
+                                onSelect={setSelectedConversation}
+                                loading={loading}
+                                currentUserId={user?._id || user?.id}
+                                typingUsers={typingUsers}
+                                onConversationDeleted={(deletedId) => {
+                                    setConversations(prev => prev.filter(c => c._id !== deletedId));
+                                    if (selectedConversation?._id === deletedId) {
+                                        setSelectedConversation(null);
+                                    }
+                                }}
+                            />
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto">
-                    {loading ? (
-                        <div className="p-8 text-center text-text-muted">
-                            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2"></div>
-                            Loading...
-                        </div>
-                    ) : conversations.length === 0 ? (
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                                <MessageCircle className="w-8 h-8 text-primary" />
-                            </div>
-                            <p className="text-text-muted font-medium mb-4">No conversations yet</p>
-                            <button
-                                onClick={() => setIsNewMessageModalOpen(true)}
-                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                            >
-                                Start New Chat
-                            </button>
-                        </div>
-                    ) : (
-                        <ChatList
-                            conversations={conversations}
-                            selectedId={selectedConversation?._id}
-                            onSelect={setSelectedConversation}
-                            loading={loading}
-                            currentUserId={user?._id || user?.id}
-                            typingUsers={typingUsers}
-                            onConversationDeleted={(deletedId) => {
-                                setConversations(prev => prev.filter(c => c._id !== deletedId));
-                                if (selectedConversation?._id === deletedId) {
-                                    setSelectedConversation(null);
-                                }
+                {/* Chat Window */}
+                <div className={`
+                    w-full md:w-2/3 min-w-0 flex flex-col bg-card
+                    ${!selectedConversation ? 'hidden md:flex' : 'flex'}
+                `}>
+                    {selectedConversation ? (
+                        <ChatWindow
+                            conversation={selectedConversation}
+                            socket={socket}
+                            currentUser={user}
+                            isDisabled={disabledConvId === selectedConversation._id}
+                            onBack={() => setSelectedConversation(null)}
+                            onMessagesRead={(convoId) => {
+                                setConversations(prev => prev.map(c => {
+                                    if (c._id === convoId && c.lastMessage) {
+                                        return {
+                                            ...c,
+                                            lastMessage: { ...c.lastMessage, status: 'read' },
+                                            unreadCount: 0
+                                        };
+                                    }
+                                    return c;
+                                }));
                             }}
                         />
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-background">
+                            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                                <MessageCircle className="w-10 h-10 text-primary" />
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground mb-2">Your Messages</h3>
+                            <p className="text-sm text-foreground-muted max-w-[280px]">
+                                Select a conversation to start chatting
+                            </p>
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Chat Window */}
-            <div className={`w-full md:w-2/3 flex flex-col bg-card/60 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
-                {selectedConversation ? (
-                    <ChatWindow
-                        conversation={selectedConversation}
-                        socket={socket}
-                        currentUser={user}
-                        onBack={() => setSelectedConversation(null)}
-                        onMessagesRead={(convoId) => {
-                            setConversations(prev => prev.map(c => {
-                                if (c._id === convoId && c.lastMessage) {
-                                    return {
-                                        ...c,
-                                        lastMessage: { ...c.lastMessage, status: 'read' },
-                                        unreadCount: 0
-                                    };
-                                }
-                                return c;
-                            }));
-                        }}
-                    />
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-text-muted p-8 text-center">
-                        <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                            <MessageCircle className="w-12 h-12 text-primary" />
-                        </div>
-                        <h3 className="text-xl font-semibold mb-2">Your Messages</h3>
-                        <p className="text-text-muted max-w-xs">
-                            Connect with people through contact requests to start chatting
-                        </p>
-                    </div>
-                )}
-</div>
-
-            <NewMessageModal
-                isOpen={isNewMessageModalOpen}
-                onClose={() => setIsNewMessageModalOpen(false)}
-                onSelectUser={async (otherUser) => {
-                    try {
-                        const res = await api.post(`/chat/init/${otherUser._id}`);
-                        setSelectedConversation(res.data);
-                        void fetchConversations();
-                        setIsNewMessageModalOpen(false);
-                    } catch (err) {
-                        console.error('Failed to init chat:', err);
-                    }
-                }}
-            />
-        </div>
+        </>
     );
 };
 

@@ -60,20 +60,31 @@ const BottomNav = () => {
         { path: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMsgCount },
     ];
 
-    // Hide on these routes — they have their own full-screen layout
-    if (location.pathname === '/' || location.pathname === '/explore') {
+    // Hide on routes with their own full-screen layout
+    const hideOnRoutes = [
+        '/create-post',
+        '/edit-post', 
+        '/settings',
+        '/edit-profile',
+        '/chat',
+    ];
+    
+    // Hide if current route matches any hide route
+    const shouldHide = hideOnRoutes.some(route => location.pathname.startsWith(route));
+    
+    if (shouldHide) {
         return null;
     }
 
     return (
         <nav
-            className="fixed bottom-0 left-0 right-0 z-[20] bg-card/95 backdrop-blur-xl border-t border-card-border lg:hidden"
+            className="fixed bottom-0 left-0 right-0 z-[var(--z-sticky)] bg-card/95 backdrop-blur-xl border-t border-card-border lg:hidden"
             aria-label="Mobile navigation"
         >
             {/* Safe-area inset for notched devices */}
             <div
                 className="flex items-center justify-around h-16 px-2 max-w-xl mx-auto"
-                style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+                style={{ paddingBottom: 'env(safe-area-inset-bottom, 0.5rem)' }}
             >
                 {navItems.map((item) => {
                     const Icon = item.icon;

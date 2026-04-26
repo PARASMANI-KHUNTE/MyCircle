@@ -70,11 +70,24 @@ const Requests = () => {
 
     const navigate = useNavigate();
 
-    const handleMessage = async (userId) => {
+    const handleMessage = async (request) => {
         try {
-            const res = await api.post(`/chat/init/${userId}`);
+            if (request?.conversationId) {
+                navigate(`/chat?conversationId=${request.conversationId}`);
+                return;
+            }
+
+            const targetUserId = activeTab === 'received'
+                ? request?.requester?._id
+                : request?.recipient?._id;
+            const res = await api.post(`/chat/init/${targetUserId}`, {
+                postId: request?.post?._id
+            });
             const targetConversationId = res.data?._id;
-            navigate(targetConversationId ? `/chat?conversationId=${targetConversationId}` : `/chat?recipientId=${userId}`);
+            if (!targetConversationId) {
+                throw new Error('Conversation was not created');
+            }
+            navigate(`/chat?conversationId=${targetConversationId}`);
         } catch (err) {
             console.error(err);
             showError(err.response?.data?.msg || "Failed to start chat");
@@ -117,10 +130,16 @@ const Requests = () => {
         setActionLoading(requestId);
         try {
             const { data } = await api.put(`/contacts/${requestId}/status`, { status: 'completed' });
-            setReceivedRequests(prev => prev.map(req =>
-                req._id === requestId ? { ...req, ...data } : req
-            ));
-            success('Marked as completed!');
+            if (data?.removed) {
+                setReceivedRequests(prev => prev.filter(req => req._id !== requestId));
+                setSentRequests(prev => prev.filter(req => req.post?._id !== data.postId));
+                success('Work completed. Post closed and chat deleted.');
+            } else {
+                setReceivedRequests(prev => prev.map(req =>
+                    req._id === requestId ? { ...req, ...data } : req
+                ));
+                success('Marked as completed!');
+            }
         } catch (err) {
             console.error(err);
             showError(err.response?.data?.msg || "Failed to complete");
@@ -160,8 +179,8 @@ const Requests = () => {
         <div className="min-h-screen bg-background">
             {/* Header */}
             <div className="sticky top-16 md:top-20 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
+                <div className="container mx-auto px-3 sm:px-4 py-4">
+                    <div className="flex items-start sm:items-center justify-between gap-3">
                         <div>
                             <p className="text-sm text-muted-foreground">
                                 {pendingCount > 0 ? `${pendingCount} pending` : 'No pending requests'}
@@ -220,7 +239,7 @@ const Requests = () => {
             </div>
 
             {/* Content */}
-            <div className="container mx-auto px-4 py-6 max-w-2xl">
+                <div className="container mx-auto px-3 sm:px-4 py-6 max-w-2xl">
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
                         <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -248,7 +267,7 @@ const Requests = () => {
                                 const badge = getStatusBadge(req.status);
                                 const BadgeIcon = badge.Icon;
                                 const isPending = req.status === 'pending';
-                                const isAccepted = req.status === 'accepted' || req.status === 'completed';
+                                const isAccepted = req.status === 'accepted';
 
                                 return (
                                     <motion.div
@@ -288,7 +307,7 @@ const Requests = () => {
                                         )}
 
                                         {/* User Info */}
-                                        <div className="p-4 flex items-start gap-4">
+                                        <div className="p-4 flex items-start gap-3 sm:gap-4">
                                             <Link to={`/profile?userId=${otherUser?._id}`} className="shrink-0">
                                                 <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10">
                                                     <img 
@@ -300,7 +319,7 @@ const Requests = () => {
                                             </Link>
                                             
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
+                                                <div className="flex flex-wrap items-center gap-2 mb-1">
                                                     <Link to={`/profile?userId=${otherUser?._id}`} className="font-semibold hover:text-primary">
                                                         {otherUser?.displayName || 'User'}
                                                     </Link>
@@ -316,7 +335,7 @@ const Requests = () => {
                                                 )}
 
                                                 {/* Timeline */}
-                                                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs text-muted-foreground">
                                                     <span>{new Date(req.createdAt).toLocaleDateString()}</span>
                                                     {req.post?.type && (
                                                         <span className="px-2 py-0.5 bg-primary/10 rounded-full capitalize">
@@ -327,7 +346,7 @@ const Requests = () => {
                                             </div>
 
                                             {/* Status Badge */}
-                                            <div className={`px-2 py-1 rounded-full flex items-center gap-1 text-xs font-medium ${badge.bg} ${badge.text}`}>
+                                            <div className={`px-2 py-1 rounded-full flex items-center gap-1 text-xs font-medium shrink-0 ${badge.bg} ${badge.text}`}>
                                                 <BadgeIcon className="w-3 h-3" />
                                                 {badge.label}
                                             </div>
@@ -342,7 +361,7 @@ const Requests = () => {
                                                         size="sm"
                                                         onClick={() => handleAction(req._id, 'accepted')}
                                                         disabled={actionLoading === req._id}
-                                                        className="gap-1.5"
+                                                        className="gap-1.5 flex-1 sm:flex-none justify-center"
                                                     >
                                                         {actionLoading === req._id ? (
                                                             <RefreshCw className="w-3 h-3 animate-spin" />
@@ -356,7 +375,7 @@ const Requests = () => {
                                                         size="sm"
                                                         onClick={() => handleAction(req._id, 'rejected')}
                                                         disabled={actionLoading === req._id}
-                                                        className="gap-1.5 text-red-400 border-red-400/30 hover:bg-red-500/10"
+                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-red-400 border-red-400/30 hover:bg-red-500/10"
                                                     >
                                                         <X className="w-3 h-3" />
                                                         Reject
@@ -368,8 +387,8 @@ const Requests = () => {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleMessage(otherUser?._id)}
-                                                    className="gap-1.5"
+                                                    onClick={() => handleMessage(req)}
+                                                    className="gap-1.5 flex-1 sm:flex-none justify-center"
                                                 >
                                                     <MessageCircle className="w-3 h-3" />
                                                     Message
@@ -382,7 +401,7 @@ const Requests = () => {
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => handleCall(otherUser.contactPhone || otherUser.contactWhatsapp)}
-                                                        className="gap-1.5 text-green-400 border-green-400/30"
+                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-green-400 border-green-400/30"
                                                     >
                                                         <Phone className="w-3 h-3" />
                                                         Call
@@ -391,7 +410,7 @@ const Requests = () => {
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => handleStartText(otherUser.contactWhatsapp || otherUser.contactPhone)}
-                                                        className="gap-1.5 text-blue-400 border-blue-400/30"
+                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-blue-400 border-blue-400/30"
                                                     >
                                                         <MessageSquare className="w-3 h-3" />
                                                         Text
@@ -405,7 +424,7 @@ const Requests = () => {
                                                     size="sm"
                                                     onClick={() => handleComplete(req._id)}
                                                     disabled={actionLoading === req._id}
-                                                    className="gap-1.5 text-blue-400 border-blue-400/30"
+                                                    className="gap-1.5 flex-1 sm:flex-none justify-center text-blue-400 border-blue-400/30"
                                                 >
                                                     {actionLoading === req._id ? (
                                                         <RefreshCw className="w-3 h-3 animate-spin" />

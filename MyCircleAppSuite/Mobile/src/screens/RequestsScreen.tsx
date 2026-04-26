@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import api from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
-import { X, Check, MessageCircle, Trash2, ArrowLeft, Star, BadgeCheck } from 'lucide-react-native';
+import { X, Check, MessageCircle, Trash2, ArrowLeft, BadgeCheck } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -136,9 +136,11 @@ const RequestsScreen = ({ navigation }: any) => {
         });
     };
 
-    const openChat = async (userId: string) => {
+    const openChat = async (request: any, userId: string) => {
         try {
-            const conversation = await ensureConversationWithUser(userId);
+            const conversation = request?.conversationId
+                ? { _id: request.conversationId }
+                : await ensureConversationWithUser(userId, request?.post?._id);
             navigation.navigate('ChatWindow', { conversation });
         } catch (error) {
             console.error(error);
@@ -161,30 +163,18 @@ const RequestsScreen = ({ navigation }: any) => {
     const handleComplete = async (id: string) => {
         try {
             const res = await api.put(`/contacts/${id}/status`, { status: 'completed' });
-            updateRequestInState(res.data);
+            if (res.data?.removed) {
+                setReceivedRequests(prev => prev.filter(req => req._id !== id));
+                setSentRequests(prev => prev.filter(req => req.post?._id !== res.data.postId));
+            } else {
+                updateRequestInState(res.data);
+            }
         } catch (error) {
             console.error(error);
             setAlertConfig({
                 visible: true,
                 title: 'Error',
                 message: 'Failed to mark work complete',
-                confirmText: 'OK',
-                isDestructive: false,
-                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
-            });
-        }
-    };
-
-    const handleRate = async (requestId: string, score: number) => {
-        try {
-            const res = await api.post(`/contacts/${requestId}/rate`, { score });
-            updateRequestInState(res.data);
-        } catch (error) {
-            console.error(error);
-            setAlertConfig({
-                visible: true,
-                title: 'Error',
-                message: 'Failed to submit rating',
                 confirmText: 'OK',
                 isDestructive: false,
                 onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
@@ -270,10 +260,10 @@ const RequestsScreen = ({ navigation }: any) => {
                                     item.status === 'accepted' || item.status === 'completed' ? styles.approvedText : styles.rejectedText
                                 ]}>Request {item.status}</Text>
                             </View>
-                            {(item.status === 'accepted' || item.status === 'completed') && (
+                            {item.status === 'accepted' && (
                                 <View style={styles.postDecisionActions}>
                                     <TouchableOpacity
-                                        onPress={() => openChat(item.requester._id)}
+                                        onPress={() => openChat(item, item.requester._id)}
                                         style={styles.chatButtonNeon}
                                     >
                                         <MessageCircle size={18} color="white" />
@@ -284,15 +274,6 @@ const RequestsScreen = ({ navigation }: any) => {
                                             <BadgeCheck size={16} color="#10b981" />
                                             <Text style={styles.completeButtonText}>MARK COMPLETE</Text>
                                         </TouchableOpacity>
-                                    )}
-                                    {item.status === 'completed' && item.canRate && (
-                                        <View style={styles.ratingRow}>
-                                            {[1, 2, 3, 4, 5].map((score) => (
-                                                <TouchableOpacity key={score} onPress={() => handleRate(item._id, score)} style={styles.ratingButton}>
-                                                    <Star size={16} color="#facc15" fill="#facc15" />
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
                                     )}
                                 </View>
                             )}
@@ -351,31 +332,17 @@ const RequestsScreen = ({ navigation }: any) => {
                             </View>
                         </View>
 
-                        {(item.status === 'accepted' || item.status === 'completed') && (
+                        {item.status === 'accepted' && (
                             <View style={styles.contactActions}>
                                 <TouchableOpacity
-                                    onPress={() => openChat(item.recipient._id)}
+                                    onPress={() => openChat(item, item.recipient._id)}
                                     style={styles.iconButtonNeon}
                                 >
                                     <MessageCircle size={18} color="white" />
                                 </TouchableOpacity>
-                                {item.status === 'accepted' && (
-                                    <TouchableOpacity onPress={() => handleComplete(item._id)} style={styles.iconButtonComplete}>
-                                        <BadgeCheck size={18} color="#10b981" />
-                                    </TouchableOpacity>
-                                )}
                             </View>
                         )}
                     </View>
-                    {item.status === 'completed' && item.canRate && (
-                        <View style={styles.ratingRowSent}>
-                            {[1, 2, 3, 4, 5].map((score) => (
-                                <TouchableOpacity key={score} onPress={() => handleRate(item._id, score)} style={styles.ratingButton}>
-                                    <Star size={16} color="#facc15" fill="#facc15" />
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
                 </View>
             </Animated.View>
         );
@@ -751,17 +718,6 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 5,
     },
-    iconButtonComplete: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 8,
-        backgroundColor: 'rgba(16,185,129,0.1)',
-        borderWidth: 1,
-        borderColor: 'rgba(16,185,129,0.2)',
-    },
     completeButton: {
         minHeight: 44,
         borderRadius: 12,
@@ -777,26 +733,6 @@ const styles = StyleSheet.create({
         color: '#10b981',
         fontWeight: '800',
         fontSize: 12,
-    },
-    ratingRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    ratingRowSent: {
-        flexDirection: 'row',
-        marginTop: 12,
-        gap: 8,
-    },
-    ratingButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(250,204,21,0.08)',
-        borderWidth: 1,
-        borderColor: 'rgba(250,204,21,0.2)',
     },
 });
 

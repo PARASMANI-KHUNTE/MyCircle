@@ -4,6 +4,7 @@ import api from '../utils/api';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/ui/Toast';
+import { getNotificationCopy, getToastMessageFromNotification } from '../utils/notificationMessage';
 
 const noopAsync = async () => {};
 const noop = () => {};
@@ -41,8 +42,17 @@ export const NotificationProvider = ({ children }) => {
                 : Array.isArray(res.data?.notifications)
                     ? res.data.notifications
                     : [];
-            setNotifications(notificationList);
-            setUnreadCount(notificationList.filter((n) => !n?.read).length);
+            const normalizedNotifications = notificationList.map((notification) => {
+                const copy = getNotificationCopy(notification);
+                return {
+                    ...notification,
+                    title: copy.title,
+                    message: copy.message,
+                };
+            });
+
+            setNotifications(normalizedNotifications);
+            setUnreadCount(normalizedNotifications.filter((n) => !n?.read).length);
         } catch (err) {
             console.error('Failed to fetch notifications:', err);
         } finally {
@@ -86,13 +96,20 @@ export const NotificationProvider = ({ children }) => {
         if (!socket) return;
 
         const handleNewNotification = (notification) => {
+            const copy = getNotificationCopy(notification);
+            const normalizedNotification = {
+                ...notification,
+                title: copy.title,
+                message: copy.message,
+            };
+
             setNotifications((prev) => {
-                const existing = prev.find((item) => item._id === notification._id);
-                const filtered = prev.filter((item) => item._id !== notification._id);
-                if (!notification.read && (!existing || existing.read)) {
+                const existing = prev.find((item) => item._id === normalizedNotification._id);
+                const filtered = prev.filter((item) => item._id !== normalizedNotification._id);
+                if (!normalizedNotification.read && (!existing || existing.read)) {
                     setUnreadCount((count) => count + 1);
                 }
-                return [notification, ...filtered];
+                return [normalizedNotification, ...filtered];
             });
 
             // Play notification sound
@@ -100,7 +117,7 @@ export const NotificationProvider = ({ children }) => {
 
             // Show toast with specific type
             const toastType = ['message', 'like', 'request'].includes(notification.type) ? notification.type : 'info';
-            toast(notification.title || notification.message, toastType);
+            toast(getToastMessageFromNotification(normalizedNotification), toastType);
         };
 
         socket.on('new_notification', handleNewNotification);

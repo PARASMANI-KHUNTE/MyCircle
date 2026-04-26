@@ -13,7 +13,7 @@ import { getPostInsights, getPostExplanation } from '../services/aiService';
 import {
     ArrowLeft, MapPin, Clock, MessageCircle,
     Share2, Heart, Repeat, Phone, UserPlus, UserCheck,
-    Check, Copy, Edit2, Trash2, Sparkles, Navigation, MessageSquare
+    Check, Copy, Edit2, Trash2, Sparkles, Navigation, MessageSquare, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useDialog } from '../hooks/useDialog';
 import { useTheme } from '../context/ThemeContext';
@@ -47,16 +47,18 @@ const PostDetails = () => {
         return sharedPosts.includes(id);
     });
     const [relatedPosts, setRelatedPosts] = useState([]);
-    const [replyingTo, setReplyingTo] = useState(null); // Comment ID being replied to
+    const [replyingTo, setReplyingTo] = useState(null);
     const [replyText, setReplyText] = useState('');
-    const [editingComment, setEditingComment] = useState(null); // Comment ID being edited
+    const [editingComment, setEditingComment] = useState(null);
     const [editText, setEditText] = useState('');
     const [aiSummary, setAiSummary] = useState('');
     const [aiInsights, setAiInsights] = useState(null);
     const [isFetchingAi, setIsFetchingAi] = useState(false);
+    const [showFullDetails, setShowFullDetails] = useState(false);
 
     const currentUserId = user?._id || user?.id;
     const isLiked = currentUserId && likes.includes(currentUserId);
+    const hasChatAccess = contactRequestStatus === 'accepted' || contactRequestStatus === 'approved';
 
     const handleReplySubmit = async (commentId) => {
         if (!replyText.trim()) return;
@@ -64,7 +66,6 @@ const PostDetails = () => {
         try {
             const res = await api.post(`/posts/${id}/comment/${commentId}/reply`, { text: replyText });
 
-            // Update UI optimistically or fetch fresh post
             setPost(prev => {
                 const updatedComments = prev.comments.map(c => {
                     if (c._id === commentId) {
@@ -88,13 +89,16 @@ const PostDetails = () => {
     };
 
     const handleMessage = async () => {
-        if (contactRequestStatus !== 'approved') {
+        if (!hasChatAccess) {
             showError('Chat unlocks only after your request is approved.');
             return;
         }
         try {
-            await api.post(`/chat/init/${post.user._id}`);
-            navigate(`/chat?recipientId=${post.user._id}`);
+            const res = await api.post(`/chat/init/${post.user._id}`, { postId: id });
+            if (!res.data?._id) {
+                throw new Error('Conversation was not created');
+            }
+            navigate(`/chat?conversationId=${res.data._id}`);
         } catch (err) {
             console.error(err);
             if (err.response?.status === 403) {
@@ -133,7 +137,6 @@ const PostDetails = () => {
                 setRequestSent(!!res.data.hasRequested);
                 setContactRequestStatus(res.data.contactRequestStatus || (res.data.hasRequested ? 'pending' : 'none'));
 
-                // Fetch Related Posts
                 try {
                     const relatedRes = await api.get(`/posts/related/${id}`);
                     setRelatedPosts(relatedRes.data);
@@ -142,9 +145,6 @@ const PostDetails = () => {
                 }
 
                 setLoading(false);
-
-                // Fetch AI Content
-                // fetchAiContent(res.data); // Removed auto-fetch
             } catch (err) {
                 console.error(err);
                 setLoading(false);
@@ -183,7 +183,6 @@ const PostDetails = () => {
         return { expired: false, text: `${mins}m left`, urgent: true };
     };
 
-    // Handle Deep Linking Scroll
     useEffect(() => {
         if (!loading && post && window.location.hash === '#comments') {
             setTimeout(() => {
@@ -191,7 +190,7 @@ const PostDetails = () => {
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth' });
                 }
-            }, 500); // Small delay to ensuring rendering
+            }, 500);
         }
     }, [loading, post]);
 
@@ -289,7 +288,6 @@ const PostDetails = () => {
         try {
             const res = await api.put(`/posts/${id}/comment/${commentId}`, { text: editText });
 
-            // Update UI
             setPost(prev => ({
                 ...prev,
                 comments: prev.comments.map(c =>
@@ -342,16 +340,17 @@ const PostDetails = () => {
     if (loading) return <div className="text-foreground text-center py-20">Loading details...</div>;
     if (!post) return <div className="text-foreground text-center py-20">Post not found</div>;
 
-    const isOwnPost = currentUserId && post.user._id === currentUserId;
+    const isOwnPost = currentUserId && (post.user._id === currentUserId || post.user === currentUserId);
+    const timeRemaining = getTimeRemaining();
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="container mx-auto px-4 sm:px-6 py-20 sm:py-24 min-h-screen text-foreground"
+            className="container mx-auto px-3 sm:px-6 py-16 sm:py-24 min-h-screen text-foreground"
         >
             <button
-                className="group mb-10 flex items-center gap-2 text-text-muted hover:text-primary transition-all font-black text-[10px] uppercase tracking-[0.2em]"
+                className="group mb-6 sm:mb-10 flex items-center gap-2 text-text-muted hover:text-primary transition-all font-black text-[10px] uppercase tracking-[0.2em]"
                 onClick={() => navigate(-1)}
             >
                 <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
@@ -359,17 +358,17 @@ const PostDetails = () => {
             </button>
 
             {isOwnPost && (
-                <div className="flex items-center gap-2 mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 sm:mb-8">
                     <button
                         onClick={() => navigate(`/edit-post/${id}`)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold w-full sm:w-auto"
                     >
                         <Edit2 className="w-4 h-4" />
                         Edit Post
                     </button>
                     <button
                         onClick={handleDeletePost}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-semibold"
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-semibold w-full sm:w-auto"
                     >
                         <Trash2 className="w-4 h-4" />
                         Delete
@@ -377,402 +376,394 @@ const PostDetails = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Content */}
-                <div className="lg:col-span-2 space-y-8">
-                    {/* Hero Image */}
-                    <div className="rounded-2xl sm:rounded-[2.5rem] overflow-hidden aspect-video relative group shadow-2xl border border-card-border">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+                <div className="lg:col-span-2">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative rounded-3xl overflow-hidden mb-8 shadow-2xl"
+                    >
                         {post.images && post.images.length > 0 ? (
-                            <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
+                            <img
+                                src={post.images[0]}
+                                alt={post.title}
+                                className="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover"
+                            />
                         ) : (
-                            <div className="flex items-center justify-center h-full text-text-muted bg-background-section">
-                                No Image Available
+                            <div className="w-full h-[300px] sm:h-[400px] lg:h-[500px] bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                                <span className="text-text-muted font-black text-2xl">No Image</span>
                             </div>
                         )}
-                    </div>
+                        {post.expired || (timeRemaining && timeRemaining.expired) && (
+                            <div className="absolute top-4 right-4 px-4 py-2 rounded-full bg-red-500/90 text-white text-xs font-black uppercase tracking-widest shadow-lg">
+                                Expired
+                            </div>
+                        )}
+                    </motion.div>
 
-                    {/* Title & Info */}
-                    <div className="space-y-6">
-                        <div className="flex flex-wrap gap-2">
-                            <span className={cn(
-                                "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border",
-                                post.type === 'job' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                    post.type === 'sell' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                        'bg-primary/10 text-primary border-primary/20'
-                            )}>
-                                {post.type}
-                            </span>
-                            {post.acceptsBarter && (
-                                <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-pink-500/10 text-pink-500 border border-pink-500/20 flex items-center gap-1">
-                                    <Repeat className="w-3 h-3" /> Barter Ready
-                                </span>
+                    <div className="mb-6">
+                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-text-heading mb-4 leading-tight">
+                            {post.title}
+                        </h1>
+
+                        <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6">
+                            {post.location && (
+                                <div className="flex items-center gap-2 text-text-muted">
+                                    <MapPin className="w-4 h-4" />
+                                    <span className="text-sm font-medium">{post.location}</span>
+                                </div>
                             )}
-                        </div>
-
-                        <div className="flex justify-between items-start gap-6">
-                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-text-heading tracking-tight leading-[0.9]">
-                                {post.title}
-                            </h1>
-                            <div className="flex gap-2 shrink-0">
-                                <button
-                                    onClick={() => fetchAiContent(post)}
-                                    className={cn(
-                                        "p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500",
-                                        isFetchingAi || aiSummary ? 'text-primary border-primary/30' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
-                                    )}
-                                    title="AI Synthesis"
-                                    disabled={isFetchingAi}
-                                >
-                                    <Sparkles className={cn("w-5 h-5", isFetchingAi && "animate-spin")} />
-                                </button>
-                                <button
-                                    onClick={handleShare}
-                                    className={cn(
-                                        "p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500",
-                                        hasShared ? 'text-blue-500 border-blue-500/30' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
-                                    )}
-                                    title={hasShared ? "Link already copied!" : "Copy share link"}
-                                >
-                                    <Share2 className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={handleLike}
-                                    className={cn(
-                                        "p-4 rounded-2xl bg-card border border-card-border shadow-xl hover:shadow-2xl transition-all duration-500",
-                                        isLiked ? 'text-pink-500 border-pink-500/30' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'
-                                    )}
-                                >
-                                    <Heart className={cn("w-5 h-5", isLiked && "fill-current scale-110")} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-8 text-[11px] font-black uppercase tracking-widest text-text-muted border-t border-card-border pt-6">
-                            <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-primary" /> {post.location}
-                            </div>
-                            {post.expiresAt && (() => {
-                                const remaining = getTimeRemaining();
-                                if (!remaining) return null;
-                                return (
-                                    <div className={cn("flex items-center gap-2", remaining.expired && "text-red-500", remaining.urgent && !remaining.expired && "text-orange-500")}>
-                                        <Clock className="w-4 h-4" /> {remaining.text}
-                                    </div>
-                                );
-                            })()}
-                            {post.duration ? (
-                                <div className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-primary" /> {formatDuration(post.duration)}
+                            {timeRemaining && (
+                                <div className={cn(
+                                    "flex items-center gap-2",
+                                    timeRemaining.urgent ? "text-red-500" : "text-text-muted"
+                                )}>
+                                    <Clock className="w-4 h-4" />
+                                    <span className="text-sm font-medium">{timeRemaining.text}</span>
                                 </div>
-                            ) : null}
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-primary" /> {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </div>
-                            <div className="flex items-center gap-2 text-pink-500">
-                                <Heart className="w-4 h-4 fill-current opacity-50" /> {likes.length} Interactions
+                            )}
+                            <div className="flex items-center gap-2 text-text-muted">
+                                <Heart className="w-4 h-4" />
+                                <span className="text-sm font-medium">{likes.length} likes</span>
                             </div>
                         </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleLike}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold transition-all",
+                                    isLiked
+                                        ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                                        : "bg-card/10 text-text-muted border border-card-border hover:bg-card/20"
+                                )}
+                            >
+                                <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
+                                <span>{isLiked ? 'Liked' : 'Like'}</span>
+                            </button>
+                            <button
+                                onClick={handleShare}
+                                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold bg-card/10 text-text-muted border border-card-border hover:bg-card/20 transition-all"
+                            >
+                                <Share2 className="w-5 h-5" />
+                                <span>Share</span>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setShowFullDetails(!showFullDetails)}
+                            className="mt-6 w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all"
+                        >
+                            {showFullDetails ? (
+                                <>
+                                    <ChevronUp className="w-5 h-5" />
+                                    <span>Show Less</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronDown className="w-5 h-5" />
+                                    <span>View Full Details</span>
+                                </>
+                            )}
+                        </button>
                     </div>
 
-                    <div className="h-px bg-card-border/50" />
-
-                    {/* Description */}
-                    <div>
-                        <h2 className="text-xl font-bold text-text-heading mb-4">Description</h2>
-                        <p className="text-text-body leading-relaxed text-lg whitespace-pre-wrap font-medium">
-                            {post.description}
-                        </p>
-
-                        {post.acceptsBarter && post.barterPreferences && (
-                            <div className="mt-6 p-4 rounded-xl bg-pink-500/5 border border-pink-500/20">
-                                <h3 className="text-pink-600 font-semibold mb-2 flex items-center gap-2">
-                                    <Repeat className="w-4 h-4" /> Barter Preferences
-                                </h3>
-                                <p className="text-text-body font-medium">
-                                    {post.barterPreferences}
-                                </p>
-                            </div>
-                        )}
-
-                        {(post.budgetMin || post.budgetMax || post.availability) && (
-                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {(post.budgetMin || post.budgetMax) && (
-                                    <div className="p-4 rounded-xl bg-card border border-card-border">
-                                        <h3 className="text-text-heading font-semibold mb-2">Budget Range</h3>
-                                        <p className="text-text-body font-medium">
-                                            ₹{post.budgetMin || post.price || 0} to ₹{post.budgetMax || post.price || 0}
-                                        </p>
-                                    </div>
-                                )}
-                                {post.availability && (
-                                    <div className="p-4 rounded-xl bg-card border border-card-border">
-                                        <h3 className="text-text-heading font-semibold mb-2">Availability</h3>
-                                        <p className="text-text-body font-medium whitespace-pre-wrap">{post.availability}</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* AI Summary Section */}
-                        {(aiSummary || isFetchingAi) && (
-                            <div className="mt-8 p-6 rounded-2xl bg-primary/5 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <Sparkles className="w-12 h-12 text-primary" />
+                    {showFullDetails && (
+                        <div className="space-y-8">
+                            {post.description && (
+                                <div className="p-6 bg-card/10 border border-card-border rounded-2xl shadow-inner">
+                                    <h2 className="text-lg font-black text-text-heading mb-3 uppercase tracking-wide">Description</h2>
+                                    <p className="text-text-body font-medium leading-relaxed whitespace-pre-wrap">{post.description}</p>
                                 </div>
-                                <div className="flex items-center gap-2 mb-4 text-primary">
-                                    <Sparkles className="w-5 h-5" />
-                                    <span className="text-sm font-bold uppercase tracking-widest">AI Summary</span>
+                            )}
+
+                            {post.barterPreferences && (
+                                <div className="p-6 bg-card/10 border border-card-border rounded-2xl shadow-inner">
+                                    <h2 className="text-lg font-black text-text-heading mb-3 uppercase tracking-wide">Barter Preferences</h2>
+                                    <p className="text-text-body font-medium leading-relaxed whitespace-pre-wrap">{post.barterPreferences}</p>
+                                </div>
+                            )}
+
+                            {post.budgetRange && (
+                                <div className="p-6 bg-card/10 border border-card-border rounded-2xl shadow-inner">
+                                    <h2 className="text-lg font-black text-text-heading mb-3 uppercase tracking-wide">Budget Range</h2>
+                                    <p className="text-text-body font-medium leading-relaxed">₹{post.budgetRange.min} - ₹{post.budgetRange.max}</p>
+                                </div>
+                            )}
+
+                            {post.availability && (
+                                <div className="p-6 bg-card/10 border border-card-border rounded-2xl shadow-inner">
+                                    <h2 className="text-lg font-black text-text-heading mb-3 uppercase tracking-wide">Availability</h2>
+                                    <p className="text-text-body font-medium leading-relaxed whitespace-pre-wrap">{post.availability}</p>
+                                </div>
+                            )}
+
+                            <div className="p-6 bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-2xl shadow-lg">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 bg-primary/20 rounded-xl">
+                                        <Sparkles className="w-5 h-5 text-primary" />
+                                    </div>
+                                    <h2 className="text-lg font-black text-text-heading uppercase tracking-wide">AI Summary</h2>
                                 </div>
                                 {isFetchingAi ? (
-                                    <div className="space-y-2">
-                                        <div className="h-4 bg-primary/10 rounded w-full animate-pulse" />
-                                        <div className="h-4 bg-primary/10 rounded w-3/4 animate-pulse" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                        <span className="text-text-muted font-medium">Generating summary...</span>
                                     </div>
+                                ) : aiSummary ? (
+                                    <p className="text-text-body font-medium leading-relaxed">{aiSummary}</p>
                                 ) : (
-                                    <p className="text-text-body leading-relaxed italic text-lg opacity-90">
-                                        "{aiSummary}"
-                                    </p>
+                                    <button
+                                        onClick={() => fetchAiContent(post)}
+                                        className="w-full py-4 rounded-xl bg-primary/20 text-primary font-bold hover:bg-primary/30 transition-all border border-primary/20"
+                                    >
+                                        Generate AI Summary
+                                    </button>
                                 )}
                             </div>
-                        )}
 
-                        {/* AI Insights Section */}
-                        {aiInsights && (
-                            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-card border border-card-border shadow-sm">
-                                    <p className="text-xs text-text-muted uppercase font-bold mb-1">Market Demand</p>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 h-2 bg-background-section rounded-full overflow-hidden">
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${aiInsights.demandScore * 10 || 50}%` }}
-                                                className="h-full bg-primary"
-                                            />
-                                        </div>
-                                        <span className="text-sm text-text-heading font-medium">{aiInsights.demandLevel}</span>
+                            <div className="p-6 bg-gradient-to-br from-secondary/10 to-amber-500/10 border border-secondary/20 rounded-2xl shadow-lg">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 bg-secondary/20 rounded-xl">
+                                        <Navigation className="w-5 h-5 text-secondary" />
                                     </div>
+                                    <h2 className="text-lg font-black text-text-heading uppercase tracking-wide">AI Insights</h2>
                                 </div>
-                                <div className="p-4 rounded-xl bg-card border border-card-border shadow-sm">
-                                    <p className="text-xs text-text-muted uppercase font-bold mb-1">Price Analysis</p>
-                                    <p className="text-sm text-text-heading font-medium">{aiInsights.priceAnalysis}</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Location Map Section */}
-                        {post.locationCoords?.coordinates?.length === 2 && (
-                            <div className="mt-8">
-                                <h2 className="text-xl font-bold text-text-heading mb-4 flex items-center gap-2">
-                                    <Navigation className="w-5 h-5 text-primary" /> Location
-                                </h2>
-                                <div className="w-full h-[250px] sm:h-[300px] lg:h-[400px] rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-2xl border border-card-border">
-                                    <MapContainer
-                                        center={[post.locationCoords.coordinates[1], post.locationCoords.coordinates[0]]}
-                                        zoom={14}
-                                        scrollWheelZoom={false}
-                                        className="w-full h-full"
-                                    >
-                                        <TileLayer url={isDark
-                                            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                                            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"}
-                                        />
-                                        <Marker position={[post.locationCoords.coordinates[1], post.locationCoords.coordinates[0]]}>
-                                            <Popup className="custom-popup">
-                                                <div className="p-1 font-bold text-text-heading">{post.location}</div>
-                                            </Popup>
-                                        </Marker>
-                                    </MapContainer>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Comments Section */}
-                    <div id="comments">
-                        <div className="h-px bg-card-border mb-8" />
-                        <h2 className="text-xl font-bold text-foreground mb-6">Comments ({post.comments?.length || 0})</h2>
-
-                        {/* New Comment Input */}
-                        {user ? (
-                            <form onSubmit={handleCommentSubmit} className="mb-8 flex gap-4">
-                                <div className="w-10 h-10 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
-                                    <img src={getAvatarUrl(user)} alt={user.displayName} className="w-full h-full object-cover" />
-                                </div>
-                                <div className="flex-1 relative">
-                                    <input
-                                        type="text"
-                                        value={commentText}
-                                        onChange={(e) => setCommentText(e.target.value)}
-                                        placeholder="Add a comment..."
-                                        className="w-full bg-card/10 border border-card-border rounded-xl pl-4 pr-12 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={!commentText.trim()}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
-                                    >
-                                        <MessageCircle className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </form>
-                        ) : (
-                            <div className="mb-8 p-4 bg-card/10 border border-card-border rounded-xl text-center text-muted-foreground text-sm font-medium">
-                                Please <button onClick={() => navigate('/login')} className="text-primary font-bold hover:underline">sign in</button> to comment.
-                            </div>
-                        )}
-
-                        {/* Comments List */}
-                        <div className="space-y-6">
-                            {post.comments?.length > 0 ? (
-                                post.comments.map((comment, index) => (
-                                    <div key={index} className="flex gap-4 group">
-                                        <div className="w-10 h-10 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
-                                            <img src={getAvatarUrl(comment.user)} alt={comment.user?.displayName || "User"} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between gap-2 mb-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-foreground">{comment.user?.displayName || "Unknown User"}</span>
-                                                    <span className="text-xs text-muted-foreground font-medium">{new Date(comment.createdAt).toLocaleDateString()}</span>
-                                                </div>
-                                                {/* Edit/Delete buttons for comment owner */}
-                                                {currentUserId && comment.user?._id === currentUserId && (
-                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingComment(comment._id);
-                                                                setEditText(comment.text);
-                                                            }}
-                                                            className="text-xs text-blue-400 hover:text-blue-300"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteComment(comment._id)}
-                                                            className="text-xs text-red-400 hover:text-red-300"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-                                                )}
+                                {isFetchingAi ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin" />
+                                        <span className="text-text-muted font-medium">Generating insights...</span>
+                                    </div>
+                                ) : aiInsights ? (
+                                    <div className="space-y-3">
+                                        {aiInsights.fairPrice && (
+                                            <div className="p-4 bg-card/10 rounded-xl border border-card-border">
+                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Fair Price Range</span>
+                                                <p className="text-text-heading font-bold mt-1">{aiInsights.fairPrice}</p>
                                             </div>
-
-                                            {/* Comment Text or Edit Mode */}
-                                            {editingComment === comment._id ? (
-                                                <div className="flex gap-2 mb-2">
-                                                    <input
-                                                        type="text"
-                                                        value={editText}
-                                                        onChange={(e) => setEditText(e.target.value)}
-                                                        className="flex-1 bg-card/10 border border-card-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 shadow-inner"
-                                                        autoFocus
-                                                    />
-                                                    <button
-                                                        onClick={() => handleEditComment(comment._id)}
-                                                        disabled={!editText.trim()}
-                                                        className="text-primary text-sm font-medium hover:text-primary-foreground disabled:opacity-50"
-                                                    >
-                                                        Save
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingComment(null);
-                                                            setEditText('');
-                                                        }}
-                                                        className="text-text-muted text-sm font-medium hover:text-text-heading"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <p className="text-muted-foreground font-medium">{comment.text}</p>
-                                            )}
-
-                                            {/* Reply Button */}
-                                            {editingComment !== comment._id && (
-                                                <button
-                                                    onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)}
-                                                    className="text-xs text-primary mt-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    Reply
-                                                </button>
-                                            )}
-
-                                            {/* Reply Form */}
-                                            {replyingTo === comment._id && (
-                                                <div className="mt-3 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                    <input
-                                                        type="text"
-                                                        value={replyText}
-                                                        onChange={(e) => setReplyText(e.target.value)}
-                                                        placeholder={`Reply to ${comment.user?.displayName}...`}
-                                                        className="flex-1 bg-card/10 border border-card-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 shadow-inner"
-                                                        autoFocus
-                                                    />
-                                                    <button
-                                                        onClick={() => handleReplySubmit(comment._id)}
-                                                        disabled={!replyText.trim()}
-                                                        className="text-primary text-sm font-medium hover:text-text-heading disabled:opacity-50"
-                                                    >
-                                                        Send
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            {/* Nested Replies */}
-                                            {comment.replies && comment.replies.length > 0 && (
-                                                <div className="mt-4 space-y-4 border-l-2 border-card-border pl-4">
-                                                    {comment.replies.map((reply, rIndex) => (
-                                                        <div key={rIndex} className="flex gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-background-section overflow-hidden shrink-0 border border-card-border shadow-sm">
-                                                                <img src={getAvatarUrl(reply.user)} alt={reply.user?.displayName || "User"} className="w-full h-full object-cover" />
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2 mb-0.5">
-                                                                    <span className="font-bold text-sm text-text-heading">{reply.user?.displayName}</span>
-                                                                    <span className="text-[10px] text-text-muted font-medium">{new Date(reply.createdAt).toLocaleDateString()}</span>
-                                                                </div>
-                                                                <p className="text-sm text-text-body font-medium">{reply.text}</p>
-                                                            </div>
-                                                        </div>
+                                        )}
+                                        {aiInsights.marketComparison && (
+                                            <div className="p-4 bg-card/10 rounded-xl border border-card-border">
+                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Market Comparison</span>
+                                                <p className="text-text-body font-medium mt-1">{aiInsights.marketComparison}</p>
+                                            </div>
+                                        )}
+                                        {aiInsights.risks && aiInsights.risks.length > 0 && (
+                                            <div className="p-4 bg-card/10 rounded-xl border border-card-border">
+                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Potential Risks</span>
+                                                <ul className="mt-2 space-y-1">
+                                                    {aiInsights.risks.map((risk, i) => (
+                                                        <li key={i} className="text-text-body font-medium text-sm">• {risk}</li>
                                                     ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                                </ul>
+                                            </div>
+                                        )}
+                                        {aiInsights.verdict && (
+                                            <div className="p-4 bg-card/10 rounded-xl border border-card-border">
+                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Verdict</span>
+                                                <p className="text-text-body font-medium mt-1">{aiInsights.verdict}</p>
+                                            </div>
+                                        )}
                                     </div>
-                                ))
-                            ) : (
-                                <p className="text-muted-foreground italic font-medium">No comments yet. Be the first to start a conversation!</p>
-                            )}
-                        </div>
-                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => fetchAiContent(post)}
+                                        className="w-full py-4 rounded-xl bg-secondary/20 text-secondary font-bold hover:bg-secondary/30 transition-all border border-secondary/20"
+                                    >
+                                        Generate AI Insights
+                                    </button>
+                                )}
+                            </div>
 
-                    {/* Related Posts */}
-                    {relatedPosts.length > 0 && (
-                        <div>
-                            <div className="h-px bg-card-border mb-8" />
-                            <h2 className="text-xl font-bold text-foreground mb-4">Related Posts</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {relatedPosts.map(post => (
-                                    <PostCard key={post._id} post={post} />
-                                ))}
+                            {post.locationCoordinates && (
+                                <div className="p-6 bg-card/10 border border-card-border rounded-2xl shadow-inner">
+                                    <h2 className="text-lg font-black text-text-heading mb-4 uppercase tracking-wide">Location Map</h2>
+                                    <div className="h-[300px] rounded-xl overflow-hidden border border-card-border">
+                                        <MapContainer
+                                            center={[post.locationCoordinates.lat, post.locationCoordinates.lng]}
+                                            zoom={15}
+                                            className="h-full w-full"
+                                        >
+                                            <TileLayer
+                                                url={isDark
+                                                    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                                                    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                }
+                                            />
+                                            <Marker position={[post.locationCoordinates.lat, post.locationCoordinates.lng]}>
+                                                <Popup>{post.location}</Popup>
+                                            </Marker>
+                                        </MapContainer>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div id="comments" className="pt-4">
+                                <div className="h-px bg-card-border mb-8" />
+                                <h2 className="text-xl font-bold text-foreground mb-6">Comments ({post.comments?.length || 0})</h2>
+
+                                {user ? (
+                                    <form onSubmit={handleCommentSubmit} className="mb-8 flex gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
+                                            <img src={getAvatarUrl(user)} alt={user.displayName} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex-1 relative">
+                                            <input
+                                                type="text"
+                                                value={commentText}
+                                                onChange={(e) => setCommentText(e.target.value)}
+                                                placeholder="Add a comment..."
+                                                className="w-full bg-card/10 border border-card-border rounded-xl pl-4 pr-12 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={!commentText.trim()}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+                                            >
+                                                <MessageCircle className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="mb-8 p-4 bg-card/10 border border-card-border rounded-xl text-center text-muted-foreground text-sm font-medium">
+                                        Please <button onClick={() => navigate('/login')} className="text-primary font-bold hover:underline">sign in</button> to comment.
+                                    </div>
+                                )}
+
+                                <div className="space-y-6">
+                                    {post.comments?.length > 0 ? (
+                                        post.comments.map((comment, index) => (
+                                            <div key={index} className="flex gap-4 group">
+                                                <div className="w-10 h-10 rounded-full bg-card/10 overflow-hidden shrink-0 border border-card-border shadow-sm">
+                                                    <img src={getAvatarUrl(comment.user)} alt={comment.user?.displayName || "User"} className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-foreground">{comment.user?.displayName || "Unknown User"}</span>
+                                                            <span className="text-xs text-muted-foreground font-medium">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                                                        </div>
+                                                        {currentUserId && comment.user?._id === currentUserId && (
+                                                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingComment(comment._id);
+                                                                        setEditText(comment.text);
+                                                                    }}
+                                                                    className="text-xs text-blue-400 hover:text-blue-300"
+                                                                    title="Edit"
+                                                                >
+                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteComment(comment._id)}
+                                                                    className="text-xs text-red-400 hover:text-red-300"
+                                                                    title="Delete"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {editingComment === comment._id ? (
+                                                        <div className="flex gap-2 mb-2">
+                                                            <input
+                                                                type="text"
+                                                                value={editText}
+                                                                onChange={(e) => setEditText(e.target.value)}
+                                                                className="flex-1 bg-card/10 border border-card-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 shadow-inner"
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() => handleEditComment(comment._id)}
+                                                                disabled={!editText.trim()}
+                                                                className="text-primary text-sm font-medium hover:text-primary-foreground disabled:opacity-50"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingComment(null);
+                                                                    setEditText('');
+                                                                }}
+                                                                className="text-text-muted text-sm font-medium hover:text-text-heading"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-muted-foreground font-medium">{comment.text}</p>
+                                                    )}
+
+                                                    {editingComment !== comment._id && (
+                                                        <button
+                                                            onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)}
+                                                            className="text-xs text-primary mt-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            Reply
+                                                        </button>
+                                                    )}
+
+                                                    {replyingTo === comment._id && (
+                                                        <div className="mt-3 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                            <input
+                                                                type="text"
+                                                                value={replyText}
+                                                                onChange={(e) => setReplyText(e.target.value)}
+                                                                placeholder={`Reply to ${comment.user?.displayName}...`}
+                                                                className="flex-1 bg-card/10 border border-card-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 shadow-inner"
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() => handleReplySubmit(comment._id)}
+                                                                disabled={!replyText.trim()}
+                                                                className="text-primary text-sm font-medium hover:text-text-heading disabled:opacity-50"
+                                                            >
+                                                                Send
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {comment.replies && comment.replies.length > 0 && (
+                                                        <div className="mt-4 space-y-4 border-l-2 border-card-border pl-4">
+                                                            {comment.replies.map((reply, rIndex) => (
+                                                                <div key={rIndex} className="flex gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-background-section overflow-hidden shrink-0 border border-card-border shadow-sm">
+                                                                        <img src={getAvatarUrl(reply.user)} alt={reply.user?.displayName || "User"} className="w-full h-full object-cover" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2 mb-0.5">
+                                                                            <span className="font-bold text-sm text-text-heading">{reply.user?.displayName}</span>
+                                                                            <span className="text-[10px] text-text-muted font-medium">{new Date(reply.createdAt).toLocaleDateString()}</span>
+                                                                        </div>
+                                                                        <p className="text-sm text-text-body font-medium">{reply.text}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-text-muted text-center py-8">No comments yet. Be the first to comment!</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Sidebar */}
                 <aside className="lg:col-span-1">
-                    <div className="glass-panel p-6 sm:p-8 lg:p-10 sticky top-24 shadow-2xl space-y-8">
+                    <div className="glass-panel p-5 sm:p-8 lg:p-10 lg:sticky lg:top-24 shadow-2xl space-y-6 sm:space-y-8">
                         <div>
                             <label className="text-[10px] font-black tracking-widest text-text-muted uppercase mb-2 block">Value Orbit</label>
                             <div className="text-5xl font-black text-text-heading tracking-tight">
                                 {post.acceptsBarter ? (
                                     <span className="text-pink-500 text-3xl">EXCHANGE</span>
                                 ) : (
-                                    <>₹{post.price}</>
+                                    <>���{post.price}</>
                                 )}
                             </div>
                         </div>
@@ -818,19 +809,19 @@ const PostDetails = () => {
 
                                 <button
                                     onClick={handleMessage}
-                                    disabled={contactRequestStatus !== 'approved'}
+                                    disabled={!hasChatAccess}
                                     className={cn(
                                         "w-full py-5 rounded-2xl text-[13px] font-black uppercase tracking-widest transition-all duration-500 flex items-center justify-center gap-3 border border-card-border",
-                                        contactRequestStatus === 'approved'
+                                        hasChatAccess
                                             ? "bg-card text-text-heading hover:bg-hover-bg shadow-xl"
                                             : "bg-card/30 text-text-muted/50 border border-card-border/30 cursor-not-allowed"
                                     )}
                                 >
                                     <MessageCircle className="w-5 h-5" />
-                                    <span>{contactRequestStatus === 'approved' ? 'Open Chat' : 'Chat Locked'}</span>
+                                    <span>{hasChatAccess ? 'Open Chat' : 'Chat Locked'}</span>
                                 </button>
 
-                                {contactRequestStatus === 'approved' && (
+                                {hasChatAccess && (
                                     <div className="grid grid-cols-2 gap-2">
                                         <button
                                             onClick={handleCall}

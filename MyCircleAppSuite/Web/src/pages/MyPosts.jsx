@@ -71,13 +71,13 @@ const MyPosts = () => {
         <div className="min-h-screen pt-6 md:pt-8">
 
             {/* Filters & Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center bg-card p-4 rounded-xl border border-card-border mb-8 gap-4 shadow-card">
-                <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-card p-4 rounded-xl border border-card-border mb-6 sm:mb-8 gap-4 shadow-card">
+                <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1">
                     {['all', 'active', 'inactive', 'sold'].map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
-                            className={`px-4 py-2 rounded-lg text-sm font-black uppercase tracking-widest transition-all
+                            className={`px-4 py-2 rounded-lg text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0
                                 ${filter === f ? 'bg-primary text-primary-foreground shadow-button' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'}`}
                         >
                             {f}
@@ -85,7 +85,7 @@ const MyPosts = () => {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
                         onClick={() => setViewMode('grid')}
                         className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-primary/10 text-primary border border-primary/20' : 'text-text-muted hover:text-text-heading hover:bg-hover-bg'}`}

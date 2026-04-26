@@ -259,7 +259,7 @@ const CreatePost = () => {
         <div className="min-h-screen bg-background">
             {/* Sticky step header */}
             <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-card-border">
-                <div className="max-w-lg mx-auto px-4 py-3">
+                <div className="max-w-lg mx-auto px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-between">
                         <button
                             onClick={() => navigate(-1)}
@@ -295,7 +295,7 @@ const CreatePost = () => {
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-4 py-6">
+            <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-3 sm:px-4 py-6">
                 <AnimatePresence mode="wait">
                     {step === 1 && (
                         <motion.div
@@ -425,7 +425,7 @@ const CreatePost = () => {
 
                             <div>
                                 <label className="text-sm font-medium">Duration</label>
-                                <div className="grid grid-cols-4 gap-2 mt-1.5">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5">
                                     {DURATIONS.map(d => (
                                         <button
                                             key={d.id}
@@ -446,7 +446,7 @@ const CreatePost = () => {
 
                             <div>
                                 <label className="text-sm font-medium">Exchange</label>
-                                <div className="grid grid-cols-3 gap-2 mt-1.5">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                                     {EXCHANGE_OPTIONS.map(opt => (
                                         <button
                                             key={opt.id}

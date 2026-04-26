@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const { addImageJob } = require('../utils/queue');
 const mongoose = require('mongoose');
 const { containsProfanity } = require('../utils/profanityFilter');
+const { deletePostScopedChats } = require('../utils/chatLifecycle');
 
 const REDACTABLE_CONTACT_FIELDS = ['contactPhone', 'contactWhatsapp'];
 
@@ -170,10 +171,10 @@ exports.getPosts = async (req, res, next) => {
             pipeline.push({ $match: baseFilter });
         }
 
-        // Filter expired posts (if expiresAt is set)
-        // We match where expiresAt is null OR expiresAt > now
+        // Filter only active posts
         pipeline.push({
             $match: {
+                isActive: true,
                 $or: [
                     { expiresAt: { $exists: false } },
                     { expiresAt: null },
@@ -267,6 +268,7 @@ exports.getPosts = async (req, res, next) => {
                             type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
                             isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
                             locationCoords: 1, duration: 1, availability: 1, budgetMin: 1, budgetMax: 1,
+                            expiresAt: 1,
                             distance: { $ifNull: ['$dist.calculated', null] },
                             applicationCount: {
                                 $ifNull: [{ $arrayElemAt: ['$applicationStats.count', 0] }, 0]
@@ -401,15 +403,20 @@ exports.deletePost = async (req, res, next) => {
 
         // Cascade Delete: Remove related data
 
-
-
         // 1. Delete Contact Requests for this post
         await ContactRequest.deleteMany({ post: req.params.id });
 
         // 2. Delete Notifications related to this post
         await Notification.deleteMany({ relatedId: req.params.id });
 
-        // 3. Delete the post (which deletes embedded comments automatically)
+        const io = req.app.get('io');
+        await deletePostScopedChats({
+            postId: req.params.id,
+            io,
+            reason: 'Post deleted'
+        });
+
+        // 4. Delete the post (which deletes embedded comments automatically)
         await Post.findByIdAndDelete(req.params.id);
 
         res.json({ msg: 'Post and related data removed' });
@@ -842,39 +849,16 @@ exports.updatePostStatus = async (req, res, next) => {
 
         await post.save();
 
-        // CHAT CLEANUP: If status is sold or completed, delete all conversations linked to this post
+        // CHAT CLEANUP: If status is sold or completed, delete all conversations and requests linked to this post
         if (status === 'sold' || status === 'completed') {
-            const conversations = await Conversation.find({ postId: post._id });
-
-            for (const conv of conversations) {
-                // Delete from Firestore
-                try {
-                    if (db) {
-                        const messagesRef = db.collection('conversations').doc(conv._id.toString()).collection('messages');
-                        const snapshot = await messagesRef.get();
-                        const batch = db.batch();
-                        snapshot.forEach(doc => batch.delete(doc.ref));
-                        await batch.commit();
-                        await db.collection('conversations').doc(conv._id.toString()).delete();
-                    }
-                } catch (fsError) {
-                    console.error('Error during post-sale Firestore cleanup:', fsError.message);
-                }
-
-                // Delete from MongoDB
-                await Conversation.findByIdAndDelete(conv._id);
-
-                // Notify participants that conversation is closed
-                const io = req.app.get('io');
-                if (io) {
-                    conv.participants.forEach(p => {
-                        io.to(`user:${p.toString()}`).emit('conversation_deleted', {
-                            conversationId: conv._id,
-                            reason: 'Post closed'
-                        });
-                    });
-                }
-            }
+            const io = req.app.get('io');
+            await deletePostScopedChats({
+                postId: post._id,
+                io,
+                reason: 'Post closed'
+            });
+            await ContactRequest.deleteMany({ post: post._id });
+            await Notification.deleteMany({ relatedId: post._id });
         }
 
         res.json(post);

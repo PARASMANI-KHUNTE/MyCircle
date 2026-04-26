@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Linking, StyleSheet, Dimensions, TextInput, KeyboardAvoidingView, Platform, StatusBar, Clipboard } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Linking, StyleSheet, Dimensions, TextInput, KeyboardAvoidingView, Platform, StatusBar, Clipboard } from 'react-native';
+import { Alert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles, X } from 'lucide-react-native';
@@ -27,7 +28,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const { colors } = useTheme();
     const [post, setPost] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [contactRequestStatus, setContactRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected' | 'expired'>('none');
+    const [contactRequestStatus, setContactRequestStatus] = useState<'none' | 'pending' | 'accepted' | 'approved' | 'rejected' | 'expired'>('none');
     const [likes, setLikes] = useState<string[]>([]);
     const [shares, setShares] = useState(0);
     const [hasShared, setHasShared] = useState(false);
@@ -68,6 +69,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);
     const isOwnPost = auth?.user?._id === post?.user?._id;
+    const hasChatAccess = contactRequestStatus === 'accepted' || contactRequestStatus === 'approved';
 
     useEffect(() => {
         fetchPostDetails();
@@ -177,9 +179,9 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleMessage = async () => {
-        if (contactRequestStatus !== 'approved') return Alert.alert('Approval Required', 'Chat unlocks after approval.');
+        if (!hasChatAccess) return Alert.alert('Approval Required', 'Chat unlocks after approval.');
         try {
-            const conversation = await ensureConversationWithUser(post.user._id);
+            const conversation = await ensureConversationWithUser(post.user._id, id);
             navigation.navigate('ChatWindow', { conversation });
         } catch (err) {
             Alert.alert("Error", "Failed to start chat.");

@@ -1,6 +1,7 @@
 // Core chat window component for individual conversations
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
+import { Alert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
@@ -26,9 +27,17 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const currentUserId = user?._id || user?.id;
 
     const resolveConversation = useCallback(async () => {
-        if (initialConversation?._id || initialConversation?.participants) {
+        if (initialConversation?._id && initialConversation?.participants) {
             setConversation(initialConversation);
             return initialConversation;
+        }
+
+        if (initialConversation?._id) {
+            const existingConversation = await getConversationById(initialConversation._id);
+            if (existingConversation) {
+                setConversation(existingConversation);
+                return existingConversation;
+            }
         }
 
         if (conversationId) {
@@ -39,8 +48,8 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             }
         }
 
-        if (recipient?._id) {
-            const ensuredConversation = await ensureConversationWithUser(recipient._id);
+        if (recipient?._id && recipient?.postId) {
+            const ensuredConversation = await ensureConversationWithUser(recipient._id, recipient.postId);
             setConversation(ensuredConversation);
             return ensuredConversation;
         }

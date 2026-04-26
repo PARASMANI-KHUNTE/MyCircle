@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, ActivityIndicator, Alert, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, AppState, StatusBar, Dimensions } from 'react-native';
+import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, AppState, StatusBar, Dimensions } from 'react-native';
+import { Alert } from '../utils/alert';
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ import Animated, {
     FadeInDown,
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { getCurrentLocation } from '../utils/location';
 import { useNotifications } from '../context/NotificationContext';
 import Sound from 'react-native-sound';
@@ -36,6 +38,7 @@ const CATEGORIES = [
 const { width, height } = Dimensions.get('window');
 
 const FeedScreen = ({ navigation, route }: any) => {
+    const { isAuthenticated } = useAuth();
     const initialViewMode = route?.params?.viewMode || 'list';
     const { colors } = useTheme();
     const { socket } = useSocket() as any; // Type assertion if needed
@@ -142,13 +145,18 @@ const FeedScreen = ({ navigation, route }: any) => {
     }, []);
 
     const fetchUnreadMsgCount = useCallback(async () => {
+        if (!isAuthenticated) {
+            setUnreadMsgCount(0);
+            return;
+        }
+
         try {
             const res = await api.get('/chat/unread/count');
             setUnreadMsgCount(res.data.count);
         } catch (err) {
             console.error('Failed to fetch unread messages count', err);
         }
-    }, []);
+    }, [isAuthenticated]);
 
     const onRefresh = useCallback(async () => {
         refetch();
@@ -217,23 +225,35 @@ const FeedScreen = ({ navigation, route }: any) => {
 
     useEffect(() => {
         requestLocationPermission();
-        fetchUnreadMsgCount();
-    }, [requestLocationPermission, fetchUnreadMsgCount]);
+
+        if (isAuthenticated) {
+            void fetchUnreadMsgCount();
+        } else {
+            setUnreadMsgCount(0);
+        }
+    }, [requestLocationPermission, fetchUnreadMsgCount, isAuthenticated]);
 
     useEffect(() => {
         if (socket) {
             socket.on('new_post', handleNewPost);
-            socket.on('receive_message', fetchUnreadMsgCount);
-            socket.on('messages_read', fetchUnreadMsgCount);
-            socket.on('unread_count_update', fetchUnreadMsgCount);
+
+            if (isAuthenticated) {
+                socket.on('receive_message', fetchUnreadMsgCount);
+                socket.on('messages_read', fetchUnreadMsgCount);
+                socket.on('unread_count_update', fetchUnreadMsgCount);
+            }
+
             return () => {
                 socket.off('new_post', handleNewPost);
-                socket.off('receive_message', fetchUnreadMsgCount);
-                socket.off('messages_read', fetchUnreadMsgCount);
-                socket.off('unread_count_update', fetchUnreadMsgCount);
+
+                if (isAuthenticated) {
+                    socket.off('receive_message', fetchUnreadMsgCount);
+                    socket.off('messages_read', fetchUnreadMsgCount);
+                    socket.off('unread_count_update', fetchUnreadMsgCount);
+                }
             };
         }
-    }, [socket, handleNewPost, fetchUnreadMsgCount]);
+    }, [socket, handleNewPost, fetchUnreadMsgCount, isAuthenticated]);
 
     useEffect(() => {
         if (postsData) {

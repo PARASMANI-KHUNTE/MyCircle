@@ -1,7 +1,7 @@
 import api from './api';
 
-export const ensureConversationWithUser = async (userId: string) => {
-    const res = await api.post(`/chat/init/${userId}`);
+export const ensureConversationWithUser = async (userId: string, postId?: string) => {
+    const res = await api.post(`/chat/init/${userId}`, postId ? { postId } : {});
     return res.data;
 };
 

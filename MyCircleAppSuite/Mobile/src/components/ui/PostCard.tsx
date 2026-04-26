@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-import { View, Text, TouchableOpacity, Image, StyleSheet, Pressable, Clipboard, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Pressable, Clipboard } from 'react-native';
+import { Alert } from '../../utils/alert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MapPin, Heart, Share2 } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';

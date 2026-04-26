@@ -9,7 +9,11 @@
     "test:coverage": "jest --coverage",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "worker": "node src/workers/index.js"
+    "worker": "node src/workers/index.js",
+    "script:cleanup-expired-chats": "node scripts/cleanupExpiredChats.js",
+    "script:cleanup-legacy-generic-chats": "node scripts/cleanupLegacyGenericChats.js",
+    "script:reset-post-connections": "node scripts/resetPostConnections.js",
+    "script:repair-post-conversations": "node scripts/repairPostConversations.js"
   },
   "keywords": [],
   "author": "",

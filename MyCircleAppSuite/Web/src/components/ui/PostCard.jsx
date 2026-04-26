@@ -57,8 +57,21 @@ const formatDate = (value) => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
+const formatLifecycleTime = (ms) => {
+    if (!Number.isFinite(ms) || ms <= 0) return 'Expired';
+
+    const totalHours = Math.ceil(ms / (60 * 60 * 1000));
+    if (totalHours < 24) {
+        return `${totalHours}h left`;
+    }
+
+    const totalDays = Math.ceil(ms / (24 * 60 * 60 * 1000));
+    return `${totalDays} day${totalDays === 1 ? '' : 's'} left`;
+};
+
 const PostCard = ({
     post,
+    user: authUser = null,
     onRequestContact = () => {},
     currentUserId = null,
     isOwnPost: propIsOwnPost = false,
@@ -100,7 +113,9 @@ const PostCard = ({
         setHasShared(sharedPosts.includes(post._id));
     }, [post._id]);
 
-    const isOwnPost = propIsOwnPost || (currentUserId && user?._id === currentUserId);
+    const postUserId = user?._id || user;
+    // Check prop first, then compare IDs as strings
+    const isOwnPost = !!propIsOwnPost || (currentUserId && postUserId && String(currentUserId) === String(postUserId));
     const isLiked = currentUserId && likes.includes(currentUserId);
     const typeStyle = typeStyles[type] || typeStyles.job;
     const displayDate = formatDate(createdAt);
@@ -117,6 +132,58 @@ const PostCard = ({
     }, [budgetFloor, budgetCeiling]);
 
     const shouldShowReadMore = description && description.length > 140;
+
+    const lifecycleMeta = useMemo(() => {
+        if (!post.expiresAt) return null;
+
+        const now = Date.now();
+        const expires = new Date(post.expiresAt).getTime();
+        const fallbackDurationMs = (Number(post.duration) || 28) * 24 * 60 * 60 * 1000;
+        const created = post.createdAt
+            ? new Date(post.createdAt).getTime()
+            : expires - fallbackDurationMs;
+        const total = expires - created;
+        const remainingMs = expires - now;
+        const safePercent = total > 0 ? (remainingMs / total) * 100 : remainingMs > 0 ? 100 : 0;
+        const percentLeft = Math.max(0, Math.min(100, Math.round(safePercent)));
+        const percentUsed = 100 - percentLeft;
+        const daysLive = created < now ? Math.max(1, Math.ceil((now - created) / (24 * 60 * 60 * 1000))) : 0;
+
+        let stage = 'Fresh';
+        let accentClass = 'bg-success';
+        let chipClass = 'bg-success/10 text-success border-success/20';
+        let summary = 'Recently published';
+
+        if (remainingMs <= 0 || status === 'expired') {
+            stage = 'Expired';
+            accentClass = 'bg-error';
+            chipClass = 'bg-error/10 text-error border-error/20';
+            summary = 'No longer accepting responses';
+        } else if (percentLeft <= 15) {
+            stage = 'Ending soon';
+            accentClass = 'bg-error';
+            chipClass = 'bg-error/10 text-error border-error/20';
+            summary = 'Best time to take action';
+        } else if (percentLeft <= 45) {
+            stage = 'Midway';
+            accentClass = 'bg-warning';
+            chipClass = 'bg-warning/10 text-warning border-warning/20';
+            summary = 'Still active, but time is moving';
+        }
+
+        return {
+            stage,
+            accentClass,
+            chipClass,
+            summary,
+            percentLeft,
+            percentUsed,
+            remainingLabel: formatLifecycleTime(remainingMs),
+            createdLabel: formatDate(post.createdAt),
+            expiresLabel: formatDate(post.expiresAt),
+            daysLive
+        };
+    }, [post.createdAt, post.duration, post.expiresAt, status]);
 
     const handleGetAIInsights = async (e) => {
         e?.stopPropagation();
@@ -219,7 +286,7 @@ const PostCard = ({
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
                             {[
                                 { label: 'Views', value: analyticsData.views, icon: Eye, color: 'text-primary' },
                                 { label: 'Likes', value: analyticsData.likes, icon: Heart, color: 'text-pink-500' },
@@ -370,7 +437,7 @@ const PostCard = ({
                     </>
                 )}
 
-                {(budgetLabel || post.duration || post.availability) && (
+{(budgetLabel || post.duration || post.availability) && (
                     <div className="flex flex-wrap gap-2 mt-4">
                         {budgetLabel && (
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary">
@@ -390,6 +457,61 @@ const PostCard = ({
                                 {post.availability}
                             </span>
                         )}
+                    </div>
+                )}
+
+                {lifecycleMeta && (
+                    <div className="mt-4 rounded-2xl border border-card-border bg-background-secondary/70 p-3.5">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="min-w-0">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
+                                    Post lifecycle
+                                </p>
+                                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                    <span className={cn(
+                                        'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+                                        lifecycleMeta.chipClass
+                                    )}>
+                                        {lifecycleMeta.stage}
+                                    </span>
+                                    <span className="text-sm font-semibold text-foreground">
+                                        {lifecycleMeta.remainingLabel}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="text-lg font-semibold leading-none">{lifecycleMeta.percentLeft}%</p>
+                                <p className="text-[11px] text-foreground-muted mt-1">time left</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-3">
+                            <div className="flex items-center justify-between text-[11px] text-foreground-muted mb-1.5">
+                                <span>{lifecycleMeta.summary}</span>
+                                <span>{lifecycleMeta.percentUsed}% used</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-card-border overflow-hidden">
+                                <div
+                                    className={cn('h-full rounded-full transition-all duration-500', lifecycleMeta.accentClass)}
+                                    style={{ width: `${lifecycleMeta.percentLeft}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+                            <div className="rounded-xl bg-card/70 px-2 py-2">
+                                <p className="text-[10px] uppercase tracking-wide text-foreground-muted">Started</p>
+                                <p className="mt-1 text-xs font-semibold">{lifecycleMeta.createdLabel}</p>
+                            </div>
+                            <div className="rounded-xl bg-card/70 px-2 py-2">
+                                <p className="text-[10px] uppercase tracking-wide text-foreground-muted">Live for</p>
+                                <p className="mt-1 text-xs font-semibold">{lifecycleMeta.daysLive}d</p>
+                            </div>
+                            <div className="rounded-xl bg-card/70 px-2 py-2">
+                                <p className="text-[10px] uppercase tracking-wide text-foreground-muted">Ends</p>
+                                <p className="mt-1 text-xs font-semibold">{lifecycleMeta.expiresLabel}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -429,7 +551,7 @@ const PostCard = ({
                 </AnimatePresence>
 
                 <footer className="mt-4 pt-4 border-t border-card-border space-y-3">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 text-foreground-muted min-w-0">
                             <MapPin className="w-4 h-4 text-primary shrink-0" />
                             <span className="text-xs font-medium truncate">{displayLocation}</span>
@@ -439,8 +561,8 @@ const PostCard = ({
                         )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-1 flex-wrap">
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -501,7 +623,7 @@ const PostCard = ({
                         {!isOwnPost && (
                             <Button
                                 size="sm"
-                                className="ml-2 gap-1.5"
+                                className="w-full sm:w-auto sm:ml-2 gap-1.5 justify-center"
                                 onClick={(e) => {
                                     e?.stopPropagation();
                                     onRequestContact(post._id, e);
@@ -515,11 +637,11 @@ const PostCard = ({
                 </footer>
 
                 {isOwnPost && !showAnalytics && (
-                    <div className="flex gap-2 mt-3 pt-3 border-t border-card-border">
+                    <div className="flex flex-col sm:flex-row gap-2 mt-3 pt-3 border-t border-card-border">
                         <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 gap-1.5"
+                            className="flex-1 gap-1.5 justify-center"
                             onClick={(e) => {
                                 e?.stopPropagation();
                                 if (typeof onEdit === 'function') {
@@ -535,7 +657,7 @@ const PostCard = ({
                         <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 gap-1.5 text-error border-error/20 hover:bg-error/10"
+                            className="flex-1 gap-1.5 justify-center text-error border-error/20 hover:bg-error/10"
                             onClick={(e) => {
                                 e?.stopPropagation();
                                 onDelete();

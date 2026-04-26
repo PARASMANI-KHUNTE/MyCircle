@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
 import { 
     X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, 
     Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2
@@ -44,6 +45,8 @@ const EditPost = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { success, error: showError } = useToast();
+    const { user } = useAuth();
+    const currentUserId = user?._id || user?.id;
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -78,9 +81,24 @@ const EditPost = () => {
     const descLimit = 1000;
 
     const fetchPost = useCallback(async () => {
+        // Check auth first
+        if (!currentUserId) {
+            showError('Please sign in to edit posts');
+            navigate('/login');
+            return;
+        }
+
         try {
             const res = await api.get(`/posts/${id}`);
             const post = res.data;
+            
+            // Check ownership
+            const postOwnerId = post.user?._id || post.user;
+            if (postOwnerId?.toString() !== currentUserId?.toString()) {
+                showError('You can only edit your own posts');
+                navigate('/my-posts');
+                return;
+            }
             
             setFormData({
                 type: post.type || '',
@@ -115,7 +133,7 @@ const EditPost = () => {
         } finally {
             setLoading(false);
         }
-    }, [id, navigate, showError]);
+    }, [id, navigate, showError, currentUserId]);
 
     useEffect(() => {
         fetchPost();
@@ -265,7 +283,7 @@ const EditPost = () => {
         <div className="min-h-screen bg-background">
             {/* Header */}
             <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-                <div className="max-w-lg mx-auto px-4 py-3">
+                <div className="max-w-lg mx-auto px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-between">
                         <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-card rounded-lg">
                             <X className="w-5 h-5" />
@@ -277,7 +295,7 @@ const EditPost = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-4 py-6 space-y-6">
+            <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-3 sm:px-4 py-6 space-y-6">
                 {/* Status Toggle */}
                 <div className="flex gap-2 p-1 bg-card-border/50 rounded-xl">
                     {['active', 'inactive', 'archived'].map(s => (
@@ -422,7 +440,7 @@ const EditPost = () => {
                 {/* Duration */}
                 <div>
                     <label className="text-sm font-medium">Duration</label>
-                    <div className="grid grid-cols-4 gap-2 mt-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5">
                         {DURATIONS.map(d => (
                             <button
                                 key={d.id}
@@ -444,7 +462,7 @@ const EditPost = () => {
                 {/* Exchange */}
                 <div>
                     <label className="text-sm font-medium">Exchange Type</label>
-                    <div className="grid grid-cols-3 gap-2 mt-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                         {EXCHANGE_OPTIONS.map(opt => (
                             <button
                                 key={opt.id}

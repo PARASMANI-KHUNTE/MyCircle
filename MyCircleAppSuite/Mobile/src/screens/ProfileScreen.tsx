@@ -7,7 +7,6 @@ import { ArrowLeft, Settings, LogOut, MessageCircle, Clock, Edit, Trash2, Wallet
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import { ensureConversationWithUser } from '../services/chat';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
@@ -158,19 +157,14 @@ const ProfileScreen = ({ navigation, route }: any) => {
     };
 
     const handleMessageUser = async () => {
-        try {
-            const conversation = await ensureConversationWithUser(userId);
-            navigation.navigate('ChatWindow', { conversation });
-        } catch (error) {
-            setAlertConfig({
-                visible: true,
-                title: 'Error',
-                message: 'Failed to start chat',
-                confirmText: 'OK',
-                isDestructive: false,
-                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
-            });
-        }
+        setAlertConfig({
+            visible: true,
+            title: 'Request Via Post',
+            message: 'Chat starts only from an accepted request on a specific post.',
+            confirmText: 'OK',
+            isDestructive: false,
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+        });
     };
 
     const handleDeletePost = (postId: string) => {
@@ -506,7 +500,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                 style={styles.messageBtn}
                             >
                                 <MessageCircle size={20} color="#ffffff" style={{ marginRight: 10 }} />
-                                <Text style={styles.btnText}>Message</Text>
+                                <Text style={styles.btnText}>Request Via Post</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity

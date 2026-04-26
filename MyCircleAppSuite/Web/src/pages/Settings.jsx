@@ -56,14 +56,14 @@ const Settings = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8 min-h-screen max-w-2xl">
+        <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-8 min-h-screen max-w-2xl">
             <div className="mb-8">
                 <p className="text-sm text-foreground-muted mt-1">Manage your preferences and account details.</p>
             </div>
 
             <div className="space-y-4">
                 {/* Notifications */}
-                <div className="glass-panel p-6">
+                <div className="glass-panel p-4 sm:p-6">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                             <Bell className="w-5 h-5" />
@@ -71,7 +71,7 @@ const Settings = () => {
                         <h2 className="text-base font-bold">Notifications</h2>
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <p className="text-sm font-semibold text-foreground">Email Notifications</p>
                             <p className="text-xs text-foreground-muted mt-0.5">Receive emails about new messages and updates</p>
@@ -91,7 +91,7 @@ const Settings = () => {
                 </div>
 
                 {/* Appearance */}
-                <div className="glass-panel p-6">
+                <div className="glass-panel p-4 sm:p-6">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-9 h-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
                             {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
@@ -99,7 +99,7 @@ const Settings = () => {
                         <h2 className="text-base font-bold">Appearance</h2>
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <p className="text-sm font-semibold text-foreground">Theme</p>
                             <p className="text-xs text-foreground-muted mt-0.5">Switch between dark and light mode</p>
@@ -124,7 +124,7 @@ const Settings = () => {
                 </div>
 
                 {/* Privacy */}
-                <div className="glass-panel p-6">
+                <div className="glass-panel p-4 sm:p-6">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-9 h-9 rounded-xl bg-info/10 text-info flex items-center justify-center">
                             <Lock className="w-5 h-5" />
@@ -167,8 +167,8 @@ const Settings = () => {
                 </div>
 
                 {/* Save + feedback */}
-                <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex-1 w-full">
                         {message && (
                             <div className={cn(
                                 'flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium',
@@ -184,14 +184,14 @@ const Settings = () => {
                             </div>
                         )}
                     </div>
-                    <Button variant="primary" onClick={handleSubmit} disabled={loading} className="gap-2 shrink-0">
+                    <Button variant="primary" onClick={handleSubmit} disabled={loading} className="gap-2 w-full sm:w-auto justify-center shrink-0">
                         <Save className="w-4 h-4" />
                         {loading ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </div>
 
                 {/* Danger Zone */}
-                <div className="border border-error/20 rounded-2xl p-6 bg-error/5">
+                <div className="border border-error/20 rounded-2xl p-4 sm:p-6 bg-error/5">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-9 h-9 rounded-xl bg-error/10 text-error flex items-center justify-center">
                             <Trash2 className="w-5 h-5" />

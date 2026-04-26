@@ -2,10 +2,35 @@ const ContactRequest = require('../models/ContactRequest');
 const Post = require('../models/Post');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
+const Notification = require('../models/Notification');
 const { createNotification } = require('./notificationController');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { applyNewRating, refreshTrustScore } = require('../utils/trustScore');
+const { deletePostScopedChats } = require('../utils/chatLifecycle');
+const CHAT_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+const getChatExpiryDate = () => new Date(Date.now() + CHAT_RETENTION_MS);
+
+const buildPostContextMessage = (post, requestMessage) => {
+    const parts = [
+        `Contact request for "${post.title}".`
+    ];
+
+    if (requestMessage) {
+        parts.push(`Request note: ${requestMessage}`);
+    }
+
+    if (post.description) {
+        const trimmed = post.description.trim();
+        if (trimmed) {
+            parts.push(`Post summary: ${trimmed.slice(0, 120)}${trimmed.length > 120 ? '...' : ''}`);
+        }
+    }
+
+    return parts.join(' ');
+};
 
 const normalizeRequestStatus = (status) => {
     if (status === 'approved') return 'accepted';
@@ -29,7 +54,7 @@ const serializeRequest = (request, viewerId) => {
         conversationId: requestObject.conversationId || null,
         viewerRole,
         counterparty,
-        canMarkComplete: normalizedStatus === 'accepted',
+        canMarkComplete: normalizedStatus === 'accepted' && viewerRole === 'recipient',
         canRate: normalizedStatus === 'completed' && !myRating,
         myRating: myRating || null,
     };
@@ -220,7 +245,11 @@ exports.updateRequestStatus = async (req, res, next) => {
             return res.status(403).json({ msg: 'Only the post owner can accept or reject a request' });
         }
 
-        if ((requestedStatus === 'completed' || requestedStatus === 'canceled') && !isRecipient && !isRequester) {
+        if (requestedStatus === 'completed' && !isRecipient) {
+            return res.status(403).json({ msg: 'Only the post owner can mark work as complete' });
+        }
+
+        if (requestedStatus === 'canceled' && !isRecipient && !isRequester) {
             return res.status(403).json({ msg: 'Not authorized to update this request' });
         }
 
@@ -228,25 +257,68 @@ exports.updateRequestStatus = async (req, res, next) => {
             return res.status(400).json({ msg: 'Only accepted requests can be completed' });
         }
 
+        if (requestedStatus === 'completed') {
+            const post = await Post.findById(postId);
+            if (!post) {
+                return res.status(404).json({ msg: 'Linked post not found' });
+            }
+
+            if (post.user.toString() !== req.user.id) {
+                return res.status(403).json({ msg: 'Only the post owner can mark work as complete' });
+            }
+
+            post.status = 'completed';
+            post.isActive = false;
+            post.completedAt = new Date();
+            await post.save();
+
+            if (post.user.toString() === request.recipient.toString()) {
+                const provider = await User.findById(request.recipient);
+                if (provider) {
+                    provider.stats.tasksCompleted = (provider.stats.tasksCompleted || 0) + 1;
+                    await refreshTrustScore(provider);
+                }
+            }
+
+            const io = req.app.get('io');
+            await deletePostScopedChats({
+                postId,
+                io,
+                reason: 'Work completed'
+            });
+            await Notification.deleteMany({ relatedId: postId });
+
+            await request.populate('recipient', 'displayName');
+            await request.populate('post', 'title');
+
+            try {
+                await createNotification(io, {
+                    recipient: requesterId,
+                    sender: req.user.id,
+                    type: 'info',
+                    title: 'Work Marked Complete',
+                    message: `${request.recipient?.displayName || 'The post owner'} marked "${request.post?.title || 'this post'}" as completed. The chat has been removed.`,
+                    link: '/requests',
+                    relatedId: postId
+                });
+            } catch (notifErr) {
+                console.error('Failed to send completion notification:', notifErr.message);
+            }
+
+            const deletedRequests = await ContactRequest.deleteMany({ post: postId });
+
+            return res.json({
+                msg: 'Work completed. Post disabled, chats deleted, and related requests removed.',
+                removed: true,
+                removedRequestId: req.params.id,
+                removedRequestsCount: deletedRequests.deletedCount,
+                postId
+            });
+        }
+
         request.status = requestedStatus;
         if (requestedStatus === 'accepted' && !request.acceptedAt) {
             request.acceptedAt = new Date();
-        }
-        if (requestedStatus === 'completed') {
-            request.completedAt = new Date();
-            if (!request.completionMarkedBy.some((userId) => userId.toString() === req.user.id)) {
-                request.completionMarkedBy.push(req.user.id);
-            }
-            
-            // Update linked post to completed
-            if (request.post) {
-                const post = await Post.findById(request.post);
-                if (post) {
-                    post.status = 'completed';
-                    post.completedAt = new Date();
-                    await post.save();
-                }
-            }
         }
         await request.save();
 
@@ -255,34 +327,46 @@ exports.updateRequestStatus = async (req, res, next) => {
         await request.populate('requester', 'displayName');
         await request.populate('post', 'title user');
 
-        // If approved, ensure a conversation exists
+// If approved, ensure a conversation exists
         let conversationId = null;
         if (requestedStatus === 'accepted') {
             const participants = [requesterId, recipientId];
             let conversation = await Conversation.findOne({
-                participants: { $all: participants }
+                participants: { $all: participants },
+                postId
             });
 
             if (!conversation) {
                 conversation = new Conversation({
                     participants,
-                    postId // Link the conversation to the post
+                    postId, // Link the conversation to the post
+                    expiresAt: getChatExpiryDate()
                 });
                 await conversation.save();
-            }
-            conversationId = conversation._id;
-            request.conversationId = conversationId;
-        }
 
-        if (requestedStatus === 'completed') {
-            const post = await Post.findById(request.post);
-            if (post?.user?.toString() === request.recipient.toString()) {
-                const provider = await User.findById(request.recipient);
-                if (provider) {
-                    provider.stats.tasksCompleted = (provider.stats.tasksCompleted || 0) + 1;
-                    await refreshTrustScore(provider);
+                // Send initial auto-message with post info from the requester
+                const post = await Post.findById(postId);
+                if (post) {
+                    const autoMessage = new Message({
+                        conversationId: conversation._id,
+                        sender: requesterId, // Message from the person who requested contact
+                        text: buildPostContextMessage(post, request.message),
+                        isAutoMessage: true,
+                        postId: postId,
+                        expiresAt: getChatExpiryDate()
+                    });
+                    await autoMessage.save();
+                    conversation.lastMessage = autoMessage._id;
                 }
             }
+            conversation.updatedAt = Date.now();
+            conversation.isActive = true;
+            conversation.deletedBy = [];
+            conversation.expiresAt = getChatExpiryDate();
+            await conversation.save();
+            conversationId = conversation._id;
+            request.conversationId = conversationId;
+            await request.save();
         }
 
         // Send real-time notification to requester

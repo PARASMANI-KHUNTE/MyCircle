@@ -1,6 +1,6 @@
-import { PermissionsAndroid, Platform, Alert, Linking } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
+import { Alert } from './alert';
 import Geolocation from '@react-native-community/geolocation';
-import { promptForEnableLocationIfNeeded } from 'react-native-android-location-enabler';
 
 export interface LocationObject {
     address: string;

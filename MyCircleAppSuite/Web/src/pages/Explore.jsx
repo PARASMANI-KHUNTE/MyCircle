@@ -347,6 +347,7 @@ const Explore = () => {
     const fetchPosts = useCallback(async () => {
         setLoading(true);
         try {
+            const serverCategory = selectedCategories.includes('all') ? undefined : selectedCategories.join(',');
             const params = {
                 limit: 100,
                 type: serverCategory,
@@ -365,7 +366,7 @@ const Explore = () => {
         } finally {
             setLoading(false);
         }
-    }, [serverCategory, searchTerm, sortOrder, radius, timeFilter, userLocation, priceMin, priceMax]);
+    }, [selectedCategories, searchTerm, sortOrder, radius, timeFilter, userLocation, priceMin, priceMax]);
 
     // Detect user location
     useEffect(() => {

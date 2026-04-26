@@ -258,9 +258,9 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             generateSuggestions();
 
             const response = await api.post('/chat/message', {
-                recipientId: otherParticipant._id,
+                recipientId: otherParticipant._id || otherParticipant.id || otherParticipant,
                 text: tempMessage.text,
-                postId: conversation.postId
+                postId: conversation.postId?._id || conversation.postId
             });
 
             setMessages(prev => prev.map((message) =>

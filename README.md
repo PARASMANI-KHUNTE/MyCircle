@@ -1,172 +1,76 @@
 # MyCircle
 
-**Hyperlocal exchange platform** for neighbors to post and discover jobs, services, items for sale/rent.
+MyCircle is a hyperlocal exchange platform with separate backend, web, and mobile applications in one repository.
 
-Built with a simple idea: **make local collaboration as easy as a scroll**.
+## Project structure
 
----
-
-## Monorepo Structure
-
-```
+```text
 MyCircle/
 ├── MyCircleAppSuite/
-│   ├── Server/       # Backend API (Node.js + Express)
-│   ├── Web/         # Web Frontend (React + Vite)
-│   └── Mobile/      # Mobile App (React Native CLI)
-├── docs/            # Documentation
+│   ├── Server/   # Node.js + Express API
+│   ├── Web/      # React + Vite web client
+│   └── Mobile/   # React Native mobile app
+├── docs/
+│   └── reports/  # Project reports and supporting report docs
 └── .gitignore
 ```
 
----
+## Prerequisites
 
-## Tech Stack
+- Node.js 20+ (mobile requires Node >=20)
+- npm
+- MongoDB (for server)
+- Optional: Redis (rate limiting/queue behavior in production-like setups)
 
-| Layer | Technology |
-|-------|-------------|
-| **Web Frontend** | React 19, Vite 7, Tailwind CSS 3, Framer Motion 11, Socket.io Client |
-| **Mobile** | React Native 0.83, NativeWind, Reanimated 4, FlashList |
-| **Backend** | Node.js 18+, Express 5, MongoDB/Mongoose, Socket.io |
-| **AI** | Groq (LLM for moderation & suggestions) |
-| **Auth** | JWT, Google OAuth (Passport) |
-| **Storage** | Cloudinary (images), Firebase (push notifications) |
-| **Caching** | Redis (ioredis) |
-| **Queue** | BullMQ |
+## Environment setup
 
----
+- Server: copy `/home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server/.env.example` to `.env`
+- Web: copy `/home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web/.env.example` to `.env` if needed
+- Mobile: copy `/home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile/.env.example` to `.env` if needed
 
-## Features
-
-- **Marketplace Feed** — Jobs, Services, Sell, Rent with filters
-- **Trust Score** — 0-100 reputation system with tiers (New/Member/Trusted/Verified)
-- **Contact Requests** — Pre-approved messaging to reduce spam
-- **Real-time Chat** — Socket.io with read receipts, typing indicators
-- **Map View** — Interactive Leaflet maps for local discovery
-- **AI Content Moderation** — Groq-powered safety checks
-- **Push Notifications** — Firebase Cloud Messaging
-- **Post Lifecycle** — Active, Paused, Fulfilled, Expired states
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **Node.js** v18+
-- **MongoDB** (local or Atlas)
-- **Redis** (optional, for production rate limiting)
-
-### Environment Variables
-
-Copy `.env.example` to `.env` in `MyCircleAppSuite/Server/`:
+## Install dependencies
 
 ```bash
-# Required
-JWT_SECRET=$(openssl rand -hex 32)
-MONGO_URI=mongodb+srv://...
-GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=xxx
-CLOUDINARY_CLOUD_NAME=xxx
-CLOUDINARY_API_KEY=xxx
-CLOUDINARY_API_SECRET=xxx
-
-# Optional (AI features)
-GROQ_API_KEY=xxx
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server && npm install
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm install
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm install
 ```
 
-### Install & Run
+## Development
 
 ```bash
-# Clone
-git clone https://github.com/PARASMANI-KHUNTE/MyCircle.git
-cd MyCircle
+# API server
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server && npm run dev
 
-# Install dependencies
-cd MyCircleAppSuite/Server && npm install
-cd MyCircleAppSuite/Web && npm install
-cd MyCircleAppSuite/Mobile && npm install
+# Web app
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm run dev
 
-# Run development
-# Terminal 1: Server
-cd MyCircleAppSuite/Server && npm run dev
-
-# Terminal 2: Web
-cd MyCircleAppSuite/Web && npm run dev
+# Mobile metro server
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm start
 ```
 
-### Mobile Development
+## Testing
 
 ```bash
-cd MyCircleAppSuite/Mobile
-
-# Start Metro bundler
-npm start
-
-# Run on Android
-npm run android
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server && npm test
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm test
 ```
 
----
+## Linting
 
-## API Endpoints
+```bash
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm run lint
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm run lint
+```
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| **Auth** |
-| POST | `/auth/register` | Email registration |
-| POST | `/auth/login` | Email login |
-| GET | `/auth/google` | Google OAuth init |
-| GET | `/auth/google/callback` | Google OAuth callback |
-| **Posts** |
-| GET | `/api/posts` | Get all posts (feed) |
-| POST | `/api/posts` | Create post (auth required) |
-| GET | `/api/posts/:id` | Get post by ID |
-| PUT | `/api/posts/:id` | Update post |
-| DELETE | `/api/posts/:id` | Delete post |
-| POST | `/api/posts/:id/like` | Like post |
-| POST | `/api/posts/:id/share` | Share tracking |
-| **User** |
-| GET | `/api/user/profile` | Get own profile |
-| PUT | `/api/user/profile` | Update profile |
-| GET | `/api/user/:userId` | Get other user profile |
-| POST | `/api/user/block/:userId` | Block user |
-| **Contacts** |
-| POST | `/api/contacts/request` | Send contact request |
-| GET | `/api/contacts/received` | Received requests |
-| GET | `/api/contacts/sent` | Sent requests |
-| PUT | `/api/contacts/:id/status` | Accept/Reject |
-| **Chat** |
-| GET | `/api/chat/conversations` | All conversations |
-| GET | `/api/chat/messages/:id` | Get messages |
-| POST | `/api/chat/message` | Send message |
-| **AI** |
-| POST | `/api/ai/moderate` | Content safety check |
-| POST | `/api/ai/analyze-post` | Post insights |
-| POST | `/api/ai/explain-post` | AI summary |
-| **Health** |
-| GET | `/` | Health check |
-| GET | `/live` | Liveness probe |
-| GET | `/ready` | Readiness probe |
+## Build
 
----
+```bash
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm run build
+cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm run build:android:debug
+```
 
-## Security
+## Notes
 
-- JWT tokens with 32+ character secrets
-- Rate limiting (production)
-- Helmet security headers
-- Socket.io authentication
-- Input validation with Zod
-- NoSQL injection prevention (manual sanitization)
-
----
-
-## Design
-
-Dark-first, glassmorphism UI with vibrant accents—built for fast, modern scrolling.
-
----
-
-## License
-
-ISC
+- Repository cleanup keeps runtime code paths unchanged and removes local/generated artifacts from version control.
+- Additional app-specific details are in each app's local README file.

@@ -63,6 +63,23 @@ yarn-error.log
 # Temporary files created by Metro to check the health of the file watcher
 .metro-health-check*
 
+# Expo / Bundler local state
+.expo/
+.bundle/
+
+# Local debugging artifacts
+build_log.txt
+fingerprint.txt
+full_keytool_output.txt
+local_sha.txt
+metro_error.txt
+metro_error_cmd.txt
+sha1_full.txt
+tsc_output*.txt
+stitch.zip
+android/gradle_help*.txt
+android/gradlew_help_check.txt
+
 # testing
 /coverage
 

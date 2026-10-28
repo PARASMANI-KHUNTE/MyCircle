@@ -30,3 +30,24 @@ node_modules/
 # Cache
 .cache/
 .vite/
+
+# Python/report tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Mobile local tooling artifacts
+MyCircleAppSuite/Mobile/.expo/
+MyCircleAppSuite/Mobile/.bundle/
+MyCircleAppSuite/Mobile/build_log.txt
+MyCircleAppSuite/Mobile/fingerprint.txt
+MyCircleAppSuite/Mobile/full_keytool_output.txt
+MyCircleAppSuite/Mobile/local_sha.txt
+MyCircleAppSuite/Mobile/metro_error.txt
+MyCircleAppSuite/Mobile/metro_error_cmd.txt
+MyCircleAppSuite/Mobile/sha1_full.txt
+MyCircleAppSuite/Mobile/tsc_output*.txt
+MyCircleAppSuite/Mobile/stitch.zip
+MyCircleAppSuite/Mobile/android/gradle_help*.txt
+MyCircleAppSuite/Mobile/android/gradlew_help_check.txt

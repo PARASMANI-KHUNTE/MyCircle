@@ -1,6 +1,9 @@
 import re
+from pathlib import Path
 
-content = open('myreport.py', encoding='utf-8').read()
+base_dir = Path(__file__).resolve().parent
+report_path = base_dir / "myreport.py"
+content = report_path.read_text(encoding='utf-8')
 
 # Fix 1: The broken story.append(Paragraph(...)) at lines ~2074-2083
 # The string was split incorrectly across two places
@@ -48,5 +51,5 @@ if bad2 in content:
 else:
     print('Fix 2 not needed')
 
-open('myreport.py', 'w', encoding='utf-8').write(content)
+report_path.write_text(content, encoding='utf-8')
 print('Saved.')

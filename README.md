@@ -11,7 +11,9 @@ MyCircle/
 │   ├── Web/      # React + Vite web client
 │   └── Mobile/   # React Native mobile app
 ├── docs/
-│   └── reports/  # Project reports and supporting report docs
+│   └── reports/  # Project reports and supporting docs
+├── tools/
+│   └── reporting/ # Report-generation scripts and report tooling deps
 └── .gitignore
 ```
 
@@ -68,6 +70,13 @@ cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm run lint
 ```bash
 cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm run build
 cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm run build:android:debug
+```
+
+## Report tooling
+
+```bash
+cd /home/runner/work/MyCircle/MyCircle/tools/reporting && npm install
+cd /home/runner/work/MyCircle/MyCircle/tools/reporting && python run_report.py
 ```
 
 ## Notes

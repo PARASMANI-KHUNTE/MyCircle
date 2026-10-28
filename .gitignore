@@ -36,6 +36,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+tools/reporting/MyCircle_Report_TEMP.docx
 
 # Mobile local tooling artifacts
 MyCircleAppSuite/Mobile/.expo/

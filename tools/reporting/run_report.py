@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Master runner — fixes encoding and calls all report-part generators sequentially."""
-import subprocess, sys
+import subprocess
+import sys
+from pathlib import Path
 
 scripts = [
     "generate_report.py",
@@ -13,8 +15,16 @@ scripts = [
     "generate_report_p8.py",
 ]
 
+base_dir = Path(__file__).resolve().parent
+
 for s in scripts:
-    result = subprocess.run([sys.executable, s], capture_output=True, text=True, encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, str(base_dir / s)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=base_dir,
+    )
     print(f"--- {s} ---")
     if result.stdout:
         print(result.stdout)

@@ -1,4 +1,8 @@
-lines = open('myreport.py', encoding='utf-8').readlines()
+from pathlib import Path
+
+base_dir = Path(__file__).resolve().parent
+report_path = base_dir / "myreport.py"
+lines = report_path.read_text(encoding='utf-8').splitlines(keepends=True)
 
 new_block = [
     '    _ts2 = TableStyle([("BOX",(0,0),(-1,-1),1.5,BLUE),("BACKGROUND",(0,0),(-1,-1),LGRAY),("ALIGN",(0,0),(-1,-1),"CENTER"),("VALIGN",(0,0),(-1,-1),"MIDDLE")])\n',
@@ -11,5 +15,5 @@ new_block = [
 ]
 
 lines[2159:2179] = new_block
-open('myreport.py', 'w', encoding='utf-8').writelines(lines)
+report_path.write_text(''.join(lines), encoding='utf-8')
 print('Done, new line count:', len(lines))

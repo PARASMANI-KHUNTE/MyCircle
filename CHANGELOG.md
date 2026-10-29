@@ -19,6 +19,12 @@ All notable changes to this project are documented here. The format follows [Kee
 - Fixed all Mobile ESLint errors and enabled mobile lint in the root lint script.
 - Stopped tracking compiled `*.apk`/`*.aab` bundles and removed the 79 MB APK from the index. The file remains in earlier Git history; purge it with `git filter-repo`/BFG before publishing if repository size matters.
 
+### Fixed
+
+- Server health checks no longer create a Redis connection per request, which could hang or crash the process when Redis was unreachable.
+- Background queues are disabled cleanly when `REDIS_URL` is unset, and Redis connection failures are logged once instead of flooding stderr.
+- Removed a duplicate `expiresAt` index on the `Message` model.
+
 ### Removed
 
 - Temporary report artifacts and duplicate report exports.

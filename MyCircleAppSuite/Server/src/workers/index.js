@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const { Worker } = require('bullmq');
 const sharp = require('sharp');
 const { connection } = require('../utils/queue');
@@ -6,6 +8,11 @@ const { checkContentSafety } = require('../config/groq');
 const pino = require('pino');
 
 const logger = pino({ name: 'worker' });
+
+if (!connection) {
+    logger.error('REDIS_URL is required to run background workers');
+    process.exit(1);
+}
 
 const imageWorker = new Worker('image-processing', async (job) => {
     logger.info({ jobId: job.id, data: job.data }, 'Processing image');

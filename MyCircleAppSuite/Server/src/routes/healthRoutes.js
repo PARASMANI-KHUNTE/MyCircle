@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const { isRedisEnabled, isRedisReady } = require('../utils/queue');
 
 router.get('/', async (req, res) => {
     const services = {
@@ -21,17 +22,8 @@ router.get('/', async (req, res) => {
         services.database = 'error';
     }
     
-    // Redis check (if available)
-    try {
-        const redis = require('ioredis');
-        const r = new redis(process.env.REDIS_URL || 'redis://localhost:6379');
-        await r.ping();
-        services.redis = 'ok';
-        r.disconnect();
-    } catch (e) {
-        // Redis optional, mark as unavailable but don't fail
-        services.redis = 'unavailable';
-    }
+    // Redis is optional; report the shared queue connection state without opening a new connection.
+    services.redis = isRedisEnabled() && isRedisReady() ? 'ok' : 'unavailable';
     
     const status = services.database === 'ok' ? 'ok' : 'degraded';
     

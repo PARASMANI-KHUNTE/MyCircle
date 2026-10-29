@@ -8,7 +8,6 @@ import PostCard from '../components/ui/PostCard';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { getAvatarUrl } from '../utils/avatar';
-import { formatDuration } from '../utils/time';
 import { getPostInsights, getPostExplanation } from '../services/aiService';
 import {
     ArrowLeft, MapPin, Clock, MessageCircle,
@@ -48,7 +47,7 @@ const PostDetails = () => {
         const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
         return sharedPosts.includes(id);
     });
-    const [relatedPosts, setRelatedPosts] = useState([]);
+    const [, setRelatedPosts] = useState([]);
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [editingComment, setEditingComment] = useState(null);

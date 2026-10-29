@@ -7,15 +7,10 @@ import api from '../services/api';
 import { GOOGLE_WEB_CLIENT_ID } from '@env';
 import Animated, {
     useSharedValue,
-    useAnimatedStyle,
-    withRepeat,
-    withTiming,
-    withDelay,
     FadeInDown,
     FadeInUp
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../context/ThemeContext';
 import { ArrowRight, Sparkles, Users, Zap } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');

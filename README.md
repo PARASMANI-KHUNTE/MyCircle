@@ -1,76 +1,85 @@
 # MyCircle
 
-MyCircle is a hyperlocal exchange platform with separate backend, web, and mobile applications in one repository.
+[![CI](https://github.com/PARASMANI-KHUNTE/MyCircle/actions/workflows/ci.yml/badge.svg)](https://github.com/PARASMANI-KHUNTE/MyCircle/actions/workflows/ci.yml)
 
-## Project structure
+MyCircle is a hyperlocal exchange platform for jobs, services, sales, rentals and barter. It ships as a single repository containing a REST/realtime API, a React web client and a React Native mobile app.
+
+## Repository layout
 
 ```text
 MyCircle/
 ├── MyCircleAppSuite/
-│   ├── Server/   # Node.js + Express API
-│   ├── Web/      # React + Vite web client
-│   └── Mobile/   # React Native mobile app
+│   ├── Server/        # Node.js + Express API (MongoDB, Redis, Socket.io)
+│   ├── Web/           # React + Vite + Tailwind web client
+│   └── Mobile/        # React Native (bare) + TypeScript mobile app
 ├── docs/
-│   └── reports/  # Project reports and supporting report docs
-└── .gitignore
+│   ├── architecture/  # System design, database design, workflows
+│   ├── guides/        # Feature, testing and operations documentation
+│   ├── analysis/      # Codebase analysis
+│   └── reports/       # Project reports and exports
+├── tools/
+│   └── reporting/     # Python report-generation tooling
+├── .github/           # CI, issue/PR templates, Dependabot
+└── package.json       # Root orchestration scripts
 ```
 
 ## Prerequisites
 
-- Node.js 20+ (mobile requires Node >=20)
-- npm
-- MongoDB (for server)
-- Optional: Redis (rate limiting/queue behavior in production-like setups)
+- Node.js 20+ (see `.nvmrc`)
+- npm 10+
+- MongoDB 7 (local or Docker)
+- Redis 7 (optional locally, required for queues/rate limiting in production)
 
-## Environment setup
-
-- Server: copy `/home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server/.env.example` to `.env`
-- Web: copy `/home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web/.env.example` to `.env` if needed
-- Mobile: copy `/home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile/.env.example` to `.env` if needed
-
-## Install dependencies
+## Quick start
 
 ```bash
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server && npm install
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm install
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm install
+# install dependencies for every app
+npm run install:all
+
+# configure environment variables
+cp MyCircleAppSuite/Server/.env.example MyCircleAppSuite/Server/.env
+cp MyCircleAppSuite/Web/.env.example   MyCircleAppSuite/Web/.env
+cp MyCircleAppSuite/Mobile/.env.example MyCircleAppSuite/Mobile/.env
+
+# start the full backend stack (MongoDB + Redis + API + worker)
+npm run docker:up
+
+# start the web client
+npm run dev:web
 ```
 
-## Development
+Refer to the per-app README files for platform-specific setup:
 
-```bash
-# API server
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server && npm run dev
+- [`MyCircleAppSuite/Server`](MyCircleAppSuite/Server)
+- [`MyCircleAppSuite/Web`](MyCircleAppSuite/Web)
+- [`MyCircleAppSuite/Mobile`](MyCircleAppSuite/Mobile)
 
-# Web app
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm run dev
+## Root scripts
 
-# Mobile metro server
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm start
-```
+| Script | Description |
+| --- | --- |
+| `npm run install:all` | Install dependencies for Server, Web and Mobile |
+| `npm run dev:server` | Start the API in watch mode |
+| `npm run dev:web` | Start the Vite dev server |
+| `npm run start:mobile` | Start the React Native Metro bundler |
+| `npm run build` | Build the web client (`build:web`) |
+| `npm run build:android` | Build the Android release APK locally (not committed) |
+| `npm run lint` | Lint the web and mobile clients |
+| `npm run lint:mobile` | Lint the mobile app only |
+| `npm run typecheck:mobile` | Type-check the mobile app |
+| `npm test` | Run the server test suite |
+| `npm run test:mobile` | Run the mobile smoke test (requires native mocks) |
+| `npm run docker:up` | Start the server stack with Docker Compose |
+| `npm run docker:down` | Stop the server stack |
 
-## Testing
+## Documentation
 
-```bash
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Server && npm test
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm test
-```
+Start at [`docs/README.md`](docs/README.md).
 
-## Linting
+## Container images
 
-```bash
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm run lint
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm run lint
-```
+The API and worker images are defined by `MyCircleAppSuite/Server/Dockerfile` and orchestrated by `MyCircleAppSuite/Server/docker-compose.yml`.
 
-## Build
+## Contributing
 
-```bash
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Web && npm run build
-cd /home/runner/work/MyCircle/MyCircle/MyCircleAppSuite/Mobile && npm run build:android:debug
-```
-
-## Notes
-
-- Repository cleanup keeps runtime code paths unchanged and removes local/generated artifacts from version control.
-- Additional app-specific details are in each app's local README file.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). For security issues, follow [`SECURITY.md`](SECURITY.md).

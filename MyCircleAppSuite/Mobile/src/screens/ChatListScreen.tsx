@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl, StyleSheet, Dimensions, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl, StyleSheet, StatusBar } from 'react-native';
 import { Alert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { useTheme } from '../context/ThemeContext';
 import { ArrowLeft, MessageCircle, ChevronRight, CheckSquare, Square, X, Trash2, CheckCheck } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -15,17 +14,12 @@ const getParticipantId = (participant: any) => participant?._id?.toString?.() ||
 const ChatListScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
     const { socket } = useSocket() as any;
-    const { colors } = useTheme();
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
     
     // Selection state
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
-
-    const handleRequestsPress = () => {
-        navigation.navigate('Requests');
-    };
 
     const [typingUsers, setTypingUsers] = useState<{ [key: string]: boolean }>({});
 
@@ -133,16 +127,6 @@ const ChatListScreen = ({ navigation }: any) => {
         } catch (err) {
             console.error('Failed to mark as read:', err);
         }
-    };
-
-    const themeStyles = {
-        container: { backgroundColor: colors.background },
-        text: { color: colors.text },
-        textSecondary: { color: colors.textSecondary },
-        card: { backgroundColor: colors.card, borderColor: colors.border },
-        border: { borderColor: colors.border },
-        highlight: { backgroundColor: colors.primary + '10', borderLeftColor: colors.primary },
-        icon: colors.text
     };
 
     const fetchConversations = async () => {

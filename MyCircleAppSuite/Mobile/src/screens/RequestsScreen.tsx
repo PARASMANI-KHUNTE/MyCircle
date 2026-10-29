@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import api from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
-import { X, Check, MessageCircle, Trash2, ArrowLeft, BadgeCheck } from 'lucide-react-native';
+import { X, Check, MessageCircle, Trash2, BadgeCheck } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -47,7 +47,7 @@ const RequestsScreen = ({ navigation }: any) => {
         divider: { backgroundColor: colors.border }
     };
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         try {
             setLoading(true);
             const [receivedRes, sentRes] = await Promise.all([
@@ -69,7 +69,7 @@ const RequestsScreen = ({ navigation }: any) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useFocusEffect(
         useCallback(() => {
@@ -80,7 +80,7 @@ const RequestsScreen = ({ navigation }: any) => {
                 !n.read && (n.type === 'request' || n.type === 'approval' || n.type === 'request_received' || n.type === 'request_approved')
             );
             relatedNotifications.forEach(n => markAsRead(n._id));
-        }, [notifications])
+        }, [fetchRequests, markAsRead, notifications])
     );
 
     const handleAction = async (id: string, status: string) => {

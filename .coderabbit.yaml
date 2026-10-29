@@ -21,17 +21,16 @@ reviews:
     drafts: false
     base_branches:
       - "main"
-      - "dev"
-      - "develop"
 
   # Paths to focus on (backend + both frontends)
   path_filters:
-    - "Paras/MyCircle/MyCircleServer/src/**"
-    - "Paras/MyCircle/MyCircleClient/src/**"
-    - "Paras/MyCircle/MyCircleMobileBare/src/**"
+    - "MyCircleAppSuite/Server/src/**"
+    - "MyCircleAppSuite/Web/src/**"
+    - "MyCircleAppSuite/Mobile/src/**"
     - "!**/node_modules/**"
     - "!**/*.lock"
     - "!**/package-lock.json"
+    - "!**/dist/**"
 
 # Chat settings
 chat:

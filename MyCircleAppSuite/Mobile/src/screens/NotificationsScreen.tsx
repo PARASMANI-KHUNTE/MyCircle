@@ -17,7 +17,7 @@ const NotificationsScreen = ({ navigation }: any) => {
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
 
-    const getIcon = (type: string) => {
+    const getIcon = useCallback((type: string) => {
         const size = 20;
         switch (type) {
             case 'request':
@@ -31,16 +31,16 @@ const NotificationsScreen = ({ navigation }: any) => {
             default:
                 return <Bell size={size} color={colors.textSecondary} />;
         }
-    };
+    }, [colors]);
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = useCallback(async (id: string) => {
         try {
             await api.delete(`/notifications/${id}`);
             refresh();
         } catch (err) {
             console.error('Failed to delete notification:', err);
         }
-    };
+    }, [refresh]);
 
     const handleBulkDelete = async () => {
         Alert.alert('Delete Notifications', `Are you sure you want to delete ${selectedItems.size} notifications?`, [
@@ -62,7 +62,7 @@ const NotificationsScreen = ({ navigation }: any) => {
         ]);
     };
 
-    const toggleSelection = (id: string) => {
+    const toggleSelection = useCallback((id: string) => {
         const next = new Set(selectedItems);
         if (next.has(id)) {
             next.delete(id);
@@ -73,7 +73,7 @@ const NotificationsScreen = ({ navigation }: any) => {
         if (next.size === 0) {
             setIsSelectionMode(false);
         }
-    };
+    }, [selectedItems]);
 
     const enterSelectionMode = (id: string) => {
         setIsSelectionMode(true);
@@ -104,12 +104,12 @@ const NotificationsScreen = ({ navigation }: any) => {
             .map(key => ({ title: key, data: groups[key] }));
     }, [notifications]);
 
-    const renderRightActions = (id: string) => (
+    const renderRightActions = useCallback((id: string) => (
         <TouchableOpacity activeOpacity={0.85} style={[styles.deleteAction, { backgroundColor: colors.danger }]} onPress={() => handleDelete(id)}>
             <Trash2 size={24} color={colors.white} />
             <Text style={[styles.deleteActionText, { color: colors.white }]}>Delete</Text>
         </TouchableOpacity>
-    );
+    ), [colors, handleDelete]);
 
     const renderItem = useCallback(({ item, index }: { item: any; index: number }) => {
         const isSelected = selectedItems.has(item._id);
@@ -181,7 +181,7 @@ const NotificationsScreen = ({ navigation }: any) => {
         }
 
         return <Swipeable renderRightActions={() => renderRightActions(item._id)}>{content}</Swipeable>;
-    }, [colors, handleNotificationClick, isSelectionMode, navigation, selectedItems]);
+    }, [colors, getIcon, handleNotificationClick, isSelectionMode, navigation, renderRightActions, selectedItems, toggleSelection]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>

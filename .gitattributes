@@ -1,0 +1,27 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.mp3 binary
+*.mp4 binary
+*.apk binary
+*.jar binary
+*.keystore binary
+*.docx binary
+*.pdf binary
+*.zip binary
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+
+package-lock.json linguist-generated=true
+*.min.js linguist-generated=true
+dist/** linguist-generated=true

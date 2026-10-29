@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Modal, Pressable } from 'react-native';
 import { Alert } from '../utils/alert';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
 import PostCard from '../components/ui/PostCard';
-import { Trash, Repeat, EyeOff, Eye, ArrowLeft, BarChart2, X } from 'lucide-react-native';
+import { Trash, EyeOff, Eye, ArrowLeft, BarChart2, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 

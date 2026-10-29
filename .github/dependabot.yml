@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /MyCircleAppSuite/Server
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      server-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /MyCircleAppSuite/Web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      web-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /MyCircleAppSuite/Mobile
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      mobile-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

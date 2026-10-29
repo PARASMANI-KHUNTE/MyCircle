@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Master runner — fixes encoding and calls all report-part generators sequentially."""
-import subprocess, sys
+import os, subprocess, sys
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 scripts = [
     "generate_report.py",

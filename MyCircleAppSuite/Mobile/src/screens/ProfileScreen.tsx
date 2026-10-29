@@ -23,7 +23,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
     const [stats, setStats] = useState({ posts: 0, requests: 0, rating: 0 });
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [myPosts, setMyPosts] = useState<any[]>([]);
-    const [postsLoading, setPostsLoading] = useState(false);
+    const [, setPostsLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
         title: string;
@@ -43,7 +43,20 @@ const ProfileScreen = ({ navigation, route }: any) => {
     const userId = route.params?.userId || authUser?._id || authUser?.id;
     const isOwnProfile = userId === (authUser?._id || authUser?.id);
 
-    const fetchProfile = async () => {
+    const fetchMyPosts = useCallback(async () => {
+        if (!isOwnProfile) return;
+        try {
+            setPostsLoading(true);
+            const res = await api.get('/posts/my-posts');
+            setMyPosts(res.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setPostsLoading(false);
+        }
+    }, [isOwnProfile]);
+
+    const fetchProfile = useCallback(async () => {
         try {
             const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
             const res = await api.get(endpoint);
@@ -81,25 +94,12 @@ const ProfileScreen = ({ navigation, route }: any) => {
             setLoading(false);
             setRefreshing(false);
         }
-    };
-
-    const fetchMyPosts = async () => {
-        if (!isOwnProfile) return;
-        try {
-            setPostsLoading(true);
-            const res = await api.get('/posts/my-posts');
-            setMyPosts(res.data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setPostsLoading(false);
-        }
-    };
+    }, [fetchMyPosts, isOwnProfile, navigation, userId]);
 
     useFocusEffect(
         useCallback(() => {
             fetchProfile();
-        }, [userId])
+        }, [fetchProfile])
     );
 
     const onRefresh = () => {
@@ -422,7 +422,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
                     {isOwnProfile && myPosts.length > 0 ? (
                         <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
-                            {myPosts.map((post, index) => (
+                            {myPosts.map((post) => (
                                 <TouchableOpacity
                                     key={post._id}
                                     style={viewMode === 'grid' ? styles.gridItem : styles.listItem}

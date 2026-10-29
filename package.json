@@ -1,0 +1,29 @@
+{
+  "name": "mycircle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hyperlocal exchange platform monorepo",
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "install:all": "npm --prefix MyCircleAppSuite/Server ci && npm --prefix MyCircleAppSuite/Web ci && npm --prefix MyCircleAppSuite/Mobile ci",
+    "dev:server": "npm --prefix MyCircleAppSuite/Server run dev",
+    "dev:web": "npm --prefix MyCircleAppSuite/Web run dev",
+    "start:mobile": "npm --prefix MyCircleAppSuite/Mobile start",
+    "build": "npm run build:web",
+    "build:web": "npm --prefix MyCircleAppSuite/Web run build",
+    "build:android": "npm --prefix MyCircleAppSuite/Mobile run build:android:release",
+    "lint": "npm run lint:web && npm run lint:mobile",
+    "lint:web": "npm --prefix MyCircleAppSuite/Web run lint",
+    "lint:mobile": "npm --prefix MyCircleAppSuite/Mobile run lint",
+    "typecheck:mobile": "npm --prefix MyCircleAppSuite/Mobile run typecheck",
+    "test": "npm run test:server",
+    "test:server": "npm --prefix MyCircleAppSuite/Server test",
+    "test:mobile": "npm --prefix MyCircleAppSuite/Mobile test",
+    "docker:up": "docker compose -f MyCircleAppSuite/Server/docker-compose.yml up -d --build",
+    "docker:down": "docker compose -f MyCircleAppSuite/Server/docker-compose.yml down",
+    "report": "python tools/reporting/run_report.py"
+  }
+}

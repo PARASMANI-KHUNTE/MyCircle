@@ -1,0 +1,12 @@
+# Generated report artifacts
+*.docx
+*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/

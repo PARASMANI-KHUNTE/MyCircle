@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, KeyboardAvoidingView, Platform, Dimensions, StatusBar } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../context/ThemeContext';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { MapPin, ChevronDown, Check, Map, Crosshair, X, Camera, Briefcase, Wrench, ShoppingBag, Package, ArrowRight, ArrowLeft, Handshake, Clock, User, Zap, MessageCircle, ShoppingCart, Key, Info, Send } from 'lucide-react-native';
+import { MapPin, Check, Map, Crosshair, X, Camera, Briefcase, ShoppingBag, Package, ArrowRight, ArrowLeft, Clock, Info, Send } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
 import api from '../services/api';
@@ -13,7 +12,6 @@ import ThemedAlert from '../components/ui/ThemedAlert';
 import Stepper from '../components/ui/Stepper';
 
 const CreatePostScreen = ({ navigation }: any) => {
-    const { colors } = useTheme();
     const webviewRef = useRef<any>(null);
 
     // Wizard State
@@ -41,7 +39,6 @@ const CreatePostScreen = ({ navigation }: any) => {
     // UI State
     const [loading, setLoading] = useState(false);
     const [locationLoading, setLocationLoading] = useState(false);
-    const [showCityModal, setShowCityModal] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
     const [alertConfig, setAlertConfig] = useState<any>({
         visible: false,

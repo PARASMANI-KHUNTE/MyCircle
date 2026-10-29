@@ -3,15 +3,13 @@ import { View, Text, TouchableOpacity, TextInput, ScrollView, Image, ActivityInd
 import { Alert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Loader, Check } from 'lucide-react-native';
+import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Check } from 'lucide-react-native';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const EditProfileScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
-    const { colors } = useTheme();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [avatar, setAvatar] = useState<any>(null);
@@ -128,16 +126,6 @@ const EditProfileScreen = ({ navigation }: any) => {
             <ActivityIndicator color="#af25f4" size="large" />
         </View>
     );
-
-    const themeStyles = {
-        container: { backgroundColor: colors.background },
-        text: { color: colors.text },
-        textSecondary: { color: colors.textSecondary },
-        headerTitle: { color: colors.text },
-        input: { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
-        border: { borderColor: colors.border },
-        icon: colors.textSecondary
-    };
 
     return (
         <SafeAreaView style={styles.container}>

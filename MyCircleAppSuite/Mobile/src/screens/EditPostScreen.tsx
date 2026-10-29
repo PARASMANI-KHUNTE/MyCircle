@@ -1,19 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, Dimensions, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, StatusBar } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import api from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../context/ThemeContext';
 import { MapPin, Check, X, Camera, Briefcase, Wrench, ShoppingBag, Package, Handshake, Save, ArrowLeft } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 const EditPostScreen = ({ navigation, route }: any) => {
     const { post } = route.params;
-    const { colors } = useTheme();
 
     // Form State
     const [title, setTitle] = useState(post.title);

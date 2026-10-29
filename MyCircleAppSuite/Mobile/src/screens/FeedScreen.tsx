@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, AppState, StatusBar, Dimensions } from 'react-native';
-import { Alert } from '../utils/alert';
+
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -70,7 +70,7 @@ const FeedScreen = ({ navigation, route }: any) => {
     const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
     const [selectedPost, setSelectedPost] = useState<any | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-    const [mapLoading, setMapLoading] = useState(false);
+    const [mapLoading] = useState(false);
 
     // Chat Badge Logic
 
@@ -78,7 +78,7 @@ const FeedScreen = ({ navigation, route }: any) => {
 
 
     // Filters
-    const [sortOrder, setSortOrder] = useState<'latest' | 'oldest' | 'urgent' | 'nearest'>('latest');
+    const [sortOrder] = useState<'latest' | 'oldest' | 'urgent' | 'nearest'>('latest');
     const [locationFilter, setLocationFilter] = useState('All');
     const [availableLocations, setAvailableLocations] = useState<string[]>(['All']);
     const [showLocationModal, setShowLocationModal] = useState(false);
@@ -361,32 +361,6 @@ const FeedScreen = ({ navigation, route }: any) => {
         });
     }, [mapPosts]);
 
-    const toggleViewMode = useCallback(async () => {
-        if (viewMode === 'list') {
-            setMapLoading(true);
-            try {
-                // Fetch fresh user location when switching to map
-                const loc = await getCurrentLocation();
-                if (loc) {
-                    setUserLocation({ lat: loc.latitude, lng: loc.longitude });
-                } else {
-                    // If denied, still allow map but center on default
-                    console.log('Location denied or failed, using default center');
-                }
-            } catch (err) {
-                console.error('Error fetching location:', err);
-            } finally {
-                // Add a slight delay to ensure smooth transition
-                setTimeout(() => {
-                    setViewMode('map');
-                    setMapLoading(false);
-                }, 300);
-            }
-        } else {
-            setViewMode('list');
-        }
-    }, [viewMode]);
-
     const mapHTML = `
     <!DOCTYPE html>
         <html>
@@ -650,19 +624,6 @@ const FeedScreen = ({ navigation, route }: any) => {
             console.error(e);
         }
     };
-
-    const handleRequestContact = useCallback(async (postId: string) => {
-        try {
-            await api.post(`/contacts/${postId}`);
-            Alert.alert("Success", "Contact Request Sent!");
-        } catch (err: any) {
-            Alert.alert("Error", err.response?.data?.msg || "Failed to send request");
-        }
-    }, []);
-
-    const toggleSort = useCallback(() => {
-        setSortOrder(prev => prev === 'latest' ? 'oldest' : 'latest');
-    }, []);
 
     const renderListContent = () => {
         if (loading) return (

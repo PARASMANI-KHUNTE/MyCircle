@@ -1,44 +1,64 @@
-# IDE
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / AI tooling
 .vscode/
 .idea/
 .windsurf/
 .kilocode/
+.kilo/
 .agent/
-
-
-# OS
-.DS_Store
-Thumbs.db
 
 # Environment
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!**/.env.example
 
 # Logs
 *.log
 logs/
 
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
 # Build outputs
 dist/
 build/
 coverage/
+*.tsbuildinfo
+.turbo/
+.eslintcache
 
-# Dependencies
-node_modules/
-
-# Cache
+# Caches
 .cache/
 .vite/
+.expo/
+.expo-shared/
 
-# Python/report tooling
+# Python / report tooling
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 
+# Signing material (keep the committed Android debug keystore)
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+!MyCircleAppSuite/Mobile/android/app/debug.keystore
+
+# Compiled app bundles (build on demand, do not commit)
+*.apk
+*.aab
+
 # Mobile local tooling artifacts
-MyCircleAppSuite/Mobile/.expo/
 MyCircleAppSuite/Mobile/.bundle/
 MyCircleAppSuite/Mobile/build_log.txt
 MyCircleAppSuite/Mobile/fingerprint.txt

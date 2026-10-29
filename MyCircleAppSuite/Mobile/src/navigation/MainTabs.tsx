@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
@@ -22,7 +22,7 @@ const MainTabs = () => {
     const { isAuthenticated } = useAuth();
     const [_, setUnreadMsgCount] = useState(0);
 
-    const fetchUnreadMsgCount = async () => {
+    const fetchUnreadMsgCount = useCallback(async () => {
         if (!isAuthenticated) {
             setUnreadMsgCount(0);
             return;
@@ -34,7 +34,7 @@ const MainTabs = () => {
         } catch (err) {
             console.error('Failed to fetch unread messages count', err);
         }
-    };
+    }, [isAuthenticated]);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -43,7 +43,7 @@ const MainTabs = () => {
         }
 
         void fetchUnreadMsgCount();
-    }, [isAuthenticated]);
+    }, [isAuthenticated, fetchUnreadMsgCount]);
 
     useEffect(() => {
         if (!socket || !isAuthenticated) return;
@@ -78,7 +78,7 @@ const MainTabs = () => {
             socket.off('messages_read', handleMessagesRead);
             socket.off('unread_count_update', handleMessagesRead);
         };
-    }, [socket, isAuthenticated]);
+    }, [socket, isAuthenticated, fetchUnreadMsgCount]);
 
     return (
         <Tab.Navigator

@@ -19,7 +19,7 @@ import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 import './Explore.css';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, CircleMarker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -179,7 +179,6 @@ const EnhancedMapControls = ({ map }) => {
     const locateUser = () => {
         const el = document.querySelector('.leaflet-marker-pane circle[r="8"]');
         if (el) {
-            const bounds = map.getBounds();
             const userMarker = el.closest('circle');
             if (userMarker) {
                 const lat = Number(userMarker.getAttribute('cy'));
@@ -394,10 +393,6 @@ const Explore = () => {
             );
         }
     }, [userLocation, locationStatus, fallbackUserLocation]);
-
-    const handleFilterChange = (newFilter) => {
-        setSelectedCategories([newFilter]);
-    };
 
     const toggleCategory = (catId) => {
         if (catId === 'all') {
@@ -842,7 +837,7 @@ const Explore = () => {
                         )}
 
                         {/* Enhanced Markers */}
-                        {filteredMapPosts.map((post, idx) => {
+                        {filteredMapPosts.map((post) => {
                             const cat = CATEGORIES.find(c => c.id === post.type) || CATEGORIES[0];
                             const markerColor = cat?.color || '#6366f1';
                             const formattedPrice = post.price > 999 ? (post.price / 1000).toFixed(1) + 'k' : post.price;

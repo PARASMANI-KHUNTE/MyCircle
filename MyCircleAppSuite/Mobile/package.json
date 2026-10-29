@@ -7,6 +7,7 @@
     "android:win": "powershell -ExecutionPolicy Bypass -File scripts/run-android-shortpath.ps1",
     "ios": "react-native run-ios",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "postinstall": "patch-package",
     "start": "react-native start --config metro.config.js",
     "start:8081": "react-native start --config metro.config.js --port 8081",

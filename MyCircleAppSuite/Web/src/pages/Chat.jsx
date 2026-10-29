@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
@@ -23,17 +23,6 @@ const Chat = () => {
         const sender = message?.sender;
         return sender?._id || sender?.id || sender || null;
     };
-
-    const fetchConversations = useCallback(async () => {
-        try {
-            const res = await api.get('/chat/conversations');
-            setConversations(res.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
 
     useEffect(() => {
         if (!user || initialized) return;

@@ -39,7 +39,6 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
     const [messagesError, setMessagesError] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
-    const [postLoading, setPostLoading] = useState(false);
     const [postCollapsed, setPostCollapsed] = useState(true);
     const messagesEndRef = useRef(null);
     const post = conversation.postId;
@@ -469,7 +468,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                                         )}
                                     </div>
                                 </div>
-                                {showPostCard && !postLoading && post && (
+                                {showPostCard && post && (
                                     <div className={`flex items-start ${isOwn ? 'order-[-1] mr-2' : 'ml-2'}`}>
                                         <div 
                                             onClick={() => navigate(`/post/${post._id}`)}

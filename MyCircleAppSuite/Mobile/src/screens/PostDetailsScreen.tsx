@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Linking, StyleSheet, Dimensions, TextInput, KeyboardAvoidingView, Platform, StatusBar, Clipboard } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, Dimensions, KeyboardAvoidingView, Platform, StatusBar, Clipboard } from 'react-native';
 import { Alert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MapPin, Clock, MessageCircle, ArrowLeft, Trash2, Shield, Calendar, Tag, ChevronLeft, ChevronRight, User, Share2, Heart, MoreVertical, Sparkles, X } from 'lucide-react-native';
+import { MapPin, MessageCircle, ArrowLeft, ChevronRight, Share2, Heart, MoreVertical, Sparkles } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { formatDurationMinutesLong } from '../utils/formatDuration';
 import api, { BASE_URL } from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
 
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
@@ -25,7 +24,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PostDetailsScreen = ({ route, navigation }: any) => {
     const { id } = route.params;
     const auth = useAuth() as any;
-    const { colors } = useTheme();
     const [post, setPost] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [contactRequestStatus, setContactRequestStatus] = useState<'none' | 'pending' | 'accepted' | 'approved' | 'rejected' | 'expired'>('none');
@@ -43,9 +41,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         checkShared();
     }, [id]);
     const [comments, setComments] = useState<any[]>([]);
-    const [commentText, setCommentText] = useState('');
-    const [postingComment, setPostingComment] = useState(false);
-    const [replyTo, setReplyTo] = useState<{ id: string; username: string } | null>(null);
 
     // AI State
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -71,17 +66,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const isOwnPost = auth?.user?._id === post?.user?._id;
     const hasChatAccess = contactRequestStatus === 'accepted' || contactRequestStatus === 'approved';
 
-    useEffect(() => {
-        fetchPostDetails();
-    }, [id]);
-
-    useEffect(() => {
-        if (post && (!post.images || post.images.length === 0)) {
-            getPlaceholderSuggestions(post.title, post.description).then(setAiPlaceholderSuggestion);
-        }
-    }, [post?._id]);
-
-    const fetchPostDetails = async () => {
+    const fetchPostDetails = useCallback(async () => {
         try {
             setLoading(true);
             const res = await api.get(`/posts/${id}`);
@@ -96,27 +81,17 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, navigation]);
 
-    const handlePostComment = async () => {
-        if (!commentText.trim()) return;
-        setPostingComment(true);
-        try {
-            if (replyTo) {
-                const res = await api.post(`/posts/${id}/comment/${replyTo.id}/reply`, { text: commentText });
-                setComments(comments.map(c => c._id === replyTo.id ? { ...c, replies: [...(c.replies || []), res.data] } : c));
-                setReplyTo(null);
-            } else {
-                const res = await api.post(`/posts/${id}/comment`, { text: commentText });
-                setComments([res.data, ...comments]);
-            }
-            setCommentText('');
-        } catch (err: any) {
-            Alert.alert("Error", "Failed to post.");
-        } finally {
-            setPostingComment(false);
+    useEffect(() => {
+        fetchPostDetails();
+    }, [fetchPostDetails]);
+
+    useEffect(() => {
+        if (post && (!post.images || post.images.length === 0)) {
+            getPlaceholderSuggestions(post.title, post.description).then(setAiPlaceholderSuggestion);
         }
-    };
+    }, [post]);
 
     const handleLike = async () => {
         if (!auth.user) return Alert.alert("Login Required", "Please login to like posts");

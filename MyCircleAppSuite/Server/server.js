@@ -16,6 +16,7 @@ require('./src/config/firebase');
 const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
 const { requestContext } = require('./src/middleware/requestContext');
+const { getServiceName } = require('./src/config/serviceIdentity');
 const User = require('./src/models/User');
 const { closeQueueConnection } = require('./src/utils/queue');
 
@@ -241,7 +242,9 @@ if (isProduction) {
 
 app.use(express.json({ limit: '10mb' }));
 
-app.use(requestContext(logger, 'api'));
+const serviceName = getServiceName();
+app.set('serviceName', serviceName);
+app.use(requestContext(logger, serviceName));
 
 connectDB();
 

@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const { isRedisEnabled, isRedisReady } = require('../utils/queue');
+const { getServiceName } = require('../config/serviceIdentity');
 
 router.get('/', async (req, res) => {
     const services = {
@@ -29,6 +30,7 @@ router.get('/', async (req, res) => {
     
     res.json({
         status,
+        service: getServiceName(),
         timestamp: new Date().toISOString(),
         services,
         version: '1.0.0',

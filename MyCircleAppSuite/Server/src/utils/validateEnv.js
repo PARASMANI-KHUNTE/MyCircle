@@ -3,6 +3,7 @@
  * Validates that all required environment variables are present at startup
  */
 const { cleanEnv, str, port, url } = require('envalid');
+const { VALID_SERVICE_NAMES } = require('../config/serviceIdentity');
 
 const validateEnv = () => {
     const isProduction = process.env.NODE_ENV === 'production';
@@ -34,6 +35,7 @@ const validateEnv = () => {
     try {
         cleanEnv(process.env, {
             NODE_ENV: str({ choices: ['development', 'production', 'test'], default: 'development' }),
+            SERVICE_NAME: str({ choices: [...VALID_SERVICE_NAMES], default: 'api' }),
             PORT: port({ default: 5000 }),
             JWT_SECRET: str(),
             GOOGLE_CLIENT_ID: str({ default: undefined }),

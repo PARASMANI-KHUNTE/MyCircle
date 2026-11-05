@@ -8,7 +8,7 @@ The current web and mobile clients use the monolith's routes below. These mounts
 
 The executable ownership source is `MyCircleAppSuite/Server/src/config/apiManifest.js`. Any route mount added or moved during migration must update that manifest and its characterization tests in the same change.
 
-The compatibility router currently supports read-only Marketplace traffic (`GET`, `HEAD`, and `OPTIONS`). Write traffic remains on the monolith until the Marketplace service implements the full request and media-upload contract.
+The compatibility router currently supports read-only Marketplace traffic (`GET`, `HEAD`, and `OPTIONS`) and opt-in JSON traffic for Identity. Multipart writes remain on the monolith until the target service implements the full media-upload contract.
 
 | Client-facing mount | Current module | Planned owner | Migration rule |
 | --- | --- | --- | --- |

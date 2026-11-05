@@ -157,3 +157,4 @@ The first implementation should be the baseline and contract work, not a new net
 - **Identity progress:** token issuance and verification now use `src/services/identity/tokenService.js` behind the existing auth and protected-route adapters.
 - **Platform progress:** service URL resolution, bounded downstream calls, request-context propagation, and versioned event envelopes are available under `src/services/platform/`.
 - **Routing progress:** configured Marketplace `GET`/`HEAD`/`OPTIONS` traffic can be shifted through the compatibility router; unset service URLs preserve monolith behavior, while enabled-service failures surface as `503` rather than silently falling back.
+- **Identity routing progress:** configured Identity `GET`/`HEAD`/`OPTIONS` and JSON `POST` traffic can be shifted through the same router; multipart requests remain on the compatibility API.

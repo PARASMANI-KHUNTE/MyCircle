@@ -255,6 +255,10 @@ startCronJobs(io);
 app.use(passport.initialize());
 
 app.use('/', require('./src/routes/healthRoutes'));
+app.use('/auth', serviceRouter({
+    serviceName: 'identity',
+    methods: ['GET', 'HEAD', 'OPTIONS', 'POST'],
+}));
 app.use('/auth', require('./src/routes/authRoutes'));
 app.use('/api/posts', serviceRouter({ serviceName: 'marketplace' }));
 app.use('/api/posts', require('./src/routes/postRoutes'));

@@ -22,8 +22,20 @@ const serviceRouter = ({
         }
 
         try {
+            const contentType = req.get('content-type') || '';
+            const hasBody = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+            if (hasBody && contentType && !contentType.includes('application/json')) {
+                return next();
+            }
+
             const response = await client(req.originalUrl, {
                 method: req.method,
+                ...(hasBody && req.body !== undefined
+                    ? {
+                        body: JSON.stringify(req.body),
+                        headers: { 'content-type': 'application/json' },
+                    }
+                    : {}),
             }, {
                 requestId: req.requestId,
                 authorization: req.get('authorization'),

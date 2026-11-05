@@ -7,6 +7,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const { isRedisEnabled, isRedisReady } = require('../utils/queue');
 const { getServiceName } = require('../config/serviceIdentity');
+const { checkConfiguredServices } = require('../services/platform/serviceHealth');
 
 router.get('/', async (req, res) => {
     const services = {
@@ -25,8 +26,10 @@ router.get('/', async (req, res) => {
     
     // Redis is optional; report the shared queue connection state without opening a new connection.
     services.redis = isRedisEnabled() && isRedisReady() ? 'ok' : 'unavailable';
-    
-    const status = services.database === 'ok' ? 'ok' : 'degraded';
+    const downstream = await checkConfiguredServices();
+    services.extracted = downstream.services;
+
+    const status = services.database === 'ok' && downstream.allHealthy ? 'ok' : 'degraded';
     
     res.json({
         status,
@@ -44,11 +47,16 @@ router.get('/live', (req, res) => {
 
 router.get('/ready', async (req, res) => {
     const mongoOk = mongoose.connection.readyState === 1;
+    const downstream = await checkConfiguredServices();
     
-    if (mongoOk) {
-        res.json({ status: 'ready' });
+    if (mongoOk && downstream.allHealthy) {
+        res.json({ status: 'ready', downstream: downstream.services });
     } else {
-        res.status(503).json({ status: 'not ready', mongoOk });
+        res.status(503).json({
+            status: 'not ready',
+            mongoOk,
+            downstream: downstream.services,
+        });
     }
 });
 

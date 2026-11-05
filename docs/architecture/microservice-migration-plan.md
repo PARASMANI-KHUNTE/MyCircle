@@ -158,3 +158,4 @@ The first implementation should be the baseline and contract work, not a new net
 - **Platform progress:** service URL resolution, bounded downstream calls, request-context propagation, and versioned event envelopes are available under `src/services/platform/`.
 - **Routing progress:** configured Marketplace `GET`/`HEAD`/`OPTIONS` traffic can be shifted through the compatibility router; unset service URLs preserve monolith behavior, while enabled-service failures surface as `503` rather than silently falling back.
 - **Identity routing progress:** configured Identity `GET`/`HEAD`/`OPTIONS` and JSON `POST` traffic can be shifted through the same router; multipart requests remain on the compatibility API.
+- **Readiness progress:** configured extracted services are probed through their declared `/health/live` contract; unconfigured services do not affect readiness, while configured failures report degraded/not-ready state.

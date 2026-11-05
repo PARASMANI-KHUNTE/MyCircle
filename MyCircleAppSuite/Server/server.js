@@ -17,6 +17,7 @@ const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
 const { requestContext } = require('./src/middleware/requestContext');
 const { getServiceName } = require('./src/config/serviceIdentity');
+const { serviceRouter } = require('./src/middleware/serviceRouter');
 const User = require('./src/models/User');
 const { closeQueueConnection } = require('./src/utils/queue');
 
@@ -255,6 +256,7 @@ app.use(passport.initialize());
 
 app.use('/', require('./src/routes/healthRoutes'));
 app.use('/auth', require('./src/routes/authRoutes'));
+app.use('/api/posts', serviceRouter({ serviceName: 'marketplace' }));
 app.use('/api/posts', require('./src/routes/postRoutes'));
 app.use('/api/contacts', require('./src/routes/contactRoutes'));
 app.use('/api/user', require('./src/routes/userRoutes'));

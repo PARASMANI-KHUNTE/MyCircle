@@ -5,7 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
 const http = require('http');
-const crypto = require('crypto');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
@@ -16,6 +15,7 @@ const connectDB = require('./src/config/db');
 require('./src/config/firebase');
 const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
+const { requestContext } = require('./src/middleware/requestContext');
 const User = require('./src/models/User');
 const { closeQueueConnection } = require('./src/utils/queue');
 
@@ -241,29 +241,7 @@ if (isProduction) {
 
 app.use(express.json({ limit: '10mb' }));
 
-app.use((req, res, next) => {
-    const requestId = req.header('x-request-id') || crypto.randomUUID();
-    req.requestId = requestId;
-    res.setHeader('x-request-id', requestId);
-    req.log = logger.child({
-        requestId,
-        method: req.method,
-        path: req.originalUrl
-    });
-
-    req.startTime = Date.now();
-    res.on('finish', () => {
-        const duration = Date.now() - req.startTime;
-        req.log.info({
-            method: req.method,
-            url: req.url,
-            status: res.statusCode,
-            duration: `${duration}ms`,
-            userId: req.user?.id,
-        }, 'Request completed');
-    });
-    next();
-});
+app.use(requestContext(logger, 'api'));
 
 connectDB();
 

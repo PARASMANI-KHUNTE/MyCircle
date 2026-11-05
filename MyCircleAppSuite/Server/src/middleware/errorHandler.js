@@ -41,8 +41,10 @@ const errorHandler = (err, req, res, next) => {
         error = new ApiError(statusCode, message, false, err.stack);
     }
 
-    logger.error({
+    const requestLogger = req.log || logger;
+    requestLogger.error({
         requestId,
+        service: req.service || 'api',
         method: req.method,
         url: req.originalUrl,
         statusCode: error.statusCode,

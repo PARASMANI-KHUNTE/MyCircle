@@ -6,6 +6,8 @@ Last updated: 2026-11-05
 
 The current web and mobile clients use the monolith's routes below. These mounts are compatibility boundaries during migration; extracted services must preserve them through gateway routes or adapters until clients are deliberately versioned.
 
+The executable ownership source is `MyCircleAppSuite/Server/src/config/apiManifest.js`. Any route mount added or moved during migration must update that manifest and its characterization tests in the same change.
+
 | Client-facing mount | Current module | Planned owner | Migration rule |
 | --- | --- | --- | --- |
 | `/auth` | `authRoutes` | Identity | Preserve token and login response shapes |

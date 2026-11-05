@@ -1,28 +1,12 @@
 const express = require('express');
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { hashPassword, verifyPassword } = require('../utils/password');
-
-const getJwtExpiry = () => {
-    const value = process.env.JWT_EXPIRY || '30d';
-
-    if (/^\d+$/.test(value)) {
-        return Number(value);
-    }
-
-    if (/^\d+[dhms]$/.test(value)) {
-        return /** @type {import('jsonwebtoken').SignOptions['expiresIn']} */ (value);
-    }
-
-    return '30d';
-};
-
-const jwtExpiry = getJwtExpiry();
+const { issueToken } = require('../services/identity/tokenService');
 
 const normalizeUrl = (value) => {
     if (!value) return null;
@@ -102,26 +86,9 @@ router.get('/google/callback', (req, res, next) => {
             return res.redirect(`${clientUrl}/login?error=oauth`);
         }
 
-        const payload = {
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-            },
-        };
-
-jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: jwtExpiry },
-            (signErr, token) => {
-                if (signErr) {
-                    return next(new ApiError(500, 'Error generating authentication token'));
-                }
-                // Use hash fragment instead of query params to prevent token leakage in logs/referrer
-                return res.redirect(`${clientUrl}/login/success#token=${token}`);
-            }
-        );
+        issueToken(user)
+            .then((token) => res.redirect(`${clientUrl}/login/success#token=${token}`))
+            .catch((signErr) => next(new ApiError(500, 'Error generating authentication token', false, signErr.stack)));
     })(req, res, next);
 });
 
@@ -140,25 +107,7 @@ const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const signAuthToken = (user) => new Promise((resolve, reject) => {
-    const payload = {
-        user: {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-        },
-    };
-
-    jwt.sign(
-        payload,
-        process.env.JWT_SECRET,
-        { expiresIn: jwtExpiry },
-        (err, token) => {
-            if (err) return reject(err);
-            resolve(token);
-        }
-    );
-});
+const signAuthToken = issueToken;
 
 // @desc    Register with email/password
 // @route   POST /auth/register

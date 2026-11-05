@@ -1,6 +1,6 @@
 # Microservice Migration Plan
 
-Status: Proposed  
+Status: In progress - Phase 0 and Identity boundary implemented
 Branch: `microservice-migration`  
 Baseline: `main`  
 Last updated: 2026-11-05
@@ -154,3 +154,5 @@ The first implementation should be the baseline and contract work, not a new net
 - **Initial boundary candidates:** Identity, Marketplace, Contact, Communication, Safety, Notifications.
 - **Database rule:** service-owned writes and no cross-service database reads.
 - **Client strategy:** preserve current client-facing contracts during migration.
+- **Identity progress:** token issuance and verification now use `src/services/identity/tokenService.js` behind the existing auth and protected-route adapters.
+- **Platform progress:** service URL resolution, bounded downstream calls, request-context propagation, and versioned event envelopes are available under `src/services/platform/`.

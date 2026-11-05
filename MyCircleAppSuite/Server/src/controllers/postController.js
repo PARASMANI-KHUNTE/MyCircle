@@ -7,7 +7,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const ContactRequest = require('../models/ContactRequest');
 const Notification = require('../models/Notification');
-const jwt = require('jsonwebtoken');
+const { verifyToken } = require('../services/identity/tokenService');
 const { addImageJob } = require('../utils/queue');
 const mongoose = require('mongoose');
 const { containsProfanity } = require('../utils/profanityFilter');
@@ -347,7 +347,7 @@ exports.getPostById = async (req, res, next) => {
         const token = req.header('x-auth-token');
         if (token) {
             try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const decoded = verifyToken(token);
                 if (decoded && typeof decoded === 'object' && decoded.user) {
                     const requesterId = decoded.user.id;
 

@@ -6,6 +6,8 @@ Last updated: 2026-11-05
 
 This inventory records the current HTTP entry points and the proposed ownership boundary before any traffic is moved. It is intentionally a logical map of the modular monolith, not a claim that these are already deployable services.
 
+The executable operational contract for each boundary is maintained in `MyCircleAppSuite/Server/src/config/serviceContracts.js`. It defines the expected health path, persistence ownership, and event vocabulary used during extraction.
+
 ## HTTP route map
 
 | Current mount | Route module | Primary responsibility | Proposed owner |

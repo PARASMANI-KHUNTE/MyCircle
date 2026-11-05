@@ -10,7 +10,7 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const compression = require('compression');
 const pino = require('pino');
-const jwt = require('jsonwebtoken');
+const { verifyToken } = require('./src/services/identity/tokenService');
 const connectDB = require('./src/config/db');
 require('./src/config/firebase');
 const validateEnv = require('./src/utils/validateEnv');
@@ -70,7 +70,7 @@ io.use((socket, next) => {
             return next(new Error('Authentication required'));
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = verifyToken(token);
         socket.user = decoded.user;
         return next();
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MapPin, Pencil, ShoppingBag } from 'lucide-react';
+import { Heart, MapPin, Pencil, ShoppingBag, Trash2 } from 'lucide-react';
 import Button from './Button';
 import CheckoutModal from './CheckoutModal';
 import { cn } from '../../utils/cn';
@@ -19,6 +19,7 @@ const PostCard = ({
     currentUserId = null,
     isOwnPost: propIsOwnPost = false,
     onEdit = () => {},
+    onDelete = null,
     onClick = () => {},
 }) => {
     const {
@@ -130,17 +131,34 @@ const PostCard = ({
                             </span>
 
                             {isOwnPost ? (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="ml-1 px-2"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEdit(post);
-                                    }}
-                                >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                </Button>
+                                <>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="ml-1 px-2"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEdit(post);
+                                        }}
+                                        aria-label="Edit post"
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    {onDelete && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="px-2 text-foreground-muted hover:bg-error/10 hover:text-error"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDelete(post);
+                                            }}
+                                            aria-label="Delete post"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    )}
+                                </>
                             ) : (
                                 <Button
                                     variant="ghost"

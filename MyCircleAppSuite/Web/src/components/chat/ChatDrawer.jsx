@@ -154,7 +154,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={handleOpenFullChat}
-                                    className="inline-flex items-center gap-2 rounded-full border border-card-border px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-black/5 hover:text-text-heading"
+                                    className="inline-flex items-center gap-2 rounded-full border border-card-border px-3 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-card-hover hover:text-foreground"
                                     title="Open full chat page"
                                 >
                                     <Maximize2 className="w-4 h-4" />
@@ -162,7 +162,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                                 </button>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 hover:bg-black/5 rounded-full transition-colors text-text-muted hover:text-text-heading"
+                                    className="p-2 hover:bg-card-hover rounded-full transition-colors text-foreground-muted hover:text-foreground"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>

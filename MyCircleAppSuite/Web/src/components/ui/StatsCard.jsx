@@ -1,20 +1,18 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 const StatsCard = ({ icon: Icon, label, value, color = 'bg-primary/10 text-primary' }) => {
     return (
-        <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-card p-6 rounded-2xl border border-card-border shadow-sm hover:shadow-md transition-all flex items-center gap-4"
-        >
-            <div className={`p-3 rounded-xl ${color}`}>
-                <Icon className="w-6 h-6" />
+        <div className="flex items-center gap-4 rounded-2xl border border-card-border bg-card p-5 transition-colors hover:border-card-border-hover">
+            <div className={`rounded-xl p-3 ${color}`}>
+                <Icon className="h-5 w-5" />
             </div>
             <div>
-                <p className="text-text-muted text-xs uppercase tracking-widest font-bold mb-0.5">{label}</p>
-                <h3 className="text-2xl font-bold text-text-heading">{value}</h3>
+                <p className="mb-0.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                    {label}
+                </p>
+                <h3 className="text-xl font-semibold text-foreground">{value}</h3>
             </div>
-        </motion.div>
+        </div>
     );
 };
 

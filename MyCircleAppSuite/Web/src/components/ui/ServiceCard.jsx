@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Star, MapPin, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from './Button';
@@ -31,10 +30,8 @@ const ServiceCard = ({ user, searchedSkill }) => {
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-card rounded-card p-6 border border-card-border shadow-card hover:shadow-lg transition-all h-full flex flex-col group"
+        <div
+            className="bg-card rounded-2xl p-6 border border-card-border hover:border-card-border-hover transition-colors h-full flex flex-col group"
         >
             <div className="flex items-start gap-4 mb-4">
                 <Link to={`/profile?userId=${user._id}`}>
@@ -94,7 +91,7 @@ const ServiceCard = ({ user, searchedSkill }) => {
                     </Button>
                 </Link>
             </div>
-        </motion.div>
+        </div>
     );
 };
 

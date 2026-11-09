@@ -1,22 +1,42 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Check, X, Clock, MessageCircle, ArrowRight, User, Package,
+    Trash2, Phone, MessageSquare, MapPin, RefreshCw, CheckCircle, XCircle, Send,
+} from 'lucide-react';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import { useSocket } from '../context/SocketContext';
 import Button from '../components/ui/Button';
 import { getAvatarUrl } from '../utils/avatar';
-import { 
-    Check, X, Clock, MessageCircle, ArrowRight, User, Package, 
-    Trash2, Star, Phone, MessageSquare, MapPin, DollarSign,
-    RefreshCw, CheckCircle, XCircle, Send
-} from 'lucide-react';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
+import { cn } from '../utils/cn';
+
+const STATUS = {
+    pending: { icon: Clock, className: 'bg-primary/10 text-primary border-primary/20', label: 'Pending' },
+    accepted: { icon: CheckCircle, className: 'bg-success/10 text-success border-success/20', label: 'Accepted' },
+    completed: { icon: CheckCircle, className: 'bg-info/10 text-info border-info/20', label: 'Completed' },
+    rejected: { icon: XCircle, className: 'bg-error/10 text-error border-error/20', label: 'Rejected' },
+    canceled: { icon: XCircle, className: 'bg-background-tertiary text-foreground-muted border-card-border', label: 'Canceled' },
+};
+
+const StatusBadge = ({ status }) => {
+    const config = STATUS[status] || STATUS.pending;
+    const Icon = config.icon;
+    return (
+        <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium', config.className)}>
+            <Icon className="h-3 w-3" />
+            {config.label}
+        </span>
+    );
+};
 
 const Requests = () => {
     const { success, error: showError } = useToast();
     const { currencySymbol } = useCurrencySymbol();
     const { socket } = useSocket();
+    const navigate = useNavigate();
+
     const [activeTab, setActiveTab] = useState('received');
     const [receivedRequests, setReceivedRequests] = useState([]);
     const [sentRequests, setSentRequests] = useState([]);
@@ -24,53 +44,35 @@ const Requests = () => {
     const [actionLoading, setActionLoading] = useState(null);
 
     const refreshAllRequests = useCallback(async (showLoader = false) => {
-        if (showLoader) {
-            setLoading(true);
-        }
+        if (showLoader) setLoading(true);
         try {
             const [receivedRes, sentRes] = await Promise.all([
                 api.get('/contacts/received'),
-                api.get('/contacts/sent')
+                api.get('/contacts/sent'),
             ]);
-            setReceivedRequests(receivedRes.data);
-            setSentRequests(sentRes.data);
-        } catch (err) {
-            console.error(err);
+            setReceivedRequests(Array.isArray(receivedRes.data) ? receivedRes.data : []);
+            setSentRequests(Array.isArray(sentRes.data) ? sentRes.data : []);
+        } catch {
+            showError('Could not load requests.');
         } finally {
-            if (showLoader) {
-                setLoading(false);
-            }
+            if (showLoader) setLoading(false);
         }
-    }, []);
+    }, [showError]);
 
-    const fetchRequests = useCallback(async () => {
-        await refreshAllRequests(true);
+    useEffect(() => {
+        void refreshAllRequests(true);
     }, [refreshAllRequests]);
 
     useEffect(() => {
-        void fetchRequests();
-    }, [fetchRequests]);
-
-    // Real-time: listen for request-related notifications
-    useEffect(() => {
         if (!socket) return;
-
         const handleNewNotification = (notification) => {
             if (['request', 'approval', 'info'].includes(notification?.type)) {
-                console.log('[Requests] Real-time update received');
                 void refreshAllRequests(false);
-                void fetchRequests();
             }
         };
-
         socket.on('new_notification', handleNewNotification);
-
-        return () => {
-            socket.off('new_notification', handleNewNotification);
-        };
-    }, [socket, refreshAllRequests, fetchRequests]);
-
-    const navigate = useNavigate();
+        return () => socket.off('new_notification', handleNewNotification);
+    }, [socket, refreshAllRequests]);
 
     const handleMessage = async (request) => {
         try {
@@ -78,21 +80,12 @@ const Requests = () => {
                 navigate(`/chat?conversationId=${request.conversationId}`);
                 return;
             }
-
-            const targetUserId = activeTab === 'received'
-                ? request?.requester?._id
-                : request?.recipient?._id;
-            const res = await api.post(`/chat/init/${targetUserId}`, {
-                postId: request?.post?._id
-            });
-            const targetConversationId = res.data?._id;
-            if (!targetConversationId) {
-                throw new Error('Conversation was not created');
-            }
-            navigate(`/chat?conversationId=${targetConversationId}`);
+            const targetUserId = activeTab === 'received' ? request?.requester?._id : request?.recipient?._id;
+            const res = await api.post(`/chat/init/${targetUserId}`, { postId: request?.post?._id });
+            if (!res.data?._id) throw new Error('Conversation was not created');
+            navigate(`/chat?conversationId=${res.data._id}`);
         } catch (err) {
-            console.error(err);
-            showError(err.response?.data?.msg || "Failed to start chat");
+            showError(err.response?.data?.msg || 'Failed to start chat');
         }
     };
 
@@ -116,13 +109,12 @@ const Requests = () => {
         setActionLoading(requestId);
         try {
             const { data } = await api.put(`/contacts/${requestId}/status`, { status });
-            setReceivedRequests(prev => prev.map(req =>
-                req._id === requestId ? { ...req, ...data } : req
-            ));
-            success(status === 'accepted' ? 'Request accepted!' : 'Request rejected');
+            setReceivedRequests((prev) =>
+                prev.map((req) => (req._id === requestId ? { ...req, ...data } : req))
+            );
+            success(status === 'accepted' ? 'Request accepted.' : 'Request rejected.');
         } catch (err) {
-            console.error(err);
-            showError(err.response?.data?.msg || "Action failed");
+            showError(err.response?.data?.msg || 'Action failed');
         } finally {
             setActionLoading(null);
         }
@@ -133,18 +125,17 @@ const Requests = () => {
         try {
             const { data } = await api.put(`/contacts/${requestId}/status`, { status: 'completed' });
             if (data?.removed) {
-                setReceivedRequests(prev => prev.filter(req => req._id !== requestId));
-                setSentRequests(prev => prev.filter(req => req.post?._id !== data.postId));
-                success('Work completed. Post closed and chat deleted.');
+                setReceivedRequests((prev) => prev.filter((req) => req._id !== requestId));
+                setSentRequests((prev) => prev.filter((req) => req.post?._id !== data.postId));
+                success('Work completed. Post closed and chat removed.');
             } else {
-                setReceivedRequests(prev => prev.map(req =>
-                    req._id === requestId ? { ...req, ...data } : req
-                ));
-                success('Marked as completed!');
+                setReceivedRequests((prev) =>
+                    prev.map((req) => (req._id === requestId ? { ...req, ...data } : req))
+                );
+                success('Marked as completed.');
             }
         } catch (err) {
-            console.error(err);
-            showError(err.response?.data?.msg || "Failed to complete");
+            showError(err.response?.data?.msg || 'Failed to complete request');
         } finally {
             setActionLoading(null);
         }
@@ -154,13 +145,12 @@ const Requests = () => {
         setActionLoading(requestId);
         try {
             const { data } = await api.put(`/contacts/${requestId}/status`, { status: 'canceled' });
-            setSentRequests(prev => prev.map(req =>
-                req._id === requestId ? { ...req, ...data } : req
-            ));
-            success('Request canceled');
+            setSentRequests((prev) =>
+                prev.map((req) => (req._id === requestId ? { ...req, ...data } : req))
+            );
+            success('Request canceled.');
         } catch (err) {
-            console.error(err);
-            showError(err.response?.data?.msg || "Failed to cancel request");
+            showError(err.response?.data?.msg || 'Failed to cancel request');
         } finally {
             setActionLoading(null);
         }
@@ -169,325 +159,267 @@ const Requests = () => {
     const handleDelete = async (requestId) => {
         try {
             await api.delete(`/contacts/${requestId}`);
-            setReceivedRequests(prev => prev.filter(req => req._id !== requestId));
-            setSentRequests(prev => prev.filter(req => req._id !== requestId));
-            success('Request removed');
-        } catch (err) {
-            console.error(err);
+            setReceivedRequests((prev) => prev.filter((req) => req._id !== requestId));
+            setSentRequests((prev) => prev.filter((req) => req._id !== requestId));
+            success('Request removed.');
+        } catch {
+            showError('Could not remove request.');
         }
     };
 
-    const getStatusBadge = (status) => {
-        const config = {
-            pending: { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: Clock, label: 'Pending' },
-            accepted: { bg: 'bg-green-500/20', text: 'text-green-400', icon: CheckCircle, label: 'Accepted' },
-            completed: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: CheckCircle, label: 'Completed' },
-            rejected: { bg: 'bg-red-500/20', text: 'text-red-400', icon: XCircle, label: 'Rejected' },
-            canceled: { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: XCircle, label: 'Canceled' },
-        };
-        const c = config[status] || config.pending;
-        const Icon = c.icon;
-        return { ...c, Icon };
-    };
-
     const requests = activeTab === 'received' ? receivedRequests : sentRequests;
-    const pendingCount = receivedRequests.filter(r => r.status === 'pending').length;
-    const sentPendingCount = sentRequests.filter(r => r.status === 'pending').length;
+    const pendingCount = receivedRequests.filter((r) => r.status === 'pending').length;
+    const sentPendingCount = sentRequests.filter((r) => r.status === 'pending').length;
 
     return (
-        <div className="min-h-screen bg-background">
-            {/* Header */}
-            <div className="sticky top-16 md:top-20 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
-                <div className="container mx-auto px-3 sm:px-4 py-4">
-                    <div className="flex items-start sm:items-center justify-between gap-3">
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                {pendingCount > 0 ? `${pendingCount} pending` : 'No pending requests'}
-                            </p>
-                        </div>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={fetchRequests}
-                            className="gap-2"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        </Button>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="flex gap-2 mt-4 bg-card-border/50 p-1 rounded-xl">
-                        <button
-                            onClick={() => setActiveTab('received')}
-                            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
-                                activeTab === 'received' 
-                                    ? 'bg-background shadow-sm text-foreground' 
-                                    : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                        >
-                            <span className="flex items-center justify-center gap-2">
-                                <User className="w-4 h-4" />
-                                Received
-                                {pendingCount > 0 && (
-                                    <span className="w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                        {pendingCount}
-                                    </span>
-                                )}
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('sent')}
-                            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
-                                activeTab === 'sent' 
-                                    ? 'bg-background shadow-sm text-foreground' 
-                                    : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                        >
-                            <span className="flex items-center justify-center gap-2">
-                                <Send className="w-4 h-4" />
-                                Sent
-                                {sentPendingCount > 0 && (
-                                    <span className="w-5 h-5 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                        {sentPendingCount}
-                                    </span>
-                                )}
-                            </span>
-                        </button>
-                    </div>
+        <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+            <header className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-xl font-semibold text-foreground">Requests</h1>
+                    <p className="mt-1 text-sm text-foreground-muted">
+                        {pendingCount > 0 ? `${pendingCount} pending` : 'No pending requests'}
+                    </p>
                 </div>
+                <Button variant="outline" size="sm" onClick={() => refreshAllRequests(true)} aria-label="Refresh requests">
+                    <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+                </Button>
+            </header>
+
+            <div className="mb-5 flex gap-1 rounded-xl border border-card-border bg-background-secondary p-1">
+                {[
+                    { id: 'received', label: 'Received', count: pendingCount, icon: User },
+                    { id: 'sent', label: 'Sent', count: sentPendingCount, icon: Send },
+                ].map((tab) => {
+                    const Icon = tab.icon;
+                    const active = activeTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                                active
+                                    ? 'bg-card text-foreground shadow-sm'
+                                    : 'text-foreground-muted hover:text-foreground'
+                            )}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {tab.label}
+                            {tab.count > 0 && (
+                                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                                    {tab.count}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* Content */}
-                <div className="container mx-auto px-3 sm:px-4 py-6 max-w-2xl">
-                {loading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : requests.length === 0 ? (
-                    <div className="text-center py-20">
-                        <div className="w-20 h-20 bg-card-border/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Package className="w-10 h-10 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-semibold mb-1">
-                            {activeTab === 'received' ? 'No requests received' : 'No requests sent'}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                            {activeTab === 'received' 
-                                ? 'Requests from users will appear here'
-                                : 'Your sent requests will appear here'
-                            }
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        <AnimatePresence>
-                            {requests.map((req, index) => {
-                                const otherUser = activeTab === 'received' ? req.requester : req.recipient;
-                                const badge = getStatusBadge(req.status);
-                                const BadgeIcon = badge.Icon;
-                                const isPending = req.status === 'pending';
-                                const isAccepted = req.status === 'accepted';
+            {loading ? (
+                <div className="flex items-center justify-center py-20">
+                    <RefreshCw className="h-6 w-6 animate-spin text-foreground-muted" />
+                </div>
+            ) : requests.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-card-border px-6 py-16 text-center">
+                    <Package className="mx-auto mb-3 h-8 w-8 text-foreground-muted/50" />
+                    <p className="text-sm font-medium text-foreground">
+                        {activeTab === 'received' ? 'No requests received' : 'No requests sent'}
+                    </p>
+                    <p className="mt-1 text-sm text-foreground-muted">
+                        {activeTab === 'received'
+                            ? 'Requests from other users will appear here.'
+                            : 'Requests you send will appear here.'}
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {requests.map((req) => {
+                        const otherUser = activeTab === 'received' ? req.requester : req.recipient;
+                        const isPending = req.status === 'pending';
+                        const isAccepted = req.status === 'accepted';
 
-                                return (
-                                    <motion.div
-                                        key={req._id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        className="bg-card border border-border rounded-2xl overflow-hidden"
+                        return (
+                            <article
+                                key={req._id}
+                                className="overflow-hidden rounded-2xl border border-card-border bg-card"
+                            >
+                                {req.post && (
+                                    <Link
+                                        to={`/post/${req.post._id}`}
+                                        className="flex items-center gap-3 border-b border-card-border px-4 py-3 transition-colors hover:bg-card-hover"
                                     >
-                                        {/* Post Info */}
-                                        {req.post && (
-                                            <Link 
-                                                to={`/post/${req.post._id}`}
-                                                className="flex items-center gap-3 p-4 bg-background/50 border-b border-border hover:bg-background transition-colors"
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background-tertiary">
+                                            {req.post.images?.[0] ? (
+                                                <img src={req.post.images[0]} alt="" className="h-full w-full object-cover" />
+                                            ) : (
+                                                <Package className="h-4 w-4 text-foreground-muted" />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-medium text-foreground">{req.post.title}</p>
+                                            <div className="mt-0.5 flex items-center gap-2 text-xs text-foreground-muted">
+                                                {Number(req.post.price) > 0 && (
+                                                    <span className="font-medium text-foreground">
+                                                        {currencySymbol}
+                                                        {Number(req.post.price).toLocaleString()}
+                                                    </span>
+                                                )}
+                                                {req.post.location && (
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <MapPin className="h-3 w-3" />
+                                                        {req.post.location.split(',')[0]}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <ArrowRight className="h-4 w-4 shrink-0 text-foreground-muted" />
+                                    </Link>
+                                )}
+
+                                <div className="flex items-start gap-3 p-4">
+                                    <Link to={`/profile?userId=${otherUser?._id}`} className="shrink-0">
+                                        <img
+                                            src={getAvatarUrl(otherUser)}
+                                            alt={otherUser?.displayName || 'User'}
+                                            className="h-10 w-10 rounded-full object-cover"
+                                        />
+                                    </Link>
+
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Link
+                                                to={`/profile?userId=${otherUser?._id}`}
+                                                className="text-sm font-semibold text-foreground hover:text-primary"
                                             >
-                                                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-lg overflow-hidden">
-                                                    {req.post.images?.[0] ? (
-                                                        <img src={req.post.images[0]} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span>📌</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-sm truncate">{req.post.title}</p>
-                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                        {req.post.price > 0 && (
-                                                            <span className="font-medium text-green-400">
-                                                                {currencySymbol}{req.post.price.toLocaleString()}
-                                                            </span>
-                                                        )}
-                                                        <MapPin className="w-3 h-3" />
-                                                        <span>{req.post.location?.split(',')[0] || 'Unknown'}</span>
-                                                    </div>
-                                                </div>
-                                                <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                                                {otherUser?.displayName || 'User'}
                                             </Link>
+                                            {otherUser?.isVerified && <CheckCircle className="h-3.5 w-3.5 text-primary" />}
+                                        </div>
+
+                                        {req.message && (
+                                            <p className="mt-1 line-clamp-2 rounded-lg bg-background-secondary p-2 text-sm text-foreground-secondary">
+                                                {req.message}
+                                            </p>
                                         )}
 
-                                        {/* User Info */}
-                                        <div className="p-4 flex items-start gap-3 sm:gap-4">
-                                            <Link to={`/profile?userId=${otherUser?._id}`} className="shrink-0">
-                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10">
-                                                    <img 
-                                                        src={getAvatarUrl(otherUser)} 
-                                                        alt="" 
-                                                        className="w-full h-full object-cover" 
-                                                    />
-                                                </div>
-                                            </Link>
-                                            
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                    <Link to={`/profile?userId=${otherUser?._id}`} className="font-semibold hover:text-primary">
-                                                        {otherUser?.displayName || 'User'}
-                                                    </Link>
-                                                    {otherUser?.isVerified && (
-                                                        <span className="text-blue-400">✓</span>
-                                                    )}
-                                                </div>
-                                                
-                                                {req.message && (
-                                                    <p className="text-sm text-muted-foreground italic line-clamp-2 bg-background/50 p-2 rounded-lg">
-                                                        "{req.message}"
-                                                    </p>
-                                                )}
-
-                                                {/* Timeline */}
-                                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs text-muted-foreground">
-                                                    <span>{new Date(req.createdAt).toLocaleDateString()}</span>
-                                                    {req.post?.type && (
-                                                        <span className="px-2 py-0.5 bg-primary/10 rounded-full capitalize">
-                                                            {req.post.type}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Status Badge */}
-                                            <div className={`px-2 py-1 rounded-full flex items-center gap-1 text-xs font-medium shrink-0 ${badge.bg} ${badge.text}`}>
-                                                <BadgeIcon className="w-3 h-3" />
-                                                {badge.label}
-                                            </div>
+                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-foreground-muted">
+                                            <span>{new Date(req.createdAt).toLocaleDateString()}</span>
+                                            {req.post?.type && (
+                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 capitalize text-primary">
+                                                    {req.post.type}
+                                                </span>
+                                            )}
                                         </div>
+                                    </div>
 
-                                        {/* Actions */}
-                                        <div className="p-4 pt-0 flex flex-wrap gap-2">
-                                            {activeTab === 'received' && isPending && (
-                                                <>
-                                                    <Button
-                                                        variant="primary"
-                                                        size="sm"
-                                                        onClick={() => handleAction(req._id, 'accepted')}
-                                                        disabled={actionLoading === req._id}
-                                                        className="gap-1.5 flex-1 sm:flex-none justify-center"
-                                                    >
-                                                        {actionLoading === req._id ? (
-                                                            <RefreshCw className="w-3 h-3 animate-spin" />
-                                                        ) : (
-                                                            <Check className="w-3 h-3" />
-                                                        )}
-                                                        Accept
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleAction(req._id, 'rejected')}
-                                                        disabled={actionLoading === req._id}
-                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-red-400 border-red-400/30 hover:bg-red-500/10"
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                        Reject
-                                                    </Button>
-                                                </>
-                                            )}
+                                    <StatusBadge status={req.status} />
+                                </div>
 
-                                            {/* Cancel button for sent pending requests */}
-                                            {activeTab === 'sent' && isPending && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleCancelRequest(req._id)}
-                                                    disabled={actionLoading === req._id}
-                                                    className="gap-1.5 flex-1 sm:flex-none justify-center text-red-400 border-red-400/30 hover:bg-red-500/10"
-                                                >
-                                                    {actionLoading === req._id ? (
-                                                        <RefreshCw className="w-3 h-3 animate-spin" />
-                                                    ) : (
-                                                        <X className="w-3 h-3" />
-                                                    )}
-                                                    Cancel
-                                                </Button>
-                                            )}
-
-                                            {isAccepted && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleMessage(req)}
-                                                    className="gap-1.5 flex-1 sm:flex-none justify-center"
-                                                >
-                                                    <MessageCircle className="w-3 h-3" />
-                                                    Message
-                                                </Button>
-                                            )}
-
-                                            {(otherUser?.contactPhone || otherUser?.contactWhatsapp) && isAccepted && (
-                                                <>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleCall(otherUser.contactPhone || otherUser.contactWhatsapp)}
-                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-green-400 border-green-400/30"
-                                                    >
-                                                        <Phone className="w-3 h-3" />
-                                                        Call
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleStartText(otherUser.contactWhatsapp || otherUser.contactPhone)}
-                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-blue-400 border-blue-400/30"
-                                                    >
-                                                        <MessageSquare className="w-3 h-3" />
-                                                        Text
-                                                    </Button>
-                                                </>
-                                            )}
-
-                                            {req.status === 'accepted' && activeTab === 'received' && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleComplete(req._id)}
-                                                    disabled={actionLoading === req._id}
-                                                    className="gap-1.5 flex-1 sm:flex-none justify-center text-blue-400 border-blue-400/30"
-                                                >
-                                                    {actionLoading === req._id ? (
-                                                        <RefreshCw className="w-3 h-3 animate-spin" />
-                                                    ) : (
-                                                        <CheckCircle className="w-3 h-3" />
-                                                    )}
-                                                    Mark Complete
-                                                </Button>
-                                            )}
-
+                                <div className="flex flex-wrap gap-2 px-4 pb-4">
+                                    {activeTab === 'received' && isPending && (
+                                        <>
                                             <Button
-                                                variant="ghost"
                                                 size="sm"
-                                                onClick={() => handleDelete(req._id)}
-                                                className="text-muted-foreground hover:text-red-400"
+                                                onClick={() => handleAction(req._id, 'accepted')}
+                                                disabled={actionLoading === req._id}
                                             >
-                                                <Trash2 className="w-3 h-3" />
+                                                {actionLoading === req._id ? (
+                                                    <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                                ) : (
+                                                    <Check className="mr-1.5 h-3.5 w-3.5" />
+                                                )}
+                                                Accept
                                             </Button>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
-                        </AnimatePresence>
-                    </div>
-                )}
-            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleAction(req._id, 'rejected')}
+                                                disabled={actionLoading === req._id}
+                                                className="text-error hover:bg-error/10 hover:text-error"
+                                            >
+                                                <X className="mr-1.5 h-3.5 w-3.5" />
+                                                Reject
+                                            </Button>
+                                        </>
+                                    )}
+
+                                    {activeTab === 'sent' && isPending && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleCancelRequest(req._id)}
+                                            disabled={actionLoading === req._id}
+                                            className="text-error hover:bg-error/10 hover:text-error"
+                                        >
+                                            {actionLoading === req._id ? (
+                                                <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <X className="mr-1.5 h-3.5 w-3.5" />
+                                            )}
+                                            Cancel
+                                        </Button>
+                                    )}
+
+                                    {isAccepted && (
+                                        <Button variant="outline" size="sm" onClick={() => handleMessage(req)}>
+                                            <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                                            Message
+                                        </Button>
+                                    )}
+
+                                    {(otherUser?.contactPhone || otherUser?.contactWhatsapp) && isAccepted && (
+                                        <>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleCall(otherUser.contactPhone || otherUser.contactWhatsapp)}
+                                            >
+                                                <Phone className="mr-1.5 h-3.5 w-3.5" />
+                                                Call
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleStartText(otherUser.contactWhatsapp || otherUser.contactPhone)}
+                                            >
+                                                <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+                                                Text
+                                            </Button>
+                                        </>
+                                    )}
+
+                                    {isAccepted && activeTab === 'received' && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleComplete(req._id)}
+                                            disabled={actionLoading === req._id}
+                                        >
+                                            {actionLoading === req._id ? (
+                                                <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+                                            )}
+                                            Mark complete
+                                        </Button>
+                                    )}
+
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDelete(req._id)}
+                                        className="ml-auto text-foreground-muted hover:bg-error/10 hover:text-error"
+                                        aria-label="Delete request"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };

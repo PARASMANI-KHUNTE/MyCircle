@@ -1,74 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useToast } from './Toast';
 import Button from './Button';
-import api from '../../utils/api';
 import { cn } from '../../utils/cn';
 import { getAvatarUrl } from '../../utils/avatar';
-import { formatDuration } from '../../utils/time';
-import { getPostInsights, getPostExplanation } from '../../services/aiService';
-import { useCurrencySymbol } from '../../context/CurrencySymbolContext';
-import {
-    Sparkles, X, Edit2, Trash2, Eye, Heart, Share2, MapPin,
-    Clock, Repeat, BarChart2, Check, Shield, Star, IndianRupee, Calendar, ChevronDown, ChevronUp
-} from 'lucide-react';
-
-const typeStyles = {
-    job: {
-        bg: 'bg-blue-500/10',
-        border: 'border-blue-500/20',
-        text: 'text-blue-500',
-        icon: '💼',
-        label: 'Job'
-    },
-    service: {
-        bg: 'bg-purple-500/10',
-        border: 'border-purple-500/20',
-        text: 'text-purple-500',
-        icon: '🔧',
-        label: 'Service'
-    },
-    sell: {
-        bg: 'bg-emerald-500/10',
-        border: 'border-emerald-500/20',
-        text: 'text-emerald-500',
-        icon: '🏷️',
-        label: 'For Sale'
-    },
-    rent: {
-        bg: 'bg-amber-500/10',
-        border: 'border-amber-500/20',
-        text: 'text-amber-500',
-        icon: '🏠',
-        label: 'For Rent'
-    }
-};
-
-const formatMoney = (value, symbol = '₹') => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric) || numeric <= 0) return null;
-    return `${symbol}${numeric.toLocaleString('en-IN')}`;
-};
-
-const formatDate = (value) => {
-    if (!value) return 'Recently';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Recently';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
-const formatLifecycleTime = (ms) => {
-    if (!Number.isFinite(ms) || ms <= 0) return 'Expired';
-
-    const totalHours = Math.ceil(ms / (60 * 60 * 1000));
-    if (totalHours < 24) {
-        return `${totalHours}h left`;
-    }
-
-    const totalDays = Math.ceil(ms / (24 * 60 * 60 * 1000));
-    return `${totalDays} day${totalDays === 1 ? '' : 's'} left`;
-};
+import CheckoutModal from './CheckoutModal';
 
 const PostCard = ({
     post,
@@ -77,440 +12,100 @@ const PostCard = ({
     onDelete = () => {},
     onEdit = () => {},
     onClick = () => {},
-    index = 0
 }) => {
-    const {
-        title,
-        description,
-        type,
-        location,
-        price,
-        user,
-        createdAt,
-        images,
-        acceptsBarter,
-        likes: initialLikes,
-        shares: initialShares,
-        isActive,
-        status
-    } = post;
-
-    const { success } = useToast();
-    const { currencySymbol } = useCurrencySymbol();
+    const { title, type, location, price, user, createdAt, images, likes, status } = post;
     const navigate = useNavigate();
-
-    const [likes, setLikes] = useState(initialLikes || []);
-    const [sharesCount, setSharesCount] = useState(initialShares || 0);
-    const [hasShared, setHasShared] = useState(false);
-    const [expanded, setExpanded] = useState(false);
-    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-    const [aiResult, setAiResult] = useState(null);
-    const [showAnalytics, setShowAnalytics] = useState(false);
-    const [analyticsData, setAnalyticsData] = useState(null);
-
-    useEffect(() => {
-        const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
-        setHasShared(sharedPosts.includes(post._id));
-    }, [post._id]);
-
-    const postUserId = user?._id || user;
-    const isOwnPost = !!propIsOwnPost || (currentUserId && postUserId && String(currentUserId) === String(postUserId));
-    const isLiked = currentUserId && likes.includes(currentUserId);
-    const typeStyle = typeStyles[type] || typeStyles.job;
-    const displayDate = formatDate(createdAt);
-    const displayLocation = location || 'Location unavailable';
-    const displayPrice = formatMoney(price, currencySymbol);
-    const budgetFloor = post.budgetMin ?? price;
-    const budgetCeiling = post.budgetMax ?? price;
-
-    const budgetLabel = useMemo(() => {
-        const minLabel = formatMoney(budgetFloor, currencySymbol);
-        const maxLabel = formatMoney(budgetCeiling, currencySymbol);
-        if (minLabel && maxLabel && minLabel !== maxLabel) return `${minLabel} - ${maxLabel}`;
-        return minLabel || maxLabel || null;
-    }, [budgetFloor, budgetCeiling, currencySymbol]);
-
-    const lifecycleMeta = useMemo(() => {
-        if (!post.expiresAt) return null;
-
-        const now = Date.now();
-        const expires = new Date(post.expiresAt).getTime();
-        const fallbackDurationMs = (Number(post.duration) || 28) * 24 * 60 * 60 * 1000;
-        const created = post.createdAt
-            ? new Date(post.createdAt).getTime()
-            : expires - fallbackDurationMs;
-        const total = expires - created;
-        const remainingMs = expires - now;
-        const safePercent = total > 0 ? (remainingMs / total) * 100 : remainingMs > 0 ? 100 : 0;
-        const percentLeft = Math.max(0, Math.min(100, Math.round(safePercent)));
-        const percentUsed = 100 - percentLeft;
-        const daysLive = created < now ? Math.max(1, Math.ceil((now - created) / (24 * 60 * 60 * 1000))) : 0;
-
-        let stage = 'Fresh';
-        let accentClass = 'bg-success';
-        let chipClass = 'bg-success/10 text-success border-success/20';
-        let summary = 'Recently published';
-
-        if (remainingMs <= 0 || status === 'expired') {
-            stage = 'Expired';
-            accentClass = 'bg-error';
-            chipClass = 'bg-error/10 text-error border-error/20';
-            summary = 'No longer accepting responses';
-        } else if (percentLeft <= 15) {
-            stage = 'Ending soon';
-            accentClass = 'bg-error';
-            chipClass = 'bg-error/10 text-error border-error/20';
-            summary = 'Best time to take action';
-        } else if (percentLeft <= 45) {
-            stage = 'Midway';
-            accentClass = 'bg-warning';
-            chipClass = 'bg-warning/10 text-warning border-warning/20';
-            summary = 'Still active, but time is moving';
-        }
-
-        return {
-            stage,
-            accentClass,
-            chipClass,
-            summary,
-            percentLeft,
-            percentUsed,
-            remainingLabel: formatLifecycleTime(remainingMs),
-            createdLabel: formatDate(post.createdAt),
-            expiresLabel: formatDate(post.expiresAt),
-            daysLive
-        };
-    }, [post.createdAt, post.duration, post.expiresAt, status]);
-
-    const handleGetAIInsights = async (e) => {
-        e?.stopPropagation();
-        if (aiResult) {
-            setAiResult(null);
-            return;
-        }
-
-        setIsGeneratingAI(true);
-        try {
-            if (isOwnPost) {
-                const insights = await getPostInsights(post);
-                setAiResult({
-                    type: 'owner',
-                    summary: `Market demand: ${insights.demandLevel}`,
-                    details: insights.priceAnalysis
-                });
-            } else {
-                const explanation = await getPostExplanation(post);
-                setAiResult({
-                    type: 'viewer',
-                    summary: explanation.summary,
-                    details: explanation.context
-                });
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsGeneratingAI(false);
-        }
-    };
-
-    const handleLike = async (e) => {
-        e?.stopPropagation();
-        try {
-            await api.post(`/posts/${post._id}/like`);
-            setLikes((prev) => (isLiked ? prev.filter((id) => id !== currentUserId) : [...prev, currentUserId]));
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleShare = async (e) => {
-        e?.stopPropagation();
-        if (hasShared) return;
-
-        try {
-            const sharedPosts = JSON.parse(localStorage.getItem('sharedPosts') || '[]');
-            sharedPosts.push(post._id);
-            localStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
-            setHasShared(true);
-
-            await api.post(`/posts/${post._id}/share`);
-            setSharesCount((prev) => prev + 1);
-            navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`);
-            success('Link copied to clipboard');
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleShowAnalytics = async (e) => {
-        e?.stopPropagation();
-        if (!showAnalytics && !analyticsData) {
-            try {
-                const res = await api.get(`/posts/${post._id}/analytics`);
-                setAnalyticsData(res.data);
-            } catch (err) {
-                console.error(err);
-            }
-        }
-        setShowAnalytics(!showAnalytics);
-    };
+    const { currencySymbol } = useCurrencySymbol();
+    const isLiked = currentUserId && (likes || []).includes(currentUserId);
+    const displayDate = createdAt ? new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recently';
+    const displayLocation = location || '—';
+    const isOwnPost = !!propIsOwnPost || (currentUserId && user?._id && String(currentUserId) === String(user?._id));
+    const [showCheckout, setShowCheckout] = useState(false);
 
     return (
-        <motion.article
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: index * 0.03 }}
-            whileHover={{ y: -2 }}
-            onClick={onClick}
+        <article
             className={cn(
-                'group relative bg-card rounded-2xl border border-card-border overflow-hidden cursor-pointer',
-                'transition-all duration-200 hover:shadow-md hover:border-card-border-hover',
-                !isActive && 'opacity-60 grayscale'
+                'group border-b border-card-border/50 hover:border-card-border/75 transition-colors cursor-pointer',
+                !isActive && 'opacity-50'
             )}
+            onClick={onClick}
         >
-            <AnimatePresence>
-                {showAnalytics && analyticsData && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-50 bg-card/95 backdrop-blur-xl p-6 flex flex-col"
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-semibold text-lg">Post Analytics</h3>
-                            <button onClick={handleShowAnalytics} className="icon-btn">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-                            {[
-                                { label: 'Views', value: analyticsData.views, icon: Eye, color: 'text-primary' },
-                                { label: 'Likes', value: analyticsData.likes, icon: Heart, color: 'text-pink-500' },
-                                { label: 'Shares', value: analyticsData.shares, icon: Share2, color: 'text-blue-500' },
-                                { label: 'Days Active', value: analyticsData.daysActive, icon: Calendar, color: 'text-foreground-muted' }
-                            ].map((stat) => (
-                                <div key={stat.label} className="p-4 rounded-xl bg-background-secondary border border-card-border">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <stat.icon className={cn('w-4 h-4', stat.color)} />
-                                        <span className="text-xs font-semibold text-foreground-muted uppercase">{stat.label}</span>
-                                    </div>
-                                    <div className="text-2xl font-semibold">{stat.value}</div>
-                                </div>
-                            ))}
-                        </div>
-                        <Button variant="outline" className="mt-auto" onClick={handleShowAnalytics}>
-                            Close
-                        </Button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <div className="relative aspect-[16/10] overflow-hidden bg-background-secondary">
+            <div className="h-48 sm:h-56 bg-background-secondary overflow-hidden rounded-t-lg">
                 {images && images.length > 0 ? (
-                    <button type="button" className="w-full h-full" onClick={(e) => { e.stopPropagation(); navigate(`/post/${post._id}`); }}>
-                        <img src={images[0]} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
-                    </button>
+                    <a href={`/post/${post._id}`} className="block w-full h-full" onClick={(e) => e.stopPropagation()}>
+                        <img src={images[0]} alt={title} className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-90" />
+                    </a>
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                            <span className="text-3xl">{typeStyle.icon}</span>
-                        </div>
+                        <span className="text-sm text-muted-foreground">{type ? type[0] : '—'}</span>
                     </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-                <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span className={cn('px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide border backdrop-blur-sm', typeStyle.bg, typeStyle.text, typeStyle.border)}>
-                        {typeStyle.label}
-                    </span>
-                    {acceptsBarter && (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-secondary/10 text-secondary border border-secondary/20 backdrop-blur-sm flex items-center gap-1">
-                            <Repeat className="w-3 h-3" /> Barter
-                        </span>
-                    )}
-                </div>
-                {status && status !== 'active' && (
-                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-black/65 text-primary-foreground backdrop-blur-sm">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+                {status && (
+                    <div className="absolute top-2 right-2 text-xs font-medium bg-black/60 text-white px-2 py-0.5 rounded">
                         {status}
                     </div>
                 )}
-                {displayPrice && (
-                    <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg text-xs font-semibold bg-black/65 text-primary-foreground backdrop-blur-sm">
-                        {displayPrice}
-                    </div>
-                )}
             </div>
 
-            <div className="p-4 sm:p-5">
-                <header className="mb-3">
-                    <Link to={`/post/${post._id}`} className="block group/title">
-                        <h3 className="font-semibold text-lg leading-tight group-hover/title:text-primary transition-colors line-clamp-2">
-                            {title}
-                        </h3>
-                    </Link>
-                </header>
+            <div className="p-3 sm:p-4">
+                <h3 className="font-medium text-sm leading-snapped line-clamp-2 line-clamp-2-sm line-clamp-md:line-clamp-2 group-hover/title:underline group-hover/title:text-primary transition-colors mb-2">
+                    <a href={`/post/${post._id}`} className="underline underline-offset-2 hover:no-underline">{title}</a>
+                </h3>
 
-                <div className="flex items-center gap-3 mb-4">
-                    <Link to={`/profile?userId=${user?._id}`} className="shrink-0">
-                        <img src={getAvatarUrl(user)} alt={user?.displayName || 'Profile'} className="w-9 h-9 rounded-full object-cover ring-2 ring-card-border" />
-                    </Link>
-                    <div className="min-w-0 flex-1">
-                        <Link to={`/profile?userId=${user?._id}`} className="text-sm font-semibold hover:text-primary transition-colors truncate block">
-                            {user?.displayName || 'Anonymous'}
-                        </Link>
-                        <div className="flex items-center gap-2 text-xs text-foreground-muted">
-                            <span>{displayDate}</span>
-                            <span>•</span>
-                            <span className="truncate">{displayLocation}</span>
-                        </div>
-                    </div>
+                <p className="text-xs text-muted-foreground line-clamp-2 line-clamp-2-sm line-clamp-md:line-clamp-2">
+                    {post.description || ''}
+                </p>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3">
+                    <span>{displayDate}</span>
+                    <span>•</span>
+                    <span>{displayLocation}</span>
                 </div>
 
-                <AnimatePresence>
-                    {expanded && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                        >
-                            {(user?.reputation?.trustScore || user?.reputation?.averageRating) && (
-                                <div className="flex flex-wrap items-center gap-2 mb-3">
-                                    {user?.reputation?.trustScore && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 border border-success/20 px-3 py-1 text-xs font-semibold text-success">
-                                            <Shield className="w-3.5 h-3.5" /> Trust {user.reputation.trustScore}
-                                        </span>
-                                    )}
-                                    {user?.reputation?.averageRating && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 border border-warning/20 px-3 py-1 text-xs font-semibold text-warning">
-                                            <Star className="w-3.5 h-3.5 fill-current" /> {Number(user.reputation.averageRating).toFixed(1)}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                            {(budgetLabel || post.duration || post.availability) && (
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {budgetLabel && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold text-primary">
-                                            <IndianRupee className="w-3.5 h-3.5" /> {budgetLabel}
-                                        </span>
-                                    )}
-                                    {post.duration && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 border border-info/20 px-3 py-1.5 text-xs font-semibold text-info">
-                                            <Clock className="w-3.5 h-3.5" /> {formatDuration(post.duration)}
-                                        </span>
-                                    )}
-                                    {post.availability && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary/10 border border-secondary/20 px-3 py-1.5 text-xs font-semibold text-secondary">
-                                            <Check className="w-3.5 h-3.5" /> {post.availability}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                            {lifecycleMeta && (
-                                <div className="mb-4 rounded-2xl border border-card-border bg-background-secondary/70 p-3.5">
-                                    <div className="flex items-start justify-between gap-3 mb-3">
-                                        <div className="min-w-0">
-                                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">Post lifecycle</p>
-                                            <div className="mt-1 flex items-center gap-2 flex-wrap">
-                                                <span className={cn('inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold', lifecycleMeta.chipClass)}>
-                                                    {lifecycleMeta.stage}
-                                                </span>
-                                                <span className="text-sm font-semibold text-foreground">{lifecycleMeta.remainingLabel}</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-lg font-semibold leading-none">{lifecycleMeta.percentLeft}%</p>
-                                            <p className="text-[11px] text-foreground-muted mt-1">time left</p>
-                                        </div>
-                                    </div>
-                                    <div className="mb-3">
-                                        <div className="flex items-center justify-between text-[11px] text-foreground-muted mb-1.5">
-                                            <span>{lifecycleMeta.summary}</span>
-                                            <span>{lifecycleMeta.percentUsed}% used</span>
-                                        </div>
-                                        <div className="h-2 rounded-full bg-card-border overflow-hidden">
-                                            <div className={cn('h-full rounded-full transition-all duration-500', lifecycleMeta.accentClass)} style={{ width: `${lifecycleMeta.percentLeft}%` }} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
-                                        <div className="rounded-xl bg-card/70 px-2 py-2"><p className="text-[10px] uppercase tracking-wide text-foreground-muted">Started</p><p className="mt-1 text-xs font-semibold">{lifecycleMeta.createdLabel}</p></div>
-                                        <div className="rounded-xl bg-card/70 px-2 py-2"><p className="text-[10px] uppercase tracking-wide text-foreground-muted">Live for</p><p className="mt-1 text-xs font-semibold">{lifecycleMeta.daysLive}d</p></div>
-                                        <div className="rounded-xl bg-card/70 px-2 py-2"><p className="text-[10px] uppercase tracking-wide text-foreground-muted">Ends</p><p className="mt-1 text-xs font-semibold">{lifecycleMeta.expiresLabel}</p></div>
-                                    </div>
-                                </div>
-                            )}
-                            {isOwnPost && (
-                                <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                                    <Button variant="outline" size="sm" className="flex-1 gap-1.5 justify-center" onClick={(e) => { e?.stopPropagation(); onEdit(); }}>
-                                        <Edit2 className="w-4 h-4" /> Edit
-                                    </Button>
-                                    <Button variant="outline" size="sm" className="flex-1 gap-1.5 justify-center text-error border-error/20 hover:bg-error/10" onClick={(e) => { e?.stopPropagation(); onDelete(); }}>
-                                        <Trash2 className="w-4 h-4" /> Delete
-                                    </Button>
-                                </div>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {description && (
-                    <div className="mb-4">
-                        <p className={cn('text-sm text-foreground-secondary leading-relaxed', expanded ? '' : 'line-clamp-2')}>
-                            {description}
-                        </p>
+                <footer className="mt-3 pt-3 border-t border-card-border/50 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        {user?.displayName || 'User'}
                     </div>
-                )}
-
-                <AnimatePresence>
-                    {(isGeneratingAI || aiResult) && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className={cn('p-4 rounded-xl mb-4 border', aiResult?.type === 'owner' ? 'bg-success/10 border-success/20' : 'bg-primary/10 border-primary/20')}
-                        >
-                            {isGeneratingAI ? (
-                                <div className="flex items-center gap-3"><Sparkles className="w-5 h-5 text-primary animate-pulse" /> <span className="text-sm font-medium">AI analyzing...</span></div>
-                            ) : (
-                                <>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> <span className="text-xs font-bold uppercase">AI Insights</span></div>
-                                        <button onClick={() => setAiResult(null)} className="icon-btn p-1"><X className="w-4 h-4" /></button>
-                                    </div>
-                                    <p className="font-semibold mb-1">{aiResult.summary}</p>
-                                    <p className="text-xs opacity-80">{aiResult.details}</p>
-                                </>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <footer className="pt-4 border-t border-card-border">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-1 flex-wrap">
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleGetAIInsights} className={cn('p-2 rounded-xl transition-all', aiResult ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card-hover text-primary hover:bg-primary/10')}>
-                                <Sparkles className={cn('w-4 h-4', isGeneratingAI && 'animate-spin')} />
-                            </motion.button>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleLike} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', isLiked ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500')}>
-                                <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} /> <span className="text-xs font-bold">{likes.length}</span>
-                            </motion.button>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleShare} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', hasShared ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500')}>
-                                <Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{sharesCount}</span>
-                            </motion.button>
-                            {isOwnPost && (
-                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleShowAnalytics} className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all">
-                                    <BarChart2 className="w-4 h-4" />
-                                </motion.button>
-                            )}
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', expanded ? 'bg-primary text-primary-foreground' : 'bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary')}>
-                                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                <span className="text-xs font-bold">{expanded ? 'Less' : 'More'}</span>
-                            </motion.button>
-                        </div>
+                    <div className="flex items-center gap-2">
+                        {isLiked ? (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="stroke-primary">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                        ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="stroke-primary/40">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                        )}
+                        <span className="text-[2] ml-1">{likes?.length || 0}</span>
                     </div>
+                    {isOwnPost && (
+                        <Button variant="ghost" size="sm" className="text-foreground-muted hover:text-primary" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                            Edit
+                        </Button>
+                    )}
+                    {!isOwnPost && (
+                        <Button variant="ghost" size="sm" className="text-foreground-muted hover:text-primary" onClick={(e) => { e.stopPropagation(); setShowCheckout(true); }}>
+                            Buy
+                        </Button>
+                    )}
                 </footer>
             </div>
-        </motion.article>
+
+            {showCheckout && (
+                <CheckoutModal
+                    post={post}
+                    onClose={() => setShowCheckout(false)}
+                    onPurchase={(orderId, clientSecret, amount, platformFee, sellerAmount) => {
+                        // Handle successful payment - could redirect to order page
+                        setShowCheckout(false);
+                        // TODO: In a full integration, redirect to order confirmation page
+                        // or show a confirmation modal
+                        alert(`Order #${orderId} created! Amount: $${amount}. Payment ID: ${clientSecret}`);
+                    }}
+                />
+            )}
+        </article>
     );
 };
 

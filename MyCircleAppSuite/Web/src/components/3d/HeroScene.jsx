@@ -1,41 +1,13 @@
-import React, { useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Sphere, MeshDistortMaterial } from '@react-three/drei';
-
-const AnimatedSphere = () => {
-    const sphereRef = useRef();
-
-    useFrame((state) => {
-        const time = state.clock.getElapsedTime();
-        if (sphereRef.current) {
-            sphereRef.current.position.y = Math.sin(time) * 0.2;
-            sphereRef.current.rotation.x = time * 0.2;
-            sphereRef.current.rotation.y = time * 0.3;
-        }
-    });
-
-    return (
-        <Sphere ref={sphereRef} args={[1, 100, 200]} scale={2.4}>
-            <MeshDistortMaterial
-                color="#8b5cf6"
-                attach="material"
-                distort={0.4}
-                speed={1.5}
-                roughness={0.2}
-                metalness={0.9} // Glassy metallic look
-            />
-        </Sphere>
-    );
-};
+import React from 'react';
 
 const HeroScene = () => {
+    // Static minimalist background - no animation, just solid colors
     return (
-        <div className="absolute top-0 right-0 w-[50%] h-[600px] z-[-1] pointer-events-none opacity-50 md:opacity-100">
-            <Canvas dpr={[1, 1.5]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[10, 10, 5]} intensity={1} />
-                <AnimatedSphere />
-            </Canvas>
+        <div className="absolute top-0 right-0 w-[50%] h-[400px] bg-black/50 pointer-events-none">
+            {/* Orange accent bar */}
+            <div className="absolute bottom-0 left-0 w-full h-px bg-orange/60" />
+            {/* Orange circle accent */}
+            <div className="absolute -top-6 left-6 w-16 h-16 bg-orange/20 rounded-full opacity-70" />
         </div>
     );
 };

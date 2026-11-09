@@ -1,24 +1,31 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Alert } from '../utils/alert';
 import * as Keychain from 'react-native-keychain';
 import api from '../services/api';
 import { setUnauthorizedHandler } from '../services/api';
 
 interface AuthContextType {
-    token: string | null;
+    accessToken: string | null;
+    refreshToken: string | null;
     user: any | null;
     isLoading: boolean;
-    login: (token: string) => Promise<void>;
+    login: (accessToken: string, refreshToken: string) => Promise<void>;
     logout: () => Promise<void>;
     isAuthenticated: boolean;
+    refreshAccessToken: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [token, setToken] = useState<string | null>(null);
+    const [accessToken, setAccessToken] = useState<string | null>(null);
+    const [refreshToken, setRefreshToken] = useState<string | null>(null);
     const [user, setUser] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
         setUnauthorizedHandler(() => {
@@ -37,9 +44,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         const loadAuth = async () => {
             try {
-                const credentials = await Keychain.getGenericPassword();
-                if (credentials) {
-                    setToken(credentials.password);
+                const [accessCreds, refreshCreds] = await Promise.all([
+                    Keychain.getGenericPassword({ service: ACCESS_TOKEN_KEY }),
+                    Keychain.getGenericPassword({ service: REFRESH_TOKEN_KEY }),
+                ]);
+                if (accessCreds) {
+                    setAccessToken(accessCreds.password);
+                }
+                if (refreshCreds) {
+                    setRefreshToken(refreshCreds.password);
                 }
             } catch (e) {
                 console.error('Failed to load credentials', e);
@@ -50,26 +63,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loadAuth();
     }, []);
 
+    const refreshAccessToken = useCallback(async (): Promise<boolean> => {
+        if (!refreshToken || isRefreshing) {
+            return false;
+        }
+
+        setIsRefreshing(true);
+        try {
+            const res = await api.post('/auth/refresh', { refreshToken });
+            const { accessToken: newAccessToken, refreshToken: newRefreshToken } = res.data;
+
+            await Promise.all([
+                Keychain.setGenericPassword(ACCESS_TOKEN_KEY, newAccessToken),
+                Keychain.setGenericPassword(REFRESH_TOKEN_KEY, newRefreshToken),
+            ]);
+
+            setAccessToken(newAccessToken);
+            setRefreshToken(newRefreshToken);
+            return true;
+        } catch (e) {
+            console.error('Failed to refresh access token', e);
+            // Refresh token is invalid/expired - clear everything
+            await logout();
+            return false;
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [refreshToken, isRefreshing]);
+
     useEffect(() => {
-        if (token) {
+        if (accessToken) {
             api.get('/user/profile')
                 .then(res => setUser(res.data))
                 .catch(err => {
                     console.error('Failed to fetch user profile', err);
                     if (err.response?.status === 404) {
-                        // Token might be valid but user missing; clear local state
                         logout();
                     }
                 });
         } else {
             setUser(null);
         }
-    }, [token]);
+    }, [accessToken]);
 
-    const login = async (newToken: string) => {
+    const login = async (newAccessToken: string, newRefreshToken: string) => {
         try {
-            await Keychain.setGenericPassword('token', newToken);
-            setToken(newToken);
+            await Promise.all([
+                Keychain.setGenericPassword(ACCESS_TOKEN_KEY, newAccessToken),
+                Keychain.setGenericPassword(REFRESH_TOKEN_KEY, newRefreshToken),
+            ]);
+            setAccessToken(newAccessToken);
+            setRefreshToken(newRefreshToken);
         } catch (e) {
             console.error('Failed to save credentials', e);
         }
@@ -77,8 +121,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const logout = async () => {
         try {
-            await Keychain.resetGenericPassword();
-            setToken(null);
+            // Call server logout to revoke refresh token
+            if (refreshToken) {
+                try {
+                    await api.post('/auth/logout');
+                } catch (e) {
+                    console.warn('Server logout failed, clearing local tokens anyway', e);
+                }
+            }
+            await Promise.all([
+                Keychain.resetGenericPassword({ service: ACCESS_TOKEN_KEY }),
+                Keychain.resetGenericPassword({ service: REFRESH_TOKEN_KEY }),
+            ]);
+            setAccessToken(null);
+            setRefreshToken(null);
             setUser(null);
         } catch (e) {
             console.error('Failed to clear credentials', e);
@@ -87,12 +143,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <AuthContext.Provider value={{
-            token,
+            accessToken,
+            refreshToken,
             user,
             isLoading,
             login,
             logout,
-            isAuthenticated: !!token
+            isAuthenticated: !!accessToken,
+            refreshAccessToken,
         }}>
             {children}
         </AuthContext.Provider>

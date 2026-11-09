@@ -42,8 +42,11 @@ const LandingScreen = ({ navigation }: any) => {
 
             const apiResponse = await api.post('/auth/google-mobile', { idToken });
 
-            if (apiResponse.data.token) {
-                await login(apiResponse.data.token);
+            if (apiResponse.data.accessToken && apiResponse.data.refreshToken) {
+                await login(apiResponse.data.accessToken, apiResponse.data.refreshToken);
+            } else if (apiResponse.data.token) {
+                // Backward compatibility
+                await login(apiResponse.data.token, apiResponse.data.token);
             } else {
                 Alert.alert("Login Failed", apiResponse.data.msg || "Could not verify account.");
             }

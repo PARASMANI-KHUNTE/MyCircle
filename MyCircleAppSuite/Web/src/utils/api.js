@@ -35,7 +35,35 @@ const api = axios.create({
 
 export const getSocketBaseUrl = () => apiURL;
 
-// Add a request interceptor to include the auth token
+/**
+ * Create a payment intent for purchasing a post.
+ * Expected backend shape: { postId, sellerId, itemTitle, amount, currency? }
+ * Returns: { orderId, clientSecret, amount, platformFee, sellerAmount }
+ */
+const createPaymentIntent = async (postId, sellerId, itemTitle, amount, currency = 'usd') => {
+    const res = await api.post('/api/payments/create-intent', {
+        postId,
+        sellerId,
+        itemTitle,
+        amount,
+        currency,
+    });
+    return res.data;
+};
+
+export { createPaymentIntent };
+
+// Helper: generate request ID for tracing (UUID v4 format using crypto API)
+// Falls back to a timestamp-based ID if crypto is unavailable.
+const generateRequestId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback: deterministic-ish ID using timestamp + random
+    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// Helper: ensure a consistent x-request-id is set on every request.
+// If the config already has one, preserve it; otherwise generate a new one.
 api.interceptors.request.use(
     (config) => {
         const isFormData = typeof FormData !== 'undefined' && config?.data instanceof FormData;
@@ -61,18 +89,139 @@ api.interceptors.request.use(
         if (token) {
             config.headers['x-auth-token'] = token;
         }
+
+        // Inject standard x-request-id header for tracing
+        if (!config.headers?.['x-request-id']) {
+            config.headers['x-request-id'] = generateRequestId();
+        }
+
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle auth expiry globally
+// Helper: map backend identity-boundary error codes to structured messages.
+// Expected error shape from identity boundary:
+//   { statusCode: number, error: string, message: string, path: string, timestamp: string }
+const mapIdentityError = (err) => {
+    const data = err?.response?.data || {};
+
+    // If the backend already provides structured identity-boundary fields, use them
+    if (data?.statusCode !== undefined) {
+        const code = data.statusCode;
+        const msg = data?.message || data?.error || 'An unexpected error occurred';
+        return {
+            code,
+            message: msg,
+            // Preserve any extra context the backend may have supplied
+            ...data,
+        };
+    }
+
+    // Fallback: deduce structure from common HTTP status patterns
+    const status = err?.response?.status;
+    switch (status) {
+        case 400:
+            return {
+                code: 'BAD_REQUEST',
+                message: data?.msg || data?.error || 'Bad request',
+            };
+        case 401:
+            return {
+                code: 'UNAUTHORIZED',
+                message: data?.msg || data?.error || 'Unauthorized',
+            };
+        case 403:
+            return {
+                code: 'FORBIDDEN',
+                message: data?.msg || data?.error || 'Forbidden',
+            };
+        case 404:
+            return {
+                code: 'NOT_FOUND',
+                message: data?.msg || data?.error || 'Not found',
+            };
+        case 409:
+            return {
+                code: 'CONFLICT',
+                message: data?.msg || data?.error || 'Conflict',
+            };
+        case 422:
+            return {
+                code: 'UNPROCESSABLE_ENTITY',
+                message: data?.msg || data?.error || 'Unprocessable entity',
+            };
+        case 429:
+            return {
+                code: 'TOO_MANY_REQUESTS',
+                message: data?.msg || data?.error || 'Too many requests',
+            };
+        case 500:
+            return {
+                code: 'INTERNAL_SERVER_ERROR',
+                message: data?.msg || data?.error || 'Internal server error',
+            };
+        case 502:
+        case 503:
+        case 504:
+            return {
+                code: 'SERVICE_UNAVAILABLE',
+                message: data?.msg || data?.error || 'Service unavailable',
+            };
+        default:
+            return {
+                code: 'UNKNOWN_ERROR',
+                message: data?.msg || data?.error || 'An unexpected error occurred',
+            };
+    }
+};
+
+// Add a request interceptor to include the auth token and x-request-id
+api.interceptors.request.use(
+    (config) => {
+        const isFormData = typeof FormData !== 'undefined' && config?.data instanceof FormData;
+        if (isFormData && config.headers) {
+            // Let the browser set the correct multipart boundary.
+            try {
+                if (typeof config.headers.delete === 'function') {
+                    config.headers.delete('Content-Type');
+                    config.headers.delete('content-type');
+                }
+            } catch {
+                // ignore
+            }
+            try {
+                delete config.headers['Content-Type'];
+                delete config.headers['content-type'];
+            } catch {
+                // ignore
+            }
+        }
+
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers['x-auth-token'] = token;
+        }
+
+        // Inject standard x-request-id header for tracing
+        if (!config.headers?.['x-request-id']) {
+            config.headers['x-request-id'] = generateRequestId();
+        }
+
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle auth expiry and structured identity-boundary errors globally
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        const status = error?.response?.status;
+        // Map structured error codes from the identity boundary
+        const structuredError = mapIdentityError(error);
 
-        if (status === 401) {
+        // Handle auth expiry (401) using the mapped code
+        if (structuredError.code === 'UNAUTHORIZED' || structuredError.code === 'TOKEN_EXPIRED') {
             try {
                 localStorage.removeItem('token');
             } catch {
@@ -85,6 +234,15 @@ api.interceptors.response.use(
             }
         }
 
+        // Enhance error for downstream consumers by attaching structured metadata
+        error.response = {
+            ...error.response,
+            ...structuredError,
+            // Ensure the original data is preserved
+            data: error.response?.data,
+        };
+
+        // Reject with the enriched error
         return Promise.reject(error);
     }
 );

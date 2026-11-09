@@ -1,26 +1,27 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { cn } from '../../utils/cn';
 
 /**
  * Loading spinner with multiple size variants
  * 
  * Design rationale:
- * - Uses CSS border instead of border-[3px] for consistency
+ * - Uses CSS border for spinner, no motion dependency
  * - Fullscreen includes backdrop blur for modal loading
  * - Includes text option for contextual loading states
+ * - Fully respects Reduced Motion preference
  */
 const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
     const spinner = (
         <div className="flex flex-col items-center gap-3">
-            <motion.div
+            <div 
                 className={`${size === 'sm' ? 'border-2' : 'border-3'} border-primary/20 border-t-primary rounded-full`}
-                animate={{ rotate: 360 }}
-                transition={{ 
-                    duration: size === 'sm' ? 0.6 : 0.8, 
-                    repeat: Infinity, 
-                    ease: 'linear' 
+                style={{
+                    animation: size === 'sm' ? 'spin-0.6s linear infinite' : 'spin-0.8s linear infinite'
                 }}
-            />
+            >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full rotate-180" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rotate-90 border-2 border-primary/20 rounded-full" />
+            </div>
             {text && (
                 <p className="text-sm text-foreground-muted font-medium">{text}</p>
             )}
@@ -43,10 +44,11 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
     if (inline) {
         return (
             <span className="inline-flex items-center gap-2 text-sm text-foreground-muted">
-                <motion.div
+                <div 
                     className={`${size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} border-primary/20 border-t-primary rounded-full`}
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    style={{
+                        animation: 'spin-0.8s linear infinite'
+                    }}
                 />
                 {text}
             </span>

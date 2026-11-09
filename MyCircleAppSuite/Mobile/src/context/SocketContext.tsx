@@ -26,7 +26,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-    const { user, token } = useAuth();
+    const { user, accessToken } = useAuth();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [connected, setConnected] = useState(false);
     const socketRef = useRef<Socket | null>(null);
@@ -126,7 +126,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }, [handleNotificationPress, user]);
 
     useEffect(() => {
-        if (!user?.id || !token) {
+        if (!user?.id || !accessToken) {
             if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current = null;
@@ -147,7 +147,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             transports: ['websocket'],
             forceNew: true,
             auth: {
-                token
+                accessToken
             }
         });
 
@@ -221,7 +221,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 socketRef.current = null;
             }
         };
-    }, [user?.id, token, getNotificationTitle, generateNotificationBody, handleNotificationPress]);
+    }, [user?.id, accessToken, getNotificationTitle, generateNotificationBody, handleNotificationPress]);
 
     return (
         <SocketContext.Provider value={{ socket, connected }}>

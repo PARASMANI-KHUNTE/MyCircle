@@ -13,7 +13,7 @@ export type RootStackParamList = {
     Welcome: undefined;
     Login: undefined;
     Register: undefined;
-    LoginSuccess: { token?: string } | undefined;
+    LoginSuccess: { accessToken: string; refreshToken: string } | undefined;
     MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
     Notifications: undefined;
     PostDetails: { id: string };

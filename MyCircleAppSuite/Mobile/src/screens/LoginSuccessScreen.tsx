@@ -6,6 +6,18 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 
+// Extend the param list for LoginSuccess
+declare global {
+    namespace ReactNavigation {
+        interface RootParamList {
+            LoginSuccess: {
+                accessToken: string;
+                refreshToken: string;
+            };
+        }
+    }
+}
+
 type Props = StackScreenProps<RootStackParamList, 'LoginSuccess'>;
 
 const LoginSuccessScreen = ({ navigation, route }: Props) => {
@@ -16,14 +28,17 @@ const LoginSuccessScreen = ({ navigation, route }: Props) => {
         let isMounted = true;
 
         async function completeLogin() {
-            const token = route.params?.token;
+            // For OAuth web flow, tokens come in URL fragment: #accessToken=xxx&refreshToken=yyy
+            // React Navigation parses these as route.params
+            const accessToken = route.params?.accessToken;
+            const refreshToken = route.params?.refreshToken;
 
-            if (!token) {
+            if (!accessToken || !refreshToken) {
                 navigation.replace('Landing');
                 return;
             }
 
-            await login(token);
+            await login(accessToken, refreshToken);
 
             if (isMounted) {
                 navigation.reset({
@@ -38,7 +53,7 @@ const LoginSuccessScreen = ({ navigation, route }: Props) => {
         return () => {
             isMounted = false;
         };
-    }, [login, navigation, route.params?.token]);
+    }, [login, navigation, route.params?.accessToken, route.params?.refreshToken]);
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>

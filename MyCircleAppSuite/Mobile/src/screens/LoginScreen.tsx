@@ -28,8 +28,11 @@ const LoginScreen = ({ navigation }: any) => {
         setLoading(true);
         try {
             const res = await api.post('/auth/login', { email, password });
-            if (res.data.token) {
-                await auth.login(res.data.token);
+            if (res.data.accessToken && res.data.refreshToken) {
+                await auth.login(res.data.accessToken, res.data.refreshToken);
+            } else if (res.data.token) {
+                // Backward compatibility with old response format
+                await auth.login(res.data.token, res.data.token);
             } else {
                 Alert.alert('Login Failed', 'No token received');
             }

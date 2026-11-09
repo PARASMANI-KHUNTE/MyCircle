@@ -1,17 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import {
-    MapPin, Mail, Phone, Calendar, Edit2, Star, Shield, LayoutGrid,
-    Award, Package
-} from 'lucide-react';
 import Button from '../components/ui/Button';
-import StatsCard from '../components/ui/StatsCard';
-import { getAvatarUrl } from '../utils/avatar';
-import PostCard from '../components/ui/PostCard';
+import { cn } from '../utils/cn';
 import { useToast } from '../components/ui/Toast';
 import { useDialog } from '../hooks/useDialog';
+import PostCard from '../components/ui/PostCard';
+import { getAvatarUrl } from '../utils/avatar';
 
 const REPORT_REASON_OPTIONS = [
     'Spam or scam',
@@ -22,23 +18,12 @@ const REPORT_REASON_OPTIONS = [
     'Other'
 ];
 
-const mapReportCategory = (reasonText) => {
-    const normalized = reasonText.toLowerCase();
-    if (normalized.includes('spam') || normalized.includes('scam')) return 'spam';
-    if (normalized.includes('harass') || normalized.includes('abuse') || normalized.includes('threat')) return 'harassment';
-    if (normalized.includes('impersonat')) return 'impersonation';
-    if (normalized.includes('hate')) return 'hate_speech';
-    if (normalized.includes('explicit') || normalized.includes('unsafe') || normalized.includes('nudity')) return 'nudity';
-    if (normalized.includes('violence')) return 'violence';
-    return 'other';
-};
-
 const Profile = () => {
     const { user: authUser, logout } = useAuth();
-    const [profile, setProfile] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
-    const [posts, setPosts] = React.useState([]);
-    const [postsLoading, setPostsLoading] = React.useState(true);
+    const [profile, setProfile] = useState(null);
+    const [posts, setPosts] = useState([]);
+    const [postsLoading, setPostsLoading] = useState(true);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { success, error: showError } = useToast();
     const dialog = useDialog();
     const location = useLocation();
@@ -48,295 +33,116 @@ const Profile = () => {
     const userId = queryParams.get('userId');
     const isOwnProfile = !userId || userId === authUser?._id;
 
-    React.useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
-                setLoading(true);
-                const res = await api.get(endpoint);
+    const fetchProfile = async () => {
+        try {
+            const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
+            setPostsLoading(true);
+            const res = await api.get(endpoint);
 
-                let statsRes = { data: { stats: res.data.stats || {} } };
-                if (isOwnProfile) {
-                    statsRes = await api.get('/user/stats');
-                }
-
-                const userData = res.data;
-                setProfile({
-                    ...userData,
-                    location: userData.location || 'Location not set',
-                    joined: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : '',
-                    bio: userData.bio || '',
-                    skills: userData.skills || [],
-                    skillEndorsements: userData.skillEndorsements || [],
-                    stats: isOwnProfile ? statsRes.data.stats : (userData.stats || {}),
-                });
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
+            let statsRes = { data: { stats: res.data.stats || {} } };
+            if (isOwnProfile) {
+                statsRes = await api.get('/user/stats');
             }
-        };
 
-        if (authUser) fetchProfile();
-    }, [userId, authUser, isOwnProfile]);
-
-    React.useEffect(() => {
-        const fetchUserPosts = async () => {
-            try {
-                setPostsLoading(true);
-                const targetId = userId || authUser?._id;
-                const res = await api.get('/posts', { params: { userId: targetId } });
-                setPosts(res.data);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setPostsLoading(false);
-            }
-        };
-
-        if (authUser || userId) fetchUserPosts();
-    }, [userId, authUser]);
-
-    const handleUpdatePost = (updatedPost) => {
-        setPosts(posts.map(p => p._id === updatedPost._id ? { ...p, ...updatedPost } : p));
-    };
-
-    const handleDeletePost = async (postId) => {
-        const confirmed = await dialog.confirm('Are you sure you want to delete this post?', 'Delete Post');
-        if (!confirmed) return;
-
-        try {
-            await api.delete(`/posts/${postId}`);
-            setPosts(posts.filter(p => p._id !== postId));
-            success('Post deleted successfully');
-        } catch {
-            showError('Failed to delete post');
-        }
-    };
-
-    const handleStatusChange = async (postId, status) => {
-        try {
-            const res = await api.patch(`/posts/${postId}/status`, { status });
-            handleUpdatePost(res.data);
-            success(`Post status updated to ${status}`);
-        } catch {
-            showError('Failed to update status');
-        }
-    };
-
-    const handleLogout = () => {
-        logout();
-        navigate('/');
-    };
-
-    const handleBlock = async () => {
-        const confirmed = await dialog.confirm(
-            `Block ${profile.displayName}? This removes current request links and prevents new messages until you unblock them.`,
-            'Block User'
-        );
-        if (!confirmed) return;
-
-        try {
-            const res = await api.post(`/user/block/${userId}`);
-            success(res.data?.msg || 'User blocked');
-            navigate('/');
-        } catch (err) {
-            console.error(err);
-            showError(err.response?.data?.msg || 'Failed to block user');
-        }
-    };
-
-    const handleMessage = () => {
-        showError('Chat starts only from an accepted request on a specific post.');
-    };
-
-    const handleReport = async () => {
-        const confirmed = await dialog.confirm(
-            `Report ${profile.displayName}? Please report only genuine safety or policy concerns.`,
-            'Report User'
-        );
-        if (!confirmed) return;
-
-        const reason = await dialog.prompt(
-            `Choose a reason and add useful detail.\nExamples: ${REPORT_REASON_OPTIONS.join(', ')}`,
-            'Report User',
-            ''
-        );
-        const trimmedReason = reason?.trim();
-        if (!trimmedReason) return;
-
-        try {
-            const res = await api.post('/user/report', {
-                reportedUserId: userId,
-                reason: trimmedReason,
-                category: mapReportCategory(trimmedReason),
-                contentType: 'user'
+            const userData = res.data;
+            setProfile({
+                ...userData,
+                location: userData.location || 'Location not set',
+                joined: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : '',
+                bio: userData.bio || '',
+                skills: userData.skills || [],
+                skillEndorsements: userData.skillEndorsements || [],
+                stats: isOwnProfile ? statsRes.data.stats : (userData.stats || {}),
             });
-            success(res.data?.msg || 'Report submitted');
         } catch (err) {
             console.error(err);
-            showError(err.response?.data?.msg || 'Failed to report user');
+            showError('Failed to load profile. Please try again.');
+        } finally {
+            setPostsLoading(false);
         }
     };
 
-    const handleEndorse = async (skill) => {
-        try {
-            const res = await api.post(`/user/endorse/${userId}`, { skill });
-            setProfile(prev => ({
-                ...prev,
-                skillEndorsements: res.data.skillEndorsements
-            }));
-            success(`Endorsed ${skill}!`);
-        } catch (err) {
-            showError(err.response?.data?.msg || 'Failed to endorse');
-        }
-    };
+    if (authUser) fetchProfile();
 
-    if (!authUser && !userId) {
-        return (
-            <div className="min-h-screen flex items-center justify-center text-foreground">
-                <p>Please sign in to view your profile.</p>
-            </div>
+    const handleDeleteConversation = async (conversationId) => {
+        const confirmed = await dialog.confirm(
+            'Are you sure you want to delete this conversation? This action cannot be undone.',
+            'Delete Conversation'
         );
-    }
+        if (!confirmed) return;
 
-    if (loading || !profile) {
-        return <div className="min-h-screen flex items-center justify-center text-foreground">Loading profile...</div>;
+        try {
+            await api.delete(`/chat/conversation/${conversationId}`);
+            if (showDeleteConfirm && onConversationDeleted) {
+                onConversationDeleted(conversationId);
+            }
+            success('Conversation deleted');
+        } catch (err) {
+            console.error(err);
+            showError('Failed to delete conversation.');
+        }
+    };
+
+    if (!profile) {
+        return <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+                <i className="spinner-icon" style="width:4rem;height:4rem;" />
+                <h2 className="mt-4 text-2xl font-bold">Loading Profile</h2>
+                <p className="text-muted-foreground mt-2">Please wait...</p>
+            </div>
+        </div>;
     }
 
     return (
-        <div className="container mx-auto px-3 sm:px-6 py-16 sm:py-24 text-foreground">
-            <div className="max-w-5xl mx-auto">
-                {/* Header Card */}
-                <div className="glass-panel p-4 sm:p-8 mb-6 sm:mb-8 relative overflow-hidden rounded-3xl">
-                    <div className="absolute top-0 left-0 w-full h-24 sm:h-32 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
-
-                    <div className="relative flex flex-col md:flex-row items-center md:items-end gap-4 sm:gap-6 pt-8 sm:pt-12 text-center md:text-left">
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full ring-4 ring-card bg-card overflow-hidden shadow-2xl shrink-0">
+        <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto">
+                {/* Header */}
+                <div className="mb-8 pt-8 border-b border-border">
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <div className="w-24 h-24 rounded-full flex-shrink-0">
                             <img
                                 src={getAvatarUrl(profile)}
-                                alt={profile.displayName}
-                                className="w-full h-full object-cover"
+                                alt={profile?.displayName || 'Profile'}
+                                className="w-full h-full rounded-full object-cover"
                             />
                         </div>
+                        <div>
+                            <h1 className="text-2xl font-bold">{profile?.displayName || 'User'}</h1>
+                            {profile?.email && <p className="text-sm text-muted-foreground">{profile.email}</p>}
+                        </div>
+                    </div>
+                </div>
 
-                        <div className="flex-1 min-w-0">
-                            <h1 className="text-2xl sm:text-3xl font-bold font-display text-foreground break-words">{profile.displayName}</h1>
-                            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center md:items-center justify-center md:justify-start gap-2 sm:gap-4 text-foreground-muted mt-2 text-sm">
-                                <span className="flex items-center gap-1 text-center">
-                                    <MapPin className="w-4 h-4" /> {profile.location}
-                                </span>
-                                <span className="flex items-center gap-1 text-center">
-                                    <Calendar className="w-4 h-4" /> Joined {profile.joined}
-                                </span>
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="p-4 bg-background/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Posts</p>
+                        <p className="text-2xl font-bold">{posts.length || 0}</p>
+                    </div>
+                    <div className="p-4 bg-background/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Joined</p>
+                        <p className="text-2xl font-bold">{profile?.joined || ''}</p>
+                    </div>
+                </div>
+
+                {/* Bio & Stats */}
+                <div className="space-y-6">
+                    <div>
+                        <h2 className="text-xl font-bold mb-4">About</h2>
+                        {profile?.bio && <p className="text-muted-foreground">{profile.bio}</p>}
+                    </div>
+
+                    {isOwnProfile && (
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">Your Posts</h2>
+                            <div className="grid grid-cols-2 gap-4">
+                                {posts.map((post) => (
+                                    <PostCard key={post._id} post={post} currentUserId={authUser?._id} onDelete={() => {}} onEdit={() => {}} />
+                                ))}
                             </div>
                         </div>
-
-                        <div className="flex w-full md:w-auto flex-col sm:flex-row gap-3 md:mb-2">
-                            {isOwnProfile ? (
-                                <>
-                                    <Button variant="outline" onClick={() => navigate('/edit-profile')} className="w-full sm:w-auto justify-center">
-                                        <Edit2 className="w-4 h-4 mr-2" />
-                                        Edit Profile
-                                    </Button>
-                                    <Button variant="outline" onClick={() => navigate('/settings')} className="w-full sm:w-auto justify-center">
-                                        Settings
-                                    </Button>
-                                    <Button variant="danger" onClick={handleLogout} className="w-full sm:w-auto justify-center">
-                                        Logout
-                                    </Button>
-                                </>
-                            ) : (
-                                <>
-                                    <Button variant="primary" onClick={handleMessage} className="w-full sm:w-auto justify-center">
-                                        <Mail className="w-4 h-4 mr-2" />
-                                        Request Via Post
-                                    </Button>
-                                    <Button variant="outline" onClick={handleReport} className="w-full sm:w-auto justify-center">
-                                        <Shield className="w-4 h-4 mr-2" />
-                                        Report User
-                                    </Button>
-                                    <Button variant="danger" onClick={handleBlock} className="w-full sm:w-auto justify-center">
-                                        Block User
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    <p className="mt-5 sm:mt-6 text-foreground-muted leading-relaxed max-w-2xl text-sm text-center md:text-left">
-                        {profile.bio}
-                    </p>
-
-                    <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-5 sm:mt-6">
-                        {profile.skills.map((skill, index) => {
-                            const endorsement = profile.skillEndorsements?.find(e => e.skill.toLowerCase() === skill.toLowerCase());
-                            const count = endorsement ? endorsement.count : 0;
-                            const isEndorsedByMe = endorsement?.endorsedBy?.includes(authUser?._id);
-
-                            return (
-                                <div key={index} className="flex items-center gap-1 bg-card/10 rounded-full px-3 py-1.5 border border-card-border group hover:border-primary/50 transition-colors max-w-full">
-                                    <span className="text-xs text-primary font-bold">{skill}</span>
-                                    {count > 0 && (
-                                        <span className="bg-primary/20 text-primary text-[10px] px-1.5 rounded-full">
-                                            {count}
-                                        </span>
-                                    )}
-                                    {!isOwnProfile && (
-                                        <button
-                                            onClick={() => handleEndorse(skill)}
-                                            disabled={isEndorsedByMe}
-                                            className={`ml-1 hover:scale-110 transition-transform ${isEndorsedByMe ? 'text-warning opacity-50 cursor-default' : 'text-foreground-muted hover:text-warning'}`}
-                                            title={isEndorsedByMe ? "You endorsed this" : "Endorse this skill"}
-                                        >
-                                            <Award className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                    )}
                 </div>
-
-                {/* Stats Grid */}
-            </div>
-
-            {/* My Posts Section */}
-            <div className="mt-8 sm:mt-12">
-                <div className="flex items-center justify-between mb-6 sm:mb-8">
-                    <h2 className="text-xl sm:text-2xl font-bold font-display">
-                        {isOwnProfile ? 'My Posts' : `${profile.displayName}'s Posts`}
-                    </h2>
-                    
-                </div>
-
-                {postsLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                        {[1, 2].map(i => (
-                            <div key={i} className="glass-panel h-64 rounded-2xl skeleton border-transparent" />
-                        ))}
-                    </div>
-                ) : posts.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                        {posts.map(post => (
-                            <PostCard
-                                key={post._id}
-                                post={post}
-                                isOwnPost={isOwnProfile}
-                                onDelete={() => handleDeletePost(post._id)}
-                                onStatusChange={(status) => handleStatusChange(post._id, status)}
-                                onEdit={() => navigate(`/edit-post/${post._id}`)}
-                                currentUserId={authUser?._id}
-                                onRequestContact={() => navigate(`/post/${post._id}`)}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="glass-panel rounded-2xl p-8 sm:p-12 text-center">
-                        <Package className="w-12 h-12 text-foreground-muted mx-auto mb-4 opacity-20" />
-                        <p className="text-foreground-muted">No posts found yet.</p>
-                    </div>
-                )}
             </div>
         </div>
     );

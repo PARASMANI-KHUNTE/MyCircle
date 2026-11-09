@@ -10,6 +10,7 @@ import api, { BASE_URL } from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
 import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
+import { useNavigation } from '@react-navigation/native';
 
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 import ImagePreviewModal from '../components/ui/ImagePreviewModal';
@@ -62,6 +63,9 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [checkoutVisible, setCheckoutVisible] = useState(false);
     const [purchaseLoading, setPurchaseLoading] = useState(false);
 
+    // Wallet state
+    const [walletBalance, setWalletBalance] = useState(0);
+
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);
     const isOwnPost = auth?.user?._id === post?.user?._id;
     const hasChatAccess = contactRequestStatus === 'accepted' || contactRequestStatus === 'approved';
@@ -75,13 +79,23 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             setShares(res.data.shares || 0);
             setComments(res.data.comments || []);
             setContactRequestStatus(res.data.contactRequestStatus || (res.data.hasRequested ? 'pending' : 'none'));
+
+            // Fetch wallet balance if authenticated
+            if (auth.accessToken) {
+                try {
+                    const walletRes = await api.get('/payments/wallet');
+                    setWalletBalance(walletRes.data.balance || 0);
+                } catch (walletErr) {
+                    console.warn('Failed to fetch wallet balance', walletErr);
+                }
+            }
         } catch (err: any) {
             Alert.alert("Error", "Could not fetch details.");
             navigation.goBack();
         } finally {
             setLoading(false);
         }
-    }, [id, navigation]);
+    }, [id, navigation, auth.accessToken]);
 
     useEffect(() => {
         fetchPostDetails();
@@ -166,15 +180,38 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const handleConfirmPurchase = async () => {
         setPurchaseLoading(true);
         try {
-            // Mock purchase logic
-            await new Promise((resolve) => {
-                setTimeout(resolve as () => void, 2000);
-            });
+            if (!post) throw new Error('Post not loaded');
+
+            // Step 1: Create escrow intent
+            const createRes = await api.post('/payments/escrow/create', { postId: post._id });
+            const { escrowId, clientSecret, devMode } = createRes.data;
+
+            // Step 2: If Stripe is configured (clientSecret exists), we would normally
+            // use Stripe React Native SDK to confirm payment here.
+            // For now, we'll directly call confirm endpoint (dev mode or webhook flow)
+            if (devMode || !clientSecret) {
+                // Dev mode: auto-confirm
+                await api.post(`/payments/escrow/${escrowId}/confirm`);
+            } else {
+                // Production: Would use Stripe SDK to confirm with clientSecret
+                // Then call confirm endpoint with paymentIntentId
+                // For now, simulate successful payment
+                const confirmRes = await api.post(`/payments/escrow/${escrowId}/confirm`, {
+                    paymentIntentId: createRes.data.stripePaymentIntentId,
+                });
+            }
+
             setCheckoutVisible(false);
             Alert.alert("Success", "Purchase successful! You can now contact the author.");
             setContactRequestStatus('approved');
-        } catch (err) {
-            Alert.alert("Error", "Purchase failed.");
+
+            // Refresh wallet balance
+            const walletRes = await api.get('/payments/wallet');
+            setWalletBalance(walletRes.data.balance || 0);
+        } catch (err: any) {
+            console.error('Purchase failed:', err);
+            const message = err.response?.data?.message || 'Purchase failed. Please try again.';
+            Alert.alert("Error", message);
         } finally {
             setPurchaseLoading(false);
         }

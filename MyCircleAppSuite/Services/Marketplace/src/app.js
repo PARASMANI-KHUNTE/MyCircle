@@ -1,21 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const jwt = require('jsonwebtoken');
 const { Post } = require('./models/Post');
+const { attachRequestContext, handleServiceError, requireAuth, parsePagination } = require('../../Common/security');
 
 const app = express();
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-
-// Correlation ID & Tracing
-app.use((req, res, next) => {
-    req.requestId = req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    res.setHeader('x-request-id', req.requestId);
-    next();
-});
+app.use(attachRequestContext);
 
 // Operational Probes
 app.get('/health/live', (req, res) => {
@@ -34,32 +28,11 @@ app.get('/health/ready', (req, res) => {
     });
 });
 
-// Auth Middleware (Verifies Identity Service Token)
-const authenticate = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ success: false, message: 'Authorization required' });
-    }
-
-    try {
-        const token = authHeader.split(' ')[1];
-        const secret = process.env.JWT_SECRET || 'identity_service_default_secret_key_12345';
-        const decoded = jwt.verify(token, secret);
-        req.user = {
-            id: decoded.sub,
-            email: decoded.email,
-            displayName: decoded.displayName,
-        };
-        next();
-    } catch {
-        return res.status(401).json({ success: false, message: 'Invalid or expired token' });
-    }
-};
-
 // Post Exploration & Discovery (Geospatial & Filtering)
 app.get('/api/posts', async (req, res) => {
     try {
-        const { type, category, search, longitude, latitude, radius = 50, page = 1, limit = 20 } = req.query;
+        const { type, category, search, longitude, latitude, radius = 50 } = req.query;
+        const { page, limit, skip } = parsePagination(req.query, 20, 100);
 
         const query = { status: 'active' };
 
@@ -67,28 +40,32 @@ app.get('/api/posts', async (req, res) => {
         if (category) query.itemCategory = category;
         if (search) {
             query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
+                { title: { $regex: String(search), $options: 'i' } },
+                { description: { $regex: String(search), $options: 'i' } },
             ];
         }
 
         if (longitude !== undefined && latitude !== undefined) {
-            query.locationCoords = {
-                $near: {
-                    $geometry: {
-                        type: 'Point',
-                        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+            const parsedLon = parseFloat(longitude);
+            const parsedLat = parseFloat(latitude);
+
+            if (Number.isFinite(parsedLon) && Number.isFinite(parsedLat)) {
+                query.locationCoords = {
+                    $near: {
+                        $geometry: {
+                            type: 'Point',
+                            coordinates: [parsedLon, parsedLat],
+                        },
+                        $maxDistance: Math.min(parseInt(radius, 10) || 50, 500) * 1000,
                     },
-                    $maxDistance: parseInt(radius, 10) * 1000,
-                },
-            };
+                };
+            }
         }
 
-        const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
         const posts = await Post.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit, 10));
+            .limit(limit);
 
         const total = await Post.countDocuments(query);
 
@@ -96,12 +73,12 @@ app.get('/api/posts', async (req, res) => {
             success: true,
             count: posts.length,
             total,
-            page: parseInt(page, 10),
-            pages: Math.ceil(total / parseInt(limit, 10)),
+            page,
+            pages: Math.ceil(total / limit),
             data: posts,
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 
@@ -110,21 +87,40 @@ app.get('/api/posts/:id', async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
         if (!post) {
-            return res.status(404).json({ success: false, message: 'Post not found' });
+            return res.status(404).json({
+                success: false,
+                code: 'NOT_FOUND',
+                message: 'Post not found',
+                requestId: req.requestId,
+            });
         }
         res.json({ success: true, data: post });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 
 // Create Post (Emits post.created)
-app.post('/api/posts', authenticate, async (req, res) => {
+app.post('/api/posts', requireAuth, async (req, res) => {
     try {
         const { type, title, description, price, location, coordinates, images, itemCategory } = req.body;
 
         if (!type || !title || !description || !location || !coordinates) {
-            return res.status(400).json({ success: false, message: 'Missing required post fields' });
+            return res.status(400).json({
+                success: false,
+                code: 'VALIDATION_ERROR',
+                message: 'Missing required post fields: type, title, description, location, coordinates',
+                requestId: req.requestId,
+            });
+        }
+
+        if (!Array.isArray(coordinates) || coordinates.length < 2) {
+            return res.status(400).json({
+                success: false,
+                code: 'VALIDATION_ERROR',
+                message: 'Coordinates must be an array of [longitude, latitude]',
+                requestId: req.requestId,
+            });
         }
 
         const post = await Post.create({
@@ -135,21 +131,21 @@ app.post('/api/posts', authenticate, async (req, res) => {
             },
             type,
             itemCategory: itemCategory || '',
-            title,
-            description,
-            price: price || 0,
-            location,
+            title: String(title).trim(),
+            description: String(description).trim(),
+            price: Math.max(0, parseFloat(price) || 0),
+            location: String(location).trim(),
             locationCoords: {
                 type: 'Point',
-                coordinates: coordinates,
+                coordinates: [parseFloat(coordinates[0]), parseFloat(coordinates[1])],
             },
-            images: images || [],
+            images: Array.isArray(images) ? images.slice(0, 10) : [],
             expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         });
 
         res.status(201).json({ success: true, data: post });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 

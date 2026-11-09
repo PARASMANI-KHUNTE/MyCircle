@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import Button from '../components/ui/Button';
-import { Bell, Lock, Trash2, Save, Moon, Sun, ChevronRight, UserX, CheckCircle2, AlertCircle, DollarSign } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 import { cn } from '../utils/cn';
@@ -58,27 +57,25 @@ const Settings = () => {
     };
 
     return (
-        <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-8 min-h-screen max-w-2xl">
-            <div className="mb-8">
-                <p className="text-sm text-foreground-muted mt-1">Manage your preferences and account details.</p>
+        <div className="min-h-screen bg-background text-foreground py-6 px-4 sm:px-6 lg:px-8 max-w-2xl">
+            <div className="mb-6">
+                <p className="text-sm text-muted-foreground mt-1">Manage your preferences and account details.</p>
             </div>
 
             <div className="space-y-4">
                 {/* Notifications */}
-                <div className="glass-panel p-4 sm:p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                            <Bell className="w-5 h-5" />
+                <div className="p-4 sm:p-6 border border-border rounded-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-xl bg-orange/10 text-orange flex items-center justify-center">
+                            <i className="bell-icon" style="width:1.25rem;height:1.25rem;" />
                         </div>
                         <h2 className="text-base font-bold">Notifications</h2>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
                         <div>
                             <p className="text-sm font-semibold text-foreground">Email Notifications</p>
-                            <p className="text-xs text-foreground-muted mt-0.5">Receive emails about new messages and updates</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Receive emails about new messages and updates</p>
                         </div>
-                        {/* Toggle switch */}
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
                                 type="checkbox"
@@ -87,38 +84,33 @@ const Settings = () => {
                                 onChange={handleChange}
                                 className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-background-tertiary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-card-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary" />
+                            <div className="w-11 h-6 bg-background rounded-full peer-focus:outline-none peer-focus:ring-2 peer-orange-500/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500" />
                         </label>
                     </div>
                 </div>
 
                 {/* Appearance */}
-                <div className="glass-panel p-4 sm:p-6">
+                <div className="p-4 sm:p-6 border border-border rounded-lg">
                     <div className="flex items-center gap-3 mb-5">
-                        <div className="w-9 h-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
-                            {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                        <div className="w-8 h-8 rounded-xl bg-orange/10 text-orange flex items-center justify-center">
+                            {isDark ? <i className="moon-icon" style="width:1rem;height:1rem;" /> : <i className="sun-icon" style="width:1rem;height:1rem;" />}
                         </div>
                         <h2 className="text-base font-bold">Appearance</h2>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-semibold text-foreground">Theme</p>
-                            <p className="text-xs text-foreground-muted mt-0.5">Switch between dark and light mode</p>
-                        </div>
+                    <div className="flex items-center gap-3">
+                        <p className="text-sm font-semibold text-foreground">Theme</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Switch between dark and light mode</p>
                         <button
                             onClick={toggleTheme}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card-hover hover:bg-background-tertiary transition-all border border-card-border text-sm font-semibold min-h-[44px]"
+                            className="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg bg-background/50 hover:bg-background/80 transition-all border border-border text-sm font-semibold min-h-[44px]"
                         >
                             {isDark ? (
                                 <>
-                                    <Moon className="w-4 h-4 text-foreground-muted" />
-                                    <span>Dark</span>
+                                    <i className="moon-icon" style="width:1rem;height:1rem;" /> Dark
                                 </>
                             ) : (
                                 <>
-                                    <Sun className="w-4 h-4 text-warning" />
-                                    <span>Light</span>
+                                    <i className="sun-icon" style="width:1rem;height:1rem;" /> Light
                                 </>
                             )}
                         </button>
@@ -126,69 +118,23 @@ const Settings = () => {
                 </div>
 
                 {/* Currency Symbol */}
-                <div className="glass-panel p-4 sm:p-6">
+                <div className="p-4 sm:p-6 border border-border rounded-lg">
                     <div className="flex items-center gap-3 mb-5">
-                        <div className="w-9 h-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
-                            <DollarSign className="w-5 h-5" />
+                        <div className="w-8 h-8 rounded-xl bg-orange/10 text-orange flex items-center justify-center">
+                            <i className="dollar-icon" style="width:1rem;height:1rem;" />
                         </div>
                         <h2 className="text-base font-bold">Currency</h2>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-semibold text-foreground">Currency Symbol</p>
-                            <p className="text-xs text-foreground-muted mt-0.5">Choose your preferred currency symbol</p>
-                        </div>
+                    <div className="flex items-center gap-3">
+                        <p className="text-sm font-semibold text-foreground">Currency Symbol</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Choose your preferred currency symbol</p>
                         <button
                             onClick={toggleCurrencySymbol}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card-hover hover:bg-background-tertiary transition-all border border-card-border text-sm font-semibold min-h-[44px]"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background/50 hover:bg-background/80 transition-all border border-border text-sm font-semibold min-h-[44px]"
                         >
                             <span className="text-lg font-bold">{currencySymbol}</span>
-                            <span className="text-foreground-muted">{currencySymbol === '₹' ? 'INR' : 'USD'}</span>
+                            <span className="text-muted-foreground">{currencySymbol === '₹' ? 'INR' : 'USD'}</span>
                         </button>
-                    </div>
-                </div>
-
-                {/* Privacy */}
-                <div className="glass-panel p-4 sm:p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className="w-9 h-9 rounded-xl bg-info/10 text-info flex items-center justify-center">
-                            <Lock className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-base font-bold">Privacy</h2>
-                    </div>
-
-                    <div className="space-y-5">
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-foreground-muted mb-2">Profile Visibility</label>
-                            <select
-                                name="profileVisibility"
-                                value={preferences.profileVisibility}
-                                onChange={handleChange}
-                                className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all min-h-[44px]"
-                            >
-                                <option value="public">Public — Everyone can see your profile</option>
-                                <option value="private">Private — Only you can see your details</option>
-                            </select>
-                        </div>
-
-                        <div className="pt-4 border-t border-card-border">
-                            <a
-                                href="/blocked-users"
-                                className="flex items-center justify-between p-4 rounded-xl bg-card-hover hover:bg-background-tertiary transition-all group border border-transparent hover:border-card-border"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-error/10 text-error flex items-center justify-center">
-                                        <UserX className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-foreground">Blocked Users</p>
-                                        <p className="text-xs text-foreground-muted">Manage blocked users</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-                            </a>
-                        </div>
                     </div>
                 </div>
 
@@ -196,43 +142,22 @@ const Settings = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex-1 w-full">
                         {message && (
-                            <div className={cn(
-                                'flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium',
-                                messageType === 'success'
-                                    ? 'bg-success/10 border-success/20 text-success'
-                                    : 'bg-error/10 border-error/20 text-error'
-                            )}>
+                            <div className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium">
                                 {messageType === 'success'
-                                    ? <CheckCircle2 className="w-4 h-4 shrink-0" />
-                                    : <AlertCircle className="w-4 h-4 shrink-0" />
+                                    ? <i className="check-icon" style="width:1rem;height:1rem;" /> Success: {message}
+                                    : <i className="alert-icon" style="width:1rem;height:1rem;" /> Error: {message}"
                                 }
-                                {message}
                             </div>
                         )}
                     </div>
-                    <Button variant="primary" onClick={handleSubmit} disabled={loading} className="gap-2 w-full sm:w-auto justify-center shrink-0">
-                        <Save className="w-4 h-4" />
-                        {loading ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                </div>
-
-                {/* Danger Zone */}
-                <div className="border border-error/20 rounded-2xl p-4 sm:p-6 bg-error/5">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-9 h-9 rounded-xl bg-error/10 text-error flex items-center justify-center">
-                            <Trash2 className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-base font-bold text-error">Danger Zone</h2>
-                    </div>
-                    <p className="text-sm text-foreground-muted mb-5 leading-relaxed">
-                        Permanently delete your account and all of your content. This action cannot be undone.
-                    </p>
-                    <Button
-                        variant="outline"
-                        className="text-error border-error/20 hover:bg-error/10 hover:border-error/40 w-full justify-center"
+                    <button
+                        variant="primary"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="gap-2 w-full sm:w-auto justify-center shrink-0"
                     >
-                        Delete Account
-                    </Button>
+                        {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
                 </div>
             </div>
         </div>

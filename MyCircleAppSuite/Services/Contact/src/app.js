@@ -1,21 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const jwt = require('jsonwebtoken');
 const { ContactRequest } = require('./models/ContactRequest');
+const { attachRequestContext, handleServiceError, requireAuth } = require('../../Common/security');
 
 const app = express();
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-
-// Tracing & Request Context
-app.use((req, res, next) => {
-    req.requestId = req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    res.setHeader('x-request-id', req.requestId);
-    next();
-});
+app.use(attachRequestContext);
 
 // Operational Probes
 app.get('/health/live', (req, res) => {
@@ -34,68 +28,61 @@ app.get('/health/ready', (req, res) => {
     });
 });
 
-// Auth Middleware (Verifies Identity Token)
-const authenticate = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ success: false, message: 'Authorization required' });
-    }
-
-    try {
-        const token = authHeader.split(' ')[1];
-        const secret = process.env.JWT_SECRET || 'identity_service_default_secret_key_12345';
-        const decoded = jwt.verify(token, secret);
-        req.user = {
-            id: decoded.sub,
-            email: decoded.email,
-            displayName: decoded.displayName,
-        };
-        next();
-    } catch {
-        return res.status(401).json({ success: false, message: 'Invalid or expired token' });
-    }
-};
-
 // Create Contact Request
-app.post('/api/contacts/request', authenticate, async (req, res) => {
+app.post('/api/contacts/request', requireAuth, async (req, res) => {
     try {
         const { postId, recipientId, message } = req.body;
 
         if (!postId || !recipientId) {
-            return res.status(400).json({ success: false, message: 'Post ID and Recipient ID are required' });
+            return res.status(400).json({
+                success: false,
+                code: 'VALIDATION_ERROR',
+                message: 'Post ID and Recipient ID are required',
+                requestId: req.requestId,
+            });
         }
 
-        if (recipientId === req.user.id) {
-            return res.status(400).json({ success: false, message: 'Cannot send contact request to yourself' });
+        if (String(recipientId) === String(req.user.id)) {
+            return res.status(400).json({
+                success: false,
+                code: 'BAD_REQUEST',
+                message: 'Cannot send contact request to yourself',
+                requestId: req.requestId,
+            });
         }
 
         const existing = await ContactRequest.findOne({
-            postId,
+            postId: String(postId),
             requesterId: req.user.id,
-            recipientId,
+            recipientId: String(recipientId),
             status: { $in: ['pending', 'accepted', 'approved'] },
         });
 
         if (existing) {
-            return res.status(400).json({ success: false, message: 'A request already exists for this post' });
+            return res.status(409).json({
+                success: false,
+                code: 'CONFLICT',
+                message: 'An active contact request already exists for this post',
+                requestId: req.requestId,
+            });
         }
 
         const request = await ContactRequest.create({
-            postId,
+            postId: String(postId),
             requesterId: req.user.id,
-            recipientId,
-            message: message || '',
+            recipientId: String(recipientId),
+            message: message ? String(message).slice(0, 500) : '',
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days expiry
         });
 
         res.status(201).json({ success: true, data: request });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 
-// Get User Contact Requests (Incoming & Outgoing)
-app.get('/api/contacts/requests', authenticate, async (req, res) => {
+// Get User Contact Requests
+app.get('/api/contacts/requests', requireAuth, async (req, res) => {
     try {
         const { type = 'all' } = req.query;
         let query = {};
@@ -109,18 +96,23 @@ app.get('/api/contacts/requests', authenticate, async (req, res) => {
         }
 
         const requests = await ContactRequest.find(query).sort({ createdAt: -1 });
-        res.json({ success: true, data: requests });
+        res.json({ success: true, count: requests.length, data: requests });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 
 // Respond to Request (Accept / Reject)
-app.put('/api/contacts/requests/:id/respond', authenticate, async (req, res) => {
+app.put('/api/contacts/requests/:id/respond', requireAuth, async (req, res) => {
     try {
-        const { action } = req.body; // 'accept' or 'reject'
+        const { action } = req.body;
         if (!['accept', 'reject'].includes(action)) {
-            return res.status(400).json({ success: false, message: 'Invalid action' });
+            return res.status(400).json({
+                success: false,
+                code: 'VALIDATION_ERROR',
+                message: "Action must be either 'accept' or 'reject'",
+                requestId: req.requestId,
+            });
         }
 
         const request = await ContactRequest.findOne({
@@ -130,7 +122,12 @@ app.put('/api/contacts/requests/:id/respond', authenticate, async (req, res) => 
         });
 
         if (!request) {
-            return res.status(404).json({ success: false, message: 'Pending request not found' });
+            return res.status(404).json({
+                success: false,
+                code: 'NOT_FOUND',
+                message: 'Pending request not found',
+                requestId: req.requestId,
+            });
         }
 
         if (action === 'accept') {
@@ -144,7 +141,7 @@ app.put('/api/contacts/requests/:id/respond', authenticate, async (req, res) => 
 
         res.json({ success: true, data: request });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 

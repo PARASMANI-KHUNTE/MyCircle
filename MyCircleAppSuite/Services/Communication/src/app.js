@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const { Conversation, Message } = require('./models/Chat');
+const { attachRequestContext, handleServiceError, requireAuth, getSecureJwtSecret } = require('../../Common/security');
 
 const app = express();
 const server = http.createServer(app);
@@ -19,13 +20,7 @@ const io = new Server(server, {
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-
-// Correlation ID & Tracing
-app.use((req, res, next) => {
-    req.requestId = req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    res.setHeader('x-request-id', req.requestId);
-    next();
-});
+app.use(attachRequestContext);
 
 // Operational Probes
 app.get('/health/live', (req, res) => {
@@ -44,43 +39,21 @@ app.get('/health/ready', (req, res) => {
     });
 });
 
-// Auth Middleware (Verifies Identity Service Token)
-const authenticate = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ success: false, message: 'Authorization required' });
-    }
-
-    try {
-        const token = authHeader.split(' ')[1];
-        const secret = process.env.JWT_SECRET || 'identity_service_default_secret_key_12345';
-        const decoded = jwt.verify(token, secret);
-        req.user = {
-            id: decoded.sub,
-            email: decoded.email,
-            displayName: decoded.displayName,
-        };
-        next();
-    } catch {
-        return res.status(401).json({ success: false, message: 'Invalid or expired token' });
-    }
-};
-
 // Get User Conversations
-app.get('/api/chat/conversations', authenticate, async (req, res) => {
+app.get('/api/chat/conversations', requireAuth, async (req, res) => {
     try {
         const conversations = await Conversation.find({
             participants: req.user.id,
-        }).sort({ lastMessageAt: -1 });
+        }).sort({ lastMessageAt: -1 }).limit(50);
 
-        res.json({ success: true, data: conversations });
+        res.json({ success: true, count: conversations.length, data: conversations });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 
 // Get Messages in Conversation
-app.get('/api/chat/messages/:conversationId', authenticate, async (req, res) => {
+app.get('/api/chat/messages/:conversationId', requireAuth, async (req, res) => {
     try {
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
@@ -88,27 +61,48 @@ app.get('/api/chat/messages/:conversationId', authenticate, async (req, res) => 
         });
 
         if (!conversation) {
-            return res.status(404).json({ success: false, message: 'Conversation not found' });
+            return res.status(404).json({
+                success: false,
+                code: 'NOT_FOUND',
+                message: 'Conversation not found',
+                requestId: req.requestId,
+            });
         }
 
         const messages = await Message.find({
             conversationId: req.params.conversationId,
         }).sort({ createdAt: 1 }).limit(100);
 
-        res.json({ success: true, data: messages });
+        res.json({ success: true, count: messages.length, data: messages });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 
 // Send Message
-app.post('/api/chat/messages', authenticate, async (req, res) => {
+app.post('/api/chat/messages', requireAuth, async (req, res) => {
     try {
         const { recipientId, text, conversationId, postId } = req.body;
 
-        if (!recipientId || !text) {
-            return res.status(400).json({ success: false, message: 'Recipient and text are required' });
+        if (!recipientId || !text || !String(text).trim()) {
+            return res.status(400).json({
+                success: false,
+                code: 'VALIDATION_ERROR',
+                message: 'Recipient ID and non-empty text message are required',
+                requestId: req.requestId,
+            });
         }
+
+        if (String(recipientId) === String(req.user.id)) {
+            return res.status(400).json({
+                success: false,
+                code: 'BAD_REQUEST',
+                message: 'Cannot send message to yourself',
+                requestId: req.requestId,
+            });
+        }
+
+        const cleanText = String(text).trim().slice(0, 2000);
 
         let conv;
         if (conversationId) {
@@ -120,13 +114,13 @@ app.post('/api/chat/messages', authenticate, async (req, res) => {
 
         if (!conv) {
             conv = await Conversation.create({
-                participants: [req.user.id, recipientId],
-                postId: postId || null,
-                lastMessage: text,
+                participants: [req.user.id, String(recipientId)],
+                postId: postId ? String(postId) : null,
+                lastMessage: cleanText,
                 lastMessageAt: new Date(),
             });
         } else {
-            conv.lastMessage = text;
+            conv.lastMessage = cleanText;
             conv.lastMessageAt = new Date();
             await conv.save();
         }
@@ -134,16 +128,16 @@ app.post('/api/chat/messages', authenticate, async (req, res) => {
         const message = await Message.create({
             conversationId: conv._id,
             senderId: req.user.id,
-            recipientId,
-            text,
+            recipientId: String(recipientId),
+            text: cleanText,
         });
 
         // Broadcast over WebSockets
-        io.to(recipientId).emit('message:received', message);
+        io.to(String(recipientId)).emit('message:received', message);
 
         res.status(201).json({ success: true, data: message });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        return handleServiceError(res, err, req);
     }
 });
 
@@ -155,7 +149,7 @@ io.use((socket, next) => {
     }
 
     try {
-        const secret = process.env.JWT_SECRET || 'identity_service_default_secret_key_12345';
+        const secret = getSecureJwtSecret();
         const decoded = jwt.verify(token, secret);
         socket.userId = decoded.sub;
         next();
@@ -166,8 +160,6 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
     socket.join(socket.userId);
-    console.log(`[Socket] User ${socket.userId} joined room`);
-
     socket.on('disconnect', () => {
         socket.leave(socket.userId);
     });

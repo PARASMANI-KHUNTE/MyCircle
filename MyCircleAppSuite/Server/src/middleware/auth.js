@@ -1,6 +1,6 @@
 const { verifyToken } = require('../services/identity/tokenService');
 
-module.exports = function (req, res, next) {
+function authMiddleware(req, res, next) {
     // Get token from header
     const token = req.header('x-auth-token');
 
@@ -21,4 +21,7 @@ module.exports = function (req, res, next) {
         authErr.statusCode = 401;
         return next(authErr);
     }
-};
+}
+
+authMiddleware.auth = authMiddleware;
+module.exports = authMiddleware;

@@ -167,11 +167,19 @@ exports.createRequest = asyncHandler(async (req, res) => {
 exports.getReceivedRequests = async (req, res, next) => {
     try {
         const requests = await ContactRequest.find({ recipient: req.user.id })
-            .populate('post', ['title', 'type', 'images', 'price', 'budgetMin', 'budgetMax', 'duration', 'availability'])
+            .populate('post', ['title', 'type', 'images', 'price', 'budgetMin', 'budgetMax', 'duration', 'availability', 'location', 'contactPhone', 'contactWhatsapp'])
             .populate('requester', ['displayName', 'avatar', 'rating', 'reputation'])
             .sort({ createdAt: -1 });
 
-        res.json(requests.map((request) => serializeRequest(request, req.user.id)));
+        // Only reveal contact details once the request has been approved.
+        res.json(requests.map((request) => {
+            const serialized = serializeRequest(request, req.user.id);
+            if (serialized.status !== 'accepted' && serialized.status !== 'completed' && serialized.post) {
+                delete serialized.post.contactPhone;
+                delete serialized.post.contactWhatsapp;
+            }
+            return serialized;
+        }));
     } catch (err) {
         return next(err);
     }
@@ -183,7 +191,7 @@ exports.getReceivedRequests = async (req, res, next) => {
 exports.getSentRequests = async (req, res, next) => {
     try {
         const requests = await ContactRequest.find({ requester: req.user.id })
-            .populate('post', ['title', 'type', 'images', 'price', 'budgetMin', 'budgetMax', 'duration', 'availability'])
+            .populate('post', ['title', 'type', 'images', 'price', 'budgetMin', 'budgetMax', 'duration', 'availability', 'location', 'contactPhone', 'contactWhatsapp'])
             .populate('recipient', ['displayName', 'avatar', 'rating', 'reputation'])
             .sort({ createdAt: -1 });
 

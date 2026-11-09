@@ -25,6 +25,7 @@ router.post('/create-intent', asyncHandler(paymentController.createEscrowIntent)
 router.post('/escrow/:escrowId/confirm', asyncHandler(paymentController.confirmEscrow));
 router.post('/escrow/:escrowId/release', asyncHandler(paymentController.releaseEscrow));
 router.post('/escrow/:escrowId/refund', asyncHandler(paymentController.refundEscrow));
+router.get('/escrow/post/:postId', asyncHandler(paymentController.getActiveEscrowForPost));
 router.get('/escrow/history', asyncHandler(paymentController.getEscrowHistory));
 router.get('/escrow/:escrowId', asyncHandler(paymentController.getEscrow));
 

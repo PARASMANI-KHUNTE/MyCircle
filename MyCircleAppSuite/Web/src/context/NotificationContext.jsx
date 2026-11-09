@@ -116,7 +116,12 @@ export const NotificationProvider = ({ children }) => {
             playNotificationSound();
 
             // Show toast with specific type
-            const toastType = ['message', 'like', 'request'].includes(notification.type) ? notification.type : 'info';
+            const isEscrow = typeof notification.type === 'string' && notification.type.startsWith('escrow_');
+            const toastType = isEscrow || notification.type === 'wallet_topup'
+                ? 'success'
+                : ['message', 'like', 'request'].includes(notification.type)
+                    ? notification.type
+                    : 'info';
             toast(getToastMessageFromNotification(normalizedNotification), toastType);
         };
 
@@ -180,15 +185,29 @@ export const NotificationProvider = ({ children }) => {
             return;
         }
 
+        if (notification.type === 'wallet_topup') {
+            navigate('/wallet');
+            return;
+        }
+
+        if (typeof notification.type === 'string' && notification.type.startsWith('escrow_')) {
+            navigate(notification.link || (notification.relatedId ? `/post/${notification.relatedId}` : '/wallet'));
+            return;
+        }
+
         if (notification.relatedId) {
             if (notification.type === 'like') {
                 navigate(`/post/${notification.relatedId}`);
-            } else if (notification.type === 'comment' || notification.type === 'reply') {
-                navigate(`/post/${notification.relatedId}#comments`);
-            } else if (notification.type === 'request' || notification.type === 'approval' || notification.type === 'info') {
-                navigate('/requests');
+                return;
             }
-            return;
+            if (notification.type === 'comment' || notification.type === 'reply') {
+                navigate(`/post/${notification.relatedId}#comments`);
+                return;
+            }
+            if (notification.type === 'request' || notification.type === 'approval' || notification.type === 'info') {
+                navigate('/requests');
+                return;
+            }
         }
 
         if (notification.link) {

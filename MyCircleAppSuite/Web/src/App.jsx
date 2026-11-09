@@ -27,6 +27,7 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const MyPosts = lazy(() => import('./pages/MyPosts'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Wallet = lazy(() => import('./pages/Wallet'));
 const BlockedUsers = lazy(() => import('./pages/BlockedUsers'));
 const LoginSuccess = lazy(() => import('./pages/LoginSuccess'));
 
@@ -75,6 +76,7 @@ function AuthRoutes() {
           <Route path="/post/:id" element={<PostDetails />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/wallet" element={<Wallet />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/blocked-users" element={<BlockedUsers />} />
           <Route path="*" element={<NotFound />} />

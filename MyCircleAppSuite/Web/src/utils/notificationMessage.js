@@ -69,6 +69,39 @@ const buildFallbackMessage = (notification) => {
         };
     }
 
+    if (type === 'wallet_topup') {
+        return {
+            title: 'Wallet topped up',
+            message: 'Funds were added to your wallet.'
+        };
+    }
+
+    if (type.startsWith('escrow_')) {
+        const escrowCopy = {
+            escrow_created: {
+                title: 'New purchase request',
+                message: `${senderName} started a purchase through escrow.`
+            },
+            escrow_funded: {
+                title: 'Escrow funded',
+                message: 'Payment is now held in escrow.'
+            },
+            escrow_released: {
+                title: 'Purchase completed',
+                message: 'Escrow funds have been released.'
+            },
+            escrow_refunded: {
+                title: 'Escrow refunded',
+                message: 'Escrow funds have been refunded.'
+            },
+        };
+
+        return escrowCopy[type] || {
+            title: 'Escrow update',
+            message: `${senderName} sent you an escrow update.`
+        };
+    }
+
     return {
         title: 'Notification',
         message: `${senderName} sent you a notification.`

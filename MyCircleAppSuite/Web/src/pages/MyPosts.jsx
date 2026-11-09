@@ -8,6 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import PostCard from '../components/ui/PostCard';
 import PostSkeleton from '../components/ui/PostSkeleton';
 import Button from '../components/ui/Button';
+import Dialog from '../components/ui/Dialog';
+import Loading from '../components/ui/Loading';
 import { cn } from '../utils/cn';
 
 const FILTERS = [
@@ -26,6 +28,9 @@ const MyPosts = () => {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [analyticsPost, setAnalyticsPost] = useState(null);
+    const [analytics, setAnalytics] = useState(null);
+    const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
     const fetchMyPosts = useCallback(async () => {
         try {
@@ -54,6 +59,31 @@ const MyPosts = () => {
             success('Post deleted successfully!');
         } catch {
             showError('Failed to delete post.');
+        }
+    };
+
+    const handleToggleStatus = async (post) => {
+        try {
+            const res = await api.patch(`/posts/${post._id}/toggle-status`);
+            setPosts((prev) => prev.map((p) => (p._id === post._id ? { ...p, ...res.data } : p)));
+            success(res.data?.isActive ? 'Post activated.' : 'Post paused.');
+        } catch {
+            showError('Could not update post status.');
+        }
+    };
+
+    const handleAnalytics = async (post) => {
+        setAnalyticsPost(post);
+        setAnalytics(null);
+        setAnalyticsLoading(true);
+        try {
+            const res = await api.get(`/posts/${post._id}/analytics`);
+            setAnalytics(res.data);
+        } catch {
+            showError('Could not load analytics.');
+            setAnalyticsPost(null);
+        } finally {
+            setAnalyticsLoading(false);
         }
     };
 
@@ -126,10 +156,49 @@ const MyPosts = () => {
                             isOwnPost
                             onEdit={() => navigate(`/edit-post/${post._id}`)}
                             onDelete={handleDelete}
+                            onToggleStatus={handleToggleStatus}
+                            onAnalytics={handleAnalytics}
                         />
                     ))}
                 </div>
             )}
+
+            <Dialog
+                isOpen={!!analyticsPost}
+                onClose={() => setAnalyticsPost(null)}
+                title="Post analytics"
+                description={analyticsPost?.title}
+                size="sm"
+            >
+                {analyticsLoading ? (
+                    <div className="flex justify-center py-8">
+                        <Loading text="Loading analytics..." />
+                    </div>
+                ) : analytics ? (
+                    <div className="grid grid-cols-2 gap-3">
+                        {[
+                            { label: 'Views', value: analytics.views ?? 0 },
+                            { label: 'Likes', value: analytics.likes ?? 0 },
+                            { label: 'Shares', value: analytics.shares ?? 0 },
+                            { label: 'Days active', value: analytics.daysActive ?? 0 },
+                        ].map((item) => (
+                            <div
+                                key={item.label}
+                                className="rounded-xl border border-card-border bg-background-secondary px-4 py-3"
+                            >
+                                <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                                    {item.label}
+                                </p>
+                                <p className="mt-1 text-lg font-semibold text-foreground">{item.value}</p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="py-6 text-center text-sm text-foreground-muted">
+                        Analytics are unavailable for this post.
+                    </p>
+                )}
+            </Dialog>
         </div>
     );
 };

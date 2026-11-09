@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import api from '../utils/api';
 import Button from '../components/ui/Button';
@@ -11,7 +11,9 @@ import { getPostInsights, getPostExplanation } from '../services/aiService';
 import {
     ArrowLeft, MapPin, Clock, MessageCircle, Share2, Heart,
     Phone, UserPlus, UserCheck, Edit2, Trash2, Sparkles, Navigation, MessageSquare,
+    ShoppingBag, ShieldCheck, Wallet,
 } from 'lucide-react';
+import CheckoutModal from '../components/ui/CheckoutModal';
 import { useDialog } from '../hooks/useDialog';
 import { useTheme } from '../context/ThemeContext';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
@@ -64,10 +66,13 @@ const PostDetails = () => {
     const [aiSummary, setAiSummary] = useState('');
     const [aiInsights, setAiInsights] = useState(null);
     const [isFetchingAi, setIsFetchingAi] = useState(false);
+    const [showCheckout, setShowCheckout] = useState(false);
+    const [activeEscrow, setActiveEscrow] = useState(null);
+    const [relatedPosts, setRelatedPosts] = useState([]);
 
     const currentUserId = user?._id || user?.id;
     const isLiked = currentUserId && likes.some((uid) => String(uid) === String(currentUserId));
-    const hasChatAccess = contactRequestStatus === 'accepted' || contactRequestStatus === 'approved';
+    const hasChatAccess = contactRequestStatus === 'accepted' || contactRequestStatus === 'approved' || !!activeEscrow;
 
     useEffect(() => {
         let active = true;
@@ -80,6 +85,16 @@ const PostDetails = () => {
                 setLikes(res.data.likes || []);
                 setShares(res.data.shares || 0);
                 setRequestSent(!!res.data.hasRequested);
+                if (user) {
+                    try {
+                        const escRes = await api.get(`/payments/escrow/post/${id}`);
+                        if (active && escRes.data?.hasActiveEscrow) {
+                            setActiveEscrow(escRes.data.escrow);
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
                 setContactRequestStatus(
                     res.data.contactRequestStatus || (res.data.hasRequested ? 'pending' : 'none')
                 );
@@ -95,6 +110,24 @@ const PostDetails = () => {
             active = false;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
+
+    useEffect(() => {
+        let active = true;
+
+        const fetchRelated = async () => {
+            try {
+                const res = await api.get(`/posts/related/${id}`);
+                if (active) setRelatedPosts(Array.isArray(res.data) ? res.data : []);
+            } catch {
+                if (active) setRelatedPosts([]);
+            }
+        };
+
+        void fetchRelated();
+        return () => {
+            active = false;
+        };
     }, [id]);
 
     useEffect(() => {
@@ -198,7 +231,8 @@ const PostDetails = () => {
     };
 
     const handleCall = () => {
-        const phone = post?.user?.contactPhone || post?.user?.contactWhatsapp;
+        // Contact details are stored on the post, not the seller profile.
+        const phone = post?.contactPhone || post?.contactWhatsapp;
         if (!phone) {
             showError('Phone number not available');
             return;
@@ -207,7 +241,7 @@ const PostDetails = () => {
     };
 
     const handleText = () => {
-        const phone = post?.user?.contactWhatsapp || post?.user?.contactPhone;
+        const phone = post?.contactWhatsapp || post?.contactPhone;
         if (!phone) {
             showError('Phone number not available');
             return;
@@ -335,6 +369,7 @@ const PostDetails = () => {
     const isOwnPost = currentUserId && String(post.user?._id) === String(currentUserId);
     const timeRemaining = getTimeRemaining();
     const isExpired = post.expired || timeRemaining?.expired;
+    const canBuy = !isOwnPost && Number(post.price) > 0 && !isExpired && post.isActive !== false;
 
     return (
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -767,7 +802,46 @@ const PostDetails = () => {
 
                         {!isOwnPost && (
                             <div className="space-y-2 border-t border-card-border pt-4">
+                                {activeEscrow ? (
+                                    <div className="rounded-xl border border-warning/30 bg-warning/5 p-3.5 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-warning flex items-center gap-1.5">
+                                                <ShieldCheck className="h-4 w-4" />
+                                                Active Escrow Hold
+                                            </span>
+                                            <span className="text-xs font-bold font-mono text-foreground">
+                                                {currencySymbol}{activeEscrow.amount}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-foreground-muted leading-relaxed">
+                                            Your payment is safely secured in Escrow. Once you receive the item/service, release funds from your Orders page.
+                                        </p>
+                                        <Link to="/wallet" className="block w-full">
+                                            <Button size="sm" variant="outline" className="w-full text-xs gap-1.5 justify-center">
+                                                <Wallet className="h-3.5 w-3.5" />
+                                                Manage in Wallet &amp; Orders
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                ) : canBuy ? (
+                                    <Button
+                                        className="w-full justify-center"
+                                        onClick={() => {
+                                            if (!user) {
+                                                showError('Please sign in to complete this purchase.');
+                                                navigate('/login');
+                                                return;
+                                            }
+                                            setShowCheckout(true);
+                                        }}
+                                    >
+                                        <ShoppingBag className="mr-1.5 h-4 w-4" />
+                                        Buy with Escrow Protection
+                                    </Button>
+                                ) : null}
+
                                 <Button
+                                    variant={canBuy ? 'outline' : 'primary'}
                                     className="w-full"
                                     onClick={handleContactRequest}
                                     loading={requestLoading}
@@ -817,6 +891,59 @@ const PostDetails = () => {
                     </div>
                 </aside>
             </div>
+
+            {relatedPosts.length > 0 && (
+                <section className="mt-8">
+                    <h2 className="mb-3 text-sm font-semibold text-foreground">Related posts</h2>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {relatedPosts.map((related) => (
+                            <Link
+                                key={related._id}
+                                to={`/post/${related._id}`}
+                                className="overflow-hidden rounded-xl border border-card-border bg-card transition-colors hover:border-card-border-hover hover:bg-card-hover"
+                            >
+                                {related.images?.[0] ? (
+                                    <img
+                                        src={related.images[0]}
+                                        alt={related.title}
+                                        className="h-28 w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex h-28 w-full items-center justify-center bg-background-secondary">
+                                        <span className="text-lg font-semibold text-foreground-muted/40">
+                                            {related.title?.charAt(0)?.toUpperCase() || '?'}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="p-3">
+                                    <p className="truncate text-sm font-medium text-foreground">
+                                        {related.title}
+                                    </p>
+                                    <p className="mt-1 truncate text-xs text-foreground-muted">
+                                        {related.location || 'Nearby'}
+                                    </p>
+                                    {related.price > 0 && (
+                                        <p className="mt-1 text-sm font-semibold text-foreground">
+                                            {currencySymbol}{related.price}
+                                        </p>
+                                    )}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {showCheckout && (
+                <CheckoutModal
+                    post={post}
+                    onClose={() => setShowCheckout(false)}
+                    onPurchase={() => {
+                        setShowCheckout(false);
+                        navigate('/wallet');
+                    }}
+                />
+            )}
         </div>
     );
 };

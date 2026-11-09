@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, PlusSquare, Bell, MessageCircle } from 'lucide-react';
+import { Home, PlusSquare, Bell, MessageCircle, Wallet } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { cn } from '../../utils/cn';
@@ -60,6 +60,7 @@ const BottomNav = () => {
 
     const navItems = [
         { path: '/', icon: Home, label: 'Home' },
+        { path: '/wallet', icon: Wallet, label: 'Wallet' },
         { path: '/create-post', icon: PlusSquare, label: 'Create' },
         { path: '/notifications', icon: Bell, label: 'Alerts', badge: unreadCount },
         { path: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMsgCount },

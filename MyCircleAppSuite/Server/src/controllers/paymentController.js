@@ -66,7 +66,13 @@ exports.createEscrowIntent = asyncHandler(async (req, res) => {
     // Check buyer's wallet balance
     const buyerWallet = await Wallet.getOrCreate(req.user.id);
     if (buyerWallet.balance < amount) {
-        throw new ApiError(400, 'Insufficient wallet balance. Please top up first.');
+        return res.status(400).json({
+            code: 'INSUFFICIENT_FUNDS',
+            message: `Insufficient wallet balance. You need ₹${amount - buyerWallet.balance} more.`,
+            balance: buyerWallet.balance,
+            required: amount,
+            shortfall: amount - buyerWallet.balance,
+        });
     }
 
     // Create escrow transaction in pending state
@@ -133,6 +139,7 @@ exports.createEscrowIntent = asyncHandler(async (req, res) => {
     });
 
     res.json({
+        orderId: escrow._id,
         escrowId: escrow._id,
         clientSecret,
         amount,
@@ -240,23 +247,35 @@ exports.releaseEscrow = asyncHandler(async (req, res) => {
 
     const escrow = await EscrowTransaction.findById(escrowId)
         .populate('post', 'title')
-        .populate('buyer', 'displayName');
+        .populate('buyer', 'displayName')
+        .populate('seller', 'displayName');
 
     if (!escrow) {
         throw new ApiError(404, 'Escrow not found');
     }
 
-    if (escrow.seller.toString() !== req.user.id) {
-        throw new ApiError(403, 'Only the seller can release escrow');
+    const isBuyer = escrow.buyer._id.toString() === req.user.id;
+    const isSeller = escrow.seller._id.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isBuyer && !isSeller && !isAdmin) {
+        throw new ApiError(403, 'Not authorized to release escrow');
     }
 
-    if (escrow.status !== 'held') {
+    if (escrow.status !== 'held' && escrow.status !== 'funded') {
         throw new ApiError(400, `Escrow cannot be released in ${escrow.status} state`);
     }
 
-    // Transfer funds to seller's wallet
-    const sellerWallet = await Wallet.getOrCreate(escrow.seller);
-    await sellerWallet.releaseEscrow(escrow.amount);
+    // Transfer funds: deduct pending from buyer and credit seller balance
+    const buyerWallet = await Wallet.getOrCreate(escrow.buyer._id);
+    const sellerWallet = await Wallet.getOrCreate(escrow.seller._id);
+
+    if (buyerWallet.pendingBalance >= escrow.amount) {
+        buyerWallet.pendingBalance -= escrow.amount;
+        await buyerWallet.save();
+    }
+    sellerWallet.balance += escrow.amount;
+    await sellerWallet.save();
 
     // Update escrow
     escrow.status = 'released';
@@ -357,6 +376,34 @@ exports.refundEscrow = asyncHandler(async (req, res) => {
         escrowId: escrow._id,
         status: escrow.status,
         message: 'Funds refunded to buyer',
+    });
+});
+
+// @desc    Get active escrow for a specific post (for the logged-in buyer)
+// @route   GET /api/payments/escrow/post/:postId
+// @access  Private
+exports.getActiveEscrowForPost = asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+        throw new ApiError(400, 'Invalid postId');
+    }
+
+    const escrow = await EscrowTransaction.getActiveForPost(postId, req.user.id);
+    if (!escrow) {
+        return res.json({ hasActiveEscrow: false, escrow: null });
+    }
+
+    return res.json({
+        hasActiveEscrow: true,
+        escrow: {
+            id: escrow._id,
+            status: escrow.status,
+            amount: escrow.amount,
+            currency: escrow.currency,
+            createdAt: escrow.createdAt,
+            fundedAt: escrow.fundedAt,
+        },
     });
 });
 

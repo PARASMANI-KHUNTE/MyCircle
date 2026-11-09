@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, CheckCircle2, MessageCircle, Info, Trash2, Heart, BellOff } from 'lucide-react';
+import { Bell, CheckCircle2, MessageCircle, Info, Trash2, Heart, BellOff, ShieldCheck, Wallet } from 'lucide-react';
 import Button from '../components/ui/Button';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
@@ -14,6 +14,11 @@ const typeConfig = {
     like: { icon: Heart, className: 'text-primary bg-primary/10 border-primary/20' },
     comment: { icon: MessageCircle, className: 'text-primary bg-primary/10 border-primary/20' },
     info: { icon: Info, className: 'text-primary bg-primary/10 border-primary/20' },
+    escrow_created: { icon: ShieldCheck, className: 'text-primary bg-primary/10 border-primary/20' },
+    escrow_funded: { icon: ShieldCheck, className: 'text-info bg-info/10 border-info/20' },
+    escrow_released: { icon: CheckCircle2, className: 'text-success bg-success/10 border-success/20' },
+    escrow_refunded: { icon: ShieldCheck, className: 'text-warning bg-warning/10 border-warning/20' },
+    wallet_topup: { icon: Wallet, className: 'text-success bg-success/10 border-success/20' },
 };
 
 const getTypeConfig = (type) =>

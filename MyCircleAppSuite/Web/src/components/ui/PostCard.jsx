@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MapPin, Pencil, ShoppingBag, Trash2 } from 'lucide-react';
+import { BarChart3, Heart, MapPin, Pause, Pencil, Play, ShoppingBag, Trash2 } from 'lucide-react';
 import Button from './Button';
 import CheckoutModal from './CheckoutModal';
 import { cn } from '../../utils/cn';
@@ -20,6 +20,8 @@ const PostCard = ({
     isOwnPost: propIsOwnPost = false,
     onEdit = () => {},
     onDelete = null,
+    onToggleStatus = null,
+    onAnalytics = null,
     onClick = () => {},
 }) => {
     const {
@@ -144,6 +146,38 @@ const PostCard = ({
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                     </Button>
+                                    {onToggleStatus && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="px-2 text-foreground-muted"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onToggleStatus(post);
+                                            }}
+                                            aria-label={post.isActive === false ? 'Activate post' : 'Pause post'}
+                                        >
+                                            {post.isActive === false ? (
+                                                <Play className="h-3.5 w-3.5" />
+                                            ) : (
+                                                <Pause className="h-3.5 w-3.5" />
+                                            )}
+                                        </Button>
+                                    )}
+                                    {onAnalytics && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="px-2 text-foreground-muted"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onAnalytics(post);
+                                            }}
+                                            aria-label="View post analytics"
+                                        >
+                                            <BarChart3 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    )}
                                     {onDelete && (
                                         <Button
                                             variant="ghost"

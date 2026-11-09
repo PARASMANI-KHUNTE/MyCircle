@@ -121,7 +121,6 @@ const Settings = () => {
                             className="input-modern w-auto min-w-[8rem] py-2"
                         >
                             <option value="public">Public</option>
-                            <option value="connections">Connections</option>
                             <option value="private">Private</option>
                         </select>
                     </Row>

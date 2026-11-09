@@ -1,24 +1,46 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, MapPin, Pencil, LogOut, Mail } from 'lucide-react';
+import {
+    CalendarDays, MapPin, Pencil, LogOut, Mail, UserPlus, UserMinus, ThumbsUp,
+} from 'lucide-react';
 import api from '../utils/api';
 import Button from '../components/ui/Button';
 import Loading from '../components/ui/Loading';
 import PostCard from '../components/ui/PostCard';
+import Dialog from '../components/ui/Dialog';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { getAvatarUrl } from '../utils/avatar';
+import { cn } from '../utils/cn';
 
-const Stat = ({ label, value }) => (
-    <div className="rounded-xl border border-card-border bg-card px-4 py-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">{label}</p>
-        <p className="mt-1 text-lg font-semibold text-foreground">{value ?? 0}</p>
-    </div>
-);
+const Stat = ({ label, value, onClick }) => {
+    const content = (
+        <>
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">{label}</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">{value ?? 0}</p>
+        </>
+    );
+
+    if (onClick) {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                className="rounded-xl border border-card-border bg-card px-4 py-3 text-left transition-colors hover:border-card-border-hover hover:bg-card-hover"
+            >
+                {content}
+            </button>
+        );
+    }
+
+    return <div className="rounded-xl border border-card-border bg-card px-4 py-3">{content}</div>;
+};
+
+const normalizeSkill = (skill) => (typeof skill === 'string' ? skill : skill?.name || '');
 
 const Profile = () => {
     const { user: authUser, logout } = useAuth();
-    const { error: showError } = useToast();
+    const { success, error: showError } = useToast();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -28,6 +50,11 @@ const Profile = () => {
     const [profile, setProfile] = useState(null);
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [followLoading, setFollowLoading] = useState(false);
+    const [endorsingSkill, setEndorsingSkill] = useState(null);
+    const [listModal, setListModal] = useState(null);
+    const [listUsers, setListUsers] = useState([]);
+    const [listLoading, setListLoading] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -41,11 +68,18 @@ const Profile = () => {
                 const postsReq = api.get('/posts', {
                     params: { userId: isOwnProfile ? authUser?._id : userId, limit: 50 },
                 });
+                // Recalculate authoritative counters for the signed-in user.
+                const statsReq = isOwnProfile ? api.get('/user/stats') : Promise.resolve(null);
 
-                const [profileRes, postsRes] = await Promise.all([profileReq, postsReq]);
+                const [profileRes, postsRes, statsRes] = await Promise.all([profileReq, postsReq, statsReq]);
                 if (!active) return;
 
-                setProfile(profileRes.data);
+                const profileData = { ...profileRes.data };
+                if (statsRes?.data?.stats) {
+                    profileData.stats = { ...profileData.stats, ...statsRes.data.stats };
+                }
+
+                setProfile(profileData);
                 setPosts(Array.isArray(postsRes.data) ? postsRes.data : postsRes.data?.posts || []);
             } catch {
                 if (!active) return;
@@ -65,6 +99,33 @@ const Profile = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authUser, isOwnProfile, userId]);
 
+    useEffect(() => {
+        if (!listModal) return undefined;
+        let active = true;
+
+        const loadList = async () => {
+            setListLoading(true);
+            try {
+                const targetId = isOwnProfile ? authUser?._id : userId;
+                const res = await api.get(`/user/${targetId}/${listModal}`);
+                if (active) setListUsers(Array.isArray(res.data) ? res.data : []);
+            } catch {
+                if (active) {
+                    setListUsers([]);
+                    showError('Could not load this list.');
+                }
+            } finally {
+                if (active) setListLoading(false);
+            }
+        };
+
+        void loadList();
+        return () => {
+            active = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [listModal]);
+
     const joined = useMemo(() => {
         if (!profile?.createdAt) return '—';
         return new Date(profile.createdAt).toLocaleDateString('en-US', {
@@ -72,6 +133,77 @@ const Profile = () => {
             year: 'numeric',
         });
     }, [profile?.createdAt]);
+
+    const isFollowing = useMemo(() => {
+        if (!authUser?._id || !profile?.followers) return false;
+        return profile.followers.some((id) => String(id?._id || id) === String(authUser._id));
+    }, [authUser?._id, profile?.followers]);
+
+    const endorsementMap = useMemo(() => {
+        const map = new Map();
+        (profile?.skillEndorsements || []).forEach((entry) => {
+            if (entry?.skill) map.set(entry.skill.toLowerCase(), entry);
+        });
+        return map;
+    }, [profile?.skillEndorsements]);
+
+    const handleFollowToggle = async () => {
+        if (!authUser) {
+            navigate('/login');
+            return;
+        }
+        setFollowLoading(true);
+        try {
+            if (isFollowing) {
+                await api.delete(`/user/follow/${userId}`);
+            } else {
+                await api.post(`/user/follow/${userId}`);
+            }
+
+            setProfile((prev) => {
+                if (!prev) return prev;
+                const followers = prev.followers || [];
+                const nextFollowers = isFollowing
+                    ? followers.filter((id) => String(id?._id || id) !== String(authUser._id))
+                    : [...followers, authUser._id];
+                const baseCount = prev.stats?.followersCount ?? followers.length;
+                return {
+                    ...prev,
+                    followers: nextFollowers,
+                    stats: {
+                        ...prev.stats,
+                        followersCount: Math.max(0, baseCount + (isFollowing ? -1 : 1)),
+                    },
+                };
+            });
+
+            success(isFollowing ? 'Unfollowed.' : 'Now following.');
+        } catch (err) {
+            showError(err.response?.data?.msg || 'Could not update follow status.');
+        } finally {
+            setFollowLoading(false);
+        }
+    };
+
+    const handleEndorse = async (skill) => {
+        if (!authUser) {
+            navigate('/login');
+            return;
+        }
+        setEndorsingSkill(skill);
+        try {
+            const res = await api.post(`/user/endorse/${userId}`, { skill });
+            const updated = res.data?.skillEndorsements;
+            if (updated) {
+                setProfile((prev) => (prev ? { ...prev, skillEndorsements: updated } : prev));
+            }
+            success(`Endorsed ${skill}.`);
+        } catch (err) {
+            showError(err.response?.data?.msg || 'Could not endorse this skill.');
+        } finally {
+            setEndorsingSkill(null);
+        }
+    };
 
     if (loading) {
         return <Loading fullscreen text="Loading profile..." />;
@@ -87,6 +219,10 @@ const Profile = () => {
             </div>
         );
     }
+
+    const followersCount = profile.stats?.followersCount ?? profile.followers?.length ?? 0;
+    const followingCount = profile.stats?.followingCount ?? profile.following?.length ?? 0;
+    const trustScore = profile.reputation?.trustScore ?? profile.trustScore;
 
     return (
         <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
@@ -120,7 +256,7 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    {isOwnProfile && (
+                    {isOwnProfile ? (
                         <div className="flex items-center gap-2">
                             <Link to="/edit-profile">
                                 <Button variant="outline" size="sm">
@@ -140,6 +276,25 @@ const Profile = () => {
                                 <LogOut className="h-4 w-4" />
                             </Button>
                         </div>
+                    ) : (
+                        <Button
+                            variant={isFollowing ? 'outline' : 'primary'}
+                            size="sm"
+                            onClick={handleFollowToggle}
+                            loading={followLoading}
+                        >
+                            {isFollowing ? (
+                                <>
+                                    <UserMinus className="mr-1.5 h-4 w-4" />
+                                    Following
+                                </>
+                            ) : (
+                                <>
+                                    <UserPlus className="mr-1.5 h-4 w-4" />
+                                    Follow
+                                </>
+                            )}
+                        </Button>
                     )}
                 </div>
 
@@ -150,22 +305,63 @@ const Profile = () => {
                 )}
 
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <Stat label="Posts" value={posts.length} />
-                    <Stat label="Followers" value={profile.stats?.followers ?? profile.followers?.length ?? 0} />
-                    <Stat label="Following" value={profile.stats?.following ?? profile.following?.length ?? 0} />
-                    <Stat label="Trust" value={profile.trustScore ?? '—'} />
+                    <Stat label="Posts" value={profile.stats?.totalPosts ?? posts.length} />
+                    <Stat
+                        label="Followers"
+                        value={followersCount}
+                        onClick={() => setListModal('followers')}
+                    />
+                    <Stat
+                        label="Following"
+                        value={followingCount}
+                        onClick={() => setListModal('following')}
+                    />
+                    <Stat label="Trust" value={trustScore ?? '—'} />
                 </div>
 
                 {profile.skills?.length > 0 && (
-                    <div className="mt-5 flex flex-wrap gap-2">
-                        {profile.skills.map((skill) => (
-                            <span
-                                key={typeof skill === 'string' ? skill : skill.name || skill._id}
-                                className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                            >
-                                {typeof skill === 'string' ? skill : skill.name}
-                            </span>
-                        ))}
+                    <div className="mt-5 space-y-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                            Skills
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {profile.skills.map((skill, index) => {
+                                const name = normalizeSkill(skill);
+                                if (!name) return null;
+                                const endorsement = endorsementMap.get(name.toLowerCase());
+                                const count = endorsement?.count || 0;
+                                const alreadyEndorsed = (endorsement?.endorsedBy || []).some(
+                                    (id) => String(id?._id || id) === String(authUser?._id)
+                                );
+                                const canEndorse = !isOwnProfile && !!authUser && !alreadyEndorsed;
+
+                                return (
+                                    <span
+                                        key={`${name}-${index}`}
+                                        className="inline-flex items-center gap-2 rounded-full border border-card-border bg-background-secondary py-1 pl-3 pr-1.5 text-xs font-medium text-foreground"
+                                    >
+                                        <span>{name}</span>
+                                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                            {count}
+                                        </span>
+                                        {canEndorse && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleEndorse(name)}
+                                                disabled={endorsingSkill === name}
+                                                className={cn(
+                                                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors hover:bg-primary/10',
+                                                    endorsingSkill === name && 'opacity-60'
+                                                )}
+                                            >
+                                                <ThumbsUp className="h-3 w-3" />
+                                                Endorse
+                                            </button>
+                                        )}
+                                    </span>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </section>
@@ -200,6 +396,49 @@ const Profile = () => {
                     </div>
                 )}
             </section>
+
+            <Dialog
+                isOpen={!!listModal}
+                onClose={() => setListModal(null)}
+                title={listModal === 'followers' ? 'Followers' : 'Following'}
+                size="sm"
+            >
+                {listLoading ? (
+                    <div className="flex justify-center py-8">
+                        <Loading text="Loading..." />
+                    </div>
+                ) : listUsers.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-foreground-muted">
+                        {listModal === 'followers' ? 'No followers yet.' : 'Not following anyone yet.'}
+                    </p>
+                ) : (
+                    <ul className="max-h-80 space-y-1 overflow-y-auto">
+                        {listUsers.map((person) => (
+                            <li key={person._id}>
+                                <Link
+                                    to={`/profile?userId=${person._id}`}
+                                    onClick={() => setListModal(null)}
+                                    className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-card-hover"
+                                >
+                                    <img
+                                        src={getAvatarUrl(person)}
+                                        alt={person.displayName || 'User'}
+                                        className="h-9 w-9 rounded-full object-cover"
+                                    />
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-medium text-foreground">
+                                            {person.displayName || 'User'}
+                                        </p>
+                                        {person.bio && (
+                                            <p className="truncate text-xs text-foreground-muted">{person.bio}</p>
+                                        )}
+                                    </div>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </Dialog>
         </div>
     );
 };

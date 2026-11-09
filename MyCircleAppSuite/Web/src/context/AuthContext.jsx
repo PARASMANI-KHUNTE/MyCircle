@@ -130,6 +130,22 @@ export const AuthProvider = ({ children }) => {
         }
     }, [fetchUserProfile]);
 
+    const persistSession = useCallback(async (newToken) => {
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
+        await fetchUserProfile();
+    }, [fetchUserProfile]);
+
+    const loginWithPassword = useCallback(async (email, password) => {
+        const res = await axios.post(`${authBaseUrl}/auth/login`, { email, password });
+        await persistSession(res.data.token);
+    }, [persistSession]);
+
+    const registerUser = useCallback(async (displayName, email, password) => {
+        const res = await axios.post(`${authBaseUrl}/auth/register`, { displayName, email, password });
+        await persistSession(res.data.token);
+    }, [persistSession]);
+
     const logout = useCallback(() => {
         localStorage.removeItem('token');
         setToken(null);
@@ -139,12 +155,14 @@ export const AuthProvider = ({ children }) => {
     const value = useMemo(() => ({
         user,
         login,
+        loginWithPassword,
+        registerUser,
         logout,
         refreshUser: fetchUserProfile,
         loading,
         isAuthenticated: !!user,
         token
-    }), [user, login, logout, fetchUserProfile, loading, token]);
+    }), [user, login, loginWithPassword, registerUser, logout, fetchUserProfile, loading, token]);
 
     return (
         <AuthContext.Provider value={value}>

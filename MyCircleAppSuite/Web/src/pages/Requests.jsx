@@ -2,12 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     Check, X, Clock, MessageCircle, ArrowRight, User, Package,
-    Trash2, Phone, MessageSquare, MapPin, RefreshCw, CheckCircle, XCircle, Send,
+    Trash2, Phone, MessageSquare, MapPin, RefreshCw, CheckCircle, XCircle, Send, Star,
 } from 'lucide-react';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import { useSocket } from '../context/SocketContext';
 import Button from '../components/ui/Button';
+import Dialog from '../components/ui/Dialog';
 import { getAvatarUrl } from '../utils/avatar';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 import { cn } from '../utils/cn';
@@ -42,6 +43,10 @@ const Requests = () => {
     const [sentRequests, setSentRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
+    const [ratingRequest, setRatingRequest] = useState(null);
+    const [ratingScore, setRatingScore] = useState(5);
+    const [ratingReview, setRatingReview] = useState('');
+    const [ratingSubmitting, setRatingSubmitting] = useState(false);
 
     const refreshAllRequests = useCallback(async (showLoader = false) => {
         if (showLoader) setLoading(true);
@@ -167,6 +172,33 @@ const Requests = () => {
         }
     };
 
+    const openRating = (request) => {
+        setRatingRequest(request);
+        setRatingScore(5);
+        setRatingReview('');
+    };
+
+    const handleRateSubmit = async () => {
+        if (!ratingRequest) return;
+        setRatingSubmitting(true);
+        try {
+            const { data } = await api.post(`/contacts/${ratingRequest._id}/rate`, {
+                score: ratingScore,
+                review: ratingReview.trim() || undefined,
+            });
+            const applyUpdate = (prev) =>
+                prev.map((req) => (req._id === ratingRequest._id ? { ...req, ...data } : req));
+            setReceivedRequests(applyUpdate);
+            setSentRequests(applyUpdate);
+            success('Thanks for your rating.');
+            setRatingRequest(null);
+        } catch (err) {
+            showError(err.response?.data?.msg || err.response?.data?.message || 'Could not submit rating.');
+        } finally {
+            setRatingSubmitting(false);
+        }
+    };
+
     const requests = activeTab === 'received' ? receivedRequests : sentRequests;
     const pendingCount = receivedRequests.filter((r) => r.status === 'pending').length;
     const sentPendingCount = sentRequests.filter((r) => r.status === 'pending').length;
@@ -235,9 +267,11 @@ const Requests = () => {
             ) : (
                 <div className="space-y-3">
                     {requests.map((req) => {
-                        const otherUser = activeTab === 'received' ? req.requester : req.recipient;
+                        const otherUser = req.counterparty
+                            || (activeTab === 'received' ? req.requester : req.recipient);
                         const isPending = req.status === 'pending';
                         const isAccepted = req.status === 'accepted';
+                        const isCompleted = req.status === 'completed';
 
                         return (
                             <article
@@ -368,12 +402,12 @@ const Requests = () => {
                                         </Button>
                                     )}
 
-                                    {(otherUser?.contactPhone || otherUser?.contactWhatsapp) && isAccepted && (
+                                    {(req.post?.contactPhone || req.post?.contactWhatsapp) && isAccepted && (
                                         <>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => handleCall(otherUser.contactPhone || otherUser.contactWhatsapp)}
+                                                onClick={() => handleCall(req.post.contactPhone || req.post.contactWhatsapp)}
                                             >
                                                 <Phone className="mr-1.5 h-3.5 w-3.5" />
                                                 Call
@@ -381,12 +415,26 @@ const Requests = () => {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => handleStartText(otherUser.contactWhatsapp || otherUser.contactPhone)}
+                                                onClick={() => handleStartText(req.post.contactWhatsapp || req.post.contactPhone)}
                                             >
                                                 <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
                                                 Text
                                             </Button>
                                         </>
+                                    )}
+
+                                    {isCompleted && req.canRate && (
+                                        <Button variant="outline" size="sm" onClick={() => openRating(req)}>
+                                            <Star className="mr-1.5 h-3.5 w-3.5" />
+                                            Rate
+                                        </Button>
+                                    )}
+
+                                    {isCompleted && req.myRating && (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-card-border px-2.5 py-1 text-xs font-medium text-foreground-muted">
+                                            <Star className="h-3 w-3 fill-primary text-primary" />
+                                            You rated {req.myRating.score}/5
+                                        </span>
                                     )}
 
                                     {isAccepted && activeTab === 'received' && (
@@ -420,6 +468,62 @@ const Requests = () => {
                     })}
                 </div>
             )}
+
+            <Dialog
+                isOpen={!!ratingRequest}
+                onClose={() => {
+                    if (!ratingSubmitting) setRatingRequest(null);
+                }}
+                title="Rate this transaction"
+                description={ratingRequest?.counterparty?.displayName || 'Your counterparty'}
+                size="sm"
+            >
+                <div className="space-y-4">
+                    <div className="flex items-center justify-center gap-1">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => setRatingScore(value)}
+                                aria-label={`${value} star${value > 1 ? 's' : ''}`}
+                                className="rounded-lg p-1.5 transition-colors hover:bg-card-hover"
+                            >
+                                <Star
+                                    className={cn(
+                                        'h-7 w-7',
+                                        value <= ratingScore
+                                            ? 'fill-primary text-primary'
+                                            : 'text-foreground-muted'
+                                    )}
+                                />
+                            </button>
+                        ))}
+                    </div>
+
+                    <textarea
+                        value={ratingReview}
+                        onChange={(e) => setRatingReview(e.target.value)}
+                        rows={3}
+                        maxLength={500}
+                        placeholder="Add a short review (optional)"
+                        className="input-modern resize-none"
+                    />
+
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRatingRequest(null)}
+                            disabled={ratingSubmitting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button size="sm" onClick={handleRateSubmit} loading={ratingSubmitting}>
+                            Submit rating
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
         </div>
     );
 };

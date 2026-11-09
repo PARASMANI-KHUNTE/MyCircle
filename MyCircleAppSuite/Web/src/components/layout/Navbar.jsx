@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
-import { CircleDot, X, Menu, User, Settings, LogOut, Sun, Moon, PlusCircle, MessageCircle, Bell } from 'lucide-react';
+import { CircleDot, X, Menu, User, Settings, LogOut, Sun, Moon, PlusCircle, MessageCircle, Bell, Wallet } from 'lucide-react';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -31,6 +31,7 @@ const Navbar = () => {
     const navLinks = [
         { name: 'Requests', path: '/requests', auth: true },
         { name: 'My Posts', path: '/my-posts', auth: true },
+        { name: 'Wallet', path: '/wallet', auth: true },
     ];
 
     const visibleLinks = navLinks.filter((link) => !link.auth || !!user);
@@ -110,6 +111,14 @@ const Navbar = () => {
                                         {unreadCount > 9 ? '9+' : unreadCount}
                                     </span>
                                 )}
+                            </Link>
+                            <Link
+                                to="/wallet"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-foreground-muted hover:text-foreground hover:bg-card-hover transition-colors"
+                            >
+                                <Wallet className="w-5 h-5" />
+                                Wallet &amp; Orders
                             </Link>
                             <Link
                                 to="/profile"
@@ -222,6 +231,13 @@ const Navbar = () => {
                                     </Link>
 
                                     <Link
+                                        to="/wallet"
+                                        className="icon-btn relative hidden lg:inline-flex"
+                                        aria-label="Wallet &amp; Orders"
+                                    >
+                                        <Wallet className="w-5 h-5" />
+                                    </Link>
+                                    <Link
                                         to="/notifications"
                                         className="icon-btn relative hidden lg:inline-flex"
                                         aria-label="Notifications"
@@ -275,6 +291,14 @@ const Navbar = () => {
                                                     >
                                                         <User className="w-4 h-4 text-foreground-muted" />
                                                         <span className="text-sm font-medium">Profile</span>
+                                                    </Link>
+                                                    <Link
+                                                        to="/wallet"
+                                                        onClick={() => setIsProfileDropdownOpen(false)}
+                                                        className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-card-hover transition-colors"
+                                                    >
+                                                        <Wallet className="w-4 h-4 text-foreground-muted" />
+                                                        <span className="text-sm font-medium">Wallet</span>
                                                     </Link>
                                                     <Link
                                                         to="/settings"

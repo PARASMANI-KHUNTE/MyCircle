@@ -9,7 +9,6 @@ import {
     Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2
 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { motion, AnimatePresence } from 'framer-motion';
 import { POST_TYPES, ITEM_CATEGORIES as ITEM_CATEGORIES_IDS, JOB_TYPES as JOB_TYPE_IDS } from '../constants';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 

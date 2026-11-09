@@ -474,7 +474,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                     postTitle={post.title}
                     price={post.price}
                     loading={purchaseLoading}
-                    balance={auth.user?.walletBalance || 5000} // Mock balance if missing
+                    balance={walletBalance}
                 />
 
                 <ImagePreviewModal

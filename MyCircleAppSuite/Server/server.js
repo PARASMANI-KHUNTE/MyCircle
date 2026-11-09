@@ -267,6 +267,7 @@ app.use('/api/user', require('./src/routes/userRoutes'));
 app.use('/api/chat', require('./src/routes/chatRoutes'));
 app.use('/api/notifications', require('./src/routes/notificationRoutes'));
 app.use('/api/payments', require('./src/routes/paymentRoutes'));
+app.use('/api/admin', require('./src/routes/adminRoutes'));
 app.use('/api/ai', require('./src/routes/aiRoutes'));
 
 app.get('/health', async (req, res) => {

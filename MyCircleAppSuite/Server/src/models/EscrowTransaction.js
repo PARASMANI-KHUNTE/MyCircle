@@ -5,7 +5,7 @@ const EscrowTransactionSchema = new mongoose.Schema({
     post: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Post',
-        required: true,
+        required: false,
     },
     // Buyer (user purchasing access)
     buyer: {
@@ -36,6 +36,11 @@ const EscrowTransactionSchema = new mongoose.Schema({
         default: 'pending',
     },
     // Stripe Payment Intent ID for tracking
+    gateway: { type: String, enum: ['wallet', 'razorpay', 'stripe'], default: 'wallet' },
+    paymentTiming: { type: String, enum: ['escrow', 'advance'], default: 'escrow' },
+    razorpayOrderId: { type: String },
+    razorpayPaymentId: { type: String },
+    razorpaySignature: { type: String },
     stripePaymentIntentId: {
         type: String,
     },

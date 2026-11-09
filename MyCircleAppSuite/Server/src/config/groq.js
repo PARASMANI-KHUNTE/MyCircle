@@ -1,6 +1,7 @@
 const Groq = require('groq-sdk').default;
 const natural = require('natural');
-const Filter = require('bad-words');
+const badWords = require('bad-words');
+const Filter = badWords.Filter || badWords;
 
 // Configuration
 const GROQ_MODEL = 'llama-3.3-70b-versatile';

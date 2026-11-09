@@ -6,6 +6,7 @@ const { createNotification } = require('./notificationController');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const mongoose = require('mongoose');
+const razorpayConfig = require('../config/razorpay');
 
 // For now, we'll simulate Stripe integration
 // In production, replace with actual Stripe SDK calls
@@ -46,6 +47,10 @@ exports.createEscrowIntent = asyncHandler(async (req, res) => {
 
     if (!post.isActive) {
         throw new ApiError(400, 'Post is not active');
+    }
+
+    if (post.acceptInAppPayment === false) {
+        throw new ApiError(400, 'This listing does not accept in-app payments');
     }
 
     if (post.user._id.toString() === req.user.id) {
@@ -617,4 +622,230 @@ exports.getStripeConnectStatus = asyncHandler(async (req, res) => {
         console.error('Stripe account retrieve error:', stripeErr);
         res.json({ connected: true, details: null, error: 'Failed to fetch status' });
     }
+});
+
+// @desc    Create Razorpay Order for listing or direct payment
+// @route   POST /api/payments/razorpay/create-order
+// @access  Private
+exports.createRazorpayOrder = asyncHandler(async (req, res) => {
+    const { postId, amount: requestedAmount, paymentTiming, recipientId } = req.body;
+
+    let targetAmount = requestedAmount;
+    let post = null;
+    let sellerId = recipientId;
+
+    if (postId) {
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            throw new ApiError(400, 'Invalid postId');
+        }
+        post = await Post.findById(postId).populate('user', '_id displayName');
+        if (!post) {
+            throw new ApiError(404, 'Post not found');
+        }
+        if (post.acceptInAppPayment === false) {
+            throw new ApiError(400, 'This listing does not accept in-app payments');
+        }
+        if (post.user._id.toString() === req.user.id) {
+            throw new ApiError(400, 'Cannot purchase your own post');
+        }
+        if (!targetAmount) {
+            targetAmount = post.price;
+        }
+        sellerId = post.user._id.toString();
+    }
+
+    const numericAmount = parseFloat(targetAmount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+        throw new ApiError(400, 'Valid amount is required');
+    }
+
+    const amountInPaise = Math.round(numericAmount * 100);
+    const receipt = `rcpt_${Date.now()}_${req.user.id.substring(Math.max(0, req.user.id.length - 6))}`;
+
+    const order = await razorpayConfig.createOrder({
+        amountInPaise,
+        currency: 'INR',
+        receipt,
+        notes: {
+            postId: postId || '',
+            buyerId: req.user.id,
+            sellerId: sellerId || '',
+            paymentTiming: paymentTiming || (post ? post.paymentTiming : 'flexible') || 'escrow',
+        },
+    });
+
+    res.json({
+        success: true,
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: razorpayConfig.getPublicKey(),
+        isMock: Boolean(order.isMock),
+        receipt,
+    });
+});
+
+// @desc    Verify Razorpay payment and create Escrow / release funds
+// @route   POST /api/payments/razorpay/verify
+// @access  Private
+exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
+    const { orderId, paymentId, signature, postId, amount: requestedAmount, paymentTiming, recipientId } = req.body;
+
+    if (!orderId || !paymentId) {
+        throw new ApiError(400, 'orderId and paymentId are required');
+    }
+
+    const isValid = razorpayConfig.verifyPaymentSignature({
+        orderId,
+        paymentId,
+        signature: signature || '',
+    });
+
+    if (!isValid) {
+        throw new ApiError(400, 'Invalid payment signature');
+    }
+
+    let post = null;
+    let sellerId = recipientId;
+    let amount = parseFloat(requestedAmount);
+
+    if (postId && mongoose.Types.ObjectId.isValid(postId)) {
+        post = await Post.findById(postId).populate('user', '_id displayName');
+        if (post) {
+            sellerId = post.user._id.toString();
+            if (!amount) amount = post.price;
+        }
+    }
+
+    if (!sellerId) {
+        throw new ApiError(400, 'Seller / recipient could not be resolved');
+    }
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+        throw new ApiError(400, 'Valid amount is required');
+    }
+
+    const timing = paymentTiming || (post ? post.paymentTiming : 'flexible') || 'escrow';
+    const isAdvance = timing === 'advance';
+
+    // Create escrow transaction record
+    const escrow = await EscrowTransaction.create({
+        post: post ? post._id : undefined,
+        buyer: req.user.id,
+        seller: sellerId,
+        amount,
+        currency: 'INR',
+        gateway: 'razorpay',
+        paymentTiming: isAdvance ? 'advance' : 'escrow',
+        razorpayOrderId: orderId,
+        razorpayPaymentId: paymentId,
+        razorpaySignature: signature || 'mock_sig',
+        status: isAdvance ? 'released' : 'funded',
+        fundedAt: new Date(),
+        releasedAt: isAdvance ? new Date() : undefined,
+        metadata: new Map([
+            ['postTitle', post ? post.title : 'Direct Payment'],
+            ['paymentMethod', 'razorpay_upi_netbanking'],
+        ]),
+    });
+
+    // If advance payment timing, instantly credit seller's wallet
+    if (isAdvance) {
+        const sellerWallet = await Wallet.getOrCreate(sellerId);
+        sellerWallet.balance += amount;
+        await sellerWallet.save();
+    }
+
+    // Send notifications
+    const io = req.app.get('io');
+    const itemTitle = post ? `"${post.title}"` : 'item/service';
+
+    if (isAdvance) {
+        await createNotification(io, {
+            recipient: sellerId,
+            sender: req.user.id,
+            type: 'payment_received',
+            title: 'Advance Payment Received!',
+            message: `You received an advance payment of ₹${amount} for ${itemTitle} via UPI / Razorpay.`,
+            link: post ? `/post/${post._id}` : '/wallet',
+            relatedId: post ? post._id : undefined,
+        });
+    } else {
+        await createNotification(io, {
+            recipient: sellerId,
+            sender: req.user.id,
+            type: 'escrow_funded',
+            title: 'Payment Held in Escrow',
+            message: `₹${amount} paid via UPI / Razorpay and held safely in Escrow for ${itemTitle}. Deliver or complete exchange to receive payout.`,
+            link: post ? `/post/${post._id}` : '/wallet',
+            relatedId: post ? post._id : undefined,
+        });
+    }
+
+    res.json({
+        success: true,
+        escrowId: escrow._id,
+        status: escrow.status,
+        paymentTiming: escrow.paymentTiming,
+        message: isAdvance
+            ? 'Advance payment transferred directly to seller.'
+            : 'Payment safely held in Escrow until product is received.',
+    });
+});
+
+// @desc    Get user payout details (UPI / Bank Account)
+// @route   GET /api/payments/payout-details
+// @access  Private
+exports.getPayoutDetails = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user.id).select('payoutDetails displayName email');
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+    res.json({
+        success: true,
+        payoutDetails: user.payoutDetails || {
+            upiId: '',
+            accountHolderName: '',
+            accountNumber: '',
+            ifscCode: '',
+            isVerified: false,
+        },
+    });
+});
+
+// @desc    Update user payout details (UPI / Bank Account)
+// @route   POST /api/payments/payout-details
+// @access  Private
+exports.updatePayoutDetails = asyncHandler(async (req, res) => {
+    const { upiId, accountHolderName, accountNumber, ifscCode } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    if (upiId && !/^[\w.-]+@[\w.-]+$/.test(upiId.trim())) {
+        throw new ApiError(400, 'Invalid UPI ID format (e.g., username@bank)');
+    }
+
+    if (ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.trim().toUpperCase())) {
+        throw new ApiError(400, 'Invalid IFSC code format (e.g., HDFC0001234)');
+    }
+
+    user.payoutDetails = {
+        upiId: (upiId || '').trim(),
+        accountHolderName: (accountHolderName || user.displayName || '').trim(),
+        accountNumber: (accountNumber || '').trim(),
+        ifscCode: (ifscCode || '').trim().toUpperCase(),
+        isVerified: Boolean(upiId || (accountNumber && ifscCode)),
+        updatedAt: new Date(),
+    };
+
+    await user.save();
+
+    res.json({
+        success: true,
+        message: 'Payout details saved successfully',
+        payoutDetails: user.payoutDetails,
+    });
 });

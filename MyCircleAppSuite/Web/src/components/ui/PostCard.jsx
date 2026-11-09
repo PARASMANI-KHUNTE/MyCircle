@@ -197,14 +197,24 @@ const PostCard = ({
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="ml-1 px-2 text-primary hover:text-primary"
-                                    disabled={!hasPrice}
+                                    className={cn(
+                                        "ml-1 px-2",
+                                        post.acceptInAppPayment === false
+                                            ? "text-foreground-muted opacity-50 cursor-not-allowed"
+                                            : "text-primary hover:text-primary"
+                                    )}
+                                    disabled={!hasPrice || post.acceptInAppPayment === false}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (hasPrice) setShowCheckout(true);
+                                        if (hasPrice && post.acceptInAppPayment !== false) setShowCheckout(true);
                                         else navigate(`/post/${_id}`);
                                     }}
-                                    aria-label={hasPrice ? 'Buy this post' : 'View post'}
+                                    aria-label={
+                                        post.acceptInAppPayment === false
+                                            ? 'In-person / Cash only'
+                                            : (hasPrice ? 'Buy this post' : 'View post')
+                                    }
+                                    title={post.acceptInAppPayment === false ? 'In-person / Cash only' : 'Buy online'}
                                 >
                                     <ShoppingBag className="h-3.5 w-3.5" />
                                 </Button>

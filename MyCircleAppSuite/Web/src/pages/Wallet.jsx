@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet as WalletIcon, ShieldCheck, ArrowUpRight, CheckCircle2, Clock, AlertTriangle, RefreshCw, MessageCircle, CreditCard } from 'lucide-react';
+import { Wallet as WalletIcon, ShieldCheck, ArrowUpRight, CheckCircle2, Clock, AlertTriangle, RefreshCw, MessageCircle, CreditCard, Building2, Smartphone, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Loading from '../components/ui/Loading';
 import { useToast } from '../components/ui/Toast';
 import { useDialog } from '../hooks/useDialog';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
-import { getWallet, topupWallet, getEscrowHistory, releaseEscrow, refundEscrow, getStripeConnectStatus, createStripeConnect } from '../utils/api';
+import { getWallet, topupWallet, getEscrowHistory, releaseEscrow, refundEscrow, getPayoutDetails, savePayoutDetails } from '../utils/api';
 import { cn } from '../utils/cn';
 
 const TOPUP_PRESETS = [500, 1000, 2000, 5000];
@@ -25,8 +25,24 @@ const WalletPage = () => {
     const [topupAmount, setTopupAmount] = useState('');
     const [topupLoading, setTopupLoading] = useState(false);
     const [actionInFlight, setActionInFlight] = useState(null);
-    const [connectStatus, setConnectStatus] = useState(null);
-    const [connectLoading, setConnectLoading] = useState(false);
+    // Stripe connect removed in favor of Razorpay
+    
+    const [payoutDetails, setPayoutDetails] = useState({
+        upiId: '',
+        accountHolderName: '',
+        accountNumber: '',
+        ifscCode: '',
+        isVerified: false,
+    });
+    const [payoutForm, setPayoutForm] = useState({
+        upiId: '',
+        accountHolderName: '',
+        accountNumber: '',
+        ifscCode: '',
+    });
+    const [showPayoutForm, setShowPayoutForm] = useState(false);
+    const [savingPayout, setSavingPayout] = useState(false);
+    
 
     const loadWalletData = useCallback(async () => {
         try {
@@ -62,17 +78,44 @@ const WalletPage = () => {
 
     useEffect(() => {
         let active = true;
-        getStripeConnectStatus()
-            .then((data) => {
-                if (active) setConnectStatus(data);
+        getPayoutDetails()
+            .then((res) => {
+                if (active && res?.payoutDetails) {
+                    setPayoutDetails(res.payoutDetails);
+                    setPayoutForm({
+                        upiId: res.payoutDetails.upiId || '',
+                        accountHolderName: res.payoutDetails.accountHolderName || '',
+                        accountNumber: res.payoutDetails.accountNumber || '',
+                        ifscCode: res.payoutDetails.ifscCode || '',
+                    });
+                }
             })
-            .catch(() => {
-                if (active) setConnectStatus(null);
+            .catch(() => {})
+            .finally(() => {
+                
             });
         return () => {
             active = false;
         };
     }, []);
+
+    const handleSavePayoutDetails = async (e) => {
+        e?.preventDefault();
+        setSavingPayout(true);
+        try {
+            const res = await savePayoutDetails(payoutForm);
+            setPayoutDetails(res.payoutDetails);
+            setShowPayoutForm(false);
+            success('Payout details saved successfully!');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.response?.data?.msg || err.message || 'Failed to save payout details';
+            showError(msg);
+        } finally {
+            setSavingPayout(false);
+        }
+    };
+
+    
 
     const handleTopup = async (amountToAdd) => {
         const amt = Number(amountToAdd || topupAmount);
@@ -141,28 +184,7 @@ const WalletPage = () => {
         }
     };
 
-    const handleConnect = async () => {
-        setConnectLoading(true);
-        try {
-            const data = await createStripeConnect();
-            if (data?.onboardingUrl) {
-                window.location.href = data.onboardingUrl;
-                return;
-            }
-            success('Payout account connected.');
-            setConnectStatus({ connected: true });
-        } catch (err) {
-            showError(
-                err.response?.data?.message ||
-                err.response?.data?.msg ||
-                'Stripe payouts are not configured on this server.'
-            );
-        } finally {
-            setConnectLoading(false);
-        }
-    };
-
-    return (
+        return (
         <div className="min-h-screen bg-background text-foreground py-6 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
             {/* Header */}
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -266,48 +288,156 @@ const WalletPage = () => {
                 </div>
             </div>
 
-            {/* Seller Payouts */}
-            <div className="mb-8 rounded-2xl border border-card-border bg-card p-5">
+            {/* Seller Payouts (Razorpay UPI & Bank Transfer) */}
+            <div className="mb-8 rounded-2xl border border-card-border bg-card p-5 space-y-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-card-border bg-background-secondary text-primary">
-                            <CreditCard className="h-4 w-4" />
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                            <Smartphone className="h-5 w-5" />
                         </span>
                         <div>
-                            <h2 className="text-sm font-semibold text-foreground">Seller payouts</h2>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                                {connectStatus?.connected
-                                    ? connectStatus?.details?.payoutsEnabled === false
-                                        ? 'Your Stripe account is connected, but payouts are not enabled yet. Finish onboarding to receive funds.'
-                                        : 'Stripe is connected. Released escrow funds can be paid out to your bank account.'
-                                    : 'Connect a Stripe account to receive payouts when buyers release escrow payments.'}
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-sm font-bold text-foreground">Seller Payout Account</h2>
+                                {payoutDetails?.isVerified && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-success/15 border border-success/30 px-2.5 py-0.5 text-[11px] font-semibold text-success">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        Ready for Payouts
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-foreground-muted">
+                                Enter your UPI ID or Bank Account to receive funds when buyers pay or release escrow.
                             </p>
                         </div>
                     </div>
-                    <div className="shrink-0 self-start sm:self-auto">
-                        {connectStatus?.connected ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Connected
-                            </span>
-                        ) : (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={connectLoading}
-                                onClick={handleConnect}
-                                className="gap-1.5 text-xs"
-                            >
-                                {connectLoading ? (
-                                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                    <CreditCard className="h-3.5 w-3.5" />
-                                )}
-                                Connect Stripe
-                            </Button>
-                        )}
+                    <div className="shrink-0 self-start sm:self-auto flex items-center gap-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowPayoutForm(!showPayoutForm)}
+                            className="gap-1.5 text-xs"
+                        >
+                            {showPayoutForm ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                            {payoutDetails?.isVerified ? 'Edit Payout Info' : 'Add Payout Details'}
+                        </Button>
                     </div>
                 </div>
+
+                {/* Display Current Payout Details when configured and form is closed */}
+                {!showPayoutForm && payoutDetails?.isVerified && (
+                    <div className="rounded-xl border border-card-border bg-background/50 p-3.5 flex flex-wrap gap-4 text-xs">
+                        {payoutDetails.upiId && (
+                            <div>
+                                <span className="text-foreground-muted block text-[10px] uppercase font-semibold">UPI ID</span>
+                                <span className="font-mono font-medium text-foreground">{payoutDetails.upiId}</span>
+                            </div>
+                        )}
+                        {payoutDetails.accountNumber && (
+                            <div>
+                                <span className="text-foreground-muted block text-[10px] uppercase font-semibold">Bank Account</span>
+                                <span className="font-mono font-medium text-foreground">•••• {payoutDetails.accountNumber.slice(-4)}</span>
+                            </div>
+                        )}
+                        {payoutDetails.ifscCode && (
+                            <div>
+                                <span className="text-foreground-muted block text-[10px] uppercase font-semibold">IFSC Code</span>
+                                <span className="font-mono font-medium text-foreground">{payoutDetails.ifscCode}</span>
+                            </div>
+                        )}
+                        {payoutDetails.accountHolderName && (
+                            <div>
+                                <span className="text-foreground-muted block text-[10px] uppercase font-semibold">Beneficiary</span>
+                                <span className="font-medium text-foreground">{payoutDetails.accountHolderName}</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Edit Form */}
+                {showPayoutForm && (
+                    <form onSubmit={handleSavePayoutDetails} className="rounded-xl border border-card-border bg-background/50 p-4 space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground-muted">
+                            Receive Earnings Directly (UPI or Bank)
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-xs font-medium text-foreground block mb-1">
+                                    UPI ID (Recommended)
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g., yourname@okhdfcbank"
+                                    value={payoutForm.upiId}
+                                    onChange={(e) => setPayoutForm({ ...payoutForm, upiId: e.target.value })}
+                                    className="w-full rounded-xl border border-card-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50"
+                                />
+                                <span className="text-[10px] text-foreground-muted mt-1 block">Works with GPay, PhonePe, Paytm, BHIM</span>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-foreground block mb-1">
+                                    Account Holder Name
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Full Name as on Bank Passbook"
+                                    value={payoutForm.accountHolderName}
+                                    onChange={(e) => setPayoutForm({ ...payoutForm, accountHolderName: e.target.value })}
+                                    className="w-full rounded-xl border border-card-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-foreground block mb-1">
+                                    Bank Account Number
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter Account Number"
+                                    value={payoutForm.accountNumber}
+                                    onChange={(e) => setPayoutForm({ ...payoutForm, accountNumber: e.target.value })}
+                                    className="w-full rounded-xl border border-card-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-foreground block mb-1">
+                                    IFSC Code
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g., HDFC0001234"
+                                    value={payoutForm.ifscCode}
+                                    onChange={(e) => setPayoutForm({ ...payoutForm, ifscCode: e.target.value.toUpperCase() })}
+                                    className="w-full rounded-xl border border-card-border bg-card px-3 py-2 text-xs text-foreground uppercase placeholder:text-foreground-muted focus:outline-none focus:border-primary/50"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-card-border">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowPayoutForm(false)}
+                                className="text-xs"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                size="sm"
+                                disabled={savingPayout || (!payoutForm.upiId && (!payoutForm.accountNumber || !payoutForm.ifscCode))}
+                                className="text-xs gap-1.5"
+                            >
+                                {savingPayout ? (
+                                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    <Save className="h-3.5 w-3.5" />
+                                )}
+                                Save Payout Details
+                            </Button>
+                        </div>
+                    </form>
+                )}
             </div>
 
             {/* Escrow Orders Section */}

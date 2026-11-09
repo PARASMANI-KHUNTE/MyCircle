@@ -10,12 +10,13 @@ if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
     console.error('❌ Firebase Admin SDK environment variables missing. Firebase features may be disabled.');
 } else {
     try {
+        const certFn = admin.credential?.cert || admin.cert;
         admin.initializeApp({
-            credential: admin.credential.cert({
+            credential: certFn ? certFn({
                 projectId: FIREBASE_PROJECT_ID,
                 clientEmail: FIREBASE_CLIENT_EMAIL,
                 privateKey: FIREBASE_PRIVATE_KEY,
-            })
+            }) : undefined
         });
 
         console.log('✅ Firebase Admin SDK initialized successfully');
@@ -24,6 +25,6 @@ if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
     }
 }
 
-const db = admin.apps.length > 0 ? admin.firestore() : null;
+const db = admin?.apps?.length > 0 ? admin.firestore() : null;
 
 module.exports = { admin, db };

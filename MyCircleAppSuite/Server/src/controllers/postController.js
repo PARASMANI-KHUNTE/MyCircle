@@ -95,6 +95,8 @@ exports.createPost = asyncHandler(async (req, res) => {
         isUrgent: req.body.isUrgent === 'true' || req.body.isUrgent === true,
         exchangePreference: req.body.exchangePreference || 'money',
         acceptsBarter: req.body.acceptsBarter === 'true' || req.body.acceptsBarter === true || req.body.exchangePreference === 'barter' || req.body.exchangePreference === 'flexible',
+        acceptInAppPayment: req.body.acceptInAppPayment === undefined ? true : (req.body.acceptInAppPayment === 'true' || req.body.acceptInAppPayment === true),
+        paymentTiming: ['escrow', 'advance', 'flexible'].includes(req.body.paymentTiming) ? req.body.paymentTiming : 'flexible',
     });
 
     const post = await newPost.save();
@@ -607,6 +609,12 @@ exports.updatePost = async (req, res, next) => {
         }
         if (status !== undefined) {
             post.status = status;
+        }
+        if (req.body.acceptInAppPayment !== undefined) {
+            post.acceptInAppPayment = req.body.acceptInAppPayment === true || req.body.acceptInAppPayment === 'true';
+        }
+        if (req.body.paymentTiming !== undefined && ['escrow', 'advance', 'flexible'].includes(req.body.paymentTiming)) {
+            post.paymentTiming = req.body.paymentTiming;
         }
 
         const latitude = parseFloat(req.body.latitude);

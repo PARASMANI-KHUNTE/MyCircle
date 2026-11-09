@@ -121,6 +121,47 @@ export const refundEscrow = async (escrowId, reason) => {
     return res.data;
 };
 
+export const createRazorpayOrder = async ({ postId, amount, paymentTiming, recipientId }) => {
+    const res = await api.post('/payments/razorpay/create-order', {
+        postId,
+        amount,
+        paymentTiming,
+        recipientId,
+    });
+    return res.data;
+};
+
+export const verifyRazorpayPayment = async ({
+    orderId,
+    paymentId,
+    signature,
+    postId,
+    amount,
+    paymentTiming,
+    recipientId,
+}) => {
+    const res = await api.post('/payments/razorpay/verify', {
+        orderId,
+        paymentId,
+        signature,
+        postId,
+        amount,
+        paymentTiming,
+        recipientId,
+    });
+    return res.data;
+};
+
+export const getPayoutDetails = async () => {
+    const res = await api.get('/payments/payout-details');
+    return res.data;
+};
+
+export const savePayoutDetails = async (data) => {
+    const res = await api.post('/payments/payout-details', data);
+    return res.data;
+};
+
 // Helper: generate request ID for tracing (UUID v4 format using crypto API)
 // Falls back to a timestamp-based ID if crypto is unavailable.
 const generateRequestId = () => {

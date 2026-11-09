@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { 
     X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, 
-    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2
+    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2, CreditCard, ShieldCheck
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { POST_TYPES, ITEM_CATEGORIES as ITEM_CATEGORIES_IDS, JOB_TYPES as JOB_TYPE_IDS } from '../constants';
@@ -65,6 +65,8 @@ const EditPost = () => {
         longitude: null,
         duration: 10080,
         exchangePreference: 'money',
+        acceptInAppPayment: true,
+        paymentTiming: 'flexible',
         isUrgent: false,
         availability: '',
         barterPreferences: '',
@@ -115,6 +117,8 @@ const EditPost = () => {
                 longitude: post.locationCoords?.coordinates?.[0] ?? null,
                 duration: post.duration || 10080,
                 exchangePreference: post.exchangePreference || 'money',
+                acceptInAppPayment: post.acceptInAppPayment !== undefined ? post.acceptInAppPayment : true,
+                paymentTiming: post.paymentTiming || 'flexible',
                 isUrgent: post.isUrgent || false,
                 availability: post.availability || '',
                 barterPreferences: post.barterPreferences || '',
@@ -240,6 +244,8 @@ const EditPost = () => {
             data.append('budgetMax', formData.budgetMax ?? '');
             data.append('duration', formData.duration);
             data.append('exchangePreference', formData.exchangePreference);
+            data.append('acceptInAppPayment', formData.acceptInAppPayment);
+            data.append('paymentTiming', formData.paymentTiming);
             data.append('isUrgent', formData.isUrgent);
             data.append('availability', formData.availability || '');
             data.append('barterPreferences', formData.barterPreferences || '');
@@ -481,6 +487,59 @@ const EditPost = () => {
                             </button>
                         ))}
                     </div>
+                </div>
+
+                {/* In-App Payments (Razorpay UPI / NetBanking / Cards) */}
+                <div className="rounded-xl border border-card-border bg-card/60 p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                                <CreditCard className="w-4 h-4" />
+                            </span>
+                            <div>
+                                <p className="text-sm font-medium text-foreground">Accept In-App Payment</p>
+                                <p className="text-xs text-foreground-muted">Allow buyers to pay online via UPI, Cards, or NetBanking</p>
+                            </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="acceptInAppPayment"
+                                checked={formData.acceptInAppPayment}
+                                onChange={(e) => setFormData(prev => ({ ...prev, acceptInAppPayment: e.target.checked }))}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                        </label>
+                    </div>
+
+                    {formData.acceptInAppPayment && (
+                        <div className="pt-2 border-t border-card-border space-y-2">
+                            <label className="text-xs font-medium text-foreground-muted block">Payment Timing</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                {[
+                                    { id: 'escrow', label: 'Escrow Protection', desc: 'Hold until buyer receives item' },
+                                    { id: 'advance', label: 'Advance Deposit', desc: 'Pay upfront before delivery' },
+                                    { id: 'flexible', label: 'Flexible', desc: 'Negotiate timing in chat' }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, paymentTiming: opt.id }))}
+                                        className={cn(
+                                            'p-2 rounded-lg border text-left transition-all',
+                                            formData.paymentTiming === opt.id
+                                                ? 'border-primary bg-primary/10 text-foreground'
+                                                : 'border-border hover:border-primary/40 text-foreground-muted'
+                                        )}
+                                    >
+                                        <p className="text-xs font-semibold">{opt.label}</p>
+                                        <p className="text-[10px] mt-0.5 leading-tight opacity-80">{opt.desc}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <label className="flex items-center gap-2 p-3 rounded-lg border border-border cursor-pointer">

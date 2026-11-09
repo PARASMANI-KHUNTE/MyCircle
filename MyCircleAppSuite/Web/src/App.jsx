@@ -11,6 +11,8 @@ import { CurrencySymbolProvider } from './context/CurrencySymbolContext';
 import DialogProvider from './components/ui/DialogProvider';
 import Loading from './components/ui/Loading';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import AdminGuard from './components/admin/AdminGuard';
+import AdminLayout from './components/admin/AdminLayout';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -30,6 +32,14 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Wallet = lazy(() => import('./pages/Wallet'));
 const BlockedUsers = lazy(() => import('./pages/BlockedUsers'));
 const LoginSuccess = lazy(() => import('./pages/LoginSuccess'));
+
+// Admin pages
+const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'));
+const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
+const AdminHealth = lazy(() => import('./pages/admin/AdminHealth'));
+const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
 
 function AppContent() {
   return (
@@ -64,23 +74,34 @@ function AuthRoutes() {
       <Route path="/login/success" element={<LoginSuccess />} />
       <Route path="/welcome" element={<Home />} />
       {isAuthenticated ? (
-        <Route element={<Layout />}>
-          <Route path="/" element={<Explore />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/create-post" element={<CreatePost />} />
-          <Route path="/edit-post/:id" element={<EditPost />} />
-          <Route path="/my-posts" element={<MyPosts />} />
-          <Route path="/requests" element={<Requests />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/edit-profile" element={<EditProfile />} />
-          <Route path="/post/:id" element={<PostDetails />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/wallet" element={<Wallet />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/blocked-users" element={<BlockedUsers />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
+        <>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Explore />} />
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/create-post" element={<CreatePost />} />
+            <Route path="/edit-post/:id" element={<EditPost />} />
+            <Route path="/my-posts" element={<MyPosts />} />
+            <Route path="/requests" element={<Requests />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
+            <Route path="/post/:id" element={<PostDetails />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/wallet" element={<Wallet />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/blocked-users" element={<BlockedUsers />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+          {/* Admin Routes - Protected by AdminGuard */}
+          <Route element={<AdminGuard><AdminLayout /></AdminGuard>}>
+            <Route path="/admin" element={<AdminOverview />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/payments" element={<AdminPayments />} />
+            <Route path="/admin/reports" element={<AdminReports />} />
+            <Route path="/admin/health" element={<AdminHealth />} />
+            <Route path="/admin/analytics" element={<AdminAnalytics />} />
+          </Route>
+        </>
       ) : (
         <>
           <Route path="/" element={<Navigate to="/welcome" replace />} />

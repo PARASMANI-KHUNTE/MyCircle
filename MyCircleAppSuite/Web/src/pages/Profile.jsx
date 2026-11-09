@@ -132,12 +132,12 @@ const Profile = () => {
             month: 'long',
             year: 'numeric',
         });
-    }, [profile?.createdAt]);
+    }, [profile]);
 
     const isFollowing = useMemo(() => {
         if (!authUser?._id || !profile?.followers) return false;
         return profile.followers.some((id) => String(id?._id || id) === String(authUser._id));
-    }, [authUser?._id, profile?.followers]);
+    }, [authUser, profile]);
 
     const endorsementMap = useMemo(() => {
         const map = new Map();

@@ -11,7 +11,7 @@ import { getPostInsights, getPostExplanation } from '../services/aiService';
 import {
     ArrowLeft, MapPin, Clock, MessageCircle, Share2, Heart,
     Phone, UserPlus, UserCheck, Edit2, Trash2, Sparkles, Navigation, MessageSquare,
-    ShoppingBag, ShieldCheck, Wallet,
+    ShoppingBag, ShieldCheck, Wallet, AlertCircle,
 } from 'lucide-react';
 import CheckoutModal from '../components/ui/CheckoutModal';
 import { useDialog } from '../hooks/useDialog';
@@ -369,7 +369,7 @@ const PostDetails = () => {
     const isOwnPost = currentUserId && String(post.user?._id) === String(currentUserId);
     const timeRemaining = getTimeRemaining();
     const isExpired = post.expired || timeRemaining?.expired;
-    const canBuy = !isOwnPost && Number(post.price) > 0 && !isExpired && post.isActive !== false;
+    const canBuy = !isOwnPost && Number(post.price) > 0 && !isExpired && post.isActive !== false && post.acceptInAppPayment !== false;
 
     return (
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -824,20 +824,36 @@ const PostDetails = () => {
                                         </Link>
                                     </div>
                                 ) : canBuy ? (
-                                    <Button
-                                        className="w-full justify-center"
-                                        onClick={() => {
-                                            if (!user) {
-                                                showError('Please sign in to complete this purchase.');
-                                                navigate('/login');
-                                                return;
-                                            }
-                                            setShowCheckout(true);
-                                        }}
-                                    >
-                                        <ShoppingBag className="mr-1.5 h-4 w-4" />
-                                        Buy with Escrow Protection
-                                    </Button>
+                                    <div className="space-y-1.5">
+                                        <Button
+                                            className="w-full justify-center"
+                                            onClick={() => {
+                                                if (!user) {
+                                                    showError('Please sign in to complete this purchase.');
+                                                    navigate('/login');
+                                                    return;
+                                                }
+                                                setShowCheckout(true);
+                                            }}
+                                        >
+                                            <ShoppingBag className="mr-1.5 h-4 w-4" />
+                                            {post.paymentTiming === 'advance' ? 'Pay Advance (Razorpay UPI)' : 'Buy with Escrow Protection'}
+                                        </Button>
+                                        <p className="text-[11px] text-center text-foreground-muted flex items-center justify-center gap-1">
+                                            <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                                            {post.paymentTiming === 'advance'
+                                                ? 'Direct UPI / NetBanking / Card payment'
+                                                : 'Funds safely held until you inspect & receive'}
+                                        </p>
+                                    </div>
+                                ) : (!isOwnPost && Number(post.price) > 0 && post.acceptInAppPayment === false) ? (
+                                    <div className="rounded-xl border border-card-border bg-card/60 p-3 flex items-start gap-2.5 text-xs text-foreground-muted">
+                                        <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                                        <div>
+                                            <span className="font-semibold text-foreground">Cash / In-Person Meetup</span>
+                                            <p className="mt-0.5 text-[11px]">The seller does not accept in-app payment for this listing. Contact them to arrange in-person payment.</p>
+                                        </div>
+                                    </div>
                                 ) : null}
 
                                 <Button

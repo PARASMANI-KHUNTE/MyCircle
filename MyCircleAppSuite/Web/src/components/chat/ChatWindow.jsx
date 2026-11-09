@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ExternalLink, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ExternalLink, X, ChevronDown, ChevronUp, CreditCard, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+import CheckoutModal from '../ui/CheckoutModal';
+import Button from '../ui/Button';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
 import { useDialog } from '../../hooks/useDialog';
 import { getAvatarUrl } from '../../utils/avatar';
@@ -40,6 +42,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
     const [suggestions, setSuggestions] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
     const [postCollapsed, setPostCollapsed] = useState(true);
+    const [showCheckout, setShowCheckout] = useState(false);
     const messagesEndRef = useRef(null);
     const post = conversation.postId;
     const typingTimeoutRef = useRef(null);
@@ -50,6 +53,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
 
     const currentUserId = currentUser?._id || currentUser?.id;
 
+
     const normalizeSenderId = (message) => {
         const sender = message?.sender;
         return sender?._id || sender?.id || sender || null;
@@ -59,6 +63,35 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
         const pId = p._id || p.id;
         return pId?.toString() !== currentUserId?.toString();
     }) || conversation.participants?.[0];
+
+    const postOwnerId = post?.user?._id || post?.user;
+    const isPostOwner = postOwnerId?.toString() === currentUserId?.toString();
+    const canTransact = Boolean(post && Number(post.price) > 0 && post.acceptInAppPayment !== false);
+
+    const handleRequestPaymentPrompt = async () => {
+        const text = `💳 Payment Request: Please send ${currencySymbol}${post.price} for "${post.title}". You can pay securely online via UPI, NetBanking, or Cards.`;
+        setNewMessage(text);
+    };
+
+    const handlePaymentComplete = async (result) => {
+        setShowCheckout(false);
+        const confirmMsg = result?.paymentTiming === 'advance'
+            ? `⚡ Payment Sent: I have completed advance payment of ${currencySymbol}${post.price} for "${post.title}" via Razorpay UPI.`
+            : `🛡️ Escrow Secured: I have safely locked ${currencySymbol}${post.price} in Escrow for "${post.title}" via Razorpay UPI. Please coordinate delivery!`;
+        
+        try {
+            await api.post(`/chats/${conversation._id}/messages`, { text: confirmMsg });
+            if (socket) {
+                socket.emit('send_message', {
+                    conversationId: conversation._id,
+                    recipientId: otherParticipant?._id || otherParticipant?.id,
+                    text: confirmMsg,
+                });
+            }
+        } catch {
+            // best effort message send
+        }
+    };
 
     const scrollToBottom = () => {
         setTimeout(() => {
@@ -242,7 +275,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
 
         let tempMessage;
         try {
-            const tempId = `temp-${Date.now()}`;
+            const tempId = `temp-${Math.random().toString(36).slice(2, 9)}`;
             tempMessage = {
                 _id: tempId,
                 conversationId: conversation._id,
@@ -408,6 +441,31 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                                 {post.price && <span className="ml-2 text-primary font-semibold">{currencySymbol}{post.price}</span>}
                             </div>
                         </div>
+                        {canTransact && (
+                            <div className="mr-2" onClick={(e) => e.stopPropagation()}>
+                                {!isPostOwner ? (
+                                    <Button
+                                        size="sm"
+                                        variant="primary"
+                                        onClick={() => setShowCheckout(true)}
+                                        className="gap-1.5 text-xs py-1 h-7"
+                                    >
+                                        <CreditCard className="w-3.5 h-3.5" />
+                                        Pay {currencySymbol}{post.price}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleRequestPaymentPrompt}
+                                        className="gap-1.5 text-xs py-1 h-7"
+                                    >
+                                        <CreditCard className="w-3.5 h-3.5" />
+                                        Request Pay
+                                    </Button>
+                                )}
+                            </div>
+                        )}
                         {postCollapsed ? (
                             <ChevronDown className="w-4 h-4 text-foreground-muted" />
                         ) : (
@@ -516,6 +574,19 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             )}
 
             <form onSubmit={handleSend} className="p-2.5 bg-card border-t border-card-border flex gap-2 items-end shrink-0">
+                {canTransact && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (!isPostOwner) setShowCheckout(true);
+                            else handleRequestPaymentPrompt();
+                        }}
+                        title={!isPostOwner ? `Pay ${currencySymbol}${post.price} online` : 'Request payment'}
+                        className="tap-target p-2.5 rounded-xl border border-card-border bg-background hover:bg-card-hover text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
+                    >
+                        <CreditCard className="w-4 h-4" />
+                    </button>
+                )}
                 <input
                     type="text"
                     value={newMessage}
@@ -531,6 +602,14 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                     <Send className="w-4 h-4" />
                 </button>
             </form>
+        
+            {showCheckout && post && (
+                <CheckoutModal
+                    post={post}
+                    onClose={() => setShowCheckout(false)}
+                    onPurchase={handlePaymentComplete}
+                />
+            )}
         </div>
     );
 };

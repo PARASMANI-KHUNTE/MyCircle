@@ -82,7 +82,7 @@ const CheckoutModal = ({
             onPurchase?.(data);
         } catch (err) {
             console.error('Checkout failed:', err);
-            const msg = err.response?.data?.message || err.response?.data?.msg || 'Checkout failed. Please try again.';
+            const msg = err.response?.data?.message || err.response?.data?.msg || err.message || 'Checkout failed. Please try again.';
             showError(msg);
         } finally {
             setLoading(false);

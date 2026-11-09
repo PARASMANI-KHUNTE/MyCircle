@@ -65,6 +65,20 @@ export const getWallet = async () => {
 };
 
 export const topupWallet = async (amount) => {
+    // Step 1: create the top-up intent (validates limits and, with Stripe,
+    // returns a client secret for card confirmation).
+    const intent = await api.post('/payments/wallet/topup', { amount });
+
+    // The web client has no card element yet. In dev mode the server returns
+    // no client secret, so we can confirm immediately; otherwise fail clearly
+    // instead of silently crediting funds.
+    if (intent.data?.clientSecret) {
+        throw new Error(
+            'Card top-ups are not available in the web app yet. Please top up from the mobile app.'
+        );
+    }
+
+    // Step 2: confirm the top-up and credit the wallet.
     const res = await api.post('/payments/wallet/topup/confirm', { amount });
     return res.data;
 };
@@ -79,8 +93,26 @@ export const getEscrowHistory = async (role = 'both') => {
     return res.data;
 };
 
+export const confirmEscrow = async (escrowId, paymentIntentId) => {
+    const res = await api.post(
+        `/payments/escrow/${escrowId}/confirm`,
+        paymentIntentId ? { paymentIntentId } : {}
+    );
+    return res.data;
+};
+
 export const releaseEscrow = async (escrowId) => {
     const res = await api.post(`/payments/escrow/${escrowId}/release`);
+    return res.data;
+};
+
+export const getStripeConnectStatus = async () => {
+    const res = await api.get('/payments/stripe/connect/status');
+    return res.data;
+};
+
+export const createStripeConnect = async () => {
+    const res = await api.post('/payments/stripe/connect');
     return res.data;
 };
 

@@ -147,7 +147,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                         className="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-background border-l border-card-border z-[1300] flex flex-col shadow-2xl"
                     >
                         {/* Drawer Header */}
-                        <div className="p-4 border-b border-card-border flex items-center justify-between glass">
+                        <div className="p-4 border-b border-card-border flex items-center justify-between bg-card">
                             <h2 className="text-xl font-bold text-text-heading">
                                 {selectedConversation ? 'Chat' : 'Messages'}
                             </h2>

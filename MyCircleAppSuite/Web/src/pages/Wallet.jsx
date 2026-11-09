@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet as WalletIcon, ShieldCheck, ArrowUpRight, ArrowDownLeft, CheckCircle2, Clock, AlertTriangle, RefreshCw, MessageCircle } from 'lucide-react';
+import { Wallet as WalletIcon, ShieldCheck, ArrowUpRight, CheckCircle2, Clock, AlertTriangle, RefreshCw, MessageCircle, CreditCard } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Loading from '../components/ui/Loading';
 import { useToast } from '../components/ui/Toast';
 import { useDialog } from '../hooks/useDialog';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
-import { getWallet, topupWallet, getEscrowHistory, releaseEscrow, refundEscrow } from '../utils/api';
+import { getWallet, topupWallet, getEscrowHistory, releaseEscrow, refundEscrow, getStripeConnectStatus, createStripeConnect } from '../utils/api';
 import { cn } from '../utils/cn';
 
 const TOPUP_PRESETS = [500, 1000, 2000, 5000];
@@ -25,6 +25,8 @@ const WalletPage = () => {
     const [topupAmount, setTopupAmount] = useState('');
     const [topupLoading, setTopupLoading] = useState(false);
     const [actionInFlight, setActionInFlight] = useState(null);
+    const [connectStatus, setConnectStatus] = useState(null);
+    const [connectLoading, setConnectLoading] = useState(false);
 
     const loadWalletData = useCallback(async () => {
         try {
@@ -58,6 +60,20 @@ const WalletPage = () => {
         void loadEscrows(activeTab);
     }, [activeTab, loadEscrows]);
 
+    useEffect(() => {
+        let active = true;
+        getStripeConnectStatus()
+            .then((data) => {
+                if (active) setConnectStatus(data);
+            })
+            .catch(() => {
+                if (active) setConnectStatus(null);
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
+
     const handleTopup = async (amountToAdd) => {
         const amt = Number(amountToAdd || topupAmount);
         if (!amt || amt < 10) {
@@ -76,7 +92,7 @@ const WalletPage = () => {
             setTopupAmount('');
             success(`₹${amt} added to your wallet successfully!`);
         } catch (err) {
-            const msg = err.response?.data?.message || 'Top-up failed. Please try again.';
+            const msg = err.response?.data?.message || err.message || 'Top-up failed. Please try again.';
             showError(msg);
         } finally {
             setTopupLoading(false);
@@ -122,6 +138,27 @@ const WalletPage = () => {
             showError(msg);
         } finally {
             setActionInFlight(null);
+        }
+    };
+
+    const handleConnect = async () => {
+        setConnectLoading(true);
+        try {
+            const data = await createStripeConnect();
+            if (data?.onboardingUrl) {
+                window.location.href = data.onboardingUrl;
+                return;
+            }
+            success('Payout account connected.');
+            setConnectStatus({ connected: true });
+        } catch (err) {
+            showError(
+                err.response?.data?.message ||
+                err.response?.data?.msg ||
+                'Stripe payouts are not configured on this server.'
+            );
+        } finally {
+            setConnectLoading(false);
         }
     };
 
@@ -229,6 +266,50 @@ const WalletPage = () => {
                 </div>
             </div>
 
+            {/* Seller Payouts */}
+            <div className="mb-8 rounded-2xl border border-card-border bg-card p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-card-border bg-background-secondary text-primary">
+                            <CreditCard className="h-4 w-4" />
+                        </span>
+                        <div>
+                            <h2 className="text-sm font-semibold text-foreground">Seller payouts</h2>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                {connectStatus?.connected
+                                    ? connectStatus?.details?.payoutsEnabled === false
+                                        ? 'Your Stripe account is connected, but payouts are not enabled yet. Finish onboarding to receive funds.'
+                                        : 'Stripe is connected. Released escrow funds can be paid out to your bank account.'
+                                    : 'Connect a Stripe account to receive payouts when buyers release escrow payments.'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="shrink-0 self-start sm:self-auto">
+                        {connectStatus?.connected ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Connected
+                            </span>
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={connectLoading}
+                                onClick={handleConnect}
+                                className="gap-1.5 text-xs"
+                            >
+                                {connectLoading ? (
+                                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    <CreditCard className="h-3.5 w-3.5" />
+                                )}
+                                Connect Stripe
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Escrow Orders Section */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-card-border pb-3">
@@ -297,7 +378,12 @@ const WalletPage = () => {
                         {escrows.map((escrow) => {
                             const post = escrow.post || {};
                             const otherUser = activeTab === 'buyer' ? escrow.seller : escrow.buyer;
-                            const isHeld = escrow.status === 'held' || escrow.status === 'funded';
+                            const isPending = escrow.status === 'pending';
+                            const isFunded = escrow.status === 'funded';
+                            const isHeld = escrow.status === 'held';
+                            const isActive = isPending || isFunded || isHeld;
+                            const canRefund = activeTab === 'buyer' && (isPending || isFunded);
+                            const canRelease = activeTab === 'buyer' && (isFunded || isHeld);
                             const isReleased = escrow.status === 'released';
                             const isRefunded = escrow.status === 'refunded';
 
@@ -344,7 +430,7 @@ const WalletPage = () => {
                                             </span>
 
                                             {/* Status Badge */}
-                                            {isHeld && (
+                                            {isActive && (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning/10 text-warning border border-warning/20">
                                                     <Clock className="h-3 w-3" />
                                                     Funds in Escrow
@@ -366,7 +452,7 @@ const WalletPage = () => {
                                     </div>
 
                                     {/* Action Bar for Active Escrows */}
-                                    {isHeld && (
+                                    {isActive && (
                                         <div className="pt-3 border-t border-card-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <p className="text-xs text-muted-foreground">
                                                 {activeTab === 'buyer'
@@ -382,31 +468,35 @@ const WalletPage = () => {
                                                     </Button>
                                                 </Link>
 
-                                                {activeTab === 'buyer' && (
+                                                {(canRefund || canRelease) && (
                                                     <>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            disabled={actionInFlight === escrow._id}
-                                                            onClick={() => handleRefund(escrow)}
-                                                            className="text-xs text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            Refund
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="primary"
-                                                            disabled={actionInFlight === escrow._id}
-                                                            onClick={() => handleRelease(escrow)}
-                                                            className="text-xs gap-1.5"
-                                                        >
-                                                            {actionInFlight === escrow._id ? (
-                                                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                                            ) : (
-                                                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                                            )}
-                                                            Confirm &amp; Release
-                                                        </Button>
+                                                        {canRefund && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                disabled={actionInFlight === escrow._id}
+                                                                onClick={() => handleRefund(escrow)}
+                                                                className="text-xs text-destructive hover:bg-destructive/10"
+                                                            >
+                                                                Refund
+                                                            </Button>
+                                                        )}
+                                                        {canRelease && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="primary"
+                                                                disabled={actionInFlight === escrow._id}
+                                                                onClick={() => handleRelease(escrow)}
+                                                                className="text-xs gap-1.5"
+                                                            >
+                                                                {actionInFlight === escrow._id ? (
+                                                                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                                                ) : (
+                                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                                )}
+                                                                Confirm &amp; Release
+                                                            </Button>
+                                                        )}
                                                     </>
                                                 )}
                                             </div>

@@ -95,6 +95,14 @@ const UserSchema = new mongoose.Schema({
         followingCount: { type: Number, default: 0 },
         followersCount: { type: Number, default: 0 },
     },
+    payoutDetails: {
+        upiId: { type: String, trim: true, default: '' },
+        accountHolderName: { type: String, trim: true, default: '' },
+        accountNumber: { type: String, trim: true, default: '' },
+        ifscCode: { type: String, trim: true, uppercase: true, default: '' },
+        isVerified: { type: Boolean, default: false },
+        updatedAt: { type: Date }
+    },
     reputation: {
         trustScore: { type: Number, default: 50 },
         reviewsCount: { type: Number, default: 0 },

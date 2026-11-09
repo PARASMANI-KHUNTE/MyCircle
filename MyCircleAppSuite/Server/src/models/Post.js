@@ -72,6 +72,15 @@ const PostSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    acceptInAppPayment: {
+        type: Boolean,
+        default: true,
+    },
+    paymentTiming: {
+        type: String,
+        enum: ['escrow', 'advance', 'flexible'],
+        default: 'flexible',
+    },
     acceptsBarter: {
         type: Boolean,
         default: false,

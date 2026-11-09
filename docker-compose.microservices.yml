@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+  # Infrastructure
+  mongo-identity:
+    image: mongo:7.0
+    container_name: mycircle-mongo-identity
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-identity-data:/data/db
+
+  mongo-marketplace:
+    image: mongo:7.0
+    container_name: mycircle-mongo-marketplace
+    restart: unless-stopped
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo-marketplace-data:/data/db
+
+  mongo-communication:
+    image: mongo:7.0
+    container_name: mycircle-mongo-communication
+    restart: unless-stopped
+    ports:
+      - "27020:27017"
+    volumes:
+      - mongo-communication-data:/data/db
+
+  mongo-contact:
+    image: mongo:7.0
+    container_name: mycircle-mongo-contact
+    restart: unless-stopped
+    ports:
+      - "27021:27017"
+    volumes:
+      - mongo-contact-data:/data/db
+
+  mongo-notifications:
+    image: mongo:7.0
+    container_name: mycircle-mongo-notifications
+    restart: unless-stopped
+    ports:
+      - "27022:27017"
+    volumes:
+      - mongo-notifications-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: mycircle-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # API Gateway (Strangler Fig Facade)
+  api-gateway:
+    build:
+      context: ./MyCircleAppSuite/Server
+    container_name: mycircle-gateway
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - IDENTITY_SERVICE_URL=http://identity-service:5001
+      - MARKETPLACE_SERVICE_URL=http://marketplace-service:5002
+      - COMMUNICATION_SERVICE_URL=http://communication-service:5003
+      - CONTACT_SERVICE_URL=http://contact-service:5004
+      - NOTIFICATIONS_SERVICE_URL=http://notifications-service:5005
+    depends_on:
+      - identity-service
+      - marketplace-service
+      - communication-service
+
+  # Microservices
+  identity-service:
+    build:
+      context: ./MyCircleAppSuite/Services/Identity
+    container_name: mycircle-identity
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=mongodb://mongo-identity:27017/mycircle_identity
+    depends_on:
+      - mongo-identity
+
+  marketplace-service:
+    build:
+      context: ./MyCircleAppSuite/Services/Marketplace
+    container_name: mycircle-marketplace
+    restart: unless-stopped
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - MONGO_URI=mongodb://mongo-marketplace:27017/mycircle_marketplace
+    depends_on:
+      - mongo-marketplace
+
+  communication-service:
+    build:
+      context: ./MyCircleAppSuite/Services/Communication
+    container_name: mycircle-communication
+    restart: unless-stopped
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - MONGO_URI=mongodb://mongo-communication:27017/mycircle_communication
+    depends_on:
+      - mongo-communication
+
+  contact-service:
+    build:
+      context: ./MyCircleAppSuite/Services/Contact
+    container_name: mycircle-contact
+    restart: unless-stopped
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - MONGO_URI=mongodb://mongo-contact:27017/mycircle_contact
+    depends_on:
+      - mongo-contact
+
+  notifications-service:
+    build:
+      context: ./MyCircleAppSuite/Services/Notifications
+    container_name: mycircle-notifications
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      - MONGO_URI=mongodb://mongo-notifications:27017/mycircle_notifications
+    depends_on:
+      - mongo-notifications
+
+volumes:
+  mongo-identity-data:
+  mongo-marketplace-data:
+  mongo-communication-data:
+  mongo-contact-data:
+  mongo-notifications-data:

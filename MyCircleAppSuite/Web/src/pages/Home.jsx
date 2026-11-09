@@ -20,8 +20,8 @@ const Home = () => {
                 {/* Header - consistent height */}
                 <header className="flex items-center justify-between py-4">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                            <Zap className="w-4 h-4 text-white" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+                            <Zap className="h-4 w-4 text-primary-foreground" />
                         </div>
                         <span className="text-xl font-bold tracking-tight">MyCircle</span>
                     </div>
@@ -114,11 +114,11 @@ const Home = () => {
                         <span className="text-xs font-medium">Verified profiles</span>
                     </div>
                     <div className="flex items-center gap-2.5 rounded-lg border border-card-border bg-card px-4 py-3">
-                        <MessageCircle className="w-4 h-4 text-secondary" />
+                        <MessageCircle className="w-4 h-4 text-primary" />
                         <span className="text-xs font-medium">Request-first chat</span>
                     </div>
                     <div className="flex items-center gap-2.5 rounded-lg border border-card-border bg-card px-4 py-3">
-                        <CheckCircle2 className="w-4 h-4 text-accent" />
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
                         <span className="text-xs font-medium">Clear notifications</span>
                     </div>
                 </section>

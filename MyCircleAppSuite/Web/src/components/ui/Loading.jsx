@@ -1,39 +1,32 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
+const SIZES = {
+    sm: 'h-4 w-4 border-2',
+    md: 'h-8 w-8 border-[3px]',
+    lg: 'h-12 w-12 border-4',
+};
+
 /**
- * Loading spinner with multiple size variants
- * 
- * Design rationale:
- * - Uses CSS border for spinner, no motion dependency
- * - Fullscreen includes backdrop blur for modal loading
- * - Includes text option for contextual loading states
- * - Fully respects Reduced Motion preference
+ * Loading spinner — a single orange ring, no decorative effects.
  */
 const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
     const spinner = (
-        <div className="flex flex-col items-center gap-3">
-            <div 
-                className={`${size === 'sm' ? 'border-2' : 'border-3'} border-primary/20 border-t-primary rounded-full`}
-                style={{
-                    animation: size === 'sm' ? 'spin-0.6s linear infinite' : 'spin-0.8s linear infinite'
-                }}
-            >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full rotate-180" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rotate-90 border-2 border-primary/20 rounded-full" />
-            </div>
-            {text && (
-                <p className="text-sm text-foreground-muted font-medium">{text}</p>
-            )}
-        </div>
+        <span className={cn('inline-flex items-center gap-3', inline ? 'flex-row' : 'flex-col')} role="status" aria-live="polite">
+            <span
+                className={cn(
+                    'inline-block animate-spin rounded-full border-primary/20 border-t-primary',
+                    SIZES[size] || SIZES.md
+                )}
+            />
+            {text && <span className="text-sm font-medium text-foreground-muted">{text}</span>}
+        </span>
     );
 
     if (fullscreen) {
         return (
-            <div 
-                className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[var(--z-modal)] flex items-center justify-center"
-                role="status"
-                aria-live="polite"
+            <div
+                className="fixed inset-0 z-[30] flex items-center justify-center bg-background"
                 aria-label={text || 'Loading'}
             >
                 {spinner}
@@ -41,63 +34,22 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
         );
     }
 
-    if (inline) {
-        return (
-            <span className="inline-flex items-center gap-2 text-sm text-foreground-muted">
-                <div 
-                    className={`${size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} border-primary/20 border-t-primary rounded-full`}
-                    style={{
-                        animation: 'spin-0.8s linear infinite'
-                    }}
-                />
-                {text}
-            </span>
-        );
-    }
-
     return spinner;
 };
 
-/**
- * Skeleton loader for content placeholders
- * 
- * Design rationale:
- * - Uses shimmer animation from design system
- * - Maintains aspect ratio via className prop
- */
 export const Skeleton = ({ className = '', ...props }) => (
-    <div 
-        className={cn('skeleton', className)}
-        aria-hidden="true"
-        {...props}
-    />
+    <div className={cn('skeleton', className)} aria-hidden="true" {...props} />
 );
 
-/**
- * Empty state component for lists and sections
- * 
- * Design rationale:
- * - Clear visual hierarchy (icon, title, description, action)
- * - Icon uses primary color for brand consistency
- */
-export const EmptyState = ({ 
-    icon: Icon,
-    title,
-    description,
-    action: Action 
-}) => (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+export const EmptyState = ({ icon: Icon, title, description, action: Action }) => (
+    <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
         {Icon && (
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                <Icon className="w-6 h-6 text-primary" />
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <Icon className="h-6 w-6 text-primary" />
             </div>
         )}
-        {title && (
-            <h3 className="text-base font-semibold text-foreground mb-1">{title}</h3>
-        )}
-        {description && (
-            <p className="text-sm text-foreground-muted max-w-sm mb-4">{description}</p>
-        )}
+        {title && <h3 className="mb-1 text-base font-semibold text-foreground">{title}</h3>}
+        {description && <p className="mb-4 max-w-sm text-sm text-foreground-muted">{description}</p>}
         {Action && <Action />}
     </div>
 );

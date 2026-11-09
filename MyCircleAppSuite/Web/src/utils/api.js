@@ -37,18 +37,23 @@ export const getSocketBaseUrl = () => apiURL;
 
 /**
  * Create a payment intent for purchasing a post.
- * Expected backend shape: { postId, sellerId, itemTitle, amount, currency? }
- * Returns: { orderId, clientSecret, amount, platformFee, sellerAmount }
+ * The backend resolves the seller/price from the post id.
+ * Returns a normalized payload: { orderId, clientSecret, amount, ... }
  */
-const createPaymentIntent = async (postId, sellerId, itemTitle, amount, currency = 'usd') => {
-    const res = await api.post('/api/payments/create-intent', {
+const createPaymentIntent = async (postId, sellerId, itemTitle, amount, currency = 'INR') => {
+    const res = await api.post('/payments/create-intent', {
         postId,
         sellerId,
         itemTitle,
         amount,
         currency,
     });
-    return res.data;
+
+    const data = res.data || {};
+    return {
+        ...data,
+        orderId: data.orderId || data.escrowId || data.id || null,
+    };
 };
 
 export { createPaymentIntent };
@@ -183,8 +188,12 @@ api.interceptors.response.use(
         // Map structured error codes from the identity boundary
         const structuredError = mapIdentityError(error);
 
-        // Handle auth expiry (401) using the mapped code
-        if (structuredError.code === 'UNAUTHORIZED' || structuredError.code === 'TOKEN_EXPIRED') {
+        // Handle auth expiry using either the mapped code or the raw status
+        if (
+            structuredError.code === 'UNAUTHORIZED' ||
+            structuredError.code === 'TOKEN_EXPIRED' ||
+            structuredError.code === 401
+        ) {
             try {
                 localStorage.removeItem('token');
             } catch {

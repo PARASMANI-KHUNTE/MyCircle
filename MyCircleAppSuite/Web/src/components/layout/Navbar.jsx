@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
@@ -17,6 +17,12 @@ const Navbar = () => {
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
     const location = useLocation();
+
+    // Close any open menus when navigating.
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+        setIsProfileDropdownOpen(false);
+    }, [location.pathname]);
 
     const handleGoogleLogin = () => {
         login();
@@ -160,9 +166,7 @@ const Navbar = () => {
 
     return (
         <>
-            <nav
-                className="fixed top-0 left-0 right-0 z-[1100] transition-all duration-300 bg-background/70 border-b border-transparent backdrop-blur-md"
-            >
+            <nav className="fixed inset-x-0 top-0 z-[1100] border-b border-card-border bg-background">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-4">
@@ -313,7 +317,20 @@ const Navbar = () => {
                 </div>
             </nav>
 
-            {typeof document !== 'undefined' ? createPortal(mobileDrawer, document.body) : null}
+            {isMobileMenuOpen && typeof document !== 'undefined'
+                ? createPortal(
+                    <>
+                        <button
+                            type="button"
+                            aria-label="Close menu"
+                            className="fixed inset-0 z-[1200] bg-foreground/30 md:hidden"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        />
+                        {mobileDrawer}
+                    </>,
+                    document.body
+                )
+                : null}
         </>
     );
 };

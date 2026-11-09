@@ -20,6 +20,8 @@ router.get('/stripe/connect/status', asyncHandler(paymentController.getStripeCon
 
 // Escrow endpoints
 router.post('/escrow/create', asyncHandler(paymentController.createEscrowIntent));
+// Checkout alias used by the web client
+router.post('/create-intent', asyncHandler(paymentController.createEscrowIntent));
 router.post('/escrow/:escrowId/confirm', asyncHandler(paymentController.confirmEscrow));
 router.post('/escrow/:escrowId/release', asyncHandler(paymentController.releaseEscrow));
 router.post('/escrow/:escrowId/refund', asyncHandler(paymentController.refundEscrow));

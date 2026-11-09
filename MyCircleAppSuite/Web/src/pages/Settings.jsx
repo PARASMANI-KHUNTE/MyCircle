@@ -82,7 +82,7 @@ const Settings = () => {
         try {
             await api.put('/user/settings', preferences);
             setMessage({ type: 'success', text: 'Settings saved.' });
-        } catch (err) {
+        } catch {
             setMessage({ type: 'error', text: 'Could not save settings. Please try again.' });
         } finally {
             setLoading(false);

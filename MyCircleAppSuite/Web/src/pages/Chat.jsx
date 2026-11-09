@@ -125,7 +125,7 @@ const Chat = () => {
 // Layout (sidebar + chat window or only list)
     return (
         <>
-            <div className="flex h-[100dvh] lg:h-[calc(100vh-80px)] overflow-hidden min-w-0">
+            <div className="flex h-[calc(100dvh-4rem)] overflow-hidden min-w-0">
                 {/* Sidebar - list of conversations */}
                 <div className={`
                     w-full md:w-1/3 min-w-0 flex flex-col bg-background border-r border-card-border

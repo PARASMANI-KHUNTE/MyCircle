@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Loading from '../components/ui/Loading';
-import { ArrowLeft, Save } from 'lucide-react';
 import api from '../utils/api';
 import { getAvatarUrl } from '../utils/avatar';
 
@@ -13,42 +13,41 @@ const EditProfile = () => {
     const { user, refreshUser } = useAuth();
     const { success, error } = useToast();
     const navigate = useNavigate();
+
     const [loading, setLoading] = useState(false);
     const [avatarFile, setAvatarFile] = useState(null);
-    const [avatarPreview, setAvatarPreview] = useState(user?.avatar || "");
+    const [avatarPreview, setAvatarPreview] = useState(user?.avatar || '');
     const [formData, setFormData] = useState({
         displayName: '',
         bio: '',
         location: '',
         skills: '',
         contactPhone: '',
-        contactWhatsapp: ''
+        contactWhatsapp: '',
     });
 
-    React.useEffect(() => {
-        if (user) {
-            setFormData({
-                displayName: user.displayName || '',
-                bio: user.bio || '',
-                location: user.location || '',
-                skills: Array.isArray(user.skills) ? user.skills.join(', ') : (user.skills || ''),
-                contactPhone: user.contactPhone || '',
-                contactWhatsapp: user.contactWhatsapp || ''
-            });
-            setAvatarPreview(user.avatar || "");
-        }
+    useEffect(() => {
+        if (!user) return;
+        setFormData({
+            displayName: user.displayName || '',
+            bio: user.bio || '',
+            location: user.location || '',
+            skills: Array.isArray(user.skills) ? user.skills.join(', ') : user.skills || '',
+            contactPhone: user.contactPhone || '',
+            contactWhatsapp: user.contactWhatsapp || '',
+        });
+        setAvatarPreview(user.avatar || '');
     }, [user]);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
     const handleAvatarChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setAvatarFile(file);
-            setAvatarPreview(URL.createObjectURL(file));
-        }
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
     };
 
     const handleSubmit = async (e) => {
@@ -56,126 +55,128 @@ const EditProfile = () => {
         setLoading(true);
         try {
             const data = new FormData();
-            // Process skills to array
-            const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
-            const submissionData = { ...formData, skills: skillsArray };
+            const skillsArray = formData.skills
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
 
-            Object.keys(submissionData).forEach(key => {
+            Object.entries({ ...formData, skills: skillsArray }).forEach(([key, value]) => {
                 if (key === 'skills') {
-                    submissionData[key].forEach(skill => data.append('skills[]', skill));
+                    value.forEach((skill) => data.append('skills[]', skill));
                 } else {
-                    data.append(key, submissionData[key]);
+                    data.append(key, value);
                 }
             });
 
             if (avatarFile) data.append('avatar', avatarFile);
 
             await api.put('/user/profile', data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-
-            // Refresh user data in context to update UI immediately
             await refreshUser();
 
-            success("Profile Updated Successfully!");
+            success('Profile updated successfully.');
             navigate('/profile');
         } catch (err) {
-            console.error(err);
-            error(err.response?.data?.msg || err.response?.data?.error || "Failed to update profile. Please try again.");
+            error(
+                err.response?.data?.msg ||
+                err.response?.data?.error ||
+                'Failed to update profile. Please try again.'
+            );
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="container mx-auto max-w-2xl px-3 sm:px-6 py-16 sm:py-24 text-text-body">
-            <Button variant="ghost" className="mb-6 pl-0 text-text-muted hover:text-text-heading" onClick={() => navigate('/profile')}>
-                <ArrowLeft className="w-5 h-5 mr-2" /> Back to Profile
-            </Button>
+        <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
+            <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
+            >
+                <ArrowLeft className="h-4 w-4" />
+                Back to profile
+            </button>
 
-            <h1 className="text-3xl font-bold mb-8 text-text-heading">Edit Profile</h1>
+            <header className="mb-5">
+                <h1 className="text-xl font-semibold text-foreground">Edit profile</h1>
+                <p className="mt-1 text-sm text-foreground-muted">
+                    Update how others see you in the community.
+                </p>
+            </header>
 
-            <div className="glass-panel p-4 sm:p-8 shadow-card rounded-3xl">
-                <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-2 sm:mb-4">
-                        <div className="w-20 h-20 rounded-full bg-background-section overflow-hidden border border-card-border">
-                            <img
-                                src={avatarPreview || getAvatarUrl(user)}
-                                alt="Avatar"
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                onError={(e) => {
-                                    const target = e.target;
-                                    target.onerror = null;
-                                    target.src = '/default-avatar.png';
-                                }}
-                            />
-                        </div>
-                        <label className="cursor-pointer w-full sm:w-auto">
-                            <div className="bg-hover-bg border border-card-border hover:opacity-80 text-text-heading px-4 py-2 rounded-xl text-sm transition-all font-bold uppercase tracking-widest text-center">
-                                Change Avatar
-                            </div>
-                            <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                        </label>
-                    </div>
-
-                    <Input
-                        label="Display Name"
-                        name="displayName"
-                        value={formData.displayName}
-                        onChange={handleChange}
-                        className=""
-                        error={null}
+            <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-card-border bg-card p-5 sm:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <img
+                        src={avatarPreview || getAvatarUrl(user)}
+                        alt="Avatar"
+                        className="h-20 w-20 rounded-full border border-card-border object-cover"
+                        onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/default-avatar.png';
+                        }}
                     />
+                    <label className="inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-card-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-card-hover sm:w-auto">
+                        Change avatar
+                        <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+                    </label>
+                </div>
 
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-black uppercase tracking-widest text-text-muted ml-1">Bio</label>
-                        <textarea
-                            name="bio"
-                            rows="4"
-                            className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-text-body placeholder:text-text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
-                            value={formData.bio}
-                            onChange={handleChange}
-                        />
-                    </div>
+                <Input
+                    label="Display name"
+                    name="displayName"
+                    value={formData.displayName}
+                    onChange={handleChange}
+                />
 
-                    <Input
-                        label="Location"
-                        name="location"
-                        value={formData.location}
+                <div className="flex flex-col gap-1.5">
+                    <label htmlFor="bio" className="text-sm font-medium text-foreground">
+                        Bio
+                    </label>
+                    <textarea
+                        id="bio"
+                        name="bio"
+                        rows="4"
+                        className="input-modern resize-none"
+                        value={formData.bio}
                         onChange={handleChange}
-                        className=""
-                        error={null}
+                        placeholder="Tell people a little about yourself."
                     />
+                </div>
 
+                <Input label="Location" name="location" value={formData.location} onChange={handleChange} />
+
+                <Input
+                    label="Skills"
+                    name="skills"
+                    value={formData.skills}
+                    onChange={handleChange}
+                    helperText="Separate skills with commas."
+                />
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Input
-                        label="Skills (Comma separated)"
-                        name="skills"
-                        value={formData.skills}
+                        label="Phone"
+                        name="contactPhone"
+                        value={formData.contactPhone}
                         onChange={handleChange}
                     />
+                    <Input
+                        label="WhatsApp"
+                        name="contactWhatsapp"
+                        value={formData.contactWhatsapp}
+                        onChange={handleChange}
+                    />
+                </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Input
-                            label="Phone"
-                            name="contactPhone"
-                            value={formData.contactPhone}
-                            onChange={handleChange}
-                            className=""
-                            error={null}
-                        />
-                        <Input
-                            label="WhatsApp"
-                            name="contactWhatsapp"
-                            value={formData.contactWhatsapp}
-                            onChange={handleChange}
-                        />
-                    </div>
-
-                    <Button variant="primary" type="submit" className="mt-2 w-full justify-center" disabled={loading}>
-                        <Save className="w-4 h-4 mr-2" /> {loading ? 'Saving...' : 'Save Changes'}
+                <div className="flex justify-end border-t border-card-border pt-4">
+                    <Button type="submit" loading={loading}>
+                        <Save className="mr-1.5 h-4 w-4" />
+                        {loading ? 'Saving...' : 'Save changes'}
                     </Button>
-                </form>
-            </div>
+                </div>
+            </form>
 
             {loading && <Loading fullscreen text="Updating profile..." />}
         </div>

@@ -35,6 +35,12 @@ const serviceContracts = Object.freeze({
         persistence: 'notifications and delivery state',
         events: Object.freeze(['notification.created', 'notification.delivered']),
     }),
+    payment: Object.freeze({
+        owner: 'payment',
+        healthPath: '/health/live',
+        persistence: 'orders, escrow state, and seller accounts',
+        events: Object.freeze(['payment.intent_created', 'escrow.funded', 'escrow.released', 'payment.disputed']),
+    }),
 });
 
 const getServiceContract = (serviceName) => {

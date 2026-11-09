@@ -47,6 +47,15 @@ services:
     volumes:
       - mongo-notifications-data:/data/db
 
+  mongo-payment:
+    image: mongo:7.0
+    container_name: mycircle-mongo-payment
+    restart: unless-stopped
+    ports:
+      - "27023:27017"
+    volumes:
+      - mongo-payment-data:/data/db
+
   redis:
     image: redis:7-alpine
     container_name: mycircle-redis
@@ -70,10 +79,12 @@ services:
       - COMMUNICATION_SERVICE_URL=http://communication-service:5003
       - CONTACT_SERVICE_URL=http://contact-service:5004
       - NOTIFICATIONS_SERVICE_URL=http://notifications-service:5005
+      - PAYMENT_SERVICE_URL=http://payment-service:5006
     depends_on:
       - identity-service
       - marketplace-service
       - communication-service
+      - payment-service
 
   # Microservices
   identity-service:
@@ -141,9 +152,23 @@ services:
     depends_on:
       - mongo-notifications
 
+  payment-service:
+    build:
+      context: ./MyCircleAppSuite/Services/Payment
+    container_name: mycircle-payment
+    restart: unless-stopped
+    ports:
+      - "5006:5006"
+    environment:
+      - PORT=5006
+      - MONGO_URI=mongodb://mongo-payment:27017/mycircle_payment
+    depends_on:
+      - mongo-payment
+
 volumes:
   mongo-identity-data:
   mongo-marketplace-data:
   mongo-communication-data:
   mongo-contact-data:
   mongo-notifications-data:
+  mongo-payment-data:

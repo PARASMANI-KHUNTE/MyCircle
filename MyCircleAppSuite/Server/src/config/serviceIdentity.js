@@ -6,6 +6,7 @@ const VALID_SERVICE_NAMES = new Set([
     'communication',
     'safety',
     'notifications',
+    'payment',
 ]);
 
 const getServiceName = () => {

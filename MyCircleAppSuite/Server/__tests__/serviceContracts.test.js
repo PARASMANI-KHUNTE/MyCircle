@@ -12,6 +12,7 @@ describe('Service contracts', () => {
             'communication',
             'safety',
             'notifications',
+            'payment',
         ]);
 
         for (const contract of Object.values(serviceContracts)) {

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
-const { auth } = require('../middleware/auth');
-const { asyncHandler } = require('../utils/asyncHandler');
+const auth = require('../middleware/auth');
+const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const mongoose = require('mongoose');
 

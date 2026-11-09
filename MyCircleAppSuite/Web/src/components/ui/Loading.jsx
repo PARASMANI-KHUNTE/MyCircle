@@ -67,7 +67,7 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
  */
 export const Skeleton = ({ className = '', ...props }) => (
     <div 
-        className={`skeleton ${className}`}
+        className={cn('skeleton', className)}
         aria-hidden="true"
         {...props}
     />

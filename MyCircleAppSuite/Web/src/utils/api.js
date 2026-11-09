@@ -61,44 +61,7 @@ const generateRequestId = () => {
     }
     // Fallback: deterministic-ish ID using timestamp + random
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-// Helper: ensure a consistent x-request-id is set on every request.
-// If the config already has one, preserve it; otherwise generate a new one.
-api.interceptors.request.use(
-    (config) => {
-        const isFormData = typeof FormData !== 'undefined' && config?.data instanceof FormData;
-        if (isFormData && config.headers) {
-            // Let the browser set the correct multipart boundary.
-            try {
-                if (typeof config.headers.delete === 'function') {
-                    config.headers.delete('Content-Type');
-                    config.headers.delete('content-type');
-                }
-            } catch {
-                // ignore
-            }
-            try {
-                delete config.headers['Content-Type'];
-                delete config.headers['content-type'];
-            } catch {
-                // ignore
-            }
-        }
-
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers['x-auth-token'] = token;
-        }
-
-        // Inject standard x-request-id header for tracing
-        if (!config.headers?.['x-request-id']) {
-            config.headers['x-request-id'] = generateRequestId();
-        }
-
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
+};
 
 // Helper: map backend identity-boundary error codes to structured messages.
 // Expected error shape from identity boundary:

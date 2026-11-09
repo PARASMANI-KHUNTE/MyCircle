@@ -257,6 +257,7 @@ const CreatePost = () => {
             hasAutoDetected.current = true;
             getCurrentLocation();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [step, locationStatus]);
 
     return (

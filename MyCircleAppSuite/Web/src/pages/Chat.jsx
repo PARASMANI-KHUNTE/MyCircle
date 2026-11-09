@@ -120,7 +120,7 @@ const Chat = () => {
             socket.off('user_stop_typing', handleTypingStop);
             socket.off('conversation_disabled', handleConversationDisabled);
         };
-    }, [currentUserId, socket, user?._id, user?.id]);
+    }, [currentUserId, socket, user?._id, user?.id, selectedConversation?._id]);
 
 // Layout (sidebar + chat window or only list)
     return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ExternalLink, X, ChevronDown, ChevronUp } from 'lucide-react';
@@ -66,7 +66,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
         }, 100);
     };
 
-    const markAsRead = async () => {
+    const markAsRead = useCallback(async () => {
         if (markReadInFlightRef.current || !conversation._id) return;
 
         markReadInFlightRef.current = true;
@@ -80,7 +80,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
         } finally {
             markReadInFlightRef.current = false;
         }
-    };
+    }, [conversation._id, onMessagesRead]);
 
     const generateSuggestions = (lastMessageText = '') => {
         const newSuggestions = getSmartSuggestions(lastMessageText);
@@ -129,7 +129,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
         };
 
         void runInit();
-    }, [conversation._id]);
+    }, [conversation._id, currentUserId, markAsRead]);
 
     useEffect(() => {
         if (!conversation._id) return;
@@ -207,7 +207,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             socket.off('user_stop_typing', handleUserStopTyping);
             socket.off('conversation_deleted', handleConversationDeleted);
         };
-    }, [socket, conversation._id, currentUserId, dialog, onBack]);
+    }, [socket, conversation._id, currentUserId, dialog, onBack, markAsRead]);
 
     const handleInputChange = (e) => {
         setNewMessage(e.target.value);

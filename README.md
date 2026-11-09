@@ -2,84 +2,115 @@
 
 [![CI](https://github.com/PARASMANI-KHUNTE/MyCircle/actions/workflows/ci.yml/badge.svg)](https://github.com/PARASMANI-KHUNTE/MyCircle/actions/workflows/ci.yml)
 
-MyCircle is a hyperlocal exchange platform for jobs, services, sales, rentals and barter. It ships as a single repository containing a REST/realtime API, a React web client and a React Native mobile app.
+MyCircle is a hyperlocal exchange platform for jobs, services, sales, rentals, and barter. It features a modern microservice-ready architecture powered by a Strangler Fig API Gateway, distributed services, a React web client, and a React Native bare mobile app.
 
-## Repository layout
+---
+
+## Architecture Overview
+
+```
+                         [ React Web / Mobile Apps ]
+                                      │
+                                      ▼
+             [ API Gateway / Facade (Port 5000) - Express Strangler ]
+               ├── Health Probes: /health/live, /health/ready, /health/services
+               ├── Distributed Tracing: x-request-id correlation injection
+               └── Dynamic Strangler Proxy to Extracted Microservices
+                                      │
+    ┌──────────────┬──────────────────┼─────────────────┬──────────────┐
+    ▼              ▼                  ▼                 ▼              ▼
+[ Identity ]  [ Marketplace ]  [ Communication ]   [ Contact ]  [ Notifications ]
+  Port: 5001    Port: 5002        Port: 5003          Port: 5004   Port: 5005
+  DB: identity  DB: marketplace   DB: communication   DB: contact  DB: notifications
+```
+
+---
+
+## Repository Layout
 
 ```text
 MyCircle/
 ├── MyCircleAppSuite/
-│   ├── Server/        # Node.js + Express API (MongoDB, Redis, Socket.io)
-│   ├── Web/           # React + Vite + Tailwind web client
-│   └── Mobile/        # React Native (bare) + TypeScript mobile app
-├── docs/
-│   ├── architecture/  # System design, database design, workflows
-│   ├── guides/        # Feature, testing and operations documentation
-│   ├── analysis/      # Codebase analysis
-│   └── reports/       # Project reports and exports
-├── tools/
-│   └── reporting/     # Python report-generation tooling
-├── .github/           # CI, issue/PR templates, Dependabot
-└── package.json       # Root orchestration scripts
+│   ├── Server/            # API Gateway & Monolith compatibility layer
+│   ├── Services/          # Extracted Domain Microservices
+│   │   ├── Identity/      # Auth, Google OAuth & User Profiles (Port 5001)
+│   │   ├── Marketplace/   # Posts, Geospatial Search & Categories (Port 5002)
+│   │   ├── Communication/ # Standalone Socket.io Chat & Messaging (Port 5003)
+│   │   ├── Contact/       # Contact Requests & Privacy Gate (Port 5004)
+│   │   └── Notifications/ # In-App Activity & Notifications (Port 5005)
+│   ├── Web/               # React 19 + Vite web client
+│   └── Mobile/            # React Native (bare) + TypeScript mobile app
+├── docs/                  # Architecture, system design & migration plans
+├── docker-compose.microservices.yml # Full microservices orchestration
+└── package.json           # Root orchestration scripts
 ```
+
+---
+
+## Microservices Fleet
+
+Each microservice runs independently with its own database, health checks, and test suite:
+
+- [**Identity Service**](MyCircleAppSuite/Services/Identity/README.md) (`Port 5001`): User registration, passwords, Google OAuth, JWT claims.
+- [**Marketplace Service**](MyCircleAppSuite/Services/Marketplace/README.md) (`Port 5002`): Post lifecycle, 2dsphere location queries, category filters.
+- [**Communication Service**](MyCircleAppSuite/Services/Communication/README.md) (`Port 5003`): Socket.io real-time chat, conversations, and message history.
+- [**Contact Service**](MyCircleAppSuite/Services/Contact/README.md) (`Port 5004`): Mutual consent contact requests and trust verification.
+- [**Notification Service**](MyCircleAppSuite/Services/Notifications/README.md) (`Port 5005`): Real-time user notification feed and unread status.
+
+---
+
+## High-Performance Algorithms & Data Structures (DSA)
+
+Integrated under `MyCircleAppSuite/Server/src/utils/dsa`:
+* **`FastKeywordTrie` (Prefix Tree):** Linear $O(N)$ profanity and content moderation.
+* **`calculateHaversineDistance`:** Exact $O(1)$ spherical geodesic distance between GPS coordinates.
+* **`MinHeap` / `getTopK`:** Optimal $O(N \log K)$ Top-K search and ranking.
+* **`LRUCache`:** Fixed-memory $O(1)$ Doubly Linked List + HashMap cache.
+
+---
 
 ## Prerequisites
 
 - Node.js 20+ (see `.nvmrc`)
 - npm 10+
-- MongoDB 7 (local or Docker)
-- Redis 7 (optional locally, required for queues/rate limiting in production)
+- MongoDB 7+ (local or Docker)
+- Redis 7+
 
-## Quick start
+---
 
+## Quick Start
+
+### 1. Monolith / Local Gateway Mode
 ```bash
-# install dependencies for every app
+# Install dependencies for all apps and microservices
 npm run install:all
 
-# configure environment variables
+# Configure environment files
 cp MyCircleAppSuite/Server/.env.example MyCircleAppSuite/Server/.env
 cp MyCircleAppSuite/Web/.env.example   MyCircleAppSuite/Web/.env
 cp MyCircleAppSuite/Mobile/.env.example MyCircleAppSuite/Mobile/.env
 
-# start the full backend stack (MongoDB + Redis + API + worker)
-npm run docker:up
-
-# start the web client
+# Start web client
 npm run dev:web
 ```
 
-Refer to the per-app README files for platform-specific setup:
+### 2. Full Microservices Fleet (Docker Compose)
+To boot all 5 microservices, databases, Redis, and the API Gateway in one command:
+```bash
+docker compose -f docker-compose.microservices.yml up --build
+```
 
-- [`MyCircleAppSuite/Server`](MyCircleAppSuite/Server)
-- [`MyCircleAppSuite/Web`](MyCircleAppSuite/Web)
-- [`MyCircleAppSuite/Mobile`](MyCircleAppSuite/Mobile)
+---
 
-## Root scripts
+## Root Scripts
 
 | Script | Description |
-| --- | --- |
-| `npm run install:all` | Install dependencies for Server, Web and Mobile |
-| `npm run dev:server` | Start the API in watch mode |
-| `npm run dev:web` | Start the Vite dev server |
+| :--- | :--- |
+| `npm run dev:server` | Start the API Gateway in watch mode |
+| `npm run dev:web` | Start the Vite React web client |
 | `npm run start:mobile` | Start the React Native Metro bundler |
-| `npm run build` | Build the web client (`build:web`) |
-| `npm run build:android` | Build the Android release APK locally (not committed) |
-| `npm run lint` | Lint the web and mobile clients |
-| `npm run lint:mobile` | Lint the mobile app only |
-| `npm run typecheck:mobile` | Type-check the mobile app |
-| `npm test` | Run the server test suite |
-| `npm run test:mobile` | Run the mobile smoke test (requires native mocks) |
-| `npm run docker:up` | Start the server stack with Docker Compose |
-| `npm run docker:down` | Stop the server stack |
-
-## Documentation
-
-Start at [`docs/README.md`](docs/README.md).
-
-## Container images
-
-The API and worker images are defined by `MyCircleAppSuite/Server/Dockerfile` and orchestrated by `MyCircleAppSuite/Server/docker-compose.yml`.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). For security issues, follow [`SECURITY.md`](SECURITY.md).
+| `npm run build:web` | Build the web production bundle |
+| `npm run lint` | Lint web and mobile codebases |
+| `npm run typecheck:mobile` | Typecheck mobile app (`tsc --noEmit`) |
+| `npm test` | Run the full Server & DSA test suite |
+| `npm run test:mobile` | Run mobile Jest test suite with native mocks |

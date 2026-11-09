@@ -263,7 +263,7 @@ const CreatePost = () => {
     return (
         <div className="min-h-screen bg-background">
             {/* Sticky step header */}
-            <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-card-border">
+            <div className="sticky top-16 z-40 border-b border-card-border bg-background">
                 <div className="max-w-lg mx-auto px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-between">
                         <button
@@ -568,12 +568,12 @@ const CreatePost = () => {
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
                                             'w-12 h-12 rounded-xl flex items-center justify-center',
-                                            locationStatus === 'found' ? 'bg-green-500/20' : 'bg-primary/20'
+                                            locationStatus === 'found' ? 'bg-success/20' : 'bg-primary/20'
                                         )}>
                                             {gettingLocation ? (
                                                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
                                             ) : locationStatus === 'found' ? (
-                                                <Check className="w-6 h-6 text-green-500" />
+                                                <Check className="w-6 h-6 text-success" />
                                             ) : (
                                                 <Navigation className="w-6 h-6 text-primary" />
                                             )}
@@ -633,7 +633,7 @@ const CreatePost = () => {
                                     </div>
                                     {formData.location && (
                                         <div className="mt-3 p-3 rounded-lg border border-primary/30 bg-primary/5 flex items-center gap-2">
-                                            <Check className="w-4 h-4 text-green-500" />
+                                            <Check className="w-4 h-4 text-success" />
                                             <span className="text-sm">{formData.location}</span>
                                         </div>
                                     )}

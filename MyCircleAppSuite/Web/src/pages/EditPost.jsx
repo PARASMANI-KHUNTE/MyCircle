@@ -284,10 +284,10 @@ const EditPost = () => {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+            <div className="sticky top-16 z-40 border-b border-card-border bg-background">
                 <div className="max-w-lg mx-auto px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-between">
-                        <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-card rounded-lg">
+                        <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-card-hover rounded-lg">
                             <X className="w-5 h-5" />
                         </button>
                         <h1 className="text-lg font-semibold">Edit Post</h1>

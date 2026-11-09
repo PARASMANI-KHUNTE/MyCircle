@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getSocketBaseUrl } from '../utils/api';
+import Loading from '../components/ui/Loading';
 import axios from 'axios';
 
 const AuthContext = createContext();
@@ -147,34 +148,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {loading ? (
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minHeight: '100vh',
-                    backgroundColor: '#0f172a',
-                    color: 'white'
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '1rem'
-                    }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            border: '3px solid rgba(139, 92, 246, 0.3)',
-                            borderTopColor: '#8b5cf6',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite'
-                        }} />
-                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                        <span>Loading...</span>
-                    </div>
-                </div>
-            ) : children}
+            {loading ? <Loading fullscreen text="Loading..." /> : children}
         </AuthContext.Provider>
     );
 };

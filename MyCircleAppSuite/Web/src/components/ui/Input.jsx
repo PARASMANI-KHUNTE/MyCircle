@@ -16,14 +16,14 @@ const Input = forwardRef(({
                 <label className="text-sm font-medium text-foreground">
                     {label}
                     {props.required && (
-                        <span className="text-muted-foreground ml-1" aria-hidden="true">*</span>
+                        <span className="text-foreground-muted ml-1" aria-hidden="true">*</span>
                     )}
                 </label>
             )}
 
             <div className="relative">
                 {Icon && (
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none">
                         <Icon className="w-4 h-4" />
                     </div>
                 )}
@@ -42,9 +42,9 @@ const Input = forwardRef(({
                         Icon && 'pl-10',
                         IconRight && 'pr-10',
                         /* Placeholder */
-                        'placeholder-opacity-50 placeholder-text-muted-foreground',
+                        'placeholder:text-input-placeholder',
                         /* Base input */
-                        'bg-background border-b border-input-border',
+                        'bg-input border border-input-border',
                         /* Focus & transition */
                         'focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10',
                         'transition-colors duration-150',
@@ -58,7 +58,7 @@ const Input = forwardRef(({
                     {...props}
                 />
                 {IconRight && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none">
                         <IconRight className="w-4 h-4" />
                     </div>
                 )}
@@ -68,7 +68,7 @@ const Input = forwardRef(({
                 <p 
                     id={props.id ? `${props.id}-error` : undefined} 
                     role="alert" 
-                    className="text-xs text-foreground-muted flex items-center gap-1"
+                    className="text-xs text-error flex items-center gap-1"
                 >
                     {error}
                 </p>

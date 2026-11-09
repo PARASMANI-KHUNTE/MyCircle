@@ -54,34 +54,7 @@ function AuthRoutes() {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        color: 'white'
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1rem'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '3px solid rgba(139, 92, 246, 0.3)',
-            borderTopColor: '#8b5cf6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <span>Loading...</span>
-        </div>
-      </div>
-    );
+    return <Loading fullscreen text="Loading..." />;
   }
 
   return (

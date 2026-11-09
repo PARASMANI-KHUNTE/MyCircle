@@ -12,6 +12,7 @@ export default {
                     DEFAULT: "rgb(var(--background) / <alpha-value>)",
                     secondary: "rgb(var(--background-secondary) / <alpha-value>)",
                     tertiary: "rgb(var(--background-tertiary) / <alpha-value>)",
+                    section: "rgb(var(--background-secondary) / <alpha-value>)",
                 },
                 foreground: {
                     DEFAULT: "rgb(var(--foreground) / <alpha-value>)",
@@ -76,6 +77,13 @@ export default {
                     hover: "rgb(var(--card-border-hover) / <alpha-value>)",
                 },
                 "muted-foreground": "rgb(var(--foreground-muted) / <alpha-value>)",
+                "hover-bg": "rgb(var(--card-hover) / <alpha-value>)",
+                text: {
+                    heading: "rgb(var(--foreground) / <alpha-value>)",
+                    body: "rgb(var(--foreground-secondary) / <alpha-value>)",
+                    muted: "rgb(var(--foreground-muted) / <alpha-value>)",
+                    primary: "rgb(var(--primary) / <alpha-value>)",
+                },
                 orange: {
                     DEFAULT: "rgb(var(--primary) / <alpha-value>)",
                     400: "rgb(var(--primary-light) / <alpha-value>)",

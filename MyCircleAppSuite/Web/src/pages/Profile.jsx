@@ -60,7 +60,10 @@ const Profile = () => {
         return () => {
             active = false;
         };
-    }, [authUser, isOwnProfile, userId, showError]);
+        // Intentionally exclude showError: it is recreated by ToastProvider
+        // and including it would re-run the fetch after every toast.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authUser, isOwnProfile, userId]);
 
     const joined = useMemo(() => {
         if (!profile?.createdAt) return '—';

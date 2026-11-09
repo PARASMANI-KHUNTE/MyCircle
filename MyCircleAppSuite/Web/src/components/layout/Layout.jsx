@@ -1,13 +1,17 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
+import { cn } from '../../utils/cn';
 
 const Layout = () => {
+    const { pathname } = useLocation();
+    const isChat = pathname.startsWith('/chat');
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
-            <main className="min-h-screen pt-16 pb-16 md:pt-16 lg:pb-0">
+            <main className={cn('min-h-screen pt-16', !isChat && 'pb-16 lg:pb-0')}>
                 <Outlet />
             </main>
             <BottomNav />

@@ -1,34 +1,33 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 const ProgressBar = ({ progress, showLabel = true, size = 'md', color = 'primary' }) => {
     const sizes = {
         sm: 'h-1',
         md: 'h-2',
-        lg: 'h-3'
+        lg: 'h-3',
     };
 
     const colors = {
         primary: 'bg-primary',
-        success: 'bg-green-500',
-        warning: 'bg-yellow-500',
-        error: 'bg-red-500'
+        success: 'bg-success',
+        warning: 'bg-warning',
+        error: 'bg-error',
     };
+
+    const value = Math.min(100, Math.max(0, Number(progress) || 0));
 
     return (
         <div className="w-full">
             {showLabel && (
-                <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-400">Progress</span>
-                    <span className="text-sm font-medium text-white">{Math.round(progress)}%</span>
+                <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm text-foreground-muted">Progress</span>
+                    <span className="text-sm font-medium text-foreground">{Math.round(value)}%</span>
                 </div>
             )}
-            <div className={`w-full bg-white/5 rounded-full overflow-hidden ${sizes[size]}`}>
-                <motion.div
-                    className={`${colors[color]} ${sizes[size]} rounded-full`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
+            <div className={`w-full overflow-hidden rounded-full bg-background-tertiary ${sizes[size]}`}>
+                <div
+                    className={`${colors[color] || colors.primary} ${sizes[size]} rounded-full transition-[width] duration-300 ease-out`}
+                    style={{ width: `${value}%` }}
                 />
             </div>
         </div>

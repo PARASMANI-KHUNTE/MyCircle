@@ -337,8 +337,8 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
     if (isDisabled) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-foreground-muted p-6 sm:p-8 text-center">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                    <X className="w-7 h-7 sm:w-8 sm:h-8 text-red-500" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
+                    <X className="w-7 h-7 sm:w-8 sm:h-8 text-error" />
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">Conversation Ended</h3>
                 <p className="text-sm mb-4 sm:mb-6 max-w-xs">This chat is no longer active because the post was deleted.</p>
@@ -372,18 +372,18 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                     <div>
                         <h3 className="font-semibold text-foreground text-sm">{otherParticipant?.displayName}</h3>
                         {otherParticipant?.isOnline && (
-                            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                            <span className="text-xs text-success font-medium flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></span>
                                 Online
                             </span>
                         )}
                     </div>
                 </div>
                 <div className="flex gap-1">
-                    <button onClick={handleBlock} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Block User">
+                    <button onClick={handleBlock} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-error hover:bg-error/10 transition-colors" title="Block User">
                         <Shield className="w-4 h-4" />
                     </button>
-                    <button onClick={handleReport} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-yellow-600 hover:bg-yellow-600/10 transition-colors" title="Report User">
+                    <button onClick={handleReport} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-warning hover:bg-warning/10 transition-colors" title="Report User">
                         <Flag className="w-4 h-4" />
                     </button>
                 </div>

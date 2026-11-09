@@ -19,9 +19,9 @@ const DialogUI = () => {
     const getIcon = () => {
         switch (type) {
             case 'confirm':
-                return <HelpCircle className="w-12 h-12 text-yellow-500" />;
+                return <HelpCircle className="w-12 h-12 text-warning" />;
             case 'alert':
-                return <AlertCircle className="w-12 h-12 text-blue-500" />;
+                return <AlertCircle className="w-12 h-12 text-info" />;
             default:
                 return null;
         }
@@ -36,19 +36,19 @@ const DialogUI = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={handleCancel}
-                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9998]"
+                        className="fixed inset-0 bg-black/70 z-[9998]"
                     />
                     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="glass-panel w-full max-w-md p-10 relative shadow-2xl"
+                            className="relative w-full max-w-md rounded-2xl border border-card-border bg-card p-6"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <button
                                 onClick={handleCancel}
-                                className="absolute top-6 right-6 text-text-muted hover:text-text-heading transition-colors"
+                                className="absolute top-4 right-4 text-foreground-muted hover:text-foreground transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -57,14 +57,14 @@ const DialogUI = () => {
                                     {getIcon()}
                                 </div>
                             )}
-                            <h2 className="text-2xl font-black text-text-heading text-center mb-3 uppercase tracking-tight">{title}</h2>
-                            <p className="text-text-body text-center mb-8 font-medium leading-relaxed">{message}</p>
+                            <h2 className="text-lg font-semibold text-foreground text-center mb-2">{title}</h2>
+                            <p className="text-sm text-foreground-secondary text-center mb-6 leading-relaxed">{message}</p>
                             {type === 'prompt' && (
                                 <input
                                     type="text"
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
-                                    className="w-full bg-card/10 border border-card-border rounded-xl px-4 py-3 text-text-heading mb-8 focus:outline-none focus:border-primary/50 shadow-inner"
+                                    className="input-modern mb-6"
                                     autoFocus
                                     onKeyPress={(e) => {
                                         if (e.key === 'Enter') handleConfirm();

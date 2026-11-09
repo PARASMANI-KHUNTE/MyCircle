@@ -42,7 +42,7 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[30]"
+                        className="fixed inset-0 bg-black/50 z-[30]"
                         aria-hidden="true"
                     />
 

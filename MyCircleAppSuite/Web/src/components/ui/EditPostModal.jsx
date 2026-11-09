@@ -37,12 +37,12 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/70">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="glass-panel w-full max-w-lg shadow-2xl overflow-hidden"
+                    className="w-full max-w-lg rounded-2xl border border-card-border bg-card overflow-hidden"
                 >
                     <div className="flex items-center justify-between p-6 border-b border-card-border bg-hover-bg/30">
                         <h2 className="text-xl font-bold text-text-heading flex items-center gap-2">

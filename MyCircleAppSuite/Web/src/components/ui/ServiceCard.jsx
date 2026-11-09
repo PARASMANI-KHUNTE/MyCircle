@@ -24,10 +24,10 @@ const ServiceCard = ({ user, searchedSkill }) => {
 
     // Badge Logic
     const getBadgeColor = (count) => {
-        if (count >= 50) return 'text-amber-500 bg-amber-500/10 border-amber-500/20'; // Gold/Master
-        if (count >= 20) return 'text-slate-400 bg-slate-400/10 border-slate-400/20'; // Silver/Expert
-        if (count >= 5) return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'; // Bronze/Proficient
-        return 'text-primary bg-primary/10 border-primary/20'; // Novice
+        if (count >= 50) return 'text-warning bg-warning/10 border-warning/20';
+        if (count >= 20) return 'text-foreground-muted bg-background-tertiary border-card-border';
+        if (count >= 5) return 'text-success bg-success/10 border-success/20';
+        return 'text-primary bg-primary/10 border-primary/20';
     };
 
     return (

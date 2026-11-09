@@ -22,29 +22,23 @@ const Button = ({
 }) => {
     const variants = {
         primary: cn(
-            'bg-primary text-primary-foreground hover:bg-primary/90',
-            'shadow-sm hover:shadow-md',
-            'active:shadow-sm'
+            'bg-primary text-primary-foreground hover:bg-primary-hover'
         ),
         secondary: cn(
-            'bg-secondary text-secondary-foreground hover:bg-secondary/90',
-            'shadow-sm hover:shadow-md',
-            'active:shadow-sm'
+            'bg-secondary text-secondary-foreground hover:bg-secondary-hover'
         ),
         outline: cn(
             'border border-input-border bg-transparent text-foreground hover:border-input-placeholder',
-            'hover:bg-input',
-            'active:bg-background-secondary'
+            'hover:bg-card-hover'
         ),
         ghost: cn(
-            'bg-transparent text-foreground-muted hover:text-foreground hover:bg-card-hover',
-            'active:bg-background-secondary'
+            'bg-transparent text-foreground-muted hover:text-foreground hover:bg-card-hover'
         ),
     };
 
     const sizeMap = {
         sm: 'px-3 py-1.5 text-sm font-medium rounded min-h-[36px]',
-        md: 'px-4.5 py-2.5 text-sm font-medium rounded-xl min-h-[44px]',
+        md: 'px-4 py-2.5 text-sm font-medium rounded-xl min-h-[44px]',
         lg: 'px-6 py-3 text-base font-medium rounded-xl min-h-[48px]',
     };
 
@@ -57,7 +51,6 @@ const Button = ({
                 'inline-flex items-center justify-center font-medium transition-colors duration-150',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                'active:scale-[0.96]',
                 variants[variant],
                 sizeMap[size],
                 className

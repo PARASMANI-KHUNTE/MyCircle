@@ -66,7 +66,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                                     />
                                 </div>
                                 {otherParticipant?.isOnline && (
-                                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background"></div>
+                                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success rounded-full border-2 border-background"></div>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -101,7 +101,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                         </button>
                         <button
                             onClick={(e) => handleDelete(e, conv._id)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-foreground-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-card/80 rounded-full backdrop-blur-sm shadow-md"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-foreground-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity bg-card rounded-full border border-card-border"
                             title="Delete Conversation"
                         >
                             <Trash2 className="w-4 h-4" />

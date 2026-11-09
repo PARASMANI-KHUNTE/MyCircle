@@ -84,9 +84,9 @@ const configs = {
     },
     like: {
         icon: Heart,
-        containerClass: 'bg-card border-pink-500/30 shadow-lg',
-        iconClass: 'text-pink-500',
-        accent: 'bg-pink-500',
+        containerClass: 'bg-card border-primary/30 shadow-lg',
+        iconClass: 'text-primary',
+        accent: 'bg-primary',
     },
     request: {
         icon: UserPlus,

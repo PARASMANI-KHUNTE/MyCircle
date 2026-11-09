@@ -1,20 +1,26 @@
 import React from 'react';
+import { cn } from '../../utils/cn';
+
+const statusStyles = {
+    active: 'bg-success/10 text-success border-success/20',
+    inactive: 'bg-background-tertiary text-foreground-muted border-card-border',
+    sold: 'bg-info/10 text-info border-info/20',
+    completed: 'bg-primary/10 text-primary border-primary/20',
+    archived: 'bg-error/10 text-error border-error/20',
+};
 
 const PostStatusBadge = ({ status, className = '' }) => {
-    const getStatusColor = (s) => {
-        switch (s) {
-            case 'active': return 'bg-green-500/10 text-green-400 border-green-500/20';
-            case 'inactive': return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-            case 'sold': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-            case 'completed': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-            case 'archived': return 'bg-red-500/10 text-red-400 border-red-500/20';
-            default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
-        }
-    };
+    const style = statusStyles[status] || statusStyles.inactive;
 
     return (
-        <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(status)} ${className}`}>
-            {status.toUpperCase()}
+        <span
+            className={cn(
+                'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide',
+                style,
+                className
+            )}
+        >
+            {status}
         </span>
     );
 };

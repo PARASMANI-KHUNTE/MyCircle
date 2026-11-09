@@ -42,14 +42,14 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="absolute inset-0 bg-background/60 backdrop-blur-sm"
+                    className="absolute inset-0 bg-background/70"
                 />
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-md glass-panel shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-md rounded-2xl border border-card-border bg-card overflow-hidden"
                 >
                     {/* Header */}
                     <div className="p-6 border-b border-card-border flex items-center justify-between bg-hover-bg/30">
@@ -65,7 +65,7 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                     {/* Search */}
                     <div className="p-4 bg-hover-bg/10">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted" />
                             <input
                                 type="text"
                                 placeholder="Search connections..."
@@ -79,7 +79,7 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                     {/* Connections List */}
                     <div className="max-h-[400px] overflow-y-auto p-2">
                         {loading ? (
-                            <div className="p-8 text-center text-gray-500">Loading connections...</div>
+                            <div className="p-8 text-center text-foreground-muted">Loading connections...</div>
                         ) : filteredConnections.length > 0 ? (
                             <div className="grid gap-1">
                                 {filteredConnections.map(user => (

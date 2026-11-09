@@ -60,7 +60,7 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
                             exit={{ opacity: 0, scale: 0.94, y: 16 }}
                             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                             className={`relative w-full ${sizes[size]} bg-card rounded-2xl border border-card-border overflow-hidden`}
-                            style={{ boxShadow: 'var(--shadow-2xl)' }}
+                            style={{ boxShadow: 'var(--shadow-lg)' }}
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}

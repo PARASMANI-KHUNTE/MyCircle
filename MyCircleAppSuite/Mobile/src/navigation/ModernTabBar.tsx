@@ -2,11 +2,13 @@ import React, { useEffect } from 'react';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { FadeInDown, FadeOutDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import Animated from 'react-native-reanimated';
-import { Home, Inbox, Map, Plus, User } from 'lucide-react-native';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Home, Inbox, Map, Plus, User, MessageCircle } from 'lucide-react-native';
+import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 
 import GlassView from '../components/ui/GlassView';
 import { useTheme } from '../context/ThemeContext';
+import { useSocket } from '../context/SocketContext';
+import api from '../services/api';
 
 const TabIcon = ({ routeName, isFocused, color }: { routeName: string; isFocused: boolean; color: string }) => {
     let Icon = Home;
@@ -51,6 +53,57 @@ const TabIcon = ({ routeName, isFocused, color }: { routeName: string; isFocused
 
 const ModernTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
     const { colors } = useTheme();
+    const { socket } = useSocket() as any;
+    const [unreadMsgCount, setUnreadMsgCount] = React.useState(0);
+    const inFlightRef = React.useRef(false);
+    const queuedRef = React.useRef(false);
+    const timeoutRef = React.useRef(null);
+
+    // Fetch unread count
+    const fetchUnreadCount = React.useCallback(async () => {
+        if (inFlightRef.current) {
+            queuedRef.current = true;
+            return;
+        }
+        inFlightRef.current = true;
+        try {
+            const res = await api.get('/chat/unread/count');
+            setUnreadMsgCount(res.data?.count || 0);
+        } catch {
+            /* silent */
+        } finally {
+            inFlightRef.current = false;
+            if (queuedRef.current) {
+                queuedRef.current = false;
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                timeoutRef.current = setTimeout(() => void fetchUnreadCount(), 150);
+            }
+        }
+    }, []);
+
+    // Set up socket listeners
+    React.useEffect(() => {
+        fetchUnreadCount();
+
+        if (!socket) return;
+
+        const handle = () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(() => void fetchUnreadCount(), 150);
+        };
+
+        socket.on('receive_message', handle);
+        socket.on('messages_read', handle);
+        socket.on('unread_count_update', handle);
+
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            socket.off('receive_message', handle);
+            socket.off('messages_read', handle);
+            socket.off('unread_count_update', handle);
+        };
+    }, [socket, fetchUnreadCount]);
+
     const focusedRoute = state.routes[state.index];
     const focusedOptions = descriptors[focusedRoute.key].options;
     const tabBarStyle = StyleSheet.flatten(focusedOptions.tabBarStyle || {}) as any;
@@ -110,9 +163,19 @@ const ModernTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                             }
                         };
 
+                        // Show badge only for Chat (Requests tab in this case)
+                        const showBadge = route.name === 'Requests' && unreadMsgCount > 0;
+
                         return (
                             <TouchableOpacity key={route.key} activeOpacity={0.8} onPress={onPress} style={styles.tabButton}>
-                                <TabIcon routeName={route.name} isFocused={isFocused} color={isFocused ? colors.primary : colors.textSecondary} />
+                                <View style={styles.iconWrapper}>
+                                    <TabIcon routeName={route.name} isFocused={isFocused} color={isFocused ? colors.primary : colors.textSecondary} />
+                                    {showBadge && (
+                                        <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                                            <Text style={styles.badgeText}>{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</Text>
+                                        </View>
+                                    )}
+                                </View>
                             </TouchableOpacity>
                         );
                     })}
@@ -160,9 +223,30 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         height: '100%',
     },
+    iconWrapper: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
     iconContainer: {
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        minWidth: 16,
+        height: 16,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '800',
     },
     dot: {
         width: 4,

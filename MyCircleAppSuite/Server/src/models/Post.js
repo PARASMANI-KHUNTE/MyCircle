@@ -12,6 +12,11 @@ const PostSchema = new mongoose.Schema({
         enum: POST_TYPES,
         required: true,
     },
+    jobType: {
+        type: String,
+        enum: ['', 'full-time', 'part-time', 'contractual', 'gig-based', 'freelance', 'internship'],
+        default: '',
+    },
     itemCategory: {
         type: String,
         enum: ['', ...ITEM_CATEGORIES],
@@ -47,7 +52,6 @@ const PostSchema = new mongoose.Schema({
         },
         coordinates: {
             type: [Number], // [longitude, latitude]
-            index: '2dsphere'
         }
     },
     images: [{
@@ -67,6 +71,10 @@ const PostSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true,
+    },
+    completedAt: {
+        type: Date,
+        default: null,
     },
     views: {
         type: Number,
@@ -193,5 +201,7 @@ PostSchema.index({ type: 1, status: 1, isActive: 1 });
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ price: 1 });
 PostSchema.index({ expiresAt: 1, status: 1, isActive: 1 });
+PostSchema.index({ locationCoords: '2dsphere' });
+PostSchema.index({ status: 1, completedAt: 1 });
 
 module.exports = mongoose.model('Post', PostSchema);

@@ -23,9 +23,11 @@ const UserSchema = new mongoose.Schema({
     },
     passwordHash: {
         type: String,
+        select: false,
     },
     passwordSalt: {
         type: String,
+        select: false,
     },
     avatar: {
         type: String,
@@ -75,6 +77,23 @@ const UserSchema = new mongoose.Schema({
     },
     lastSeenAt: {
         type: Date,
+    },
+    banned: {
+        type: Boolean,
+        default: false,
+    },
+    banReason: {
+        type: String,
+        default: null,
+    },
+    bannedAt: {
+        type: Date,
+        default: null,
+    },
+    bannedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
     },
     reports: [{
         reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

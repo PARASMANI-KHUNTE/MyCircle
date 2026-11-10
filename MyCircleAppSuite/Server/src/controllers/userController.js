@@ -285,6 +285,9 @@ exports.unblockUser = async (req, res, next) => {
 exports.getBlockedUsers = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id).populate('blockedUsers', 'displayName avatar bio location');
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
         res.json(user.blockedUsers || []);
     } catch (err) {
         return next(err);
@@ -389,7 +392,9 @@ exports.getConnections = async (req, res, next) => {
 // @route   GET /api/user/:userId
 // @access  Private
 exports.getUserById = asyncHandler(async (req, res, next) => {
-    const user = await User.findById(req.params.userId).select('-passwordHash -passwordSalt -preferences -blockedUsers');
+    // Exclude private data: moderation reports, contact details, and payout info
+    const user = await User.findById(req.params.userId)
+        .select('-passwordHash -passwordSalt -preferences -blockedUsers -reports -contactPhone -contactWhatsapp -payoutDetails');
     if (!user) {
         throw new ApiError(404, 'User not found');
     }
@@ -420,18 +425,30 @@ exports.followUser = async (req, res, next) => {
                 return res.status(400).json({ msg: 'Already following this user' });
             }
 
-        // Add to following/followers arrays
-        currentUser.following.push(userId);
-        userToFollow.followers.push(currentUserId);
+        // Add to following/followers arrays atomically ($addToSet prevents
+        // duplicate entries if two requests race past the check above)
+        const [updatedCurrentUser, updatedUserToFollow] = await Promise.all([
+            User.findByIdAndUpdate(
+                currentUserId,
+                { $addToSet: { following: userToFollow._id } },
+                { new: true }
+            ),
+            User.findByIdAndUpdate(
+                userToFollow._id,
+                { $addToSet: { followers: currentUserId } },
+                { new: true }
+            )
+        ]);
 
-        // Update stats
-        currentUser.stats.followingCount = currentUser.following.length;
-        userToFollow.stats.followersCount = userToFollow.followers.length;
+        // Update denormalized stats from the post-update array lengths
+        const followingCount = updatedCurrentUser.following.length;
+        const followersCount = updatedUserToFollow.followers.length;
+        await Promise.all([
+            User.updateOne({ _id: currentUserId }, { $set: { 'stats.followingCount': followingCount } }),
+            User.updateOne({ _id: userToFollow._id }, { $set: { 'stats.followersCount': followersCount } })
+        ]);
 
-        await currentUser.save();
-        await userToFollow.save();
-
-        res.json({ msg: 'User followed successfully', followingCount: currentUser.stats.followingCount });
+        res.json({ msg: 'User followed successfully', followingCount });
     } catch (err) {
         return next(err);
     }
@@ -513,6 +530,15 @@ exports.endorseSkill = async (req, res, next) => {
         const targetUserId = req.params.userId;
         const endorserId = req.user.id;
 
+        // Validate the skill input before using it
+        const normalizedSkill = typeof skill === 'string' ? skill.trim() : '';
+        if (!normalizedSkill) {
+            return res.status(400).json({ msg: 'Skill is required' });
+        }
+        if (normalizedSkill.length > 50) {
+            return res.status(400).json({ msg: 'Skill must be 50 characters or fewer' });
+        }
+
         if (targetUserId === endorserId) {
             return res.status(400).json({ msg: 'You cannot endorse yourself' });
         }
@@ -527,7 +553,7 @@ exports.endorseSkill = async (req, res, next) => {
             targetUser.skillEndorsements = [];
         }
 
-        let skillEntry = targetUser.skillEndorsements.find(e => e.skill.toLowerCase() === skill.toLowerCase());
+        let skillEntry = targetUser.skillEndorsements.find(e => String(e.skill || '').toLowerCase() === normalizedSkill.toLowerCase());
 
         if (skillEntry) {
             // Check if already endorsed
@@ -539,7 +565,7 @@ exports.endorseSkill = async (req, res, next) => {
         } else {
             // Add new skill endorsement
             targetUser.skillEndorsements.push({
-                skill: skill,
+                skill: normalizedSkill,
                 count: 1,
                 endorsedBy: [endorserId]
             });
@@ -574,9 +600,15 @@ exports.getServices = async (req, res, next) => {
             ];
         }
 
+        // Bound the result set (the query previously returned every user)
+        const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50);
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const skip = (page - 1) * limit;
 
         let services = await User.find(query)
             .select('displayName avatar bio skills skillEndorsements rating reviews location stats')
+            .skip(skip)
+            .limit(limit)
             .lean(); // Use lean for performance since we'll process it
 
 

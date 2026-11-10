@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
-import { AlertCircle, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, CreditCard, ShieldCheck } from 'lucide-react';
+import { 
+    AlertCircle, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, 
+    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, CreditCard, ShieldCheck,
+    Briefcase, Users, ShoppingBag, Home, Coins
+} from 'lucide-react';
 import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
@@ -48,17 +52,17 @@ const LocationPicker = ({ position, setPosition }) => {
 };
 
 const STEPS = [
-    { id: 1, title: 'Category', icon: '📋' },
-    { id: 2, title: 'Details', icon: '📝' },
-    { id: 3, title: 'Location', icon: '📍' },
-    { id: 4, title: 'Review', icon: '✓' },
+    { id: 1, title: 'Category' },
+    { id: 2, title: 'Details' },
+    { id: 3, title: 'Location' },
+    { id: 4, title: 'Review' },
 ];
 
 const CATEGORIES = [
-    { id: 'service', emoji: '💼', label: 'Earn', desc: 'Offer your skills/services' },
-    { id: 'job', emoji: '🤝', label: 'Hire', desc: 'Post a job or task' },
-    { id: 'sell', emoji: '🛒', label: 'Trade', desc: 'Sell or barter items' },
-    { id: 'rent', emoji: '🏠', label: 'Rent', desc: 'Rentals & spaces' },
+    { id: 'service', icon: Briefcase, label: 'Earn', desc: 'Offer your skills/services' },
+    { id: 'job', icon: Users, label: 'Hire', desc: 'Post a job or task' },
+    { id: 'sell', icon: ShoppingBag, label: 'Trade', desc: 'Sell or barter items' },
+    { id: 'rent', icon: Home, label: 'Rent', desc: 'Rentals & spaces' },
 ];
 
 const JOB_TYPES_LIST = JOB_TYPES.map(id => ({ id, label: id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }));
@@ -73,9 +77,9 @@ const DURATIONS = [
 ];
 
 const EXCHANGE_OPTIONS = [
-    { id: 'money', label: 'Money', icon: '💰', desc: 'Cash payment' },
-    { id: 'barter', label: 'Barter', icon: '🔄', desc: 'Item exchange' },
-    { id: 'flexible', label: 'Flexible', icon: '💳', desc: 'Either accepted' },
+    { id: 'money', label: 'Cash / Online', icon: CreditCard, desc: 'Direct payment' },
+    { id: 'barter', label: 'Barter', icon: ArrowLeftRight, desc: 'Item exchange' },
+    { id: 'flexible', label: 'Flexible', icon: Coins, desc: 'Either accepted' },
 ];
 
 const CreatePost = () => {
@@ -323,28 +327,37 @@ const CreatePost = () => {
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {CATEGORIES.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, type: cat.id })}
-                                        className={cn(
-                                            'p-5 rounded-2xl border text-left transition-all duration-200 relative overflow-hidden group',
-                                            formData.type === cat.id
-                                                ? 'border-primary bg-primary/8 shadow-md'
-                                                : 'border-card-border bg-card hover:border-primary/50 hover:bg-card-hover'
-                                        )}
-                                    >
-                                        {formData.type === cat.id && (
-                                            <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                                <Check className="w-3 h-3 text-primary-foreground" />
+                                {CATEGORIES.map(cat => {
+                                    const Icon = cat.icon;
+                                    const isSelected = formData.type === cat.id;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, type: cat.id })}
+                                            className={cn(
+                                                'p-4 rounded-xl border text-left transition-all duration-150 relative overflow-hidden group',
+                                                isSelected
+                                                    ? 'border-primary bg-primary/5 text-foreground shadow-sm ring-1 ring-primary/20'
+                                                    : 'border-card-border bg-card text-foreground-secondary hover:border-card-border-hover hover:bg-card-hover'
+                                            )}
+                                        >
+                                            {isSelected && (
+                                                <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                                                    <Check className="w-2.5 h-2.5 text-primary-foreground stroke-[3]" />
+                                                </div>
+                                            )}
+                                            <div className={cn(
+                                                'w-9 h-9 rounded-lg flex items-center justify-center mb-3 transition-colors',
+                                                isSelected ? 'bg-primary/10 text-primary' : 'bg-background-secondary text-foreground-muted group-hover:text-foreground'
+                                            )}>
+                                                <Icon className="w-4 h-4" />
                                             </div>
-                                        )}
-                                        <span className="text-3xl mb-3 block">{cat.emoji}</span>
-                                        <h3 className="font-bold text-base">{cat.label}</h3>
-                                        <p className="text-xs text-foreground-muted mt-0.5 leading-snug">{cat.desc}</p>
-                                    </button>
-                                ))}
+                                            <h3 className="font-semibold text-sm text-foreground">{cat.label}</h3>
+                                            <p className="text-xs text-foreground-muted mt-0.5 leading-snug">{cat.desc}</p>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </motion.div>
                     )}
@@ -455,23 +468,33 @@ const CreatePost = () => {
 
                             <div>
                                 <label className="text-sm font-medium">Exchange</label>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
-                                    {EXCHANGE_OPTIONS.map(opt => (
-                                        <button
-                                            key={opt.id}
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, exchangePreference: opt.id }))}
-                                            className={cn(
-                                                'px-2 py-2 rounded-lg border text-xs text-center transition-all',
-                                                formData.exchangePreference === opt.id
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-border hover:border-primary/50'
-                                            )}
-                                        >
-                                            <span className="block text-lg mb-0.5">{opt.icon}</span>
-                                            {opt.label}
-                                        </button>
-                                    ))}
+                                <div className="grid grid-cols-3 gap-2 mt-1.5">
+                                    {EXCHANGE_OPTIONS.map(opt => {
+                                        const Icon = opt.icon;
+                                        const isSelected = formData.exchangePreference === opt.id;
+                                        return (
+                                            <button
+                                                key={opt.id}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, exchangePreference: opt.id }))}
+                                                className={cn(
+                                                    'p-3 rounded-xl border text-center transition-all',
+                                                    isSelected
+                                                        ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary/20'
+                                                        : 'border-card-border bg-card text-foreground-muted hover:border-card-border-hover hover:text-foreground'
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    'w-7 h-7 mx-auto rounded-lg flex items-center justify-center mb-1.5 transition-colors',
+                                                    isSelected ? 'bg-primary/10 text-primary' : 'bg-background-secondary text-foreground-muted'
+                                                )}>
+                                                    <Icon className="w-3.5 h-3.5" />
+                                                </div>
+                                                <p className="text-xs font-semibold text-foreground">{opt.label}</p>
+                                                <p className="text-[10px] text-foreground-muted mt-0.5">{opt.desc}</p>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -715,14 +738,22 @@ const CreatePost = () => {
                                 <p className="text-sm text-foreground-muted">Make sure everything looks good before publishing</p>
                             </div>
 
-                            <div className="p-5 rounded-2xl border border-card-border bg-background-secondary space-y-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-2xl">{CATEGORIES.find(c => c.id === formData.type)?.emoji}</span>
-                                    <span className="font-medium">{formData.type}</span>
-                                    {formData.isUrgent && (
-                                        <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-500 text-xs">Urgent</span>
-                                    )}
-                                </div>
+                            <div className="p-5 rounded-2xl border border-card-border bg-card space-y-3">
+                                {(() => {
+                                    const selectedCat = CATEGORIES.find(c => c.id === formData.type);
+                                    const CatIcon = selectedCat?.icon || Briefcase;
+                                    return (
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                                                <CatIcon className="w-4 h-4" />
+                                            </div>
+                                            <span className="font-semibold text-sm text-foreground capitalize">{selectedCat?.label || formData.type}</span>
+                                            {formData.isUrgent && (
+                                                <span className="px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium border border-warning/20">Urgent</span>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                                 <div>
                                     <h3 className="text-lg font-semibold">{formData.title || 'Untitled'}</h3>
                                     <p className="text-sm text-foreground-muted mt-1 leading-relaxed line-clamp-3">{formData.description}</p>

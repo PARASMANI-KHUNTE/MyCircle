@@ -1,10 +1,21 @@
+// PM2 process configuration.
+//
+// The API server intentionally runs as a single fork-mode instance:
+// - Socket.io sessions live in this process (no Redis adapter is configured),
+//   so cluster mode would break real-time delivery across instances.
+// - In-process cron jobs (post expiry, chat cleanup, archival) must run
+//   exactly once; multiple instances would duplicate notifications.
+//
+// To scale horizontally later: add @socket.io/redis-adapter, set
+// ENABLE_CRON=false on all but one server instance, then switch back
+// to cluster mode.
 module.exports = {
   apps: [
     {
       name: 'mycircle-server',
       script: 'server.js',
-      instances: 'max',
-      exec_mode: 'cluster',
+      instances: 1,
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 5000,
@@ -18,13 +29,18 @@ module.exports = {
       max_restarts: 10,
       min_uptime: '10s',
       listen_timeout: 8000,
-      kill_timeout: 5000,
+      // Must exceed the 10s graceful-shutdown budget inside server.js,
+      // otherwise PM2 SIGKILLs mid-shutdown.
+      kill_timeout: 15000,
     },
     {
       name: 'mycircle-worker',
       script: 'src/workers/index.js',
-      instances: 2,
-      exec_mode: 'cluster',
+      // One instance is enough: each worker process already runs all four
+      // BullMQ workers with their own concurrency settings. Scale by raising
+      // `instances` — Redis distributes jobs safely across worker processes.
+      instances: 1,
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
       },
@@ -34,6 +50,8 @@ module.exports = {
       merge_logs: true,
       max_memory_restart: '512M',
       autorestart: true,
+      // Must exceed the 10s worker shutdown budget inside src/workers/index.js.
+      kill_timeout: 12000,
     },
   ],
 };

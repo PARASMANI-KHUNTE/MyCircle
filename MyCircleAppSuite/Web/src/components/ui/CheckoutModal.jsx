@@ -130,7 +130,7 @@ const CheckoutModal = ({
                         email: currentUser?.email || '',
                     },
                     theme: {
-                        color: '#6366f1',
+                        color: '#F59E0B',
                     },
                     handler: async (response) => {
                         try {
@@ -345,25 +345,27 @@ const CheckoutModal = ({
                                         type="button"
                                         onClick={() => setPaymentTiming('escrow')}
                                         className={cn(
-                                            'p-2 rounded-lg border text-left text-xs transition-all',
+                                            'p-2.5 rounded-xl border text-left text-xs transition-all flex items-center gap-2',
                                             paymentTiming === 'escrow'
                                                 ? 'border-primary bg-primary/10 text-foreground font-semibold'
-                                                : 'border-border text-foreground-muted hover:border-primary/40'
+                                                : 'border-card-border bg-card text-foreground-muted hover:border-primary/40'
                                         )}
                                     >
-                                        🛡️ Escrow Hold
+                                        <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                                        <span>Escrow Hold</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setPaymentTiming('advance')}
                                         className={cn(
-                                            'p-2 rounded-lg border text-left text-xs transition-all',
+                                            'p-2.5 rounded-xl border text-left text-xs transition-all flex items-center gap-2',
                                             paymentTiming === 'advance'
                                                 ? 'border-primary bg-primary/10 text-foreground font-semibold'
-                                                : 'border-border text-foreground-muted hover:border-primary/40'
+                                                : 'border-card-border bg-card text-foreground-muted hover:border-primary/40'
                                         )}
                                     >
-                                        ⚡ Direct Advance
+                                        <Zap className="h-4 w-4 text-warning shrink-0" />
+                                        <span>Direct Advance</span>
                                     </button>
                                 </div>
                             </div>

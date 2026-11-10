@@ -1,8 +1,8 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
-const sharp = require('sharp');
 const path = require('path');
+const ApiError = require('../utils/ApiError');
 
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
@@ -29,7 +29,8 @@ const fileFilter = (req, file, cb) => {
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb(new Error('Only image files (JPEG, PNG, WEBP) are allowed'));
+        // Use ApiError so the error handler returns a 400 instead of a 500
+        cb(new ApiError(400, 'Only image files (JPEG, PNG, WEBP) are allowed'));
     }
 };
 

@@ -31,6 +31,9 @@ const errorHandler = (err, req, res, next) => {
         } else if (error.name === 'TokenExpiredError') {
             statusCode = 401;
             message = 'Authentication token expired';
+        } else if (error.name === 'ZodError') {
+            statusCode = 400;
+            message = error.issues?.map(issue => issue.message).join(', ') || 'Validation failed';
         } else if (error.name === 'MulterError') {
             statusCode = 400;
             if (error.code === 'LIMIT_FILE_SIZE') message = 'File size too large. Max 5MB';

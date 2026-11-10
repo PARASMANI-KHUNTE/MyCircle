@@ -1,6 +1,6 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
-const { createNotification } = require('./notificationController');
+const { sendNotification } = require('./notificationController');
 const Conversation = require('../models/Conversation');
 const { db } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
@@ -66,7 +66,9 @@ exports.createPost = asyncHandler(async (req, res) => {
                 imagePath: img,
                 action: 'optimize',
                 postId: null,
-            }, { priority: 2 });
+            }, { priority: 2 }).catch(err => {
+                console.error(`Image optimization job failed for ${img}:`, err.message);
+            });
         }
     }
 
@@ -107,7 +109,7 @@ exports.createPost = asyncHandler(async (req, res) => {
         io.emit('new_post', populatedPost);
     }
 
-    res.json(post);
+    res.status(201).json(post);
 });
 
 // @desc    Get all posts
@@ -402,7 +404,7 @@ exports.deletePost = async (req, res, next) => {
 
         // Check user
         if (post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(403).json({ msg: 'User not authorized' });
         }
 
         // Cascade Delete: Remove related data
@@ -513,7 +515,7 @@ exports.togglePostStatus = async (req, res, next) => {
 
         // Check user authorization
         if (post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(403).json({ msg: 'User not authorized' });
         }
 
         // Toggle the isActive status
@@ -549,7 +551,7 @@ exports.updatePost = async (req, res, next) => {
 
         // Check user authorization
         if (post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(403).json({ msg: 'User not authorized' });
         }
 
         const {
@@ -744,7 +746,7 @@ exports.likePost = async (req, res, next) => {
             });
 
             if (!recentNotification) {
-                await createNotification(io, {
+                await sendNotification(io, {
                     recipient: post.user,
                     sender: req.user.id,
                     type: 'like',
@@ -845,7 +847,7 @@ exports.updatePostStatus = async (req, res, next) => {
 
         // Check user authorization
         if (post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(403).json({ msg: 'User not authorized' });
         }
 
         post.status = status;
@@ -893,7 +895,7 @@ exports.getPostAnalytics = async (req, res, next) => {
 
         // Check user authorization
         if (post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(403).json({ msg: 'User not authorized' });
         }
 
         res.json({
@@ -919,6 +921,16 @@ exports.commentOnPost = async (req, res, next) => {
         if (!post) {
             return res.status(404).json({ msg: 'Post not found' });
         }
+
+        // Validate comment text
+        const text = typeof req.body.text === 'string' ? req.body.text.trim() : '';
+        if (!text) {
+            return res.status(400).json({ msg: 'Comment text is required' });
+        }
+        if (text.length > 2000) {
+            return res.status(400).json({ msg: 'Comment too long (max 2000 characters)' });
+        }
+        req.body.text = text;
 
         // Check for profanity in comment
         if (containsProfanity(req.body.text)) {
@@ -957,7 +969,7 @@ exports.commentOnPost = async (req, res, next) => {
             const postTitle = post.title.length > 25 ? post.title.substring(0, 25) + '...' : post.title;
 
             const io = req.app.get('io');
-            await createNotification(io, {
+            await sendNotification(io, {
                 recipient: post.user,
                 sender: req.user.id,
                 type: 'comment',
@@ -994,7 +1006,7 @@ exports.deleteComment = async (req, res, next) => {
 
         // Check user
         if (comment.user.toString() !== req.user.id && post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(403).json({ msg: 'User not authorized' });
         }
 
         // Get remove index
@@ -1029,11 +1041,23 @@ exports.editComment = async (req, res, next) => {
 
         // Check user authorization
         if (comment.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(403).json({ msg: 'User not authorized' });
+        }
+
+        // Validate and moderate the updated text
+        const text = typeof req.body.text === 'string' ? req.body.text.trim() : '';
+        if (!text) {
+            return res.status(400).json({ msg: 'Comment text is required' });
+        }
+        if (text.length > 2000) {
+            return res.status(400).json({ msg: 'Comment too long (max 2000 characters)' });
+        }
+        if (containsProfanity(text)) {
+            return res.status(400).json({ msg: 'Comment contains inappropriate language. Please be respectful.' });
         }
 
         // Update comment text
-        comment.text = req.body.text;
+        comment.text = text;
         await post.save();
 
         // Return updated comment with populated user
@@ -1062,6 +1086,16 @@ exports.replyToComment = async (req, res, next) => {
         if (!comment) {
             return res.status(404).json({ msg: 'Comment not found' });
         }
+
+        // Validate reply text
+        const replyText = typeof req.body.text === 'string' ? req.body.text.trim() : '';
+        if (!replyText) {
+            return res.status(400).json({ msg: 'Reply text is required' });
+        }
+        if (replyText.length > 2000) {
+            return res.status(400).json({ msg: 'Reply too long (max 2000 characters)' });
+        }
+        req.body.text = replyText;
 
         // Check for profanity in reply
         if (containsProfanity(req.body.text)) {
@@ -1109,7 +1143,7 @@ exports.replyToComment = async (req, res, next) => {
                 const sender = await User.findById(req.user.id);
                 const senderName = sender ? sender.displayName : 'Someone';
 
-                await createNotification(io, {
+                await sendNotification(io, {
                     recipient: comment.user,
                     sender: req.user.id,
                     type: 'request', // Using 'request' as generic 'reply' or add 'reply' to enum

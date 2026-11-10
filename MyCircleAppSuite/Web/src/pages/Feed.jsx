@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Plus, Users, MapPin } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Users, MapPin, Sparkles, ArrowRight, ShieldCheck, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import PostCard from '../components/ui/PostCard';
@@ -12,11 +12,13 @@ import { getAvatarUrl } from '../utils/avatar';
 import { cn } from '../utils/cn';
 
 const CATEGORIES = [
-    { id: 'all', label: 'All' },
+    { id: 'all', label: 'All Listings' },
+    { id: 'sell', label: 'For Sale' },
     { id: 'service', label: 'Services' },
     { id: 'hire', label: 'Hiring' },
-    { id: 'trade', label: 'Trade' },
-    { id: 'rent', label: 'Rent' },
+    { id: 'rent', label: 'Rentals' },
+    { id: 'barter', label: 'Barter' },
+    { id: 'request', label: 'Requests' },
 ];
 
 const SORT_OPTIONS = [
@@ -26,8 +28,8 @@ const SORT_OPTIONS = [
 
 const PEOPLE_SORT_OPTIONS = [
     { id: 'relevance', label: 'Relevance' },
-    { id: 'rating', label: 'Rating' },
-    { id: 'endorsements', label: 'Endorsements' },
+    { id: 'rating', label: 'Top Rated' },
+    { id: 'endorsements', label: 'Endorsed' },
 ];
 
 const PersonCard = ({ person }) => {
@@ -36,38 +38,38 @@ const PersonCard = ({ person }) => {
     return (
         <Link
             to={`/profile?userId=${person._id}`}
-            className="flex flex-col rounded-2xl border border-card-border bg-card p-4 transition-colors hover:border-card-border-hover hover:bg-card-hover"
+            className="group flex flex-col rounded-2xl border border-card-border bg-card p-4 transition-all duration-200 hover:border-card-border-hover hover:shadow-sm"
         >
             <div className="flex items-center gap-3">
                 <img
                     src={getAvatarUrl(person)}
                     alt={person.displayName || 'User'}
-                    className="h-12 w-12 rounded-full object-cover"
+                    className="h-11 w-11 rounded-full object-cover border border-card-border"
                 />
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">
+                    <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                         {person.displayName || 'User'}
                     </p>
-                    <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-foreground-muted">
-                        <MapPin className="h-3 w-3" />
-                        {person.location || 'Location not set'}
+                    <p className="inline-flex items-center gap-1 text-[11px] text-foreground-muted">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{person.location || 'Location not set'}</span>
                     </p>
                 </div>
             </div>
 
             {person.bio && (
-                <p className="mt-3 line-clamp-2 text-sm text-foreground-secondary">{person.bio}</p>
+                <p className="mt-2.5 line-clamp-2 text-xs leading-relaxed text-foreground-muted">{person.bio}</p>
             )}
 
             {skills.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-3 flex flex-wrap gap-1">
                     {skills.map((skill) => {
                         const name = typeof skill === 'string' ? skill : skill?.name;
                         if (!name) return null;
                         return (
                             <span
                                 key={name}
-                                className="rounded-full border border-card-border bg-background-secondary px-2 py-0.5 text-[11px] font-medium text-foreground-muted"
+                                className="rounded-md border border-card-border/80 bg-background-secondary px-2 py-0.5 text-[10px] font-medium text-foreground-muted"
                             >
                                 {name}
                             </span>
@@ -76,8 +78,11 @@ const PersonCard = ({ person }) => {
                 </div>
             )}
 
-            <div className="mt-auto flex items-center gap-3 pt-3 text-xs text-foreground-muted">
-                {person.rating > 0 && <span>{Number(person.rating).toFixed(1)} rating</span>}
+            <div className="mt-auto flex items-center justify-between pt-3 border-t border-card-border/60 text-[11px] text-foreground-muted">
+                <div className="flex items-center gap-1 text-primary font-semibold">
+                    <Star className="h-3 w-3 fill-primary" />
+                    <span>{person.rating > 0 ? Number(person.rating).toFixed(1) : 'New'}</span>
+                </div>
                 {person.stats?.followersCount > 0 && (
                     <span>{person.stats.followersCount} followers</span>
                 )}
@@ -136,7 +141,7 @@ const Feed = () => {
             const res = await api.get('/user/services', { params });
             setPeople(Array.isArray(res.data) ? res.data : []);
         } catch {
-            setPeopleError('Could not load people. Please try again.');
+            setPeopleError('Could not load community members.');
             setPeople([]);
         } finally {
             setPeopleLoading(false);
@@ -144,13 +149,13 @@ const Feed = () => {
     }, [peopleSort, skillTerm]);
 
     useEffect(() => {
-        const timer = window.setTimeout(fetchPosts, 250);
+        const timer = window.setTimeout(fetchPosts, 200);
         return () => window.clearTimeout(timer);
     }, [fetchPosts]);
 
     useEffect(() => {
         if (tab !== 'people') return undefined;
-        const timer = window.setTimeout(fetchPeople, 250);
+        const timer = window.setTimeout(fetchPeople, 200);
         return () => window.clearTimeout(timer);
     }, [tab, fetchPeople]);
 
@@ -168,14 +173,17 @@ const Feed = () => {
     const hasPosts = posts.length > 0;
 
     const emptyState = useMemo(() => (
-        <div className="col-span-full rounded-2xl border border-dashed border-card-border px-6 py-16 text-center">
-            <p className="text-sm font-medium text-foreground">No posts yet</p>
-            <p className="mt-1 text-sm text-foreground-muted">
-                Be the first to offer a service, hire someone, or trade an item.
+        <div className="col-span-full rounded-2xl border border-dashed border-card-border p-12 text-center">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Plus className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">No listings found</p>
+            <p className="mt-1 text-xs text-foreground-muted max-w-sm mx-auto">
+                Be the first in your circle to list an item, offer a service, or post a request.
             </p>
             <Link to="/create-post" className="mt-4 inline-block">
-                <Button size="sm">
-                    <Plus className="mr-1.5 h-4 w-4" />
+                <Button size="sm" className="gap-1.5 text-xs font-semibold">
+                    <Plus className="h-3.5 w-3.5" />
                     Create a post
                 </Button>
             </Link>
@@ -184,78 +192,83 @@ const Feed = () => {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-                <header className="mb-6">
-                    <h1 className="text-2xl font-semibold text-foreground">Explore</h1>
-                    <p className="mt-1 text-sm text-foreground-muted">
-                        Discover services, opportunities, and people near you.
-                    </p>
-                </header>
+            <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8 space-y-5">
+                {/* Header & View Switcher */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                    <div>
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">Marketplace</h1>
+                        <p className="text-xs text-foreground-muted">
+                            Explore verified items, local skills, and community peers.
+                        </p>
+                    </div>
 
-                <div className="mb-5 flex gap-1 rounded-xl border border-card-border bg-background-secondary p-1 sm:w-fit">
-                    {[
-                        { id: 'posts', label: 'Posts' },
-                        { id: 'people', label: 'People' },
-                    ].map((item) => (
-                        <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => setTab(item.id)}
-                            className={cn(
-                                'flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors sm:flex-none',
-                                tab === item.id
-                                    ? 'bg-card text-foreground shadow-sm'
-                                    : 'text-foreground-muted hover:text-foreground'
-                            )}
-                        >
-                            {item.label}
-                        </button>
-                    ))}
+                    <div className="flex items-center gap-1 self-start sm:self-auto bg-secondary/70 border border-card-border/60 p-1 rounded-xl">
+                        {[
+                            { id: 'posts', label: 'Listings' },
+                            { id: 'people', label: 'People' },
+                        ].map((item) => (
+                            <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setTab(item.id)}
+                                className={cn(
+                                    'rounded-lg px-3.5 py-1 text-xs font-medium transition-all duration-150',
+                                    tab === item.id
+                                        ? 'bg-card text-foreground font-semibold shadow-sm border border-card-border/80'
+                                        : 'text-foreground-muted hover:text-foreground'
+                                )}
+                            >
+                                {item.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {tab === 'posts' ? (
                     <>
-                        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <div className="relative flex-1">
-                                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
+                        {/* Search and Filters */}
+                        <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                            <div className="relative flex-1 w-full">
+                                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted" />
                                 <input
                                     type="search"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    placeholder="Search posts, services, items..."
-                                    className="input-modern pl-9"
-                                    aria-label="Search posts"
+                                    placeholder="Search listings, keywords, items, services..."
+                                    className="w-full h-9 rounded-xl border border-input-border bg-card px-3 pl-8 text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                                    aria-label="Search listings"
                                 />
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowFilters((v) => !v)}
                                 className={cn(
-                                    'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition-colors',
+                                    'h-9 px-3.5 inline-flex items-center gap-1.5 rounded-xl border text-xs font-medium transition-colors shrink-0 w-full sm:w-auto justify-center',
                                     showFilters
                                         ? 'border-primary/40 bg-primary/10 text-primary'
-                                        : 'border-card-border text-foreground-muted hover:text-foreground'
+                                        : 'border-card-border bg-card text-foreground-muted hover:text-foreground hover:bg-card-hover'
                                 )}
                                 aria-expanded={showFilters}
                             >
-                                <SlidersHorizontal className="h-4 w-4" />
-                                Filters
+                                <SlidersHorizontal className="h-3.5 w-3.5" />
+                                <span>Filter &amp; Sort</span>
                             </button>
                         </div>
 
+                        {/* Filter Drawer */}
                         {showFilters && (
-                            <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-card-border bg-card p-3">
-                                <span className="mr-1 text-xs font-medium text-foreground-muted">Sort</span>
+                            <div className="rounded-xl border border-card-border bg-card/60 p-3 flex flex-wrap items-center gap-2 text-xs">
+                                <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted mr-1">Sort:</span>
                                 {SORT_OPTIONS.map((option) => (
                                     <button
                                         key={option.id}
                                         type="button"
                                         onClick={() => setSort(option.id)}
                                         className={cn(
-                                            'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                                            'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                                             sort === option.id
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'text-foreground-muted hover:bg-card-hover hover:text-foreground'
+                                                ? 'bg-secondary text-foreground font-semibold border border-card-border'
+                                                : 'text-foreground-muted hover:text-foreground hover:bg-card-hover'
                                         )}
                                     >
                                         {option.label}
@@ -264,17 +277,18 @@ const Feed = () => {
                             </div>
                         )}
 
-                        <div className="mb-5 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {/* Category Chips */}
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                             {CATEGORIES.map((item) => (
                                 <button
                                     key={item.id}
                                     type="button"
                                     onClick={() => setCategory(item.id)}
                                     className={cn(
-                                        'shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                                        'shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-150',
                                         category === item.id
-                                            ? 'border-primary bg-primary text-primary-foreground'
-                                            : 'border-card-border text-foreground-muted hover:border-card-border-hover hover:text-foreground'
+                                            ? 'border-primary bg-primary text-primary-foreground font-semibold shadow-xs'
+                                            : 'border-card-border bg-card text-foreground-muted hover:border-card-border-hover hover:text-foreground'
                                     )}
                                 >
                                     {item.label}
@@ -283,14 +297,15 @@ const Feed = () => {
                         </div>
 
                         {error && (
-                            <div className="mb-4 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+                            <div className="rounded-xl border border-error/30 bg-error/10 px-3.5 py-2.5 text-xs text-error">
                                 {error}
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {/* Listings Grid */}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                             {loading
-                                ? Array.from({ length: 6 }).map((_, i) => <PostSkeleton key={i} />)
+                                ? Array.from({ length: 8 }).map((_, i) => <PostSkeleton key={i} />)
                                 : hasPosts
                                     ? posts.map((post) => (
                                         <PostCard
@@ -304,29 +319,30 @@ const Feed = () => {
                     </>
                 ) : (
                     <>
-                        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <div className="relative flex-1">
-                                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
+                        {/* People Tab */}
+                        <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                            <div className="relative flex-1 w-full">
+                                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted" />
                                 <input
                                     type="search"
                                     value={skillTerm}
                                     onChange={(e) => setSkillTerm(e.target.value)}
-                                    placeholder="Search people by skill, e.g. plumbing"
-                                    className="input-modern pl-9"
+                                    placeholder="Search people by skill (e.g. Photography, React, Tutoring)..."
+                                    className="w-full h-9 rounded-xl border border-input-border bg-card px-3 pl-8 text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
                                     aria-label="Search people by skill"
                                 />
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-1 self-start sm:self-auto">
                                 {PEOPLE_SORT_OPTIONS.map((option) => (
                                     <button
                                         key={option.id}
                                         type="button"
                                         onClick={() => setPeopleSort(option.id)}
                                         className={cn(
-                                            'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                                            'h-9 rounded-xl px-3 py-1 text-xs font-medium transition-colors border',
                                             peopleSort === option.id
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'border border-card-border text-foreground-muted hover:bg-card-hover hover:text-foreground'
+                                                ? 'bg-secondary border-card-border text-foreground font-semibold'
+                                                : 'border-card-border bg-card text-foreground-muted hover:text-foreground hover:bg-card-hover'
                                         )}
                                     >
                                         {option.label}
@@ -336,25 +352,25 @@ const Feed = () => {
                         </div>
 
                         {peopleError && (
-                            <div className="mb-4 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+                            <div className="rounded-xl border border-error/30 bg-error/10 px-3.5 py-2.5 text-xs text-error">
                                 {peopleError}
                             </div>
                         )}
 
                         {peopleLoading ? (
                             <div className="flex justify-center py-16">
-                                <Loading text="Loading people..." />
+                                <Loading text="Finding community peers..." />
                             </div>
                         ) : people.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-card-border px-6 py-16 text-center">
-                                <Users className="mx-auto mb-3 h-8 w-8 text-foreground-muted/50" />
-                                <p className="text-sm font-medium text-foreground">No people found</p>
-                                <p className="mt-1 text-sm text-foreground-muted">
-                                    Try a different skill or clear your search.
+                            <div className="rounded-2xl border border-dashed border-card-border p-12 text-center">
+                                <Users className="mx-auto mb-3 h-8 w-8 text-foreground-muted/40" />
+                                <p className="text-sm font-semibold text-foreground">No peers found</p>
+                                <p className="mt-1 text-xs text-foreground-muted">
+                                    Try searching for a different skill or clear filters.
                                 </p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                                 {people.map((person) => (
                                     <PersonCard key={person._id} person={person} />
                                 ))}

@@ -13,10 +13,10 @@ const Input = forwardRef(({
     return (
         <div className="flex flex-col gap-1.5 w-full">
             {label && (
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                     {label}
                     {props.required && (
-                        <span className="text-foreground-muted ml-1" aria-hidden="true">*</span>
+                        <span className="text-primary ml-1" aria-hidden="true">*</span>
                     )}
                 </label>
             )}
@@ -37,22 +37,15 @@ const Input = forwardRef(({
                             : undefined
                     }
                     className={cn(
-                        /* Layout & sizing — min 44px touch target */
-                        'w-full rounded-lg px-3.5 py-2.5 text-sm text-foreground min-h-[44px]',
-                        Icon && 'pl-10',
-                        IconRight && 'pr-10',
-                        /* Placeholder */
-                        'placeholder:text-input-placeholder',
-                        /* Base input */
+                        'w-full rounded-xl px-3.5 py-2 text-sm text-foreground h-10',
+                        Icon && 'pl-9',
+                        IconRight && 'pr-9',
+                        'placeholder:text-input-placeholder placeholder:text-xs',
                         'bg-input border border-input-border',
-                        /* Focus & transition */
-                        'focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10',
-                        'transition-colors duration-150',
-                        /* Error state */
-                        error && 'border-error focus:ring-error/10',
-                        /* Disabled state */
+                        'focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20',
+                        'transition-all duration-150',
+                        error && 'border-error focus:border-error focus:ring-error/20',
                         'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-card/50',
-                        'disabled:focus:ring-0 disabled:cursor-not-allowed',
                         className
                     )}
                     {...props}
@@ -64,23 +57,22 @@ const Input = forwardRef(({
                 )}
             </div>
 
-            {error && (
+            {error ? (
                 <p 
                     id={props.id ? `${props.id}-error` : undefined} 
                     role="alert" 
-                    className="text-xs text-error flex items-center gap-1"
+                    className="text-xs text-error font-medium"
                 >
                     {error}
                 </p>
-            )}
-            {helperText && !error && (
+            ) : helperText ? (
                 <p 
                     id={props.id ? `${props.id}-helper` : undefined} 
-                    className="text-xs text-foreground-muted"
+                    className="text-[11px] text-foreground-muted"
                 >
                     {helperText}
                 </p>
-            )}
+            ) : null}
         </div>
     );
 });

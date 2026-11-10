@@ -70,4 +70,26 @@ WalletSchema.methods.refundEscrow = async function (amount) {
     return this.save();
 };
 
+// Atomically debit pending (escrowed) funds. Returns null when the wallet
+// does not hold enough pending balance, which prevents concurrent releases
+// from double-spending the same funds.
+WalletSchema.statics.debitPending = async function (userId, amount) {
+    if (amount <= 0) throw new Error('Amount must be positive');
+    return this.findOneAndUpdate(
+        { user: userId, pendingBalance: { $gte: amount } },
+        { $inc: { pendingBalance: -amount } },
+        { new: true }
+    );
+};
+
+// Atomically credit spendable balance (upserts the wallet if missing)
+WalletSchema.statics.creditBalance = async function (userId, amount) {
+    if (amount <= 0) throw new Error('Amount must be positive');
+    return this.findOneAndUpdate(
+        { user: userId },
+        { $inc: { balance: amount } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+};
+
 module.exports = mongoose.model('Wallet', WalletSchema);

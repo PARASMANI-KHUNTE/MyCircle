@@ -94,7 +94,7 @@ const AdminReports = () => {
 
 
 
-  const fetchReports = async () => {
+  const fetchReports = React.useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -115,11 +115,11 @@ const AdminReports = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, search, statusFilter, categoryFilter]);
 
   useEffect(() => {
     fetchReports();
-  }, [currentPage, search, statusFilter, categoryFilter]);
+  }, [fetchReports]);
 
   const handleAction = async (reportId, action, data = {}) => {
     setActionLoading(reportId);

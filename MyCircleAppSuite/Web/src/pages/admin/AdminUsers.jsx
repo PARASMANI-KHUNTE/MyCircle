@@ -42,7 +42,7 @@ const AdminUsers = () => {
 
 
 
-  const fetchUsers = async () => {
+  const fetchUsers = React.useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -63,11 +63,11 @@ const AdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, search, roleFilter, statusFilter]);
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, search, roleFilter, statusFilter]);
+  }, [fetchUsers]);
 
   const handleAction = async (userId, action, data = {}) => {
     setActionLoading(userId);

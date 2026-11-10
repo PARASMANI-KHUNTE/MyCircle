@@ -35,6 +35,7 @@ export type WebRoutePath =
     | '/explore'
     | '/welcome'
     | '/login'
+    | '/register'
     | '/login/success'
     | '/create-post'
     | '/edit-post/:id'
@@ -47,6 +48,7 @@ export type WebRoutePath =
     | '/chat'
     | '/settings'
     | '/blocked-users'
+    | '/wallet'
     | '*';
 
 export const webToMobileRouteMap: Record<WebRoutePath, string> = {
@@ -54,6 +56,7 @@ export const webToMobileRouteMap: Record<WebRoutePath, string> = {
     '/explore': 'MainTabs > Feed',
     '/welcome': 'Welcome',
     '/login': 'Login',
+    '/register': 'Register',
     '/login/success': 'LoginSuccess',
     '/create-post': 'MainTabs > CreatePost',
     '/edit-post/:id': 'EditPost',
@@ -66,6 +69,7 @@ export const webToMobileRouteMap: Record<WebRoutePath, string> = {
     '/chat': 'ChatList',
     '/settings': 'Settings',
     '/blocked-users': 'BlockedUsers',
+    '/wallet': 'Wallet',
     '*': 'NotFound',
 };
 

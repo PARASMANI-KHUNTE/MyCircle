@@ -9,9 +9,9 @@ const Layout = () => {
     const isChat = pathname.startsWith('/chat');
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background text-foreground flex flex-col">
             <Navbar />
-            <main className={cn('min-h-screen pt-16', !isChat && 'pb-16 lg:pb-0')}>
+            <main className={cn('flex-1 pt-14', !isChat && 'pb-16 md:pb-0')}>
                 <Outlet />
             </main>
             <BottomNav />

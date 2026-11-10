@@ -3,7 +3,9 @@ const { POST_TYPES, EXCHANGE_PREFERENCES } = require('../constants/postTypes');
 
 const validate = (schema) => (req, res, next) => {
     try {
-        schema.parse(req.body);
+        // Assign the parsed (type-coerced) result back so controllers
+        // receive validated data, not the raw request body.
+        req.body = schema.parse(req.body);
         next();
     } catch (error) {
         if (error instanceof z.ZodError) {
@@ -27,6 +29,10 @@ const schemas = {
         postId: z.string().optional(),
     }),
 
+    sendMessageToConversation: z.object({
+        text: z.string().min(1, 'Message text is required').max(5000, 'Message too long'),
+    }),
+
     createPost: z.object({
         title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
         description: z.string().max(5000, 'Description too long').optional(),
@@ -41,14 +47,11 @@ const schemas = {
     }),
 
     updateProfile: z.object({
-        displayName: z.string().max(50, 'Display name too long').optional(),
+        displayName: z.string().min(1, 'Display name cannot be empty').max(50, 'Display name too long').optional(),
         bio: z.string().max(500, 'Bio too long').optional(),
-        location: z.object({
-            type: z.literal('Point'),
-            coordinates: z.array(z.number()).length(2),
-        }).optional(),
-        skills: z.array(z.string()).optional(),
-        services: z.array(z.string()).optional(),
+        // User.location is a plain string (e.g. "Mumbai"), not a GeoJSON object
+        location: z.string().max(200, 'Location too long').optional(),
+        skills: z.array(z.string().max(50, 'Skill too long')).max(20, 'Too many skills').optional(),
     }),
 
     blockUser: z.object({

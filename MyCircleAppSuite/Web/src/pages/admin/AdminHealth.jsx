@@ -164,19 +164,8 @@ const AdminHealth = () => {
   const [loading, setLoading] = useState(true);
   const [, setError] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  
 
-  useEffect(() => {
-    fetchHealth();
-  }, []);
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(fetchHealth, 30000);
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
-
-  const fetchHealth = async () => {
+  const fetchHealth = React.useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get('/health/services');
@@ -187,7 +176,17 @@ const AdminHealth = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchHealth();
+  }, [fetchHealth]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(fetchHealth, 30000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchHealth]);
 
   const overallStatus = services.length > 0
     ? services.some(s => s.status === 'down') ? 'down'

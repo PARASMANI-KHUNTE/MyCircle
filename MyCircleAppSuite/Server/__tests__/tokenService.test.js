@@ -34,6 +34,6 @@ describe('Identity token service', () => {
 
     it('delegates token verification to the identity boundary', () => {
         expect(verifyToken('token')).toEqual({ user: { id: 'user-1' } });
-        expect(jwt.verify).toHaveBeenCalledWith('token', process.env.JWT_SECRET);
+        expect(jwt.verify).toHaveBeenCalledWith('token', process.env.JWT_SECRET, { algorithms: ['HS256'] });
     });
 });

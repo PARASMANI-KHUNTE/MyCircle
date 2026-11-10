@@ -16,6 +16,7 @@ import AdminLayout from './components/admin/AdminLayout';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
 const Feed = lazy(() => import('./pages/Feed'));
 const Explore = lazy(() => import('./pages/Explore'));
 const CreatePost = lazy(() => import('./pages/CreatePost'));
@@ -71,6 +72,7 @@ function AuthRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/login/success" element={<LoginSuccess />} />
       <Route path="/welcome" element={<Home />} />
       {isAuthenticated ? (

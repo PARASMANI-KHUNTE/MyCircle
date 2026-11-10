@@ -25,6 +25,13 @@ const isRazorpayConfigured = () => {
 };
 
 /**
+ * Mock orders/signatures are only allowed outside production. A production
+ * deployment without credentials must fail closed instead of "verifying"
+ * payments that never moved any money.
+ */
+const isMockMode = () => !key_secret && process.env.NODE_ENV !== 'production';
+
+/**
  * Returns public key to send to frontend
  */
 const getPublicKey = () => {
@@ -50,6 +57,10 @@ const createOrder = async ({ amountInPaise, currency = 'INR', receipt, notes = {
     }
 
     // Mock order for sandbox development when credentials aren't provided
+    if (!isMockMode()) {
+        throw new Error('Razorpay is not configured and mock orders are disabled in production');
+    }
+
     const mockOrderId = `order_mock_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     return {
         id: mockOrderId,
@@ -79,6 +90,7 @@ const verifyPaymentSignature = ({ orderId, paymentId, signature }) => {
 
     // In mock/test mode without production secret
     if (!key_secret) {
+        if (!isMockMode()) return false;
         return Boolean(signature && !signature.startsWith('fail_'));
     }
 

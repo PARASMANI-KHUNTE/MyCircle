@@ -4,16 +4,23 @@ const ContactRequest = require('../models/ContactRequest');
 const Notification = require('../models/Notification');
 const { db } = require('../config/firebase');
 
+// Firestore allows at most 500 operations per batch
+const FIRESTORE_BATCH_LIMIT = 500;
+
 const deleteFirestoreConversation = async (conversationId) => {
     if (!db) return;
 
     const conversationDoc = db.collection('conversations').doc(conversationId.toString());
     const messagesRef = conversationDoc.collection('messages');
     const snapshot = await messagesRef.get();
-    const batch = db.batch();
 
-    snapshot.forEach((doc) => batch.delete(doc.ref));
-    await batch.commit();
+    // Chunk deletes: a single batch would fail for conversations with > 500 messages
+    const docs = snapshot.docs;
+    for (let i = 0; i < docs.length; i += FIRESTORE_BATCH_LIMIT) {
+        const batch = db.batch();
+        docs.slice(i, i + FIRESTORE_BATCH_LIMIT).forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+    }
     await conversationDoc.delete().catch(() => {});
 };
 

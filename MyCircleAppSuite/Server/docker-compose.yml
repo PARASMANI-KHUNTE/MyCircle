@@ -39,17 +39,38 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/mycircle
       - REDIS_URL=redis://redis:6379
       - CLIENT_URL=${CLIENT_URL}
+      - CLIENT_URL_DEV=${CLIENT_URL_DEV:-http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS}
       - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY=${JWT_EXPIRY:-30d}
+      - JWT_REFRESH_EXPIRY=${JWT_REFRESH_EXPIRY:-60d}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_ANDROID_CLIENT_ID=${GOOGLE_ANDROID_CLIENT_ID}
+      - GOOGLE_IOS_CLIENT_ID=${GOOGLE_IOS_CLIENT_ID}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     depends_on:
       redis:
         condition: service_healthy
       mongodb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Grace period for the server's 10s graceful-shutdown budget before SIGKILL.
+    stop_grace_period: 15s
     restart: unless-stopped
 
   worker:
@@ -67,11 +88,14 @@ services:
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - GROQ_API_KEY=${GROQ_API_KEY}
     depends_on:
       redis:
         condition: service_healthy
       mongodb:
         condition: service_healthy
+    # Grace period for the worker's 10s shutdown budget before SIGKILL.
+    stop_grace_period: 15s
     restart: unless-stopped
 
 volumes:

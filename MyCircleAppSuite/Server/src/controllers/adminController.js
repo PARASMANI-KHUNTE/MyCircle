@@ -4,10 +4,19 @@ const EscrowTransaction = require('../models/EscrowTransaction');
 const Wallet = require('../models/Wallet');
 const Report = require('../models/Report');
 const Notification = require('../models/Notification');
-const { verifyToken } = require('../services/identity/tokenService');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const mongoose = require('mongoose');
+
+// Escape user-supplied search strings before using them in $regex queries
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Parse pagination, capped to prevent unbounded queries
+const parsePagination = (query) => {
+    const page = Math.max(parseInt(query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(query.limit) || 20, 1), 100);
+    return { page, limit, skip: (page - 1) * limit };
+};
 
 // Middleware to check admin role
 const requireAdmin = (req, res, next) => {
@@ -16,6 +25,10 @@ const requireAdmin = (req, res, next) => {
     }
     next();
 };
+
+// Attach requireAdmin alongside the exports.* handlers defined below,
+// without replacing the exports object (which previously discarded every handler).
+exports.requireAdmin = requireAdmin;
 
 // @desc    Get admin dashboard stats
 // @route   GET /admin/stats
@@ -134,17 +147,17 @@ exports.getActivity = asyncHandler(async (req, res) => {
 // @route   GET /admin/users
 // @access  Private (Admin)
 exports.getUsers = asyncHandler(async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const { page, limit, skip } = parsePagination(req.query);
     const search = req.query.search;
     const role = req.query.role;
     const status = req.query.status;
 
     const query = {};
     if (search) {
+        const safeSearch = escapeRegex(search);
         query.$or = [
-            { displayName: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } }
+            { displayName: { $regex: safeSearch, $options: 'i' } },
+            { email: { $regex: safeSearch, $options: 'i' } }
         ];
     }
     if (role && role !== 'all') {
@@ -161,9 +174,8 @@ exports.getUsers = asyncHandler(async (req, res) => {
     const [users, total] = await Promise.all([
         User.find(query)
             .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .select('-passwordHash -passwordSalt'),
+            .skip(skip)
+            .limit(limit),
         User.countDocuments(query)
     ]);
 
@@ -206,6 +218,11 @@ exports.updateUserRole = asyncHandler(async (req, res) => {
     const { role } = req.body;
     if (!['user', 'moderator', 'admin'].includes(role)) {
         throw new ApiError(400, 'Invalid role');
+    }
+
+    // Prevent admins from changing their own role (avoids accidental self-lockout)
+    if (req.user.id === String(req.params.id)) {
+        throw new ApiError(400, 'You cannot change your own role');
     }
 
     const user = await User.findByIdAndUpdate(
@@ -264,18 +281,31 @@ exports.unbanUser = asyncHandler(async (req, res) => {
 // @route   GET /admin/payments
 // @access  Private (Admin)
 exports.getPayments = asyncHandler(async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const { page, limit, skip } = parsePagination(req.query);
     const search = req.query.search;
     const type = req.query.type;
     const status = req.query.status;
 
     const query = {};
     if (search) {
-        query.$or = [
-            { _id: { $regex: search, $options: 'i' } },
-            { 'post.title': { $regex: search, $options: 'i' } }
-        ];
+        const safeSearch = escapeRegex(search);
+        // $regex cannot match populated paths (post.title); resolve matching post ids first
+        const [matchingPosts, matchingUsers] = await Promise.all([
+            Post.find({ title: { $regex: safeSearch, $options: 'i' } }).select('_id').limit(100),
+            User.find({ displayName: { $regex: safeSearch, $options: 'i' } }).select('_id').limit(100)
+        ]);
+
+        query.$or = [];
+        if (mongoose.isValidObjectId(search)) {
+            query.$or.push({ _id: search });
+        }
+        query.$or.push({ razorpayOrderId: { $regex: safeSearch, $options: 'i' } });
+        if (matchingPosts.length) {
+            query.$or.push({ post: { $in: matchingPosts.map(p => p._id) } });
+        }
+        if (matchingUsers.length) {
+            query.$or.push({ buyer: { $in: matchingUsers.map(u => u._id) } }, { seller: { $in: matchingUsers.map(u => u._id) } });
+        }
     }
     if (type && type !== 'all') {
         // Determine type from fields
@@ -288,7 +318,7 @@ exports.getPayments = asyncHandler(async (req, res) => {
     const [transactions, total] = await Promise.all([
         EscrowTransaction.find(query)
             .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
+            .skip(skip)
             .limit(limit)
             .populate('buyer', 'displayName email')
             .populate('seller', 'displayName email')
@@ -324,19 +354,26 @@ exports.getPayment = asyncHandler(async (req, res) => {
 // @route   GET /admin/reports
 // @access  Private (Admin)
 exports.getReports = asyncHandler(async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const { page, limit, skip } = parsePagination(req.query);
     const search = req.query.search;
     const status = req.query.status;
     const category = req.query.category;
 
     const query = {};
     if (search) {
-        query.$or = [
-            { reason: { $regex: search, $options: 'i' } },
-            { 'reporter.displayName': { $regex: search, $options: 'i' } },
-            { 'reportedUser.displayName': { $regex: search, $options: 'i' } }
-        ];
+        const safeSearch = escapeRegex(search);
+        // $regex cannot match populated paths (reporter.displayName); resolve matching user ids first
+        const matchingUsers = await User.find({
+            displayName: { $regex: safeSearch, $options: 'i' }
+        }).select('_id').limit(100);
+
+        query.$or = [{ reason: { $regex: safeSearch, $options: 'i' } }];
+        if (matchingUsers.length) {
+            query.$or.push(
+                { reporter: { $in: matchingUsers.map(u => u._id) } },
+                { reportedUser: { $in: matchingUsers.map(u => u._id) } }
+            );
+        }
     }
     if (status && status !== 'all') {
         query.status = status;
@@ -348,7 +385,7 @@ exports.getReports = asyncHandler(async (req, res) => {
     const [reports, total] = await Promise.all([
         Report.find(query)
             .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
+            .skip(skip)
             .limit(limit)
             .populate('reporter', 'displayName email avatar role')
             .populate('reportedUser', 'displayName email avatar role'),
@@ -461,38 +498,54 @@ exports.getAnalytics = asyncHandler(async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // Generate daily data for charts
-    const dailyData = [];
+    // Generate daily data for charts.
+    // Aggregate all days in bulk instead of issuing per-day queries (avoids days*5 DB round trips).
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayKeys = [];
     for (let i = days - 1; i >= 0; i--) {
-        const date = new Date();
+        const date = new Date(today);
         date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-
-        const [users, posts, messages, revenue, escrows, activeUsers] = await Promise.all([
-            User.countDocuments({ createdAt: { $gte: date, $lt: nextDate } }),
-            Post.countDocuments({ createdAt: { $gte: date, $lt: nextDate } }),
-            // Mock messages count
-            Promise.resolve(Math.floor(Math.random() * 500) + 100),
-            EscrowTransaction.aggregate([
-                { $match: { status: 'released', createdAt: { $gte: date, $lt: nextDate } } },
-                { $group: { _id: null, total: { $sum: '$amount' } } }
-            ]),
-            EscrowTransaction.countDocuments({ createdAt: { $gte: date, $lt: nextDate } }),
-            User.countDocuments({ lastSeenAt: { $gte: date, $lt: nextDate } })
-        ]);
-
-        dailyData.push({
-            date: date.toISOString(),
-            users,
-            posts,
-            messages: messages,
-            revenue: revenue[0]?.total || 0,
-            escrows,
-            activeUsers
-        });
+        dayKeys.push(date.toISOString().slice(0, 10));
     }
+
+    const countByDay = {
+        $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 }
+        }
+    };
+    const sumByDay = {
+        $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            total: { $sum: '$amount' }
+        }
+    };
+
+    const [usersByDay, postsByDay, escrowsByDay, revenueByDay, activeByDay] = await Promise.all([
+        User.aggregate([{ $match: { createdAt: { $gte: startDate } } }, countByDay]),
+        Post.aggregate([{ $match: { createdAt: { $gte: startDate } } }, countByDay]),
+        EscrowTransaction.aggregate([{ $match: { createdAt: { $gte: startDate } } }, countByDay]),
+        EscrowTransaction.aggregate([{ $match: { status: 'released', createdAt: { $gte: startDate } } }, sumByDay]),
+        User.aggregate([{ $match: { lastSeenAt: { $gte: startDate } } }, countByDay])
+    ]);
+
+    const toDayMap = (rows, field) => Object.fromEntries(rows.map(row => [row._id, row[field] || 0]));
+    const usersMap = toDayMap(usersByDay, 'count');
+    const postsMap = toDayMap(postsByDay, 'count');
+    const escrowsMap = toDayMap(escrowsByDay, 'count');
+    const revenueMap = toDayMap(revenueByDay, 'total');
+    const activeMap = toDayMap(activeByDay, 'count');
+
+    const dailyData = dayKeys.map((key) => ({
+        date: new Date(`${key}T00:00:00.000Z`).toISOString(),
+        users: usersMap[key] || 0,
+        posts: postsMap[key] || 0,
+        messages: Math.floor(Math.random() * 500) + 100, // Mock messages count
+        revenue: revenueMap[key] || 0,
+        escrows: escrowsMap[key] || 0,
+        activeUsers: activeMap[key] || 0
+    }));
 
     // Overview stats
     const [totalUsers, totalPosts, totalRevenue, totalEscrows] = await Promise.all([
@@ -575,5 +628,3 @@ exports.getAnalytics = asyncHandler(async (req, res) => {
         funnel
     });
 });
-
-module.exports = { requireAdmin };

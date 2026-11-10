@@ -23,7 +23,7 @@ const ContactRequestSchema = new mongoose.Schema({
     },
     message: {
         type: String,
-        maxLength: 200,
+        maxlength: 200,
     },
     conversationId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -82,8 +82,16 @@ const ContactRequestSchema = new mongoose.Schema({
     }]
 });
 
-// Ensure a user can only request once per post
-ContactRequestSchema.index({ post: 1, requester: 1 }, { unique: true });
+// One *pending* request per (post, requester). Terminal statuses fall out of the
+// partial index so users can re-request after rejection/expiry/cancellation
+// (subject to the 24h cooldown enforced in contactController.createRequest).
+// NOTE: databases created before this change hold a plain unique index with the
+// same name; run `db.contactrequests.dropIndex("post_1_requester_1")` once
+// before deploying so the partial index can build.
+ContactRequestSchema.index(
+    { post: 1, requester: 1 },
+    { unique: true, partialFilterExpression: { status: 'pending' } }
+);
 ContactRequestSchema.index({ post: 1, status: 1, createdAt: -1 });
 ContactRequestSchema.index({ requester: 1, recipient: 1, status: 1 });
 ContactRequestSchema.index({ recipient: 1, status: 1, createdAt: -1 });

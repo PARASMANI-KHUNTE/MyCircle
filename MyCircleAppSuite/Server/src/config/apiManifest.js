@@ -7,6 +7,7 @@ const apiManifest = Object.freeze([
     Object.freeze({ mount: '/api/notifications', owner: 'notifications', module: 'notificationRoutes' }),
     Object.freeze({ mount: '/api/payments', owner: 'payment', module: 'paymentRoutes' }),
     Object.freeze({ mount: '/api/ai', owner: 'safety', module: 'aiRoutes' }),
+    Object.freeze({ mount: '/api/admin', owner: 'safety', module: 'adminRoutes' }),
 ]);
 
 const getApiManifest = () => apiManifest.map((entry) => ({ ...entry }));

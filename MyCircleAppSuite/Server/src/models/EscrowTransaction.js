@@ -27,6 +27,7 @@ const EscrowTransactionSchema = new mongoose.Schema({
     },
     currency: {
         type: String,
+        enum: ['INR'],
         default: 'INR',
     },
     // Status of the escrow
@@ -85,6 +86,12 @@ EscrowTransactionSchema.index({ seller: 1, status: 1 });
 EscrowTransactionSchema.index({ post: 1, status: 1 });
 EscrowTransactionSchema.index({ status: 1 });
 EscrowTransactionSchema.index({ createdAt: -1 });
+// Idempotency: a Razorpay order/payment can only ever be recorded once
+// (sparse so wallet/stripe escrows without these fields are unaffected)
+EscrowTransactionSchema.index({ razorpayOrderId: 1 }, { unique: true, sparse: true });
+EscrowTransactionSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
+// Stripe payment intents can likewise only be recorded once (top-up replays)
+EscrowTransactionSchema.index({ stripePaymentIntentId: 1 }, { unique: true, sparse: true });
 
 // Static method to get active escrow for a post
 EscrowTransactionSchema.statics.getActiveForPost = async function (postId, buyerId) {

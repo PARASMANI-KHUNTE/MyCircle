@@ -8,6 +8,27 @@ const mongoose = require('mongoose');
 const { isRedisEnabled, isRedisReady } = require('../utils/queue');
 const { getServiceName } = require('../config/serviceIdentity');
 const { checkConfiguredServices } = require('../services/platform/serviceHealth');
+const { serviceContracts } = require('../config/serviceContracts');
+
+const formatUptime = (seconds) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${days}d ${hours}h ${minutes}m`;
+};
+
+// Map internal check results to the status labels the admin UI understands
+const toUiStatus = (status) => {
+    switch (status) {
+        case 'ok':
+            return 'healthy';
+        case 'error':
+        case 'timeout':
+            return 'down';
+        default:
+            return 'unknown';
+    }
+};
 
 router.get('/', async (req, res) => {
     const services = {
@@ -43,6 +64,64 @@ router.get('/', async (req, res) => {
 
 router.get('/live', (req, res) => {
     res.json({ status: 'ok' });
+});
+
+// Per-service health cards for the admin dashboard.
+// Shape: { services: [{ name, description, status, latency, uptime, lastCheck }] }
+router.get('/services', async (req, res) => {
+    const startedAt = Date.now();
+    const lastCheck = new Date().toISOString();
+    const uptime = formatUptime(process.uptime());
+
+    const mongoOk = mongoose.connection.readyState === 1;
+    const redisOk = isRedisEnabled() && isRedisReady();
+
+    let firebaseOk = false;
+    try {
+        const { admin } = require('../config/firebase');
+        firebaseOk = Boolean(admin && Array.isArray(admin.apps) && admin.apps.length > 0);
+    } catch (e) {
+        firebaseOk = false;
+    }
+
+    const downstream = await checkConfiguredServices();
+
+    const services = [
+        {
+            name: 'database',
+            description: 'MongoDB primary datastore',
+            status: mongoOk ? 'healthy' : 'down',
+            latency: Date.now() - startedAt,
+            uptime,
+            lastCheck,
+        },
+        {
+            name: 'redis',
+            description: 'Redis job queue and cache',
+            status: redisOk ? 'healthy' : 'unknown',
+            latency: Date.now() - startedAt,
+            uptime,
+            lastCheck,
+        },
+        {
+            name: 'firebase',
+            description: 'Firebase push notifications',
+            status: firebaseOk ? 'healthy' : 'down',
+            latency: Date.now() - startedAt,
+            uptime,
+            lastCheck,
+        },
+        ...Object.entries(downstream.services).map(([name, result]) => ({
+            name,
+            description: serviceContracts[name]?.persistence || `${name} service`,
+            status: toUiStatus(result.status),
+            httpStatus: result.httpStatus,
+            uptime,
+            lastCheck,
+        })),
+    ];
+
+    res.json({ services });
 });
 
 router.get('/ready', async (req, res) => {

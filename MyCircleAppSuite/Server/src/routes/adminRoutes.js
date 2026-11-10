@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { requireAdmin } = require('../controllers/adminController');
+const auth = require('../middleware/auth');
 const asyncHandler = require('../utils/asyncHandler');
 
 // All admin routes require authentication and admin role
-router.use(requireAdmin);
+router.use(auth, adminController.requireAdmin);
 
 // Dashboard stats
 router.get('/stats', asyncHandler(adminController.getStats));

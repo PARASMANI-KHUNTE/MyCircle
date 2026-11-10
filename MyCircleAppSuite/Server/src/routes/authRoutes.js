@@ -6,7 +6,7 @@ const router = express.Router();
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { hashPassword, verifyPassword } = require('../utils/password');
-const { issueToken } = require('../services/identity/tokenService');
+const { issueToken, issueTokenPair, verifyRefreshToken } = require('../services/identity/tokenService');
 
 const normalizeUrl = (value) => {
     if (!value) return null;
@@ -93,13 +93,19 @@ router.get('/google/callback', (req, res, next) => {
 });
 
 // @desc    Logout user
-// @route   GET /auth/logout
+// @route   POST /auth/logout (mobile) / GET /auth/logout (legacy redirect)
+router.post('/logout', (req, res) => {
+    // JWTs are stateless; clients discard their stored token.
+    res.json({ success: true, msg: 'Logged out successfully' });
+});
+
 router.get('/logout', (req, res, next) => {
     req.logout((err) => {
         if (err) {
             return next(err);
         }
-        res.redirect('/');
+        const clientUrl = getConfiguredClientUrl();
+        res.redirect(clientUrl || '/');
     });
 });
 
@@ -108,6 +114,43 @@ const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signAuthToken = issueToken;
+
+// Build a response containing both the legacy `token` field (web client)
+// and the { accessToken, refreshToken } pair (mobile client).
+const buildTokenResponse = async (user) => {
+    const { accessToken, refreshToken } = await issueTokenPair(user);
+    return { token: accessToken, accessToken, refreshToken };
+};
+
+// @desc    Refresh access token
+// @route   POST /auth/refresh
+// @access  Public (requires a valid refresh token)
+router.post('/refresh', asyncHandler(async (req, res) => {
+    const providedToken = req.body.refreshToken || req.body.token;
+
+    if (!providedToken) {
+        throw new ApiError(400, 'refreshToken is required');
+    }
+
+    let decoded;
+    try {
+        decoded = verifyRefreshToken(providedToken);
+    } catch (err) {
+        throw new ApiError(401, 'Invalid or expired refresh token');
+    }
+
+    if (!decoded?.user?.id) {
+        throw new ApiError(401, 'Invalid refresh token');
+    }
+
+    const user = await User.findById(decoded.user.id).select('email role displayName banned');
+    if (!user || user.banned) {
+        throw new ApiError(401, 'Account not available');
+    }
+
+    const { accessToken, refreshToken } = await issueTokenPair(user);
+    res.json({ accessToken, refreshToken, token: accessToken });
+}));
 
 // @desc    Register with email/password
 // @route   POST /auth/register
@@ -144,8 +187,8 @@ router.post('/register', asyncHandler(async (req, res) => {
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName)}`,
     });
 
-    const token = await signAuthToken(user);
-    res.status(201).json({ token, user: { id: user.id, email: user.email, displayName: user.displayName } });
+    const tokens = await buildTokenResponse(user);
+    res.status(201).json({ ...tokens, user: { id: user.id, email: user.email, displayName: user.displayName } });
 }));
 
 // @desc    Login with email/password
@@ -159,7 +202,7 @@ router.post('/login', asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Email and password are required');
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+passwordHash +passwordSalt');
     if (!user || !user.passwordHash || !user.passwordSalt) {
         throw new ApiError(401, 'Invalid credentials');
     }
@@ -169,8 +212,8 @@ router.post('/login', asyncHandler(async (req, res) => {
         throw new ApiError(401, 'Invalid credentials');
     }
 
-    const token = await signAuthToken(user);
-    res.json({ token, user: { id: user.id, email: user.email, displayName: user.displayName } });
+    const tokens = await buildTokenResponse(user);
+    res.json({ ...tokens, user: { id: user.id, email: user.email, displayName: user.displayName } });
 }));
 
 // @desc    Development-only email login shortcut
@@ -191,8 +234,8 @@ router.post('/dev-login', asyncHandler(async (req, res) => {
         throw new ApiError(404, 'User not found');
     }
 
-    const token = await signAuthToken(user);
-    res.json({ token });
+    const tokens = await buildTokenResponse(user);
+    res.json(tokens);
 }));
 
 // @desc    Mobile Google Login (Verify ID Token)
@@ -244,8 +287,8 @@ router.post('/google-mobile', asyncHandler(async (req, res) => {
         await user.save();
     }
 
-    const token = await signAuthToken(user);
-    res.json({ token });
+    const tokens = await buildTokenResponse(user);
+    res.json(tokens);
 }));
 
 module.exports = router;

@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Notification = require('../models/Notification');
-const { createNotification } = require('./notificationController');
+const { sendNotification } = require('./notificationController');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { applyNewRating, refreshTrustScore } = require('../utils/trustScore');
@@ -88,11 +88,13 @@ exports.createRequest = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Cannot request contact for your own post');
     }
 
-    // Check for existing request
+    // Check for an existing ACTIVE request. Terminal statuses (rejected/expired/canceled)
+    // must not block re-requests — the 24h cooldown below governs those.
     const existingRequest = await ContactRequest.findOne({
         requester: requesterId,
         recipient: finalRecipientId,
-        post: postId
+        post: postId,
+        status: { $in: ['pending', 'accepted', 'approved'] }
     });
 
     if (existingRequest) {
@@ -148,7 +150,7 @@ exports.createRequest = asyncHandler(async (req, res) => {
 
     // Send real-time notification to recipient
     const io = req.app.get('io');
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: finalRecipientId,
         sender: requesterId,
         type: 'request',
@@ -246,7 +248,7 @@ exports.updateRequestStatus = async (req, res, next) => {
         const isRequester = requesterId.toString() === req.user.id;
 
         if (!isRecipient && !isRequester) {
-            return res.status(401).json({ msg: 'Not authorized' });
+            return res.status(403).json({ msg: 'Not authorized' });
         }
 
         if ((requestedStatus === 'accepted' || requestedStatus === 'rejected') && !isRecipient) {
@@ -299,19 +301,15 @@ exports.updateRequestStatus = async (req, res, next) => {
             await request.populate('recipient', 'displayName');
             await request.populate('post', 'title');
 
-            try {
-                await createNotification(io, {
-                    recipient: requesterId,
-                    sender: req.user.id,
-                    type: 'info',
-                    title: 'Work Marked Complete',
-                    message: `${request.recipient?.displayName || 'The post owner'} marked "${request.post?.title || 'this post'}" as completed. The chat has been removed.`,
-                    link: '/requests',
-                    relatedId: postId
-                });
-            } catch (notifErr) {
-                console.error('Failed to send completion notification:', notifErr.message);
-            }
+            await sendNotification(io, {
+                recipient: requesterId,
+                sender: req.user.id,
+                type: 'info',
+                title: 'Work Marked Complete',
+                message: `${request.recipient?.displayName || 'The post owner'} marked "${request.post?.title || 'this post'}" as completed. The chat has been removed.`,
+                link: '/requests',
+                relatedId: postId
+            });
 
             const deletedRequests = await ContactRequest.deleteMany({ post: postId });
 
@@ -379,27 +377,22 @@ exports.updateRequestStatus = async (req, res, next) => {
 
         // Send real-time notification to requester
         const io = req.app.get('io');
-        try {
-            const isPositive = requestedStatus === 'accepted' || requestedStatus === 'completed';
-            await createNotification(io, {
-                recipient: isRecipient ? requesterId : recipientId,
-                sender: req.user.id,
-                type: requestedStatus === 'accepted' ? 'approval' : 'info',
-                title: requestedStatus === 'accepted'
-                    ? 'Request Accepted'
-                    : requestedStatus === 'completed'
-                        ? 'Work Marked Complete'
-                        : requestedStatus === 'canceled'
-                            ? 'Request Canceled'
-                            : 'Request Rejected',
-                message: `${isRecipient ? request.recipient?.displayName : request.requester?.displayName || 'User'} has ${requestedStatus} this request.`,
-                link: '/requests',
-                relatedId: postId,
-                conversationId: conversationId
-            });
-        } catch (notifErr) {
-            console.error('Failed to send notification for request status update:', notifErr);
-        }
+        await sendNotification(io, {
+            recipient: isRecipient ? requesterId : recipientId,
+            sender: req.user.id,
+            type: requestedStatus === 'accepted' ? 'approval' : 'info',
+            title: requestedStatus === 'accepted'
+                ? 'Request Accepted'
+                : requestedStatus === 'completed'
+                    ? 'Work Marked Complete'
+                    : requestedStatus === 'canceled'
+                        ? 'Request Canceled'
+                        : 'Request Rejected',
+            message: `${isRecipient ? request.recipient?.displayName : request.requester?.displayName || 'User'} has ${requestedStatus} this request.`,
+            link: '/requests',
+            relatedId: postId,
+            conversationId: conversationId
+        });
 
         const serializedRequest = serializeRequest(request, req.user.id);
         if (conversationId) {
@@ -464,7 +457,7 @@ exports.rateRequest = asyncHandler(async (req, res) => {
     await applyNewRating(ratedUser, numericScore);
 
     const io = req.app.get('io');
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: targetUserId,
         sender: req.user.id,
         type: 'info',
@@ -489,7 +482,7 @@ exports.deleteRequest = async (req, res, next) => {
 
         // Verify user is either requester or recipient
         if (request.requester.toString() !== req.user.id && request.recipient.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'Not authorized' });
+            return res.status(403).json({ msg: 'Not authorized' });
         }
 
         await ContactRequest.findByIdAndDelete(req.params.id);

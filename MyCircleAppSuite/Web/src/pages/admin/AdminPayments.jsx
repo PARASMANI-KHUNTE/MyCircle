@@ -22,6 +22,7 @@ import {
   Banknote,
   ArrowUpRight,
   ArrowDownRight,
+  X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -86,7 +87,7 @@ const AdminPayments = () => {
 
 
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = React.useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -107,11 +108,11 @@ const AdminPayments = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, search, typeFilter, statusFilter]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [currentPage, search, typeFilter, statusFilter]);
+  }, [fetchTransactions]);
 
   const openDetails = (txn) => {
     setSelectedTxn(txn);

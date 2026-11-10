@@ -21,6 +21,7 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
+  BarChart3,
 } from 'lucide-react';
 import { format } from 'date-fns';
 

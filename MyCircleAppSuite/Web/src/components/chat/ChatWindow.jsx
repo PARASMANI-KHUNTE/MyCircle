@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ExternalLink, X, ChevronDown, ChevronUp, CreditCard, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ExternalLink, X, ChevronDown, ChevronUp, CreditCard, ShoppingBag, ShieldCheck, Briefcase, Wrench, Tag } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import CheckoutModal from '../ui/CheckoutModal';
 import Button from '../ui/Button';
@@ -432,8 +432,8 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                             {post.images?.[0] ? (
                                 <img src={post.images[0]} alt="" className="w-8 h-8 rounded-lg object-cover" />
                             ) : (
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm">
-                                    {post.type === 'service' ? '🔧' : post.type === 'job' ? '💼' : '🏷️'}
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                    {post.type === 'service' ? <Wrench className="w-4 h-4" /> : post.type === 'job' ? <Briefcase className="w-4 h-4" /> : <Tag className="w-4 h-4" />}
                                 </div>
                             )}
                             <div className="text-left">

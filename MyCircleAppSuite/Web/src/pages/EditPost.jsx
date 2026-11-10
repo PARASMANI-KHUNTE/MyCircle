@@ -6,7 +6,8 @@ import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { 
     X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, 
-    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2, CreditCard, ShieldCheck
+    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2, CreditCard, ShieldCheck,
+    Briefcase, Users, ShoppingBag, Home, Coins, FileText, Handshake
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { POST_TYPES, ITEM_CATEGORIES as ITEM_CATEGORIES_IDS, JOB_TYPES as JOB_TYPE_IDS } from '../constants';
@@ -14,14 +15,14 @@ import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 
 const CATEGORIES = POST_TYPES.map(id => {
     const configs = {
-        service: { emoji: '💼', label: 'Earn', desc: 'Offer your skills/services' },
-        job: { emoji: '🤝', label: 'Hire', desc: 'Post a job or task' },
-        sell: { emoji: '🛒', label: 'Trade', desc: 'Sell or barter items' },
-        rent: { emoji: '🏠', label: 'Rent', desc: 'Rentals & spaces' },
-        barter: { emoji: '🔄', label: 'Barter', desc: 'Exchange items or services' },
-        request: { emoji: '📝', label: 'Request', desc: 'Request an item or service' },
+        service: { icon: Briefcase, label: 'Earn', desc: 'Offer your skills/services' },
+        job: { icon: Users, label: 'Hire', desc: 'Post a job or task' },
+        sell: { icon: ShoppingBag, label: 'Trade', desc: 'Sell or barter items' },
+        rent: { icon: Home, label: 'Rent', desc: 'Rentals & spaces' },
+        barter: { icon: ArrowLeftRight, label: 'Barter', desc: 'Exchange items or services' },
+        request: { icon: FileText, label: 'Request', desc: 'Request an item or service' },
     };
-    return { id, ...(configs[id] || { label: id, desc: '' }) };
+    return { id, ...(configs[id] || { icon: Briefcase, label: id, desc: '' }) };
 });
 
 const JOB_TYPES_LIST = JOB_TYPE_IDS.map(id => ({ id, label: id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }));
@@ -36,9 +37,9 @@ const DURATIONS = [
 ];
 
 const EXCHANGE_OPTIONS = [
-    { id: 'money', label: 'Money', icon: '💰' },
-    { id: 'barter', label: 'Barter', icon: '🔄' },
-    { id: 'flexible', label: 'Flexible', icon: '💳' },
+    { id: 'money', label: 'Cash / Online', icon: CreditCard },
+    { id: 'barter', label: 'Barter', icon: ArrowLeftRight },
+    { id: 'flexible', label: 'Flexible', icon: Coins },
 ];
 
 const EditPost = () => {
@@ -325,23 +326,32 @@ const EditPost = () => {
                 {/* Type */}
                 <div>
                     <label className="text-sm font-medium">Category</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                        {CATEGORIES.map(cat => (
-                            <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, type: cat.id })}
-                                className={cn(
-                                    'p-3 rounded-xl border text-center transition-all',
-                                    formData.type === cat.id
-                                        ? 'border-primary bg-primary/5'
-                                        : 'border-border hover:border-primary/50'
-                                )}
-                            >
-                                <span className="text-xl block">{cat.emoji}</span>
-                                <span className="text-xs mt-1 block">{cat.label}</span>
-                            </button>
-                        ))}
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2">
+                        {CATEGORIES.map(cat => {
+                            const Icon = cat.icon;
+                            const isSelected = formData.type === cat.id;
+                            return (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, type: cat.id })}
+                                    className={cn(
+                                        'p-2.5 rounded-xl border text-center transition-all',
+                                        isSelected
+                                            ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary/20'
+                                            : 'border-card-border bg-card text-foreground-muted hover:border-card-border-hover hover:text-foreground'
+                                    )}
+                                >
+                                    <div className={cn(
+                                        'w-7 h-7 mx-auto rounded-lg flex items-center justify-center mb-1 transition-colors',
+                                        isSelected ? 'bg-primary/10 text-primary' : 'bg-background-secondary text-foreground-muted'
+                                    )}>
+                                        <Icon className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span className="text-xs font-medium block truncate">{cat.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -469,23 +479,32 @@ const EditPost = () => {
                 {/* Exchange */}
                 <div>
                     <label className="text-sm font-medium">Exchange Type</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
-                        {EXCHANGE_OPTIONS.map(opt => (
-                            <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, exchangePreference: opt.id }))}
-                                className={cn(
-                                    'px-2 py-2 rounded-lg border text-xs text-center transition-all',
-                                    formData.exchangePreference === opt.id
-                                        ? 'border-primary bg-primary/5'
-                                        : 'border-border hover:border-primary/50'
-                                )}
-                            >
-                                <span className="block text-lg">{opt.icon}</span>
-                                {opt.label}
-                            </button>
-                        ))}
+                    <div className="grid grid-cols-3 gap-2 mt-1.5">
+                        {EXCHANGE_OPTIONS.map(opt => {
+                            const Icon = opt.icon;
+                            const isSelected = formData.exchangePreference === opt.id;
+                            return (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, exchangePreference: opt.id }))}
+                                    className={cn(
+                                        'p-2.5 rounded-xl border text-center transition-all',
+                                        isSelected
+                                            ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary/20'
+                                            : 'border-card-border bg-card text-foreground-muted hover:border-card-border-hover hover:text-foreground'
+                                    )}
+                                >
+                                    <div className={cn(
+                                        'w-7 h-7 mx-auto rounded-lg flex items-center justify-center mb-1 transition-colors',
+                                        isSelected ? 'bg-primary/10 text-primary' : 'bg-background-secondary text-foreground-muted'
+                                    )}>
+                                        <Icon className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span className="text-xs font-medium block">{opt.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 

@@ -184,23 +184,32 @@ const LandingScreen = ({ navigation }: any) => {
                     entering={FadeInUp.delay(800).duration(800).springify()}
                     style={styles.actionSection}
                 >
-                    {/* Primary Action */}
+                    {/* Primary Action - Register */}
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('Login')}
+                        onPress={() => navigation.navigate('Register')}
                         activeOpacity={0.9}
                         style={styles.primaryButton}
                     >
                         <View style={styles.buttonGradient}>
-                            <Text style={styles.primaryButtonText}>Get Started</Text>
+                            <Text style={styles.primaryButtonText}>Create Account</Text>
                             <ArrowRight size={20} color="#fff" style={styles.buttonIcon} />
                         </View>
                     </TouchableOpacity>
 
-                    {/* Secondary Action */}
+                    {/* Secondary Action - Login */}
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Login')}
+                        activeOpacity={0.8}
+                        style={styles.secondaryButton}
+                    >
+                        <Text style={styles.secondaryButtonText}>Sign In</Text>
+                    </TouchableOpacity>
+
+                    {/* Third Action - Google */}
                     <TouchableOpacity
                         onPress={handleGoogleLogin}
                         activeOpacity={0.8}
-                        style={styles.secondaryButton}
+                        style={[styles.secondaryButton, styles.googleButton]}
                     >
                         <View style={styles.googleIconContainer}>
                             <Image
@@ -211,14 +220,6 @@ const LandingScreen = ({ navigation }: any) => {
                         </View>
                         <Text style={styles.secondaryButtonText}>Continue with Google</Text>
                     </TouchableOpacity>
-
-                    {/* Login Link */}
-                    <View style={styles.loginLinkContainer}>
-                        <Text style={styles.loginText}>Already have an account?</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                            <Text style={styles.loginLink}>Sign In</Text>
-                        </TouchableOpacity>
-                    </View>
                 </Animated.View>
 
                 {/* Footer */}
@@ -422,6 +423,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#ffffff',
+    },
+    googleButton: {
+        marginTop: 16,
     },
     loginLinkContainer: {
         flexDirection: 'row',

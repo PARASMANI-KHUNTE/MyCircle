@@ -5,11 +5,13 @@ WORKDIR /app
 RUN apk add --no-cache dumb-init
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 COPY . .
 
-RUN npm run build || true
+# The image runs both the HTTP server (default CMD) and the queue worker
+# (docker-compose overrides command); the HTTP healthcheck therefore lives in
+# docker-compose.yml on the server service only.
 
 EXPOSE 5000
 

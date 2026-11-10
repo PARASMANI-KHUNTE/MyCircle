@@ -19,6 +19,7 @@ const { requestContext } = require('./src/middleware/requestContext');
 const { getServiceName } = require('./src/config/serviceIdentity');
 const { serviceRouter } = require('./src/middleware/serviceRouter');
 const User = require('./src/models/User');
+const ApiError = require('./src/utils/ApiError');
 const { closeQueueConnection } = require('./src/utils/queue');
 
 validateEnv();
@@ -30,6 +31,10 @@ app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Redis connection used by the production rate limiter; kept at module scope
+// so the graceful shutdown handler can close it.
+let rateLimitRedis = null;
 
 const logger = isProduction 
     ? pino({ level: 'info' })
@@ -210,10 +215,10 @@ if (isProduction) {
     if (process.env.REDIS_URL) {
         const RedisStore = require('rate-limit-redis');
         const Redis = require('ioredis');
-        const redis = new Redis(process.env.REDIS_URL);
-        
+        rateLimitRedis = new Redis(process.env.REDIS_URL);
+
         rateLimitOptions.store = new RedisStore({
-            sendCommand: (...args) => redis.call(...args),
+            sendCommand: (...args) => rateLimitRedis.call(...args),
         });
         logger.info('Using Redis for rate limiting');
     }
@@ -255,16 +260,26 @@ startCronJobs(io);
 app.use(passport.initialize());
 
 app.use('/', require('./src/routes/healthRoutes'));
+app.use('/api/health', require('./src/routes/healthRoutes'));
 app.use('/auth', serviceRouter({
     serviceName: 'identity',
     methods: ['GET', 'HEAD', 'OPTIONS', 'POST'],
 }));
 app.use('/auth', require('./src/routes/authRoutes'));
+// Alias mounts: the mobile client's baseURL always ends in /api, so it calls
+// /api/auth/* for authentication while the web client calls /auth/*.
+app.use('/api/auth', serviceRouter({
+    serviceName: 'identity',
+    methods: ['GET', 'HEAD', 'OPTIONS', 'POST'],
+}));
+app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/posts', serviceRouter({ serviceName: 'marketplace' }));
 app.use('/api/posts', require('./src/routes/postRoutes'));
 app.use('/api/contacts', require('./src/routes/contactRoutes'));
 app.use('/api/user', require('./src/routes/userRoutes'));
 app.use('/api/chat', require('./src/routes/chatRoutes'));
+// Compatibility mount for the web ChatWindow flow (POST /api/chats/:id/messages)
+app.use('/api/chats', require('./src/routes/chatCompatRoutes'));
 app.use('/api/notifications', require('./src/routes/notificationRoutes'));
 app.use('/api/payments', require('./src/routes/paymentRoutes'));
 app.use('/api/admin', require('./src/routes/adminRoutes'));
@@ -290,7 +305,9 @@ app.get('/health', async (req, res) => {
     
     try {
         const { admin } = require('./src/config/firebase');
-        if (admin) healthcheck.services.firebase = 'ok';
+        // The admin SDK object exists even when initialization failed;
+        // a registered app is what proves Firebase is actually usable.
+        healthcheck.services.firebase = (admin && Array.isArray(admin.apps) && admin.apps.length > 0) ? 'ok' : 'error';
     } catch (e) {
         healthcheck.services.firebase = 'error';
     }
@@ -323,6 +340,12 @@ app.get('/api/test', (req, res) => {
     });
 });
 
+// Catch-all for unmatched routes so clients get a structured 404
+// instead of a bare HTML error from the default Express handler
+app.use((req, res, next) => {
+    next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`));
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
@@ -337,6 +360,16 @@ const gracefulShutdown = async (signal) => {
         logger.error('Forced shutdown after timeout');
         process.exit(1);
     }, 10000);
+
+    // Close the rate-limiter's dedicated Redis connection
+    if (rateLimitRedis) {
+        try {
+            await rateLimitRedis.quit();
+            logger.info('Rate limit Redis connection closed');
+        } catch (err) {
+            rateLimitRedis.disconnect();
+        }
+    }
 
     server.close(async () => {
         logger.info('HTTP server closed');

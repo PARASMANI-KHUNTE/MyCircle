@@ -53,18 +53,26 @@ const Home = () => {
                         </p>
 
                         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
-                            <Button 
-                                size="lg" 
-                                onClick={() => navigate('/login')} 
+                            <Button
+                                size="lg"
+                                onClick={() => navigate('/register')}
                                 className="group w-full sm:w-auto"
                             >
-                                <span>Get Started</span>
+                                <span>Create Account</span>
                                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                             </Button>
-                            <Button 
-                                variant="outline" 
-                                size="lg" 
-                                onClick={() => navigate('/explore')} 
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                onClick={() => navigate('/login')}
+                                className="w-full sm:w-auto"
+                            >
+                                Sign In
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                onClick={() => navigate('/explore')}
                                 className="w-full sm:w-auto"
                             >
                                 Browse Posts

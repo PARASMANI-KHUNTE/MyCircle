@@ -2,7 +2,7 @@ const Wallet = require('../models/Wallet');
 const EscrowTransaction = require('../models/EscrowTransaction');
 const Post = require('../models/Post');
 const User = require('../models/User');
-const { createNotification } = require('./notificationController');
+const { sendNotification } = require('./notificationController');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const mongoose = require('mongoose');
@@ -133,7 +133,7 @@ exports.createEscrowIntent = asyncHandler(async (req, res) => {
 
     // Notify seller
     const io = req.app.get('io');
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: post.user._id,
         sender: req.user.id,
         type: 'escrow_created',
@@ -211,7 +211,7 @@ exports.confirmEscrow = asyncHandler(async (req, res) => {
 
     // Notify seller
     const io = req.app.get('io');
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: escrow.seller._id,
         sender: req.user.id,
         type: 'escrow_funded',
@@ -223,7 +223,7 @@ exports.confirmEscrow = asyncHandler(async (req, res) => {
     });
 
     // Notify buyer
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: req.user.id,
         sender: escrow.seller._id,
         type: 'escrow_funded',
@@ -271,29 +271,34 @@ exports.releaseEscrow = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Escrow cannot be released in ${escrow.status} state`);
     }
 
-    // Transfer funds: deduct pending from buyer and credit seller balance
-    const buyerWallet = await Wallet.getOrCreate(escrow.buyer._id);
+    // Transfer funds: atomically debit the buyer's pending balance first.
+    // Gateway-funded escrows (Razorpay) brought money in from outside the
+    // wallet system, so only wallet-funded escrows debit the buyer.
     const sellerWallet = await Wallet.getOrCreate(escrow.seller._id);
 
-    if (buyerWallet.pendingBalance >= escrow.amount) {
-        buyerWallet.pendingBalance -= escrow.amount;
-        await buyerWallet.save();
+    if (escrow.gateway !== 'razorpay') {
+        const debitedBuyerWallet = await Wallet.debitPending(escrow.buyer._id, escrow.amount);
+        if (!debitedBuyerWallet) {
+            throw new ApiError(409, 'Buyer funds are no longer held in escrow for this transaction');
+        }
     }
-    sellerWallet.balance += escrow.amount;
-    await sellerWallet.save();
+
+    // Credit the seller only after the buyer debit succeeded
+    await Wallet.creditBalance(escrow.seller._id, escrow.amount);
 
     // Update escrow
     escrow.status = 'released';
     escrow.releasedAt = new Date();
     await escrow.save();
 
-    // If Stripe, create transfer to seller's Stripe Connect account
-    if (stripe && escrow.seller.stripeAccountId) {
+    // If Stripe, create transfer to seller's Stripe Connect account (only
+    // when the funds actually moved through Stripe)
+    if (stripe && escrow.stripePaymentIntentId && sellerWallet.stripeAccountId) {
         try {
             await stripe.transfers.create({
                 amount: escrow.amount * 100,
                 currency: 'inr',
-                destination: escrow.seller.stripeAccountId,
+                destination: sellerWallet.stripeAccountId,
                 metadata: {
                     escrowId: escrowId,
                     postId: escrow.post._id.toString(),
@@ -307,7 +312,7 @@ exports.releaseEscrow = asyncHandler(async (req, res) => {
 
     // Notify buyer
     const io = req.app.get('io');
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: escrow.buyer._id,
         sender: req.user.id,
         type: 'escrow_released',
@@ -367,7 +372,7 @@ exports.refundEscrow = asyncHandler(async (req, res) => {
 
     // Notify seller
     const io = req.app.get('io');
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: escrow.seller._id,
         sender: req.user.id,
         type: 'escrow_refunded',
@@ -497,13 +502,19 @@ exports.topupWallet = asyncHandler(async (req, res) => {
 // @route   POST /api/payments/wallet/topup/confirm
 // @access  Private
 exports.confirmTopup = asyncHandler(async (req, res) => {
-    const { paymentIntentId, amount } = req.body;
+    const { paymentIntentId, amount: requestedAmount } = req.body;
+
+    let amount = requestedAmount;
 
     if (!amount || amount < 10) {
         throw new ApiError(400, 'Invalid amount');
     }
 
-    // If Stripe, verify payment
+    if (amount > 50000) {
+        throw new ApiError(400, 'Maximum top-up amount is ₹50,000');
+    }
+
+    // If Stripe, verify payment and use the gateway's amount as authoritative
     if (stripe && paymentIntentId) {
         try {
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
@@ -511,12 +522,41 @@ exports.confirmTopup = asyncHandler(async (req, res) => {
                 throw new ApiError(400, 'Payment not completed');
             }
             if (paymentIntent.metadata.userId !== req.user.id) {
-                throw new ApiError(400, 'Payment intent mismatch');
+                throw new ApiError(403, 'Payment intent does not belong to you');
             }
             if (paymentIntent.metadata.type !== 'wallet_topup') {
                 throw new ApiError(400, 'Invalid payment type');
             }
+            amount = paymentIntent.amount / 100;
+
+            // Idempotency: recording the intent first (unique index) means a
+            // replayed confirm call cannot double-credit the wallet.
+            try {
+                await EscrowTransaction.create({
+                    buyer: req.user.id,
+                    seller: req.user.id,
+                    amount,
+                    currency: 'INR',
+                    gateway: 'stripe',
+                    stripePaymentIntentId: paymentIntentId,
+                    status: 'released',
+                    fundedAt: new Date(),
+                    releasedAt: new Date(),
+                    metadata: new Map([['type', 'wallet_topup']]),
+                });
+            } catch (err) {
+                if (err && err.code === 11000) {
+                    const wallet = await Wallet.getOrCreate(req.user.id);
+                    return res.json({
+                        balance: wallet.balance,
+                        pendingBalance: wallet.pendingBalance,
+                        message: 'Top-up already processed',
+                    });
+                }
+                throw err;
+            }
         } catch (stripeErr) {
+            if (stripeErr instanceof ApiError) throw stripeErr;
             console.error('Stripe topup verification error:', stripeErr);
             throw new ApiError(400, 'Payment verification failed');
         }
@@ -528,7 +568,7 @@ exports.confirmTopup = asyncHandler(async (req, res) => {
 
     // Notify user
     const io = req.app.get('io');
-    await createNotification(io, {
+    await sendNotification(io, {
         recipient: req.user.id,
         sender: req.user.id,
         type: 'wallet_topup',
@@ -662,17 +702,23 @@ exports.createRazorpayOrder = asyncHandler(async (req, res) => {
     const amountInPaise = Math.round(numericAmount * 100);
     const receipt = `rcpt_${Date.now()}_${req.user.id.substring(Math.max(0, req.user.id.length - 6))}`;
 
-    const order = await razorpayConfig.createOrder({
-        amountInPaise,
-        currency: 'INR',
-        receipt,
-        notes: {
-            postId: postId || '',
-            buyerId: req.user.id,
-            sellerId: sellerId || '',
-            paymentTiming: paymentTiming || (post ? post.paymentTiming : 'flexible') || 'escrow',
-        },
-    });
+    let order;
+    try {
+        order = await razorpayConfig.createOrder({
+            amountInPaise,
+            currency: 'INR',
+            receipt,
+            notes: {
+                postId: postId || '',
+                buyerId: req.user.id,
+                sellerId: sellerId || '',
+                paymentTiming: paymentTiming || (post ? post.paymentTiming : 'flexible') || 'escrow',
+            },
+        });
+    } catch (err) {
+        console.error('Razorpay create order error:', err.message);
+        throw new ApiError(503, 'Payment gateway is not configured');
+    }
 
     res.json({
         success: true,
@@ -689,10 +735,25 @@ exports.createRazorpayOrder = asyncHandler(async (req, res) => {
 // @route   POST /api/payments/razorpay/verify
 // @access  Private
 exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
-    const { orderId, paymentId, signature, postId, amount: requestedAmount, paymentTiming, recipientId } = req.body;
+    const { orderId, paymentId, signature, postId: requestedPostId, amount: requestedAmount, paymentTiming, recipientId } = req.body;
 
     if (!orderId || !paymentId) {
         throw new ApiError(400, 'orderId and paymentId are required');
+    }
+
+    // Idempotency: replaying the same Razorpay order/payment must never
+    // create a second escrow or credit a wallet twice.
+    const existingEscrow = await EscrowTransaction.findOne({
+        $or: [{ razorpayPaymentId: paymentId }, { razorpayOrderId: orderId }],
+    });
+    if (existingEscrow) {
+        return res.json({
+            success: true,
+            escrowId: existingEscrow._id,
+            status: existingEscrow.status,
+            paymentTiming: existingEscrow.paymentTiming,
+            message: 'Payment already processed',
+        });
     }
 
     const isValid = razorpayConfig.verifyPaymentSignature({
@@ -708,12 +769,62 @@ exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
     let post = null;
     let sellerId = recipientId;
     let amount = parseFloat(requestedAmount);
+    let timing = paymentTiming;
 
-    if (postId && mongoose.Types.ObjectId.isValid(postId)) {
-        post = await Post.findById(postId).populate('user', '_id displayName');
+    const razorpayInstance = razorpayConfig.razorpayInstance;
+    const isMockOrder = String(orderId).startsWith('order_mock_');
+
+    if (razorpayInstance && !isMockOrder) {
+        // Authoritative verification: pull the order from Razorpay so the
+        // amount, seller, and payment timing cannot be spoofed by the client.
+        let order;
+        try {
+            order = await razorpayInstance.orders.fetch(orderId);
+        } catch (err) {
+            console.error('Razorpay order fetch failed:', err.message);
+            throw new ApiError(400, 'Unable to verify payment order');
+        }
+
+        const notes = order.notes || {};
+        if (notes.buyerId && notes.buyerId !== req.user.id) {
+            throw new ApiError(403, 'Payment order does not belong to you');
+        }
+
+        amount = order.amount / 100;
+        if (notes.sellerId) sellerId = notes.sellerId;
+        if (notes.paymentTiming) timing = notes.paymentTiming;
+
+        const notesPostId = notes.postId && mongoose.Types.ObjectId.isValid(notes.postId)
+            ? notes.postId
+            : null;
+        if (notesPostId) {
+            post = await Post.findById(notesPostId).populate('user', '_id displayName');
+            if (!post) {
+                throw new ApiError(404, 'Post from payment order no longer exists');
+            }
+        }
+    } else {
+        // Mock/dev mode: the gateway cannot be consulted, so validate the
+        // client-supplied amount against the post price.
+        if (requestedPostId && mongoose.Types.ObjectId.isValid(requestedPostId)) {
+            post = await Post.findById(requestedPostId).populate('user', '_id displayName');
+        }
         if (post) {
             sellerId = post.user._id.toString();
+            if (post.price && post.price > 0) {
+                if (!amount || amount !== post.price) {
+                    throw new ApiError(400, `Amount mismatch: this listing costs ₹${post.price}`);
+                }
+            } else if (post.budgetMax && amount > post.budgetMax) {
+                throw new ApiError(400, `Amount exceeds the maximum budget of ₹${post.budgetMax}`);
+            }
             if (!amount) amount = post.price;
+        }
+        if (amount && (isNaN(amount) || amount <= 0)) {
+            throw new ApiError(400, 'Valid amount is required');
+        }
+        if (amount > 50000) {
+            throw new ApiError(400, 'Amount exceeds the maximum allowed value');
         }
     }
 
@@ -725,35 +836,55 @@ exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Valid amount is required');
     }
 
-    const timing = paymentTiming || (post ? post.paymentTiming : 'flexible') || 'escrow';
+    if (!timing && post) {
+        timing = post.paymentTiming;
+    }
     const isAdvance = timing === 'advance';
 
     // Create escrow transaction record
-    const escrow = await EscrowTransaction.create({
-        post: post ? post._id : undefined,
-        buyer: req.user.id,
-        seller: sellerId,
-        amount,
-        currency: 'INR',
-        gateway: 'razorpay',
-        paymentTiming: isAdvance ? 'advance' : 'escrow',
-        razorpayOrderId: orderId,
-        razorpayPaymentId: paymentId,
-        razorpaySignature: signature || 'mock_sig',
-        status: isAdvance ? 'released' : 'funded',
-        fundedAt: new Date(),
-        releasedAt: isAdvance ? new Date() : undefined,
-        metadata: new Map([
-            ['postTitle', post ? post.title : 'Direct Payment'],
-            ['paymentMethod', 'razorpay_upi_netbanking'],
-        ]),
-    });
+    let escrow;
+    try {
+        escrow = await EscrowTransaction.create({
+            post: post ? post._id : undefined,
+            buyer: req.user.id,
+            seller: sellerId,
+            amount,
+            currency: 'INR',
+            gateway: 'razorpay',
+            paymentTiming: isAdvance ? 'advance' : 'escrow',
+            razorpayOrderId: orderId,
+            razorpayPaymentId: paymentId,
+            razorpaySignature: signature || 'mock_sig',
+            status: isAdvance ? 'released' : 'funded',
+            fundedAt: new Date(),
+            releasedAt: isAdvance ? new Date() : undefined,
+            metadata: new Map([
+                ['postTitle', post ? post.title : 'Direct Payment'],
+                ['paymentMethod', 'razorpay_upi_netbanking'],
+            ]),
+        });
+    } catch (err) {
+        // Unique index race: another request already recorded this payment
+        if (err && err.code === 11000) {
+            const duplicate = await EscrowTransaction.findOne({
+                $or: [{ razorpayPaymentId: paymentId }, { razorpayOrderId: orderId }],
+            });
+            if (duplicate) {
+                return res.json({
+                    success: true,
+                    escrowId: duplicate._id,
+                    status: duplicate.status,
+                    paymentTiming: duplicate.paymentTiming,
+                    message: 'Payment already processed',
+                });
+            }
+        }
+        throw err;
+    }
 
-    // If advance payment timing, instantly credit seller's wallet
+    // If advance payment timing, instantly credit seller's wallet (atomically)
     if (isAdvance) {
-        const sellerWallet = await Wallet.getOrCreate(sellerId);
-        sellerWallet.balance += amount;
-        await sellerWallet.save();
+        await Wallet.creditBalance(sellerId, amount);
     }
 
     // Send notifications
@@ -761,7 +892,7 @@ exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
     const itemTitle = post ? `"${post.title}"` : 'item/service';
 
     if (isAdvance) {
-        await createNotification(io, {
+        await sendNotification(io, {
             recipient: sellerId,
             sender: req.user.id,
             type: 'payment_received',
@@ -771,7 +902,7 @@ exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
             relatedId: post ? post._id : undefined,
         });
     } else {
-        await createNotification(io, {
+        await sendNotification(io, {
             recipient: sellerId,
             sender: req.user.id,
             type: 'escrow_funded',

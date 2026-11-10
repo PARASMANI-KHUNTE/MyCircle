@@ -1,6 +1,9 @@
 const Notification = require('../models/Notification');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
+const pino = require('pino');
+
+const logger = pino({ name: 'notifications' });
 
 const DEFAULT_NOTIFICATION_LIMIT = 30;
 const MAX_NOTIFICATION_LIMIT = 100;
@@ -54,7 +57,7 @@ exports.markRead = async (req, res, next) => {
         if (!notification) return res.status(404).json({ msg: 'Notification not found' });
 
         if (notification.recipient.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'Not authorized' });
+            return res.status(403).json({ msg: 'Not authorized' });
         }
 
         notification.read = true;
@@ -89,7 +92,7 @@ exports.deleteNotification = async (req, res, next) => {
         if (!notification) return res.status(404).json({ msg: 'Notification not found' });
 
         if (notification.recipient.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'Not authorized' });
+            return res.status(403).json({ msg: 'Not authorized' });
         }
 
         await notification.deleteOne();
@@ -111,51 +114,63 @@ exports.deleteAll = async (req, res, next) => {
     }
 };
 
-// Helper to create and emit notification (internal use)
+// Helper to create and emit notification (internal use).
+//
+// Throws on database failure so callers that need delivery guarantees
+// (queue workers, cron jobs) can observe and retry. Request handlers should
+// prefer sendNotification, which never turns a successful API action into a 5xx.
 exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId, conversationId = null }) => {
+    if (!recipient) {
+        logger.warn('createNotification called without a recipient');
+        return null;
+    }
+
+    // Safe ID comparison
+    const recipientIdStr = recipient._id ? recipient._id.toString() : recipient.toString();
+    const senderIdStr = sender?._id ? sender._id.toString() : sender?.toString();
+
+    if (senderIdStr && recipientIdStr === senderIdStr) return null; // Don't notify self
+
+    const notification = new Notification({
+        recipient,
+        sender,
+        type,
+        title,
+        message,
+        link,
+        relatedId,
+        conversationId
+    });
+    await notification.save();
+    await notification.populate('sender', 'displayName avatar');
+
+    if (io) {
+        const emittedNotification = notification.toObject();
+        if (relatedId) {
+            emittedNotification.postId = relatedId.toString();
+        }
+        if (conversationId) {
+            emittedNotification.conversationId = conversationId.toString();
+        }
+
+        // Emit to the specific user's room
+        const userRoom = `user:${recipientIdStr}`;
+        io.to(userRoom).emit('new_notification', emittedNotification);
+        logger.info({ userRoom, type: emittedNotification.type }, 'Notification emitted');
+    } else {
+        logger.debug('No io instance; notification saved without emitting');
+    }
+
+    return notification;
+};
+
+// Fire-and-forget variant for request handlers: a failed notification must never
+// fail an API response whose primary action (payment, post, contact request) already succeeded.
+exports.sendNotification = async (io, payload) => {
     try {
-        if (!recipient) {
-            console.error("[Notification] No recipient provided.");
-            return;
-        }
-
-        // Safe ID comparison
-        const recipientIdStr = recipient._id ? recipient._id.toString() : recipient.toString();
-        const senderIdStr = sender?._id ? sender._id.toString() : sender?.toString();
-
-        if (senderIdStr && recipientIdStr === senderIdStr) return; // Don't notify self
-
-        const notification = new Notification({
-            recipient,
-            sender,
-            type,
-            title,
-            message,
-            link,
-            relatedId,
-            conversationId
-        });
-await notification.save();
-        await notification.populate('sender', 'displayName avatar');
-
-        if (io) {
-            const emittedNotification = notification.toObject();
-            if (relatedId) {
-                emittedNotification.postId = relatedId.toString();
-            }
-            if (conversationId) {
-                emittedNotification.conversationId = conversationId.toString();
-            }
-            
-            // Emit to the specific user's room
-            const userRoom = `user:${recipientIdStr}`;
-            io.to(userRoom).emit('new_notification', emittedNotification);
-            
-            console.log(`[Notification] Emitted to room ${userRoom}:`, emittedNotification.title);
-        } else {
-            console.log('[Notification] No io instance, notification saved but not emitted');
-        }
+        return await exports.createNotification(io, payload);
     } catch (err) {
-        console.error("Notification creation failed:", err);
+        logger.error({ error: err.message, type: payload?.type }, 'Notification delivery failed');
+        return null;
     }
 };

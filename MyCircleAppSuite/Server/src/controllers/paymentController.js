@@ -68,9 +68,10 @@ exports.createEscrowIntent = asyncHandler(async (req, res) => {
         throw new ApiError(409, 'You already have an active escrow for this post');
     }
 
-    // Check buyer's wallet balance
-    const buyerWallet = await Wallet.getOrCreate(req.user.id);
-    if (buyerWallet.balance < amount) {
+    // Wallet-backed escrow is only used when an external processor is not
+    // configured. A Stripe payment must never also reserve wallet funds.
+    const buyerWallet = stripe ? null : await Wallet.getOrCreate(req.user.id);
+    if (buyerWallet && buyerWallet.balance < amount) {
         return res.status(400).json({
             code: 'INSUFFICIENT_FUNDS',
             message: `Insufficient wallet balance. You need ₹${amount - buyerWallet.balance} more.`,
@@ -88,14 +89,16 @@ exports.createEscrowIntent = asyncHandler(async (req, res) => {
         amount,
         currency: 'INR',
         status: 'pending',
+        gateway: stripe ? 'stripe' : 'wallet',
         metadata: new Map([
             ['postTitle', post.title],
             ['postType', post.type],
         ]),
     });
 
-    // Reserve funds in buyer's wallet
-    await buyerWallet.reserveFunds(amount);
+    if (buyerWallet) {
+        await buyerWallet.reserveFunds(amount);
+    }
 
     // If Stripe is configured, create a Payment Intent
     let clientSecret = null;
@@ -114,17 +117,20 @@ exports.createEscrowIntent = asyncHandler(async (req, res) => {
             });
             clientSecret = paymentIntent.client_secret;
             escrow.stripePaymentIntentId = paymentIntent.id;
-            escrow.status = 'funded';
-            escrow.fundedAt = new Date();
             await escrow.save();
         } catch (stripeErr) {
             console.error('Stripe error:', stripeErr);
-            // Refund the reserved funds on Stripe failure
-            await buyerWallet.refundEscrow(amount);
+            // Refund only the wallet reservation; Stripe never reserves it.
+            if (buyerWallet) await buyerWallet.refundEscrow(amount);
             await escrow.deleteOne();
             throw new ApiError(500, 'Payment processing failed. Please try again.');
         }
     } else {
+        if (process.env.NODE_ENV === 'production') {
+            await escrow.deleteOne();
+            await buyerWallet.refundEscrow(amount);
+            throw new ApiError(503, 'Payment processor is not configured');
+        }
         // Development mode - auto-fund without Stripe
         escrow.status = 'funded';
         escrow.fundedAt = new Date();
@@ -189,14 +195,19 @@ exports.confirmEscrow = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Escrow cannot be confirmed in ${escrow.status} state`);
     }
 
-    // If Stripe is configured, verify payment
-    if (stripe && paymentIntentId) {
+    // Stripe confirmation is mandatory and tied to this exact escrow.
+    if (escrow.gateway === 'stripe') {
+        if (!paymentIntentId || paymentIntentId !== escrow.stripePaymentIntentId) {
+            throw new ApiError(400, 'Matching payment intent is required');
+        }
         try {
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
             if (paymentIntent.status !== 'succeeded') {
                 throw new ApiError(400, 'Payment not completed');
             }
-            if (paymentIntent.metadata.escrowId !== escrowId) {
+            if (paymentIntent.metadata.escrowId !== escrowId
+                || paymentIntent.amount !== Math.round(escrow.amount * 100)
+                || paymentIntent.currency !== 'inr') {
                 throw new ApiError(400, 'Payment intent mismatch');
             }
         } catch (stripeErr) {
@@ -207,6 +218,7 @@ exports.confirmEscrow = asyncHandler(async (req, res) => {
 
     // Update escrow status
     escrow.status = 'held';
+    escrow.fundedAt = escrow.fundedAt || new Date();
     await escrow.save();
 
     // Notify seller
@@ -240,9 +252,9 @@ exports.confirmEscrow = asyncHandler(async (req, res) => {
     });
 });
 
-// @desc    Release escrow to seller (seller confirms delivery)
+// @desc    Release escrow to seller after buyer confirms delivery
 // @route   POST /api/payments/escrow/:escrowId/release
-// @access  Private (seller)
+// @access  Private (buyer or admin)
 exports.releaseEscrow = asyncHandler(async (req, res) => {
     const { escrowId } = req.params;
 
@@ -260,10 +272,9 @@ exports.releaseEscrow = asyncHandler(async (req, res) => {
     }
 
     const isBuyer = escrow.buyer._id.toString() === req.user.id;
-    const isSeller = escrow.seller._id.toString() === req.user.id;
     const isAdmin = req.user.role === 'admin';
 
-    if (!isBuyer && !isSeller && !isAdmin) {
+    if (!isBuyer && !isAdmin) {
         throw new ApiError(403, 'Not authorized to release escrow');
     }
 
@@ -276,26 +287,20 @@ exports.releaseEscrow = asyncHandler(async (req, res) => {
     // wallet system, so only wallet-funded escrows debit the buyer.
     const sellerWallet = await Wallet.getOrCreate(escrow.seller._id);
 
-    if (escrow.gateway !== 'razorpay') {
+    if (escrow.gateway === 'wallet') {
         const debitedBuyerWallet = await Wallet.debitPending(escrow.buyer._id, escrow.amount);
         if (!debitedBuyerWallet) {
             throw new ApiError(409, 'Buyer funds are no longer held in escrow for this transaction');
         }
     }
 
-    // Credit the seller only after the buyer debit succeeded
-    await Wallet.creditBalance(escrow.seller._id, escrow.amount);
-
-    // Update escrow
-    escrow.status = 'released';
-    escrow.releasedAt = new Date();
-    await escrow.save();
-
-    // If Stripe, create transfer to seller's Stripe Connect account (only
-    // when the funds actually moved through Stripe)
-    if (stripe && escrow.stripePaymentIntentId && sellerWallet.stripeAccountId) {
+    // For Stripe payments, move the provider funds before recording payout.
+    if (escrow.gateway === 'stripe') {
+        if (!stripe || !sellerWallet.stripeAccountId) {
+            throw new ApiError(409, 'Seller has not configured a payout account');
+        }
         try {
-            await stripe.transfers.create({
+            const transfer = await stripe.transfers.create({
                 amount: escrow.amount * 100,
                 currency: 'inr',
                 destination: sellerWallet.stripeAccountId,
@@ -304,11 +309,17 @@ exports.releaseEscrow = asyncHandler(async (req, res) => {
                     postId: escrow.post._id.toString(),
                 },
             });
+            escrow.stripeTransferId = transfer.id;
         } catch (stripeErr) {
             console.error('Stripe transfer error:', stripeErr);
-            // Log but don't fail - wallet already updated
+            throw new ApiError(502, 'Unable to transfer payment to seller');
         }
     }
+
+    await Wallet.creditBalance(escrow.seller._id, escrow.amount);
+    escrow.status = 'released';
+    escrow.releasedAt = new Date();
+    await escrow.save();
 
     // Notify buyer
     const io = req.app.get('io');
@@ -360,9 +371,22 @@ exports.refundEscrow = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Cannot refund escrow in ${escrow.status} state`);
     }
 
-    // Refund to buyer's wallet
-    const buyerWallet = await Wallet.getOrCreate(escrow.buyer);
-    await buyerWallet.refundEscrow(escrow.amount);
+    if (escrow.gateway === 'wallet') {
+        const buyerWallet = await Wallet.getOrCreate(escrow.buyer);
+        await buyerWallet.refundEscrow(escrow.amount);
+    } else if (escrow.gateway === 'razorpay') {
+        if (!razorpayConfig.razorpayInstance || !escrow.razorpayPaymentId) {
+            throw new ApiError(503, 'Gateway refund is unavailable');
+        }
+        await razorpayConfig.razorpayInstance.payments.refund(escrow.razorpayPaymentId, {
+            amount: Math.round(escrow.amount * 100),
+        });
+    } else if (escrow.gateway === 'stripe') {
+        if (!stripe || !escrow.stripePaymentIntentId) {
+            throw new ApiError(503, 'Gateway refund is unavailable');
+        }
+        await stripe.refunds.create({ payment_intent: escrow.stripePaymentIntentId });
+    }
 
     // Update escrow
     escrow.status = 'refunded';
@@ -488,6 +512,8 @@ exports.topupWallet = asyncHandler(async (req, res) => {
             console.error('Stripe topup error:', stripeErr);
             throw new ApiError(500, 'Failed to create top-up intent');
         }
+    } else if (process.env.NODE_ENV === 'production') {
+        throw new ApiError(503, 'Payment processor is not configured');
     }
 
     res.json({
@@ -514,8 +540,11 @@ exports.confirmTopup = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Maximum top-up amount is ₹50,000');
     }
 
-    // If Stripe, verify payment and use the gateway's amount as authoritative
-    if (stripe && paymentIntentId) {
+    if (stripe) {
+        if (!paymentIntentId) {
+            throw new ApiError(400, 'paymentIntentId is required');
+        }
+        // Verify payment and use the gateway's amount as authoritative.
         try {
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
             if (paymentIntent.status !== 'succeeded') {
@@ -560,6 +589,8 @@ exports.confirmTopup = asyncHandler(async (req, res) => {
             console.error('Stripe topup verification error:', stripeErr);
             throw new ApiError(400, 'Payment verification failed');
         }
+    } else if (process.env.NODE_ENV === 'production') {
+        throw new ApiError(503, 'Payment processor is not configured');
     }
 
     // Add funds to wallet
@@ -688,8 +719,9 @@ exports.createRazorpayOrder = asyncHandler(async (req, res) => {
         if (post.user._id.toString() === req.user.id) {
             throw new ApiError(400, 'Cannot purchase your own post');
         }
-        if (!targetAmount) {
-            targetAmount = post.price;
+        targetAmount = post.price;
+        if (!targetAmount || targetAmount <= 0) {
+            throw new ApiError(400, 'This listing does not have a fixed price');
         }
         sellerId = post.user._id.toString();
     }
@@ -801,6 +833,11 @@ exports.verifyRazorpayPayment = asyncHandler(async (req, res) => {
             post = await Post.findById(notesPostId).populate('user', '_id displayName');
             if (!post) {
                 throw new ApiError(404, 'Post from payment order no longer exists');
+            }
+            if (!post.isActive || post.acceptInAppPayment === false
+                || post.user._id.toString() !== sellerId
+                || Number(post.price) !== Number(amount)) {
+                throw new ApiError(400, 'Payment order no longer matches the listing');
             }
         }
     } else {

@@ -38,7 +38,9 @@ const serviceRouter = ({
                     : {}),
             }, {
                 requestId: req.requestId,
-                authorization: req.get('authorization'),
+                authorization: req.get('authorization') || (req.get('x-auth-token')
+                    ? `Bearer ${req.get('x-auth-token')}`
+                    : undefined),
             });
 
             res.status(response.status);

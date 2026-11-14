@@ -32,11 +32,18 @@ const requireAuth = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     try {
         const decoded = jwt.verify(token, getSecureJwtSecret());
+        // The gateway issues { user: { id, email, role } } claims while
+        // independently-issued service tokens use standard JWT top-level claims.
+        // Accept both during migration so routing does not erase identity.
+        const claims = decoded.user || decoded;
+        if (!claims.id && !decoded.sub) {
+            throw new Error('Token has no subject');
+        }
         req.user = {
-            id: decoded.sub,
-            email: decoded.email,
-            displayName: decoded.displayName,
-            role: decoded.role || 'user',
+            id: claims.id || decoded.sub,
+            email: claims.email || decoded.email,
+            displayName: claims.displayName || decoded.displayName,
+            role: claims.role || decoded.role || 'user',
         };
         next();
     } catch (err) {

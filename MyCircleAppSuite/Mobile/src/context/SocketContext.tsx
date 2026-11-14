@@ -147,7 +147,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             transports: ['websocket'],
             forceNew: true,
             auth: {
-                accessToken
+                token: accessToken
             }
         });
 

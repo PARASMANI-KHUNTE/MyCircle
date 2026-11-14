@@ -5,6 +5,7 @@ const { Order, SellerAccount, PaymentAuditLog } = require('./models/Payment');
 const { attachRequestContext, handleServiceError, requireAuth, parsePagination } = require('../../Common/security');
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(helmet());
 app.use(cors());
@@ -31,6 +32,17 @@ app.get('/health/ready', (req, res) => {
 // Create Payment Intent & Escrow Order
 app.post('/api/payments/create-intent', requireAuth, async (req, res) => {
     try {
+        // This extracted service still uses mock provider artifacts. It must
+        // never create a payable order in production until a real provider
+        // integration and signed webhook are implemented here.
+        if (isProduction) {
+            return res.status(503).json({
+                success: false,
+                code: 'PAYMENT_PROVIDER_UNAVAILABLE',
+                message: 'The payment service is not configured for production payments',
+                requestId: req.requestId,
+            });
+        }
         const { postId, sellerId, itemTitle, amount, currency = 'usd' } = req.body;
 
         if (!postId || !sellerId || !itemTitle || amount === undefined) {
@@ -118,7 +130,7 @@ app.post('/api/payments/orders/:orderId/confirm-delivery', requireAuth, async (r
             });
         }
 
-        if (order.status !== 'funds_in_escrow' && order.status !== 'payment_pending') {
+        if (order.status !== 'funds_in_escrow') {
             return res.status(400).json({
                 success: false,
                 code: 'INVALID_STATE',

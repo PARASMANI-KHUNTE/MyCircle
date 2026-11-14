@@ -19,6 +19,8 @@ const { requestContext } = require('./src/middleware/requestContext');
 const { getServiceName } = require('./src/config/serviceIdentity');
 const { serviceRouter } = require('./src/middleware/serviceRouter');
 const User = require('./src/models/User');
+const Conversation = require('./src/models/Conversation');
+const mongoose = require('mongoose');
 const ApiError = require('./src/utils/ApiError');
 const { closeQueueConnection } = require('./src/utils/queue');
 
@@ -116,12 +118,19 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('join_conversation', (conversationId) => {
+    socket.on('join_conversation', async (conversationId) => {
         try {
-            if (conversationId) {
-                socket.join(`conversation:${conversationId}`);
-                logger.debug({ conversationId }, 'User joined conversation');
+            if (!conversationId || !mongoose.Types.ObjectId.isValid(conversationId)) return;
+            const conversation = await Conversation.findOne({
+                _id: conversationId,
+                participants: socket.userId,
+            }).select('_id').lean();
+            if (!conversation) {
+                logger.warn({ socketId: socket.id, conversationId }, 'Conversation join rejected');
+                return;
             }
+            socket.join(`conversation:${conversationId}`);
+            logger.debug({ conversationId }, 'User joined conversation');
         } catch (error) {
             logger.error({ error: error.message }, 'Error in join_conversation');
         }

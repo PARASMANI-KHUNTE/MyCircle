@@ -9,14 +9,14 @@ MyCircle is a hyperlocal community exchange platform for items, services, events
 ## 1. System Architecture
 
 ```
-                             [ Clients: Web & Mobile ]
-                                         │
-                                         ▼
-            [ API Gateway / Strangler Façade (Port 5000) - Express ]
-             ├── Health Probes: /health/live, /health/ready, /health/services
-             ├── Distributed Tracing: Injects and propagates x-request-id
-             └── Dynamic Proxying to Extracted Microservices
-                                         │
+                              [ Clients: Web & Mobile ]
+                                          │
+                                          ▼
+             [ API Gateway / Strangler Façade (Port 5000) - Express ]
+              ├── Health Probes: /health/live, /health/ready, /health/services
+              ├── Distributed Tracing: Injects and propagates x-request-id
+              └── Dynamic Proxying to Extracted Microservices
+                                          │
  ┌─────────────┬─────────────┬───────────┼───────────┬─────────────┬─────────────┐
  ▼             ▼             ▼           ▼           ▼             ▼             ▼
 [Identity] [Marketplace]  [Comm]     [Contact]  [Notifications] [Payment]     [DSA Suite]
@@ -48,7 +48,7 @@ Owns user registration, credential verification, Google OAuth delegation, JWT cl
 | `POST`| `/auth/logout-all` | Bearer | Revoke all refresh tokens for user |
 | `GET` | `/api/user/profile` | Bearer | Fetch authenticated user's private profile |
 | `PUT` | `/api/user/profile` | Bearer | Update profile details (`displayName`, `bio`, `phone`, `skills`) |
-| `GET` | `/api/user/:id` | Public | Fetch sanitized public profile with reputation score |
+| `GET` | `/api/user/:id` | Public | Fetch sanitized public profile with **Reputation Index** |
 
 ---
 
@@ -61,7 +61,7 @@ Owns post listings, category taxonomy, and real-time geospatial discovery.
 | `GET` | `/health/live` | Public | Liveness probe returning service status |
 | `GET` | `/health/ready` | Public | Readiness probe confirming operational state |
 | `GET` | `/api/posts` | Public | Search and discover listings with geospatial proximity filters (`longitude`, `latitude`, `radius`), category, type, and keyword search |
-| `GET` | `/api/posts/:id` | Public | Retrieve detailed post metadata and author snapshot |
+| `GET` | `/api/posts/:id` | Public | Retrieve detailed post metadata and author snapshot (includes **Reputation Index**) |
 | `POST`| `/api/posts` | Bearer | Create a new listing (`type`, `title`, `description`, `price`, `location`, `coordinates`, `images`) |
 
 ---
@@ -99,7 +99,7 @@ Manages contact requests, trust verification, and privacy-preserving mutual cons
 Delivers in-app activity feeds, real-time unread counts, and delivery status tracking.
 
 | Method | Path | Auth | Description |
-| :--- | :--- | :---: | :--- |
+| :--- | :---: | :---: | :--- |
 | `GET` | `/health/live` | Public | Liveness probe returning service status |
 | `GET` | `/health/ready` | Public | Readiness probe confirming operational state |
 | `GET` | `/api/notifications` | Bearer | Fetch paginated notification feed and unread badge count |
@@ -108,8 +108,45 @@ Delivers in-app activity feeds, real-time unread counts, and delivery status tra
 
 ---
 
+### 📈 9. Reputation System (`Port 5001` | DB: `mycircle_identity`)
+*Path: `MyCircleAppSuite/Services/Identity`*  
+Tracks cross-category reputation that travels with the user across all exchange types.
+
+| Metric | Description | Weight |
+| :--- | :--- | :---: |
+| **Reputation Index** | Score 200-800 that reflects overall trustworthiness | 40% |
+| **Transaction Success** | Ratio of successful to attempted exchanges | 25% |
+| **Communication Quality** | Average response time & message quality | 20% |
+| **Community Vouches** | Number of user recommendations/endorsements | 15% |
+| **Dispute Ratio** | Fewer disputes = higher score | 15% (negative) |
+
+**Key Features:**
+- **Travels across categories** – your reputation in barter improves service ratings and vice versa
+- **Decays slowly** – inactivity causes gradual decrease, encouraging re-engagement
+- **Context-aware** – different weights for different exchange types (barter vs. high-value sales)
+- **Visual display** – shown as `Reputation: 7/10` with category breakdown on profile pages
+- **Resets on fraud** – permanent score reduction for confirmed policy violations
+
+---
+
+### 🛒 2. Marketplace Service (`Port 5002` | DB: `mycircle_marketplace`)
+*Path: `MyCircleAppSuite/Services/Marketplace`*  
+Owns post listings, category taxonomy, and real-time geospatial discovery.
+
+| Method | Path | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/health/live` | Public | Liveness probe returning service status |
+| `GET` | `/health/ready` | Public | Readiness probe confirming operational state |
+| `GET` | `/api/posts` | Public | Search and discover listings with geospatial proximity filters (`longitude`, `latitude`, `radius`), category, type, and keyword search |
+| `GET` | `/api/posts/:id` | Public | Retrieve detailed post metadata and author snapshot |
+| `POST`| `/api/posts` | Bearer | Create a new listing (`type`, `title`, `description`, `price`, `location`, `coordinates`, `images`) |
+
+---
+
 ### 💳 6. Payment & Escrow Service (`Port 5006` | DB: `mycircle_payment`)
 *Path: `MyCircleAppSuite/Services/Payment`*  
+*(Note: Payment/escrow functionality has been removed from the UI/front-end but the service layer remains for potential future re-enablement.)*
+
 Provides end-to-end buyer escrow protection, wallet management, payment intents, Stripe Connect for seller payouts, and platform take-rate (commission).
 
 | Method | Path | Auth | Description |
@@ -140,8 +177,7 @@ React Native (bare workflow) with Expo modules, TypeScript, and modern architect
 - **Automatic Token Refresh** — Axios interceptors with request queuing during refresh (no race conditions)
 - **Socket.io Real-time** — Authenticated WebSocket with auto-reconnect, typing indicators, presence
 - **Push Notifications** — FCM via `@react-native-firebase/messaging` + `notifee` for native display, deep linking from quit/background/foreground states
-- **Escrow Checkout Flow** — Integrated with Payment Service API (create escrow → confirm → approve contact)
-- **Wallet Management** — Balance display, top-up via Stripe, Stripe Connect onboarding for sellers
+- **Reputation System** — Cross-category Reputation Index that travels with user profile
 - **Type-Safe Navigation** — React Navigation v6 with typed route params
 
 ### Mobile Tech Stack
@@ -228,7 +264,69 @@ docker compose -f docker-compose.microservices.yml up --build
 
 ---
 
-## 6. Verification & Testing
+## 7. Authentication Flow (Dual-Token)
+
+```
+┌─────────────┐     POST /auth/login     ┌──────────────────┐
+│   Client    │ ──────────────────────► │  Identity Service │
+└─────────────┘                          └────────┬─────────┘
+                                                    │
+                                           { accessToken, refreshToken }
+                           (access: 15min, refresh: 30 days)
+                                                    ▼
+┌─────────────┐     x-auth-token header    ┌──────────────────┐
+│   Client    │ ◄───────────────────────── │  API Gateway     │
+└─────────────┘  (auto-refreshed on 401)   └──────────────────┘
+```
+
+- **Access Token**: 15 min expiry, HS256, contains `{ id, email, role, iat, exp }`
+- **Refresh Token**: 30 days, rotated on each use, stored hashed (scrypt) in DB
+- **Security**: Refresh token rotation prevents replay; DB compromise leaks only hashes
+
+---
+
+## 8. Project Structure
+
+```
+MyCircle/
+├ MyCircleAppSuite/
+│   ├── Server/                    # Monolith / API Gateway (Port 5000)
+│   │   ├── src/
+│   │   │   ├── config/            # DB, Firebase, Passport, Service Contracts
+│   │   │   ├── controllers/       # Route handlers (auth, post, chat, payment, etc.)
+│   │   │   ├── middleware/        # Auth, serviceRouter, errorHandler, rateLimit
+│   │   │   ├── models/            # Mongoose models (User, Post, Wallet, EscrowTransaction)
+│   │   │   ├── routes/            # Express routers
+│   │   │   ├── services/          # Business logic (tokenService, platform services)
+│   │   │   └── utils/             # DSA, asyncHandler, ApiError, validation
+│   │   └── __tests__/             # 40 tests across 12 suites
+│   ├── Mobile/                    # React Native App
+│   │   ├── src/
+│   │   │   ├── components/        # Reusable UI (CheckoutModal, GlassView, etc.)
+│   │   │   │   └── Reputation/    # ReputationIndex component (new)
+│   │   │   ├── context/           # AuthContext, SocketContext, NotificationContext, ReputationContext
+│   │   │   ├── navigation/        # Typed React Navigation
+│   │   │   ├── screens/           # All app screens + ProfileScreen (with Reputation)
+│   │   │   │   └── ProfileScreen (shows Reputation Index)
+│   │   │   ├── services/          # api.ts, chat.ts, notificationService.ts, aiService.ts
+│   │   │   ├── utils/             # Helpers, formatters, reputationAlgorithm.ts
+│   │   │   └── theme/             # Design tokens, colors
+│   │   └── __tests__/             # Jest tests
+│   ├── Web/                       # React Web App (Vite)
+│   └── Services/                  # Extracted Microservices (Identity, Marketplace, etc.)
+│       ├── Identity/
+│       ├── Marketplace/
+│       ├── Communication/
+│       ├── Contact/
+│       ├── Notifications/
+│       └── Payment/                # Functionality removed from UI, service layer retained
+├── docker-compose.microservices.yml
+└── README.md
+```
+
+---
+
+## 9. Verification & Testing
 
 Every microservice and the central gateway include automated test suites:
 
@@ -256,60 +354,12 @@ npm run build:web
 
 ---
 
-## 7. Authentication Flow (Dual-Token)
+## 10. Future Enhancements
 
-```
-┌─────────────┐     POST /auth/login     ┌──────────────────┐
-│   Client    │ ──────────────────────► │  Identity Service │
-└─────────────┘                          └────────┬─────────┘
-                                                   │
-                          { accessToken, refreshToken }
-                          (access: 15min, refresh: 30 days)
-                                                   ▼
-┌─────────────┐     x-auth-token header    ┌──────────────────┐
-│   Client    │ ◄───────────────────────── │  API Gateway     │
-└─────────────┘  (auto-refreshed on 401)   └──────────────────┘
-```
-
-- **Access Token**: 15 min expiry, HS256, contains `{ id, email, role, iat, exp }`
-- **Refresh Token**: 30 days, rotated on each use, stored hashed (scrypt) in DB
-- **Security**: Refresh token rotation prevents replay; DB compromise leaks only hashes
+- **Reputation System v2** – Machine-learning-based trust scoring
+- **Micro-credentials** – Badges for specialized skills (e.g., "Verified Handyman", "Trusted Pet Sitter")
+- **Swapping Market** – Direct item-for-item exchange without cash
+- **Local Business Partnerships** – Discounts for high-reputation users at local shops
+- **API Public Access** – Allow third-party apps to integrate MyCircle reputation
 
 ---
-
-## 8. Project Structure
-
-```
-MyCircle/
-├── MyCircleAppSuite/
-│   ├── Server/                    # Monolith / API Gateway (Port 5000)
-│   │   ├── src/
-│   │   │   ├── config/            # DB, Firebase, Passport, Service Contracts
-│   │   │   ├── controllers/       # Route handlers (auth, post, chat, payment, etc.)
-│   │   │   ├── middleware/        # Auth, serviceRouter, errorHandler, rateLimit
-│   │   │   ├── models/            # Mongoose models (User, Post, Wallet, EscrowTransaction)
-│   │   │   ├── routes/            # Express routers
-│   │   │   ├── services/          # Business logic (tokenService, platform services)
-│   │   │   └── utils/             # DSA, asyncHandler, ApiError, validation
-│   │   └── __tests__/             # 40 tests across 12 suites
-│   ├── Mobile/                    # React Native App
-│   │   ├── src/
-│   │   │   ├── components/        # Reusable UI (CheckoutModal, GlassView, etc.)
-│   │   │   ├── context/           # AuthContext, SocketContext, NotificationContext
-│   │   │   ├── navigation/        # Typed React Navigation
-│   │   │   ├── screens/           # All app screens
-│   │   │   ├── services/          # api.ts, chat.ts, notificationService.ts, aiService.ts
-│   │   │   ├── utils/             # Helpers, formatters
-│   │   │   └── theme/             # Design tokens, colors
-│   │   └── __tests__/             # Jest tests
-│   ├── Web/                       # React Web App (Vite)
-│   └── Services/                  # Extracted Microservices (Identity, Marketplace, etc.)
-│       ├── Identity/
-│       ├── Marketplace/
-│       ├── Communication/
-│       ├── Contact/
-│       ├── Notifications/
-│       └── Payment/
-├── docker-compose.microservices.yml
-└── README.md
-```

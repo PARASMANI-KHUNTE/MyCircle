@@ -30,14 +30,12 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const MyPosts = lazy(() => import('./pages/MyPosts'));
 const Settings = lazy(() => import('./pages/Settings'));
-const Wallet = lazy(() => import('./pages/Wallet'));
 const BlockedUsers = lazy(() => import('./pages/BlockedUsers'));
 const LoginSuccess = lazy(() => import('./pages/LoginSuccess'));
 
 // Admin pages
 const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
-const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'));
 const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminHealth = lazy(() => import('./pages/admin/AdminHealth'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
@@ -89,7 +87,6 @@ function AuthRoutes() {
             <Route path="/post/:id" element={<PostDetails />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/chat" element={<Chat />} />
-            <Route path="/wallet" element={<Wallet />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/blocked-users" element={<BlockedUsers />} />
             <Route path="*" element={<NotFound />} />
@@ -98,7 +95,6 @@ function AuthRoutes() {
           <Route element={<AdminGuard><AdminLayout /></AdminGuard>}>
             <Route path="/admin" element={<AdminOverview />} />
             <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/payments" element={<AdminPayments />} />
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/health" element={<AdminHealth />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />

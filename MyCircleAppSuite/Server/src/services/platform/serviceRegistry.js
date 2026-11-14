@@ -5,7 +5,6 @@ const SERVICE_NAMES = Object.freeze([
     'communication',
     'safety',
     'notifications',
-    'payment',
 ]);
 
 const getServiceUrl = (serviceName) => {

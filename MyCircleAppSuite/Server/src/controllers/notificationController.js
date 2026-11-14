@@ -165,7 +165,7 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
 };
 
 // Fire-and-forget variant for request handlers: a failed notification must never
-// fail an API response whose primary action (payment, post, contact request) already succeeded.
+// fail an API response whose primary action (post, contact request) already succeeded.
 exports.sendNotification = async (io, payload) => {
     try {
         return await exports.createNotification(io, payload);

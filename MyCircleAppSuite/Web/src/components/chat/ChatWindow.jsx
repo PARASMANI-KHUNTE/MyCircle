@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import { Send, ArrowLeft, Shield, Flag, Check, CheckCheck, Sparkles, ExternalLink, X, ChevronDown, ChevronUp, CreditCard, ShoppingBag, ShieldCheck, Briefcase, Wrench, Tag } from 'lucide-react';
 import { useToast } from '../ui/Toast';
-import CheckoutModal from '../ui/CheckoutModal';
 import Button from '../ui/Button';
 import { getSmartSuggestions } from '../../utils/smartSuggestions';
-import { useDialog } from '../../hooks/useDialog';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useCurrencySymbol } from '../../context/CurrencySymbolContext';
+import { useDialog } from '../../hooks/useDialog';
 
 const REPORT_REASON_OPTIONS = [
     'Spam or scam',
@@ -42,7 +40,6 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
     const [suggestions, setSuggestions] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
     const [postCollapsed, setPostCollapsed] = useState(true);
-    const [showCheckout, setShowCheckout] = useState(false);
     const messagesEndRef = useRef(null);
     const post = conversation.postId;
     const typingTimeoutRef = useRef(null);
@@ -52,7 +49,6 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
     const initializedRef = useRef(false);
 
     const currentUserId = currentUser?._id || currentUser?.id;
-
 
     const normalizeSenderId = (message) => {
         const sender = message?.sender;
@@ -66,38 +62,8 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
 
     const postOwnerId = post?.user?._id || post?.user;
     const isPostOwner = postOwnerId?.toString() === currentUserId?.toString();
-    const canTransact = Boolean(post && Number(post.price) > 0 && post.acceptInAppPayment !== false);
 
-    const handleRequestPaymentPrompt = async () => {
-        const text = `💳 Payment Request: Please send ${currencySymbol}${post.price} for "${post.title}". You can pay securely online via UPI, NetBanking, or Cards.`;
-        setNewMessage(text);
-    };
-
-    const handlePaymentComplete = async (result) => {
-        setShowCheckout(false);
-        const confirmMsg = result?.paymentTiming === 'advance'
-            ? `⚡ Payment Sent: I have completed advance payment of ${currencySymbol}${post.price} for "${post.title}" via Razorpay UPI.`
-            : `🛡️ Escrow Secured: I have safely locked ${currencySymbol}${post.price} in Escrow for "${post.title}" via Razorpay UPI. Please coordinate delivery!`;
-        
-        try {
-            await api.post(`/chats/${conversation._id}/messages`, { text: confirmMsg });
-            if (socket) {
-                socket.emit('send_message', {
-                    conversationId: conversation._id,
-                    recipientId: otherParticipant?._id || otherParticipant?.id,
-                    text: confirmMsg,
-                });
-            }
-        } catch {
-            // best effort message send
-        }
-    };
-
-    const scrollToBottom = () => {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-    };
+    const otherParticipantId = otherParticipant?._id || otherParticipant?.id;
 
     const markAsRead = useCallback(async () => {
         if (markReadInFlightRef.current || !conversation._id) return;
@@ -165,7 +131,6 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
     }, [conversation._id, currentUserId, markAsRead]);
 
     useEffect(() => {
-        if (!conversation._id) return;
         generateSuggestions(conversation.lastMessage?.text || '');
     }, [conversation._id, conversation.lastMessage?.text]);
 
@@ -245,7 +210,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
     const handleInputChange = (e) => {
         setNewMessage(e.target.value);
 
-        if (!socket || !otherParticipant?._id) return;
+        if (!socket || !otherParticipant?.id) return;
 
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
@@ -253,7 +218,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             socket.emit('typing_start', {
                 conversationId: conversation._id,
                 userId: currentUserId,
-                recipientId: otherParticipant._id
+                recipientId: otherParticipantId
             });
             typingStartEmitted.current = true;
         }
@@ -262,7 +227,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             socket.emit('typing_stop', {
                 conversationId: conversation._id,
                 userId: currentUserId,
-                recipientId: otherParticipant._id
+                recipientId: otherParticipantId
             });
             typingTimeoutRef.current = null;
             typingStartEmitted.current = false;
@@ -271,7 +236,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
 
     const handleSend = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !otherParticipant?._id) return;
+        if (!newMessage.trim() || !otherParticipant?.id) return;
 
         let tempMessage;
         try {
@@ -290,7 +255,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             generateSuggestions();
 
             const response = await api.post('/chat/message', {
-                recipientId: otherParticipant._id || otherParticipant.id || otherParticipant,
+                recipientId: otherParticipantId || otherParticipant.id || otherParticipant,
                 text: tempMessage.text,
                 postId: conversation.postId?._id || conversation.postId
             });
@@ -298,128 +263,129 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             setMessages(prev => prev.map((message) =>
                 message._id === tempId ? response.data : message
             ));
-        } catch (err) {
-            console.error("Failed to send", err);
-            if (tempMessage) {
-                setMessages(prev => prev.filter(m => m._id !== tempMessage._id));
-            }
-
-            if (err.response?.status === 403) {
-                showError(err.response.data.msg || "You can only message connected users.");
-            } else if (err.response?.status === 400) {
-                showError(err.response.data.msg || "Message rejected.");
-            } else {
-                showError("Failed to send message.");
-            }
+        } catch {
+            // best effort message send
         }
     };
 
-    const handleBlock = async () => {
-        const confirmed = await dialog.confirm(
-            `Block ${otherParticipant.displayName}? This hides the conversation, removes request links between you, and stops future messaging until you unblock them.`,
-            'Block User'
-        );
-        if (!confirmed) return;
-
-        try {
-            const res = await api.post(`/user/block/${otherParticipant._id}`);
-            success(res.data?.msg || 'User blocked');
-            onBack();
-        } catch (err) {
-            showError(err.response?.data?.msg || 'Failed to block user');
-        }
+    const scrollToBottom = () => {
+        setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
     };
 
-    const handleReport = async () => {
-        const confirmed = await dialog.confirm(
-            `Report ${otherParticipant.displayName}? Please report only genuine safety or policy concerns.`,
-            'Report User'
-        );
-        if (!confirmed) return;
+    const handleInputChange = (e) => {
+        setNewMessage(e.target.value);
 
-        const reason = await dialog.prompt(
-            `Choose a reason and add useful detail.\nExamples: ${REPORT_REASON_OPTIONS.join(', ')}`,
-            'Report User',
-            ''
-        );
-        const trimmedReason = reason?.trim();
-        if (!trimmedReason) return;
+        if (!socket || !otherParticipant?.id) return;
 
-        try {
-            const res = await api.post('/user/report', {
-                reportedUserId: otherParticipant._id,
-                reason: trimmedReason,
-                category: mapReportCategory(trimmedReason),
-                contentType: 'chat',
-                contentId: conversation._id
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        } else if (!typingStartEmitted.current) {
+            socket.emit('typing_start', {
+                conversationId: conversation._id,
+                userId: currentUserId,
+                recipientId: otherParticipantId
             });
-            success(res.data?.msg || 'Report submitted');
-        } catch (err) {
-            showError(err.response?.data?.msg || 'Failed to report');
+            typingStartEmitted.current = true;
         }
+
+        typingTimeoutRef.current = setTimeout(() => {
+            socket.emit('typing_stop', {
+                conversationId: conversation._id,
+                userId: currentUserId,
+                recipientId: otherParticipantId
+            });
+            typingTimeoutRef.current = null;
+            typingStartEmitted.current = false;
+        }, 1000);
     };
-
-    if (!otherParticipant) {
-        return (
-            <div className="flex-1 flex items-center justify-center text-text-muted">
-                Conversation not found
-            </div>
-        );
-    }
-
-    if (isDisabled) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center text-foreground-muted p-6 sm:p-8 text-center">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
-                    <X className="w-7 h-7 sm:w-8 sm:h-8 text-error" />
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">Conversation Ended</h3>
-                <p className="text-sm mb-4 sm:mb-6 max-w-xs">This chat is no longer active because the post was deleted.</p>
-                <button 
-                    onClick={onBack}
-                    className="tap-target px-4 sm:px-6 py-2.5 sm:py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors w-full sm:w-auto"
-                >
-                    Go Back
-                </button>
-            </div>
-        );
-    }
 
     return (
-        <div className="flex flex-col h-full min-h-0">
-            <div className="px-3 py-2.5 border-b border-card-border flex items-center justify-between bg-card/50 shrink-0">
-                <div className="flex items-center gap-2.5">
-                    <button 
-                        onClick={onBack} 
-                        className="tap-target p-2 -ml-2 rounded-lg hover:bg-card-hover text-foreground-muted transition-colors"
+        <div className="flex flex-col h-full w-full">
+            <div className="flex-1 flex flex-col">
+                <div className="p-3 bg-background border-b border-card-border">
+                    <div className="flex items-center gap-2">
+                        <button onClick={onBack} className="p-1 rounded-lg hover:bg-card-hover transition-colors">
+                            <X className="w-4 h-4" />
+                        </button>
+                        <span className="font-semibold text-foreground">{otherParticipant?.displayName || 'Chat'}</span>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-background min-h-0">
+                    {loading ? (
+                        <div className="text-center text-foreground-muted mt-10 font-medium animate-pulse">Loading messages...</div>
+                    ) : messagesError ? (
+                        <div className="text-center mt-10">
+                            <p className="text-sm text-error font-medium">{messagesError}</p>
+                        </div>
+                    ) : (
+                        messages.map((msg) => {
+                            const isOwn = normalizeSenderId(msg)?.toString() === currentUserId?.toString();
+                            return (
+                                <div key={msg._id || `temp-${msg.createdAt}`} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] sm:max-w-[75%] rounded-2xl px-3.5 py-2 shadow-sm ${isOwn
+                                        ? 'bg-primary text-primary-foreground rounded-br-none'
+                                        : 'bg-card border border-card-border text-foreground rounded-bl-none'}
+                                    }`}>
+                                        <p className="text-sm leading-relaxed">{msg.text}</p>
+                                        <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-primary-foreground/80' : 'text-foreground-muted'}`}>
+                                            <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            {isOwn && (
+                                                msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-primary-foreground" /> :
+                                                    msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-primary-foreground/70" /> :
+                                                    <Check className="w-3 h-3 text-primary-foreground/50" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
+                <div ref={messagesEndRef} />
+
+                {suggestions.length > 0 && (
+                    <div className="px-3 py-2 flex gap-2 overflow-x-auto bg-card border-t border-card-border shrink-0">
+                        <div className="flex items-center text-xs text-primary font-medium mr-1 shrink-0">
+                            <Sparkles className="w-3 h-3 mr-1" /> AI:
+                        </div>
+                        {suggestions.map((s, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setNewMessage(s)}
+                                className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
+                            >
+                                {s}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {isTyping && (
+                    <div className="px-3 py-2 text-xs text-foreground-muted italic animate-pulse bg-card border-t border-card-border shrink-0">
+                        {otherParticipant?.displayName} is typing...
+                    </div>
+                )}
+
+                <form onSubmit={handleSend} className="p-2.5 bg-card border-t border-card-border flex gap-2 items-end shrink-0">
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={handleInputChange}
+                        placeholder="Type a message..."
+                        className="flex-1 bg-background border border-card-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50 transition-all shadow-inner min-h-[44px]"
+                    />
+                    <button
+                        type="submit"
+                        disabled={!newMessage.trim()}
+                        className="tap-target p-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors shadow-md min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
-                        <ArrowLeft className="w-5 h-5" />
+                        <Send className="w-4 h-4" />
                     </button>
-                    <div className="w-9 h-9 rounded-full bg-background overflow-hidden border border-card-border">
-                        <img
-                            src={getAvatarUrl(otherParticipant)}
-                            alt={otherParticipant?.displayName}
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-foreground text-sm">{otherParticipant?.displayName}</h3>
-                        {otherParticipant?.isOnline && (
-                            <span className="text-xs text-success font-medium flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></span>
-                                Online
-                            </span>
-                        )}
-                    </div>
-                </div>
-                <div className="flex gap-1">
-                    <button onClick={handleBlock} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-error hover:bg-error/10 transition-colors" title="Block User">
-                        <Shield className="w-4 h-4" />
-                    </button>
-                    <button onClick={handleReport} className="tap-target p-2 rounded-lg text-foreground-muted hover:text-warning hover:bg-warning/10 transition-colors" title="Report User">
-                        <Flag className="w-4 h-4" />
-                    </button>
-                </div>
+                </form>
             </div>
 
             {post && (
@@ -441,36 +407,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                                 {post.price && <span className="ml-2 text-primary font-semibold">{currencySymbol}{post.price}</span>}
                             </div>
                         </div>
-                        {canTransact && (
-                            <div className="mr-2" onClick={(e) => e.stopPropagation()}>
-                                {!isPostOwner ? (
-                                    <Button
-                                        size="sm"
-                                        variant="primary"
-                                        onClick={() => setShowCheckout(true)}
-                                        className="gap-1.5 text-xs py-1 h-7"
-                                    >
-                                        <CreditCard className="w-3.5 h-3.5" />
-                                        Pay {currencySymbol}{post.price}
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={handleRequestPaymentPrompt}
-                                        className="gap-1.5 text-xs py-1 h-7"
-                                    >
-                                        <CreditCard className="w-3.5 h-3.5" />
-                                        Request Pay
-                                    </Button>
-                                )}
-                            </div>
-                        )}
-                        {postCollapsed ? (
-                            <ChevronDown className="w-4 h-4 text-foreground-muted" />
-                        ) : (
-                            <ChevronUp className="w-4 h-4 text-foreground-muted" />
-                        )}
+                        <ChevronDown className="w-4 h-4 text-foreground-muted" />
                     </button>
                     {!postCollapsed && (
                         <div className="px-3 pb-3">
@@ -497,118 +434,6 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                         </div>
                     )}
                 </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-background min-h-0">
-                {loading ? (
-                    <div className="text-center text-foreground-muted mt-10 font-medium animate-pulse">Loading messages...</div>
-                ) : messagesError ? (
-                    <div className="text-center mt-10">
-                        <p className="text-sm text-error font-medium">{messagesError}</p>
-                    </div>
-                ) : (
-                    messages.map((msg) => {
-                        const isOwn = normalizeSenderId(msg)?.toString() === currentUserId?.toString();
-                        const showPostCard = msg.isAutoMessage || msg.postId;
-                        return (
-                            <div key={msg._id || `temp-${msg.createdAt}`} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] sm:max-w-[75%] rounded-2xl px-3.5 py-2 shadow-sm ${isOwn
-                                    ? 'bg-primary text-primary-foreground rounded-br-none'
-                                    : 'bg-card border border-card-border text-foreground rounded-bl-none'
-                                    }`}>
-                                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isOwn ? 'text-primary-foreground/80' : 'text-foreground-muted'}`}>
-                                        <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        {isOwn && (
-                                            msg.status === 'read' ? <CheckCheck className="w-3 h-3 text-primary-foreground" /> :
-                                                msg.status === 'delivered' ? <CheckCheck className="w-3 h-3 text-primary-foreground/70" /> :
-                                                    <Check className="w-3 h-3 text-primary-foreground/50" />
-                                        )}
-                                    </div>
-                                </div>
-                                {showPostCard && post && (
-                                    <div className={`flex items-start ${isOwn ? 'order-[-1] mr-2' : 'ml-2'}`}>
-                                        <div 
-                                            onClick={() => navigate(`/post/${post._id}`)}
-                                            className="w-14 h-14 rounded-lg overflow-hidden cursor-pointer border border-card-border hover:opacity-80 transition-opacity"
-                                        >
-                                            {post.images?.[0] && (
-                                                <img 
-                                                    src={post.images[0]} 
-                                                    alt="" 
-                                                    className="w-full h-full object-cover" 
-                                                />
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })
-                )}
-
-                <div ref={messagesEndRef} />
-            </div>
-
-            {suggestions.length > 0 && (
-                <div className="px-3 py-2 flex gap-2 overflow-x-auto bg-card border-t border-card-border shrink-0">
-                    <div className="flex items-center text-xs text-primary font-medium mr-1 shrink-0">
-                        <Sparkles className="w-3 h-3 mr-1" /> AI:
-                    </div>
-                    {suggestions.map((s, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setNewMessage(s)}
-                            className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
-                        >
-                            {s}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {isTyping && (
-                <div className="px-3 py-2 text-xs text-foreground-muted italic animate-pulse bg-card border-t border-card-border shrink-0">
-                    {otherParticipant?.displayName} is typing...
-                </div>
-            )}
-
-            <form onSubmit={handleSend} className="p-2.5 bg-card border-t border-card-border flex gap-2 items-end shrink-0">
-                {canTransact && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (!isPostOwner) setShowCheckout(true);
-                            else handleRequestPaymentPrompt();
-                        }}
-                        title={!isPostOwner ? `Pay ${currencySymbol}${post.price} online` : 'Request payment'}
-                        className="tap-target p-2.5 rounded-xl border border-card-border bg-background hover:bg-card-hover text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
-                    >
-                        <CreditCard className="w-4 h-4" />
-                    </button>
-                )}
-                <input
-                    type="text"
-                    value={newMessage}
-                    onChange={handleInputChange}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-background border border-card-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-primary/50 transition-all shadow-inner min-h-[44px]"
-                />
-                <button
-                    type="submit"
-                    disabled={!newMessage.trim()}
-                    className="tap-target p-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-colors shadow-md min-h-[44px] min-w-[44px] flex items-center justify-center"
-                >
-                    <Send className="w-4 h-4" />
-                </button>
-            </form>
-        
-            {showCheckout && post && (
-                <CheckoutModal
-                    post={post}
-                    onClose={() => setShowCheckout(false)}
-                    onPurchase={handlePaymentComplete}
-                />
             )}
         </div>
     );

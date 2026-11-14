@@ -57,7 +57,7 @@ const ModernTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
     const [unreadMsgCount, setUnreadMsgCount] = React.useState(0);
     const inFlightRef = React.useRef(false);
     const queuedRef = React.useRef(false);
-    const timeoutRef = React.useRef(null);
+    const timeoutRef = React.useRef<number | null>(null);
 
     // Fetch unread count
     const fetchUnreadCount = React.useCallback(async () => {

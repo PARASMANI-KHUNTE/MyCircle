@@ -245,15 +245,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         if (!userLocation) requestLocationPermission();
     }, [refetch, requestLocationPermission, userLocation]);
 
-    // Auto-check location when returning to app (e.g. from Settings)
-    useEffect(() => {
-        const subscription = AppState.addEventListener('change', nextAppState => {
-            if (nextAppState === 'active') {
-                requestLocationPermission();
-            }
-        });
-        return () => subscription.remove();
-    }, [requestLocationPermission]);
+    
 
     // Removed manual fetchPosts function
 
@@ -705,7 +697,7 @@ const FeedScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <StatusBar barStyle="light-content" />
 
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>

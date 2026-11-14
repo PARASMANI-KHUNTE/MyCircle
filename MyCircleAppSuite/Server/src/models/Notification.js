@@ -13,9 +13,7 @@ const NotificationSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: [
-            'request', 'approval', 'info', 'message', 'like', 'comment', 'system',
-            'escrow_created', 'escrow_funded', 'escrow_released', 'escrow_refunded',
-            'wallet_topup', 'payment_received'
+            'request', 'approval', 'info', 'message', 'like', 'comment', 'system'
         ],
         default: 'system'
     },

@@ -20,10 +20,6 @@ router.post('/users/:id/role', asyncHandler(adminController.updateUserRole));
 router.post('/users/:id/ban', asyncHandler(adminController.banUser));
 router.post('/users/:id/unban', asyncHandler(adminController.unbanUser));
 
-// Payments/Transactions
-router.get('/payments', asyncHandler(adminController.getPayments));
-router.get('/payments/:id', asyncHandler(adminController.getPayment));
-
 // Reports/Moderation
 router.get('/reports', asyncHandler(adminController.getReports));
 router.get('/reports/:id', asyncHandler(adminController.getReport));

@@ -304,7 +304,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     if (!conversation && loading) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <StatusBar barStyle="light-content" />
                 <View style={styles.backgroundGradient}>
                     <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
                     <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
@@ -320,7 +320,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     if (!conversation) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <StatusBar barStyle="light-content" />
                 <View style={styles.backgroundGradient}>
                     <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
                     <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
@@ -338,7 +338,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <StatusBar barStyle="light-content" />
             
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>

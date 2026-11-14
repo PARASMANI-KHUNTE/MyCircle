@@ -392,9 +392,9 @@ exports.getConnections = async (req, res, next) => {
 // @route   GET /api/user/:userId
 // @access  Private
 exports.getUserById = asyncHandler(async (req, res, next) => {
-    // Exclude private data: moderation reports, contact details, and payout info
+    // Exclude private data: moderation reports and contact details.
     const user = await User.findById(req.params.userId)
-        .select('-passwordHash -passwordSalt -preferences -blockedUsers -reports -contactPhone -contactWhatsapp -payoutDetails');
+        .select('-passwordHash -passwordSalt -preferences -blockedUsers -reports -contactPhone -contactWhatsapp');
     if (!user) {
         throw new ApiError(404, 'User not found');
     }

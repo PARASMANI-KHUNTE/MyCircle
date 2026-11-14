@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BarChart3, Heart, MapPin, Pause, Pencil, Play, ShoppingBag, Trash2, Zap } from 'lucide-react';
+import { BarChart3, Heart, MapPin, Pause, Pencil, Play, ShoppingBag, Trash2 } from 'lucide-react';
 import Button from './Button';
-import CheckoutModal from './CheckoutModal';
 import { cn } from '../../utils/cn';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useCurrencySymbol } from '../../context/CurrencySymbolContext';
@@ -39,12 +38,10 @@ const PostCard = ({
         images,
         likes = [],
         status,
-        acceptInAppPayment,
     } = post;
 
     const navigate = useNavigate();
     const { currencySymbol } = useCurrencySymbol();
-    const [showCheckout, setShowCheckout] = useState(false);
 
     const isOwnPost =
         !!propIsOwnPost ||
@@ -54,7 +51,6 @@ const PostCard = ({
         ? new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         : 'Recently';
     const hasPrice = Number(price) > 0;
-    const canPayOnline = hasPrice && acceptInAppPayment !== false;
 
     return (
         <>
@@ -106,22 +102,13 @@ const PostCard = ({
                 {/* Content */}
                 <div className="flex flex-1 flex-col p-3.5 justify-between">
                     <div>
-                        {/* Location and In-App Payment Indicator */}
+                        {/* Location and date */}
                         <div className="flex items-center justify-between text-[11px] text-foreground-muted mb-1.5">
                             <span className="inline-flex items-center gap-1 truncate max-w-[60%]">
                                 <MapPin className="h-3 w-3 shrink-0 text-foreground-muted" />
                                 <span className="truncate">{location || 'Nearby'}</span>
                             </span>
-                            {acceptInAppPayment === false ? (
-                                <span className="text-[10px] font-medium text-foreground-muted">Cash only</span>
-                            ) : hasPrice ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
-                                    <Zap className="h-2.5 w-2.5 fill-primary" />
-                                    Online Pay
-                                </span>
-                            ) : (
-                                <span>{displayDate}</span>
-                            )}
+                            <span>{displayDate}</span>
                         </div>
 
                         {/* Title */}
@@ -212,19 +199,15 @@ const PostCard = ({
                                 </>
                             ) : (
                                 <button
-                                    disabled={!hasPrice || !canPayOnline}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (canPayOnline) setShowCheckout(true);
-                                        else navigate(`/post/${_id}`);
+                                        navigate(`/post/${_id}`);
                                     }}
                                     className={cn(
                                         "p-1.5 rounded-lg transition-colors flex items-center justify-center",
-                                        canPayOnline
-                                            ? "text-primary hover:bg-primary/10"
-                                            : "text-foreground-muted/40 cursor-not-allowed"
+                                        "text-primary hover:bg-primary/10"
                                     )}
-                                    title={canPayOnline ? 'Buy online' : (hasPrice ? 'Cash / Meetup only' : 'View post')}
+                                    title="View post"
                                 >
                                     <ShoppingBag className="h-3.5 w-3.5" />
                                 </button>
@@ -234,13 +217,6 @@ const PostCard = ({
                 </div>
             </article>
 
-            {showCheckout && (
-                <CheckoutModal
-                    post={post}
-                    onClose={() => setShowCheckout(false)}
-                    onPurchase={() => setShowCheckout(false)}
-                />
-            )}
         </>
     );
 };

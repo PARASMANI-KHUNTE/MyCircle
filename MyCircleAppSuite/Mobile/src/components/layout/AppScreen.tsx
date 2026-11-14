@@ -21,8 +21,6 @@ const AppScreen = ({
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={edges}>
             <StatusBar
                 barStyle={isDark ? 'light-content' : 'dark-content'}
-                backgroundColor="transparent"
-                translucent
             />
             {withBackground ? (
                 <View pointerEvents="none" style={styles.backgroundGradient}>
@@ -41,10 +39,10 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     backgroundGradient: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
     },
     gradientLayer: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
     },
 });
 

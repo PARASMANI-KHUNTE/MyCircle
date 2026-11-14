@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   Users,
-  CreditCard,
   Flag,
   Activity,
   BarChart3,
@@ -27,7 +26,6 @@ import {
   Phone,
   MapPin,
   Calendar,
-  DollarSign,
   TrendingUp,
   Download,
   RefreshCw,
@@ -41,7 +39,6 @@ import {
 const adminNavItems = [
   { path: '/admin', label: 'Overview', icon: LayoutDashboard },
   { path: '/admin/users', label: 'Users', icon: Users },
-  { path: '/admin/payments', label: 'Payments', icon: CreditCard },
   { path: '/admin/reports', label: 'Reports', icon: Flag },
   { path: '/admin/health', label: 'Services Health', icon: Activity },
   { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },

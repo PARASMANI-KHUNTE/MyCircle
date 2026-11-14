@@ -68,7 +68,7 @@ const LandingScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" />
+            <StatusBar barStyle="light-content" />
 
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>

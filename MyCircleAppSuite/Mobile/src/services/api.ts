@@ -127,7 +127,7 @@ api.interceptors.response.use(
                 }
             } else {
                 // Wait for the token refresh to complete
-                return new Promise((resolve, reject) => {
+                return new Promise((resolve) => {
                     subscribeTokenRefresh((token: string) => {
                         originalRequest.headers['x-auth-token'] = token;
                         resolve(api(originalRequest));

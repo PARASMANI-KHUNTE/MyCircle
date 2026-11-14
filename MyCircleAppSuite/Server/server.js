@@ -290,7 +290,6 @@ app.use('/api/chat', require('./src/routes/chatRoutes'));
 // Compatibility mount for the web ChatWindow flow (POST /api/chats/:id/messages)
 app.use('/api/chats', require('./src/routes/chatCompatRoutes'));
 app.use('/api/notifications', require('./src/routes/notificationRoutes'));
-app.use('/api/payments', require('./src/routes/paymentRoutes'));
 app.use('/api/admin', require('./src/routes/adminRoutes'));
 app.use('/api/ai', require('./src/routes/aiRoutes'));
 

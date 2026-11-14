@@ -348,19 +348,7 @@ const AdminAnalytics = () => {
           setChartType={setChartType}
           generateChartData={generateChartData}
         />
-        <ChartCard
-          title="Escrow Volume"
-          data={analytics?.escrow}
-          dataKey="escrow"
-          color="#06b6d4"
-          icon={Shield}
-          chartType={chartType}
-          setChartType={setChartType}
-          generateChartData={generateChartData}
-        />
-      </div>
-
-      {/* Detailed Tables */}
+        {/* Detailed Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Categories */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">

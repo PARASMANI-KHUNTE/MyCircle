@@ -26,7 +26,6 @@ export type RootStackParamList = {
     BlockedUsers: undefined;
     UserProfile: { userId?: string } | undefined;
     EditPost: { id: string };
-    Wallet: undefined;
     NotFound: { path?: string } | undefined;
 };
 
@@ -48,7 +47,6 @@ export type WebRoutePath =
     | '/chat'
     | '/settings'
     | '/blocked-users'
-    | '/wallet'
     | '*';
 
 export const webToMobileRouteMap: Record<WebRoutePath, string> = {
@@ -69,7 +67,6 @@ export const webToMobileRouteMap: Record<WebRoutePath, string> = {
     '/chat': 'ChatList',
     '/settings': 'Settings',
     '/blocked-users': 'BlockedUsers',
-    '/wallet': 'Wallet',
     '*': 'NotFound',
 };
 

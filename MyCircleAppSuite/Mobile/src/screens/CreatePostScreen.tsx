@@ -392,7 +392,7 @@ const CreatePostScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.mainContainer}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <StatusBar barStyle="light-content" />
 
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>

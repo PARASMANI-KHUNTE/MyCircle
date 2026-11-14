@@ -33,21 +33,8 @@ const EscrowTransactionSchema = new mongoose.Schema({
     // Status of the escrow
     status: {
         type: String,
-        enum: ['pending', 'funded', 'held', 'released', 'refunded', 'disputed', 'cancelled'],
+        enum: ['pending', 'funded', 'released', 'refunded', 'disputed', 'cancelled'],
         default: 'pending',
-    },
-    // Stripe Payment Intent ID for tracking
-    gateway: { type: String, enum: ['wallet', 'razorpay', 'stripe'], default: 'wallet' },
-    paymentTiming: { type: String, enum: ['escrow', 'advance'], default: 'escrow' },
-    razorpayOrderId: { type: String },
-    razorpayPaymentId: { type: String },
-    razorpaySignature: { type: String },
-    stripePaymentIntentId: {
-        type: String,
-    },
-    // Stripe Transfer ID when released to seller
-    stripeTransferId: {
-        type: String,
     },
     // Timestamps for escrow lifecycle
     fundedAt: {
@@ -86,12 +73,6 @@ EscrowTransactionSchema.index({ seller: 1, status: 1 });
 EscrowTransactionSchema.index({ post: 1, status: 1 });
 EscrowTransactionSchema.index({ status: 1 });
 EscrowTransactionSchema.index({ createdAt: -1 });
-// Idempotency: a Razorpay order/payment can only ever be recorded once
-// (sparse so wallet/stripe escrows without these fields are unaffected)
-EscrowTransactionSchema.index({ razorpayOrderId: 1 }, { unique: true, sparse: true });
-EscrowTransactionSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
-// Stripe payment intents can likewise only be recorded once (top-up replays)
-EscrowTransactionSchema.index({ stripePaymentIntentId: 1 }, { unique: true, sparse: true });
 
 // Static method to get active escrow for a post
 EscrowTransactionSchema.statics.getActiveForPost = async function (postId, buyerId) {

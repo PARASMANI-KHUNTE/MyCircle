@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.08)',
     },
     backgroundImage: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         width: '100%',
         height: '100%',
     },

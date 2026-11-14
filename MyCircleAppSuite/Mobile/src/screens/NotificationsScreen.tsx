@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Alert } from '../utils/alert';
 import { Bell, CheckCircle, CheckSquare, Heart, Info, MessageSquare, Square, Trash2, X } from 'lucide-react-native';
-import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import AppScreen from '../components/layout/AppScreen';
@@ -180,7 +180,7 @@ const NotificationsScreen = ({ navigation }: any) => {
             return content;
         }
 
-        return <Swipeable renderRightActions={() => renderRightActions(item._id)}>{content}</Swipeable>;
+        return <View style={styles.swipeContainer}>{content}</View>;
     }, [colors, getIcon, handleNotificationClick, isSelectionMode, navigation, renderRightActions, selectedItems, toggleSelection]);
 
     return (
@@ -297,6 +297,9 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 1.5,
+    },
+    swipeContainer: {
+        paddingHorizontal: 16,
     },
     notificationCard: {
         padding: 20,

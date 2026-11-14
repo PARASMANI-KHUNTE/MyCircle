@@ -10,14 +10,12 @@ import api, { BASE_URL } from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
 import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
-import { useNavigation } from '@react-navigation/native';
 
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 import ImagePreviewModal from '../components/ui/ImagePreviewModal';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import CheckoutModal from '../components/ui/CheckoutModal';
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -58,13 +56,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [aiPlaceholderSuggestion, setAiPlaceholderSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
     const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-    // Checkout State
     const [checkoutVisible, setCheckoutVisible] = useState(false);
     const [purchaseLoading, setPurchaseLoading] = useState(false);
-
-    // Wallet state
     const [walletBalance, setWalletBalance] = useState(0);
+
 
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);
     const isOwnPost = auth?.user?._id === post?.user?._id;
@@ -80,15 +75,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             setComments(res.data.comments || []);
             setContactRequestStatus(res.data.contactRequestStatus || (res.data.hasRequested ? 'pending' : 'none'));
 
-            // Fetch wallet balance if authenticated
-            if (auth.accessToken) {
-                try {
-                    const walletRes = await api.get('/payments/wallet');
-                    setWalletBalance(walletRes.data.balance || 0);
-                } catch (walletErr) {
-                    console.warn('Failed to fetch wallet balance', walletErr);
-                }
-            }
         } catch (err: any) {
             Alert.alert("Error", "Could not fetch details.");
             navigation.goBack();
@@ -177,46 +163,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         }
     };
 
-    const handleConfirmPurchase = async () => {
-        setPurchaseLoading(true);
-        try {
-            if (!post) throw new Error('Post not loaded');
-
-            // Step 1: Create escrow intent
-            const createRes = await api.post('/payments/escrow/create', { postId: post._id });
-            const { escrowId, clientSecret, devMode } = createRes.data;
-
-            // Step 2: If Stripe is configured (clientSecret exists), we would normally
-            // use Stripe React Native SDK to confirm payment here.
-            // For now, we'll directly call confirm endpoint (dev mode or webhook flow)
-            if (devMode || !clientSecret) {
-                // Dev mode: auto-confirm
-                await api.post(`/payments/escrow/${escrowId}/confirm`);
-            } else {
-                // Production: Would use Stripe SDK to confirm with clientSecret
-                // Then call confirm endpoint with paymentIntentId
-                // For now, simulate successful payment
-                const confirmRes = await api.post(`/payments/escrow/${escrowId}/confirm`, {
-                    paymentIntentId: createRes.data.stripePaymentIntentId,
-                });
-            }
-
-            setCheckoutVisible(false);
-            Alert.alert("Success", "Purchase successful! You can now contact the author.");
-            setContactRequestStatus('approved');
-
-            // Refresh wallet balance
-            const walletRes = await api.get('/payments/wallet');
-            setWalletBalance(walletRes.data.balance || 0);
-        } catch (err: any) {
-            console.error('Purchase failed:', err);
-            const message = err.response?.data?.message || 'Purchase failed. Please try again.';
-            Alert.alert("Error", message);
-        } finally {
-            setPurchaseLoading(false);
-        }
-    };
-
     const handleDeletePost = async () => {
         try {
             await api.delete(`/posts/${id}`);
@@ -256,7 +202,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0a0a' }} edges={['top']}>
-                <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+                <StatusBar barStyle="light-content" />
 
                 {/* Header */}
                 <View className="px-5 py-4 flex-row justify-between items-center border-b border-white/5">
@@ -434,28 +380,19 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                 <Heart size={24} color={isLiked ? "#ef4444" : "#fff"} fill={isLiked ? "#ef4444" : "transparent"} />
                             </TouchableOpacity>
 
-                            {post.price > 0 && contactRequestStatus === 'none' ? (
-                                <TouchableOpacity
-                                    onPress={() => setCheckoutVisible(true)}
-                                    className="bg-primary flex-[3] py-4 rounded-full items-center shadow-lg shadow-primary/30 mx-2"
-                                >
-                                    <Text className="text-white font-black text-lg tracking-wider">BUY NOW</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity
-                                    onPress={handleRequestContact}
-                                    style={[
-                                        styles.requestBtn,
-                                        { backgroundColor: contactRequestStatus === 'pending' ? 'rgba(255,255,255,0.1)' : '#af25f4' }
-                                    ]}
-                                    disabled={contactRequestStatus !== 'none'}
-                                    className="flex-[3] py-4 rounded-full items-center shadow-lg mx-2"
-                                >
-                                    <Text className="text-white font-black text-sm tracking-wider uppercase">
-                                        {contactRequestStatus === 'none' ? 'Request Contact' : contactRequestStatus}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
+                            <TouchableOpacity
+                                onPress={handleRequestContact}
+                                style={[
+                                    styles.requestBtn,
+                                    { backgroundColor: contactRequestStatus === 'pending' ? 'rgba(255,255,255,0.1)' : '#af25f4' }
+                                ]}
+                                disabled={contactRequestStatus !== 'none'}
+                                className="flex-[3] py-4 rounded-full items-center shadow-lg mx-2"
+                            >
+                                <Text className="text-white font-black text-sm tracking-wider uppercase">
+                                    {contactRequestStatus === 'none' ? 'Request Contact' : contactRequestStatus}
+                                </Text>
+                            </TouchableOpacity>
 
                             <TouchableOpacity
                                 onPress={handleMessage}
@@ -466,16 +403,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         </View>
                     </View>
                 </View>
-
-                <CheckoutModal
-                    visible={checkoutVisible}
-                    onClose={() => setCheckoutVisible(false)}
-                    onConfirm={handleConfirmPurchase}
-                    postTitle={post.title}
-                    price={post.price}
-                    loading={purchaseLoading}
-                    balance={walletBalance}
-                />
 
                 <ImagePreviewModal
                     visible={imagePreviewVisible}

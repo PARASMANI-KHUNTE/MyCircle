@@ -388,7 +388,7 @@ async function seed() {
                 recipient: primaryUser._id,
                 type: 'system',
                 title: 'Welcome to MyCircle!',
-                message: 'Your account is ready. Discover trusted local peers, buy & sell with secure escrow, and connect directly.',
+                message: 'Your account is ready. Discover trusted local peers, connect directly, and share your skills.',
                 link: '/',
                 read: true,
             },

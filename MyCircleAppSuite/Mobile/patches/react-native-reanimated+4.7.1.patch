@@ -1,0 +1,24 @@
+diff --git a/node_modules/react-native-reanimated/android/build.gradle.kts b/node_modules/react-native-reanimated/android/build.gradle.kts
+index 46728e5..44b69d2 100644
+--- a/node_modules/react-native-reanimated/android/build.gradle.kts
++++ b/node_modules/react-native-reanimated/android/build.gradle.kts
+@@ -212,7 +212,8 @@ android {
+                     "-DREANIMATED_PROFILING=$REANIMATED_PROFILING",
+                     "-DREANIMATED_VERSION=$REANIMATED_VERSION",
+                     "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+-                    "-DREANIMATED_FEATURE_FLAGS=$REANIMATED_FEATURE_FLAGS"
++                    "-DREANIMATED_FEATURE_FLAGS=$REANIMATED_FEATURE_FLAGS",
++                    "-DCMAKE_SUPPRESS_REGENERATION=ON"
+                 )
+                 abiFilters.addAll(reactNativeArchitectures())
+                 targets("reanimated")
+@@ -225,6 +226,9 @@ android {
+     externalNativeBuild {
+         cmake {
+             path = file("CMakeLists.txt")
++            // Use short path in temp directory to avoid Windows MAX_PATH limit (260 chars)
++            val shortBuildDir = File(System.getProperty("java.io.tmpdir"), "mycircle-reanimated-build")
++            buildStagingDirectory = shortBuildDir
+         }
+     }
+ 

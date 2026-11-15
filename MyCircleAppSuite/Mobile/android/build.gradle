@@ -1,18 +1,19 @@
 buildscript {
-  ext {
-    buildToolsVersion = "36.0.0"
-    minSdkVersion = 24
-    compileSdkVersion = 36
-    targetSdkVersion = 34
-    ndkVersion = "27.1.12297006"
-    kotlinVersion = "2.0.21"
-}
+    ext {
+        buildToolsVersion = "37.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 37
+        targetSdkVersion = 36
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.2.10"
+    }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.9.1")
+        // Must match the AGP/Kotlin versions used by @react-native/gradle-plugin 0.88.1
+        classpath("com.android.tools.build:gradle:9.2.1")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         classpath("com.google.gms:google-services:4.4.3")
     }
@@ -22,8 +23,9 @@ plugins {
     id("com.facebook.react.rootproject")
 }
 
-configurations.all {
-    resolutionStrategy {
-        force "com.android.tools.build:gradle:8.9.1"
-    }
-}
+// Native build workarounds for this repository's deeply nested Windows path:
+// - react-native-worklets and react-native-reanimated are patched via
+//   patch-package (see patches/) to stage CMake output outside the deep path
+//   and disable redundant CMake self-regeneration.
+// - android/app/build.gradle stages the app's autolinked CMake output in a
+//   short temp directory as well.

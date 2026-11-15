@@ -93,6 +93,11 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // Release builds only talk to HTTPS; debug builds opt into cleartext
+        // so the app can reach a local http:// API during development.
+        manifestPlaceholders = [
+            usesCleartextTraffic: "false",
+        ]
     }
     signingConfigs {
         debug {
@@ -114,7 +119,17 @@ android {
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            // The app's autolinked codegen libraries generate object paths
+            // that exceed Windows' 260-character MAX_PATH when the native
+            // build tree lives under this deeply nested repository. Staging
+            // the build output in a short temp directory lets CMake shorten
+            // those paths instead of passing invalid ones to Ninja.
+            buildStagingDirectory = file("${System.getProperty('java.io.tmpdir')}/mc-app")
         }
     }
 }

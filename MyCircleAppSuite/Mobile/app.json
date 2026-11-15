@@ -1,4 +1,6 @@
 {
+  "name": "TempMobile",
+  "displayName": "MyCircle",
   "expo": {
     "name": "MyCircle",
     "slug": "mycircle",

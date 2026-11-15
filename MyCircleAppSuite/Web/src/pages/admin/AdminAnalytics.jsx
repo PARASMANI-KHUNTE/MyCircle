@@ -3,22 +3,14 @@ import api from '../../utils/api';
 import {
   Download,
   RefreshCw,
-  Loader2,
   TrendingUp,
   TrendingDown,
   Users,
-  DollarSign,
   MapPin,
   MessageSquare,
-  Clock,
   BarChart3,
   LineChart,
-  PieChart,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  ExternalLink,
+  Activity,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -188,17 +180,10 @@ const AdminAnalytics = () => {
     return num.toString();
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(value || 0);
-  };
-
   const generateChartData = (data, key) => {
-    if (!data || !data.daily) return [];
-    return data.daily.map((day) => ({
+    const rows = Array.isArray(data) ? data : data?.daily;
+    if (!rows) return [];
+    return rows.map((day) => ({
       date: format(new Date(day.date), 'MMM d'),
       value: day[key] || 0,
     }));
@@ -210,7 +195,7 @@ const AdminAnalytics = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Platform growth, engagement, and revenue metrics</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Platform growth and engagement metrics</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -236,7 +221,7 @@ const AdminAnalytics = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Platform growth, engagement, and revenue metrics</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Platform growth and engagement metrics</p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -281,13 +266,6 @@ const AdminAnalytics = () => {
           color="bg-green-500"
         />
         <StatCard
-          title="Revenue"
-          value={formatCurrency(analytics?.overview?.totalRevenue || 0)}
-          change={analytics?.overview?.revenueGrowth}
-          icon={DollarSign}
-          color="bg-purple-500"
-        />
-        <StatCard
           title="Posts Created"
           value={formatNumber(analytics?.overview?.totalPosts || 0)}
           change={analytics?.overview?.postGrowth}
@@ -301,20 +279,13 @@ const AdminAnalytics = () => {
         <ChartCard
           title="User Registrations"
           data={analytics?.registrations}
-          key="users"
+          dataKey="users"
           color="#3b82f6"
           icon={Users}
+          chartType={chartType}
+          setChartType={setChartType}
+          generateChartData={generateChartData}
         />
-        <ChartCard
-          title="Revenue"
-          data={analytics?.revenue}
-          key="revenue"
-          color="#8b5cf6"
-          icon={DollarSign}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
           title="Active Users (DAU)"
           data={analytics?.activity}
@@ -325,6 +296,9 @@ const AdminAnalytics = () => {
           setChartType={setChartType}
           generateChartData={generateChartData}
         />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
           title="Posts Created"
           data={analytics?.posts}
@@ -335,9 +309,6 @@ const AdminAnalytics = () => {
           setChartType={setChartType}
           generateChartData={generateChartData}
         />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
           title="Messages Sent"
           data={analytics?.messages}
@@ -348,7 +319,9 @@ const AdminAnalytics = () => {
           setChartType={setChartType}
           generateChartData={generateChartData}
         />
-        {/* Detailed Tables */}
+      </div>
+
+      {/* Detailed Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Categories */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
@@ -438,7 +411,5 @@ const AdminAnalytics = () => {
     </div>
   );
 };
-
-import { Activity, Shield } from 'lucide-react';
 
 export default AdminAnalytics;

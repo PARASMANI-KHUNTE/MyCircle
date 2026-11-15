@@ -11,8 +11,6 @@ const HANDLERS = [
     'updateUserRole',
     'banUser',
     'unbanUser',
-    'getPayments',
-    'getPayment',
     'getReports',
     'getReport',
     'resolveReport',

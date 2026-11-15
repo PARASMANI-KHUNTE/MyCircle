@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { 
     X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, 
-    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2, CreditCard, ShieldCheck,
+    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Trash2, Banknote, ShieldCheck,
     Briefcase, Users, ShoppingBag, Home, Coins, FileText, Handshake
 } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -37,7 +37,7 @@ const DURATIONS = [
 ];
 
 const EXCHANGE_OPTIONS = [
-    { id: 'money', label: 'Cash / Online', icon: CreditCard },
+    { id: 'money', label: 'Cash', icon: Banknote },
     { id: 'barter', label: 'Barter', icon: ArrowLeftRight },
     { id: 'flexible', label: 'Flexible', icon: Coins },
 ];

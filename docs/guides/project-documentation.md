@@ -62,7 +62,7 @@ messages: Chat history.
 4. Workflow
 A. Favor/Barter Flow
 1. Create Post: User A posts a request: "Need help moving a sofa."
-Payment Mode: Selects "Favor" or "Barter".
+Exchange Mode: Selects "Favor" or "Barter".
 Offer: "Will bake a cake in return."
 2. Discovery: User B (neighbor) sees the post in their feed.
 3. Negotiation: User B chats with User A to agree on time and terms.

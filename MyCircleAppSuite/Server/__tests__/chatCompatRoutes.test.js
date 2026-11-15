@@ -1,7 +1,7 @@
 const chatCompatRoutes = require('../src/routes/chatCompatRoutes');
 const chatController = require('../src/controllers/chatController');
 
-// The web ChatWindow payment-complete flow posts to
+// The web ChatWindow compose flow posts to
 // /api/chats/:conversationId/messages — this guards the compatibility mount.
 describe('Chat compatibility routes', () => {
     it('exposes POST /:conversationId/messages', () => {

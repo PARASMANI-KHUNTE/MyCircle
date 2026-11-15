@@ -56,9 +56,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [aiPlaceholderSuggestion, setAiPlaceholderSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
     const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const [checkoutVisible, setCheckoutVisible] = useState(false);
-    const [purchaseLoading, setPurchaseLoading] = useState(false);
-    const [walletBalance, setWalletBalance] = useState(0);
 
 
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);

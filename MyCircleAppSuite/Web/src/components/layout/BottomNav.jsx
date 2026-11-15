@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Compass, Plus, Bell, MessageCircle, Wallet } from 'lucide-react';
+import { Compass, Plus, Bell, MessageCircle } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { cn } from '../../utils/cn';
@@ -60,7 +60,6 @@ const BottomNav = () => {
 
     const navItems = [
         { path: '/', icon: Compass, label: 'Explore' },
-        { path: '/wallet', icon: Wallet, label: 'Wallet' },
         { path: '/create-post', icon: Plus, label: 'Post', isPrimary: true },
         { path: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMsgCount },
         { path: '/notifications', icon: Bell, label: 'Alerts', badge: unreadCount },

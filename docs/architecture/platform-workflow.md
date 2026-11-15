@@ -1,7 +1,7 @@
 # Hyperlocal Job, Service & Marketplace Platform
 
 ## 1. Vision & Core Idea
-A single platform where people can **post jobs, offer services, sell items, or rent items** in a **local, flexible, low-friction** way. Payments are **optional**, and exchanges can be **money, barter, service-for-service, or free**.
+A single platform where people can **post jobs, offer services, sell items, or rent items** in a **local, flexible, low-friction** way. Exchanges can be **money, barter, service-for-service, or free**; arrangements happen directly between users and the app does not process payments.
 
 The platform focuses on **short-term, real-world needs** (e.g., birthday decoration help, renting speakers, selling a chair) and prioritizes **human coordination over rigid transactions**.
 
@@ -422,7 +422,6 @@ This approach:
 - Full in-app chat system with real-time messaging
 - AI-based chat moderation and sentiment analysis
 - Voice and media messaging
-- Payment gateway integration
 - Ratings & reviews
 - Identity verification (KYC)
 - Real-time chat using WebSockets

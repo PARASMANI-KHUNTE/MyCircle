@@ -5,7 +5,7 @@ import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { 
     AlertCircle, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, 
-    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, ShieldCheck,
+    Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight, Banknote, ShieldCheck,
     Briefcase, Users, ShoppingBag, Home, Coins
 } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -77,6 +77,7 @@ const DURATIONS = [
 ];
 
 const EXCHANGE_OPTIONS = [
+    { id: 'money', label: 'Cash', icon: Banknote, desc: 'Direct cash payment' },
     { id: 'barter', label: 'Barter', icon: ArrowLeftRight, desc: 'Item exchange' },
     { id: 'flexible', label: 'Flexible', icon: Coins, desc: 'Either accepted' },
 ];
@@ -99,7 +100,7 @@ const CreatePost = () => {
         latitude: null,
         longitude: null,
         duration: 10080,
-        exchangePreference: 'flexible',
+        exchangePreference: 'money',
         isUrgent: false,
     });
     const [images, setImages] = useState([]);

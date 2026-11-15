@@ -222,7 +222,6 @@ User Input → Gemini Moderation → Safe?
 
 - Full in-app chat system
 - AI-powered chat moderation
-- Payment integration
 - Ratings & reviews
 - Identity verification (KYC)
 - Real-time communication using WebSockets

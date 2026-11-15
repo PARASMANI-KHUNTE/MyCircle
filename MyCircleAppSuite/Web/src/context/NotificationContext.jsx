@@ -116,12 +116,9 @@ export const NotificationProvider = ({ children }) => {
             playNotificationSound();
 
             // Show toast with specific type
-            const isEscrow = typeof notification.type === 'string' && notification.type.startsWith('escrow_');
-            const toastType = isEscrow || notification.type === 'wallet_topup'
-                ? 'success'
-                : ['message', 'like', 'request'].includes(notification.type)
-                    ? notification.type
-                    : 'info';
+            const toastType = ['message', 'like', 'request'].includes(notification.type)
+                ? notification.type
+                : 'info';
             toast(getToastMessageFromNotification(normalizedNotification), toastType);
         };
 
@@ -182,16 +179,6 @@ export const NotificationProvider = ({ children }) => {
 
         if (notification.type === 'message') {
             navigate(notification.conversationId ? `/chat?conversationId=${notification.conversationId}` : '/chat');
-            return;
-        }
-
-        if (notification.type === 'wallet_topup') {
-            navigate('/wallet');
-            return;
-        }
-
-        if (typeof notification.type === 'string' && notification.type.startsWith('escrow_')) {
-            navigate(notification.link || (notification.relatedId ? `/post/${notification.relatedId}` : '/wallet'));
             return;
         }
 

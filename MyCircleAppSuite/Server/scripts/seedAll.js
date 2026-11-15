@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const connectDB = require('../src/config/db');
 const User = require('../src/models/User');
 const Post = require('../src/models/Post');
-const Wallet = require('../src/models/Wallet');
 const Notification = require('../src/models/Notification');
 const ContactRequest = require('../src/models/ContactRequest');
 
@@ -304,30 +303,12 @@ async function seed() {
             userMap.set(peerData.email, user);
         }
 
-        // 3. Ensure wallets exist with initial funds
-        for (const [, user] of userMap) {
-            let wallet = await Wallet.findOne({ user: user._id });
-            if (!wallet) {
-                wallet = await Wallet.create({
-                    user: user._id,
-                    balance: user._id.equals(primaryUser._id) ? 15000 : 25000,
-                    pendingBalance: 2000,
-                    currency: 'INR',
-                });
-                console.log(`Created wallet for ${user.displayName}: ₹${wallet.balance}`);
-            } else if (wallet.balance === 0) {
-                wallet.balance = user._id.equals(primaryUser._id) ? 15000 : 25000;
-                await wallet.save();
-                console.log(`Topped up wallet for ${user.displayName}: ₹${wallet.balance}`);
-            }
-        }
-
-        // 4. Remove previous test posts with same titles to prevent duplicates
+        // 3. Remove previous test posts with same titles to prevent duplicates
         const titles = postTemplates.map((p) => p.title);
         const delRes = await Post.deleteMany({ title: { $in: titles } });
         console.log(`Cleared ${delRes.deletedCount} existing posts with matching titles.`);
 
-        // 5. Insert new posts
+        // 4. Insert new posts
         const postsToCreate = postTemplates.map((tmpl) => {
             const owner = userMap.get(tmpl.ownerKey) || primaryUser;
             return {
@@ -360,7 +341,7 @@ async function seed() {
         const createdPosts = await Post.insertMany(postsToCreate);
         console.log(`Successfully seeded ${createdPosts.length} marketplace listings.`);
 
-        // 6. Seed sample notifications for primary user
+        // 5. Seed sample notifications for primary user
         await Notification.deleteMany({ recipient: primaryUser._id });
         const priyaUser = userMap.get('priya.lens@mycircle.community');
         const aaravUser = userMap.get('aarav.dev@mycircle.community');
@@ -396,7 +377,7 @@ async function seed() {
         await Notification.insertMany(notifications);
         console.log(`Seeded ${notifications.length} notifications for ${primaryUser.displayName}.`);
 
-        // 7. Seed sample contact request
+        // 6. Seed sample contact request
         await ContactRequest.deleteMany({
             $or: [
                 { requester: primaryUser._id },

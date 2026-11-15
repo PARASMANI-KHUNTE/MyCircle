@@ -69,13 +69,6 @@ const buildFallbackMessage = (notification) => {
         };
     }
 
-    if (type === 'wallet_topup') {
-        return {
-            title: 'Wallet topped up',
-            message: 'Funds were added to your wallet.'
-        };
-    }
-
     return {
         title: 'Notification',
         message: `${senderName} sent you a notification.`

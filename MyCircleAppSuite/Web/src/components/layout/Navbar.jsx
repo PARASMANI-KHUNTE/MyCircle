@@ -13,7 +13,6 @@ import {
     Plus, 
     MessageCircle, 
     Bell, 
-    Wallet,
     Compass,
     Sparkles,
     FileText,
@@ -56,7 +55,6 @@ const Navbar = () => {
         { name: 'Explore', path: '/explore', icon: Compass },
         { name: 'Requests', path: '/requests', icon: Inbox, auth: true },
         { name: 'My Posts', path: '/my-posts', icon: FileText, auth: true },
-        { name: 'Wallet & Orders', path: '/wallet', icon: Wallet, auth: true },
     ];
 
     const visibleLinks = navLinks.filter((link) => !link.auth || !!user);
@@ -304,14 +302,6 @@ const Navbar = () => {
                                                 >
                                                     <User className="w-3.5 h-3.5" />
                                                     <span>Profile</span>
-                                                </Link>
-                                                <Link
-                                                    to="/wallet"
-                                                    onClick={() => setIsProfileDropdownOpen(false)}
-                                                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-foreground-muted hover:text-foreground hover:bg-card-hover transition-colors"
-                                                >
-                                                    <Wallet className="w-3.5 h-3.5" />
-                                                    <span>Wallet &amp; Orders</span>
                                                 </Link>
                                                 <Link
                                                     to="/settings"

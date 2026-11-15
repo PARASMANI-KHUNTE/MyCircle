@@ -108,4 +108,3 @@
 - [x] Map View for "Near Me" discovery.
 - [x] Reputation System (Trust Scores & Badges).
 - [ ] Push Notifications (Expo).
-- [ ] Wallet / Payment Integration.

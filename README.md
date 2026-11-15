@@ -17,10 +17,10 @@ MyCircle is a hyperlocal community exchange platform for items, services, events
               ├── Distributed Tracing: Injects and propagates x-request-id
               └── Dynamic Proxying to Extracted Microservices
                                           │
- ┌─────────────┬─────────────┬───────────┼───────────┬─────────────┬─────────────┐
- ▼             ▼             ▼           ▼           ▼             ▼             ▼
-[Identity] [Marketplace]  [Comm]     [Contact]  [Notifications] [Payment]     [DSA Suite]
-Port: 5001  Port: 5002   Port: 5003  Port: 5004  Port: 5005     Port: 5006    O(1)/O(N)
+ ┌─────────────┬─────────────┬───────────┼───────────┬─────────────────┬─────────────┐
+ ▼             ▼             ▼           ▼           ▼                 ▼             ▼
+[Identity] [Marketplace]  [Comm]     [Contact]  [Notifications]    [DSA Suite]
+Port: 5001  Port: 5002   Port: 5003  Port: 5004  Port: 5005         O(1)/O(N)
 ```
 
 ### Key Architectural Characteristics
@@ -143,31 +143,6 @@ Owns post listings, category taxonomy, and real-time geospatial discovery.
 
 ---
 
-### 💳 6. Payment & Escrow Service (`Port 5006` | DB: `mycircle_payment`)
-*Path: `MyCircleAppSuite/Services/Payment`*  
-*(Note: Payment/escrow functionality has been removed from the UI/front-end but the service layer remains for potential future re-enablement.)*
-
-Provides end-to-end buyer escrow protection, wallet management, payment intents, Stripe Connect for seller payouts, and platform take-rate (commission).
-
-| Method | Path | Auth | Description |
-| :--- | :--- | :---: | :--- |
-| `GET` | `/health/live` | Public | Liveness probe returning service status |
-| `GET` | `/health/ready` | Public | Readiness probe confirming operational state |
-| `GET` | `/api/payments/wallet` | Bearer | Get user wallet (balance, pending balance, currency, Stripe account ID) |
-| `POST`| `/api/payments/wallet/topup` | Bearer | Create Stripe PaymentIntent for wallet top-up (₹10-₹50,000) |
-| `POST`| `/api/payments/wallet/topup/confirm` | Bearer | Confirm top-up and credit wallet balance |
-| `POST`| `/api/payments/stripe/connect` | Bearer | Create/return Stripe Connect Express onboarding link for sellers |
-| `GET` | `/api/payments/stripe/connect/status` | Bearer | Check Stripe Connect account status (payouts enabled, details submitted) |
-| `POST`| `/api/payments/escrow/create` | Bearer | Create escrow for post purchase (reserves buyer funds, returns clientSecret) |
-| `POST`| `/api/payments/create-intent` | Bearer | Alias for `/escrow/create` (web client compatibility) |
-| `POST`| `/api/payments/escrow/:escrowId/confirm` | Bearer | Confirm payment (buyer) — moves escrow to `held` state |
-| `POST`| `/api/payments/escrow/:escrowId/release` | Bearer | Release escrow to seller — transfers to seller wallet + Stripe payout |
-| `POST`| `/api/payments/escrow/:escrowId/refund` | Bearer | Refund escrow to buyer (buyer if pending/funded, admin any state) |
-| `GET` | `/api/payments/escrow/history` | Bearer | List user's escrow history (`?role=buyer|seller|both`) |
-| `GET` | `/api/payments/escrow/:escrowId` | Bearer | Get single escrow details (buyer/seller/admin only) |
-
----
-
 ## 3. Mobile Application (`MyCircleAppSuite/Mobile`)
 
 React Native (bare workflow) with Expo modules, TypeScript, and modern architecture.
@@ -259,7 +234,6 @@ docker compose -f docker-compose.microservices.yml up --build
 | **Communication Service**| `5003` | `communication-service:5003` |
 | **Contact Service** | `5004` | `contact-service:5004` |
 | **Notification Service** | `5005` | `notifications-service:5005` |
-| **Payment Service** | `5006` | `payment-service:5006` |
 | **Redis** | `6379` | `mycircle-redis:6379` |
 
 ---
@@ -293,16 +267,16 @@ MyCircle/
 │   ├── Server/                    # Monolith / API Gateway (Port 5000)
 │   │   ├── src/
 │   │   │   ├── config/            # DB, Firebase, Passport, Service Contracts
-│   │   │   ├── controllers/       # Route handlers (auth, post, chat, payment, etc.)
+│   │   │   ├── controllers/       # Route handlers (auth, post, chat, etc.)
 │   │   │   ├── middleware/        # Auth, serviceRouter, errorHandler, rateLimit
-│   │   │   ├── models/            # Mongoose models (User, Post, Wallet, EscrowTransaction)
+│   │   │   ├── models/            # Mongoose models (User, Post, Notification, etc.)
 │   │   │   ├── routes/            # Express routers
 │   │   │   ├── services/          # Business logic (tokenService, platform services)
 │   │   │   └── utils/             # DSA, asyncHandler, ApiError, validation
 │   │   └── __tests__/             # 40 tests across 12 suites
 │   ├── Mobile/                    # React Native App
 │   │   ├── src/
-│   │   │   ├── components/        # Reusable UI (CheckoutModal, GlassView, etc.)
+│   │   │   ├── components/        # Reusable UI (GlassView, etc.)
 │   │   │   │   └── Reputation/    # ReputationIndex component (new)
 │   │   │   ├── context/           # AuthContext, SocketContext, NotificationContext, ReputationContext
 │   │   │   ├── navigation/        # Typed React Navigation
@@ -318,8 +292,7 @@ MyCircle/
 │       ├── Marketplace/
 │       ├── Communication/
 │       ├── Contact/
-│       ├── Notifications/
-│       └── Payment/                # Functionality removed from UI, service layer retained
+│       └── Notifications/
 ├── docker-compose.microservices.yml
 └── README.md
 ```
@@ -340,7 +313,6 @@ npm --prefix MyCircleAppSuite/Services/Marketplace test
 npm --prefix MyCircleAppSuite/Services/Communication test
 npm --prefix MyCircleAppSuite/Services/Contact test
 npm --prefix MyCircleAppSuite/Services/Notifications test
-npm --prefix MyCircleAppSuite/Services/Payment test
 
 # Mobile
 cd MyCircleAppSuite/Mobile

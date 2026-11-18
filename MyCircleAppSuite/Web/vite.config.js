@@ -21,7 +21,6 @@ export default defineConfig({
       'react',
       'react-dom',
       'react-router-dom',
-      'framer-motion',
       'axios',
       'socket.io-client',
     ],
@@ -34,7 +33,6 @@ export default defineConfig({
 
           if (id.includes('leaflet')) return 'maps';
           if (id.includes('react') || id.includes('scheduler')) return 'react-vendor';
-          if (id.includes('framer-motion')) return 'motion';
           if (id.includes('three') || id.includes('@react-three')) return 'three';
           if (id.includes('axios') || id.includes('socket.io-client')) return 'network';
 

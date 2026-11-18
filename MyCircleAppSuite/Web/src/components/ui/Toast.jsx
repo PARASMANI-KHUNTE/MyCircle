@@ -100,8 +100,7 @@ const ToastItem = ({ message, type, onClose }) => {
     const Icon = config.icon;
 
     return (
-        <
-            layout}}}}
+        <div
             className={`relative overflow-hidden rounded-2xl border pointer-events-auto ${config.containerClass}`}
             style={{ boxShadow: 'var(--shadow-lg)' }}
         >
@@ -125,6 +124,6 @@ const ToastItem = ({ message, type, onClose }) => {
             >
                 <X className="w-4 h-4" />
             </button>
-        </>
+        </div>
     );
 };

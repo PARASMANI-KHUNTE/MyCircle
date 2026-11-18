@@ -30,12 +30,12 @@ const DialogUI = () => {
         <>
             {isOpen && (
                 <>
-                    <}}}
+                    <div
                         onClick={handleCancel}
                         className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9998]"
                     />
                     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                        <}}}
+                        <div
                             className="glass-panel w-full max-w-md p-10 relative shadow-2xl"
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -74,7 +74,7 @@ const DialogUI = () => {
                                     {confirmText}
                                 </Button>
                             </div>
-                        </>
+                        </div>
                     </div>
                 </>
             )}

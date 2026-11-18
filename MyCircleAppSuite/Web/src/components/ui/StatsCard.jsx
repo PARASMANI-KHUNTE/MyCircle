@@ -2,7 +2,7 @@ import React from 'react';
 
 const StatsCard = ({ icon: Icon, label, value, color = 'bg-primary/10 text-primary' }) => {
     return (
-        <}
+        <div
             className="bg-card p-6 rounded-2xl border border-card-border shadow-sm hover:shadow-md transition-all flex items-center gap-4"
         >
             <div className={`p-3 rounded-xl ${color}`}>
@@ -12,7 +12,7 @@ const StatsCard = ({ icon: Icon, label, value, color = 'bg-primary/10 text-prima
                 <p className="text-text-muted text-xs uppercase tracking-widest font-bold mb-0.5">{label}</p>
                 <h3 className="text-2xl font-bold text-text-heading">{value}</h3>
             </div>
-        </>
+        </div>
     );
 };
 

@@ -301,8 +301,8 @@ const CreatePost = () => {
             <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-3 sm:px-4 py-6">
                 <>
                     {step === 1 && (
-                        <
-                            key="step1"}}}
+                        <div
+                            key="step1"
                             className="space-y-4"
                         >
                         <div className="text-center py-8">
@@ -337,12 +337,12 @@ const CreatePost = () => {
                                     </button>
                                 ))}
                             </div>
-                        </>
+                        </div>
                     )}
 
                     {step === 2 && (
-                        <
-                            key="step2"}}}
+                        <div
+                            key="step2"
                             className="space-y-4"
                         >
                             {formData.type === 'job' && (
@@ -508,12 +508,12 @@ const CreatePost = () => {
                                 <AlertTriangle className={cn("w-4 h-4", formData.isUrgent ? "text-warning" : "text-foreground-muted")} />
                                 <span className="text-sm font-medium">Mark as urgent</span>
                             </label>
-                        </>
+                        </div>
                     )}
 
                     {step === 3 && (
-                        <
-                            key="step3"}}}
+                        <div
+                            key="step3"
                             className="space-y-4"
                         >
                             <div className="text-center py-4">
@@ -560,7 +560,7 @@ const CreatePost = () => {
                                             locationStatus === 'found' ? 'bg-green-500/20' : 'bg-primary/20'
                                         )}>
                                             {gettingLocation ? (
-                                                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                                                <Loader2 className="w-6 h-6 text-primary" />
                                             ) : locationStatus === 'found' ? (
                                                 <Check className="w-6 h-6 text-green-500" />
                                             ) : (
@@ -586,7 +586,7 @@ const CreatePost = () => {
                                         className="w-full mt-3"
                                     >
                                         {gettingLocation ? (
-                                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Detecting...</>
+                                            <><Loader2 className="w-4 h-4 mr-2" /> Detecting...</>
                                         ) : locationStatus === 'found' ? (
                                             <><Navigation className="w-4 h-4 mr-2" /> Re-detect</>
                                         ) : (
@@ -628,12 +628,12 @@ const CreatePost = () => {
                                     )}
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
 
                     {step === 4 && (
-                        <
-                            key="step4"}}}
+                        <div
+                            key="step4"
                             className="space-y-4"
                         >
                             <div className="text-center py-4">
@@ -682,7 +682,7 @@ const CreatePost = () => {
                                 </div>
                             )}
 
-                        </>
+                        </div>
                     )}
                 </>
 
@@ -706,7 +706,7 @@ const CreatePost = () => {
                     ) : (
                         <Button type="submit" disabled={loading || gettingLocation} className="flex-1">
                             {loading ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Posting...</>
+                                <><Loader2 className="w-4 h-4 mr-2" /> Posting...</>
                             ) : (
                                 <><Check className="w-4 h-4 mr-2" /> Publish</>
                             )}

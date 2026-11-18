@@ -34,8 +34,7 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
             {isOpen && (
                 <>
                     {/* Backdrop — z-modal(30) */}
-                    <
-                        key="backdrop"}}}}
+                    <div
                         onClick={onClose}
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[30]"
                         aria-hidden="true"
@@ -48,8 +47,7 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
                         aria-modal="true"
                         aria-labelledby="dialog-title"
                     >
-                        <
-                            key="dialog"}}}}
+                        <div
                             className={`relative w-full ${sizes[size]} bg-card rounded-2xl border border-card-border overflow-hidden`}
                             style={{ boxShadow: 'var(--shadow-2xl)' }}
                             onClick={(e) => e.stopPropagation()}
@@ -90,7 +88,7 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
                                     {actions}
                                 </div>
                             )}
-                        </>
+                        </div>
                     </div>
                 </>
             )}

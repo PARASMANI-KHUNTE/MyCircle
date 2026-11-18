@@ -137,7 +137,6 @@
     }
 
     html {
-        scroll-behavior: smooth;
         text-rendering: optimizeLegibility;
         -webkit-font-smoothing: antialiased;
     }
@@ -308,14 +307,6 @@
     /* ===== Skeleton ===== */
     .skeleton {
         @apply bg-background-tertiary rounded-xl;
-        animation: shimmer 1.8s ease-in-out infinite;
-        background: linear-gradient(
-            90deg,
-            rgb(var(--background-tertiary)) 25%,
-            rgb(var(--background-secondary)) 50%,
-            rgb(var(--background-tertiary)) 75%
-        );
-        background-size: 200% 100%;
     }
 
     /* ===== Icon Buttons ===== */
@@ -352,18 +343,6 @@
 
 
 @layer utilities {
-    .animate-fade-in {
-        animation: fadeIn 0.35s ease-out forwards;
-    }
-
-    .animate-slide-up {
-        animation: slideUp 0.35s ease-out forwards;
-    }
-
-    .animate-scale-in {
-        animation: scaleIn 0.24s ease-out forwards;
-    }
-
     .line-clamp-1 {
         overflow: hidden;
         display: -webkit-box;
@@ -393,32 +372,6 @@
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
     }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-[data-framer-portal] {
-    position: fixed;
-    /* Framer portals (modals/overlays) sit at z-modal level */
-    z-index: 30;
 }
 
 .leaflet-container {

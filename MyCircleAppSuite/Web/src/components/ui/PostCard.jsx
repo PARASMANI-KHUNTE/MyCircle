@@ -75,8 +75,7 @@ const PostCard = ({
     isOwnPost: propIsOwnPost = false,
     onDelete = () => {},
     onEdit = () => {},
-    onClick = () => {},
-    index = 0
+    onClick = () => {}
 }) => {
     const {
         title,
@@ -255,7 +254,7 @@ const PostCard = ({
     };
 
     return (
-        <}}}}
+        <article
             onClick={onClick}
             className={cn(
                 'group relative bg-card rounded-2xl border border-card-border overflow-hidden cursor-pointer',
@@ -265,7 +264,7 @@ const PostCard = ({
         >
             <>
                 {showAnalytics && analyticsData && (
-                    <}}}
+                    <div
                         className="absolute inset-0 z-50 bg-card/95 backdrop-blur-xl p-6 flex flex-col"
                     >
                         <div className="flex items-center justify-between mb-6">
@@ -293,7 +292,7 @@ const PostCard = ({
                         <Button variant="outline" className="mt-auto" onClick={handleShowAnalytics}>
                             Close
                         </Button>
-                    </>
+                    </div>
                 )}
             </>
 
@@ -359,7 +358,7 @@ const PostCard = ({
 
                 <>
                     {expanded && (
-                        <}}}
+                        <div
                             className="overflow-hidden"
                         >
                             {(user?.reputation?.trustScore || user?.reputation?.averageRating) && (
@@ -438,7 +437,7 @@ const PostCard = ({
                                     </Button>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </>
 
@@ -452,11 +451,11 @@ const PostCard = ({
 
                 <>
                     {(isGeneratingAI || aiResult) && (
-                        <}}}
+                        <div
                             className={cn('p-4 rounded-xl mb-4 border', aiResult?.type === 'owner' ? 'bg-success/10 border-success/20' : 'bg-primary/10 border-primary/20')}
                         >
                             {isGeneratingAI ? (
-                                <div className="flex items-center gap-3"><Sparkles className="w-5 h-5 text-primary animate-pulse" /> <span className="text-sm font-medium">AI analyzing...</span></div>
+                                <div className="flex items-center gap-3"><Sparkles className="w-5 h-5 text-primary" /> <span className="text-sm font-medium">AI analyzing...</span></div>
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between mb-2">
@@ -467,36 +466,36 @@ const PostCard = ({
                                     <p className="text-xs opacity-80">{aiResult.details}</p>
                                 </>
                             )}
-                        </>
+                        </div>
                     )}
                 </>
 
                 <footer className="pt-4 border-t border-card-border">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-1 flex-wrap">
-                            <}} onClick={handleGetAIInsights} className={cn('p-2 rounded-xl transition-all', aiResult ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card-hover text-primary hover:bg-primary/10')}>
-                                <Sparkles className={cn('w-4 h-4', isGeneratingAI && 'animate-spin')} />
-                            </>
-                            <}} onClick={handleLike} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', isLiked ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500')}>
+                            <button onClick={handleGetAIInsights} className={cn('p-2 rounded-xl transition-all', aiResult ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card-hover text-primary hover:bg-primary/10')}>
+                                <Sparkles className="w-4 h-4" />
+                            </button>
+                            <button onClick={handleLike} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', isLiked ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500')}>
                                 <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} /> <span className="text-xs font-bold">{likes.length}</span>
-                            </>
-                            <}} onClick={handleShare} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', hasShared ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500')}>
+                            </button>
+                            <button onClick={handleShare} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', hasShared ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500')}>
                                 <Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{sharesCount}</span>
-                            </>
+                            </button>
                             {isOwnPost && (
-                                <}} onClick={handleShowAnalytics} className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all">
+                                <button onClick={handleShowAnalytics} className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all">
                                     <BarChart2 className="w-4 h-4" />
-                                </>
+                                </button>
                             )}
-                            <}} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', expanded ? 'bg-primary text-primary-foreground' : 'bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary')}>
+                            <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', expanded ? 'bg-primary text-primary-foreground' : 'bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary')}>
                                 {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                 <span className="text-xs font-bold">{expanded ? 'Less' : 'More'}</span>
-                            </>
+                            </button>
                         </div>
                     </div>
                 </footer>
             </div>
-        </>
+        </article>
     );
 };
 

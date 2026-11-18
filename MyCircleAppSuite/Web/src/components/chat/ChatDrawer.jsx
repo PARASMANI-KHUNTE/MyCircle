@@ -129,13 +129,13 @@ const ChatDrawer = ({ isOpen, onClose }) => {
             {isOpen && (
                 <>
                     {/* Backdrop */}
-                    <}}}
+                    <div
                         onClick={onClose}
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1250]"
                     />
 
                     {/* Drawer Panel */}
-                    <}}}}
+                    <div
                         className="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-background border-l border-card-border z-[1300] flex flex-col shadow-2xl"
                     >
                         {/* Drawer Header */}
@@ -165,8 +165,7 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                         <div className="flex-1 overflow-hidden relative">
                             <>
                                 {selectedConversation ? (
-                                    <
-                                        key="window"}}}
+                                    <div
                                         className="absolute inset-0 bg-background"
                                     >
                                         <ChatWindow
@@ -186,10 +185,9 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                                                 }));
                                             }}
                                         />
-                                    </>
+                                    </div>
                                 ) : (
-                                    <
-                                        key="list"}}}
+                                    <div
                                         className="absolute inset-0 overflow-y-auto"
                                     >
                                         <ChatList
@@ -201,11 +199,11 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                                             onConversationDeleted={handleConversationDeleted}
                                             typingUsers={typingUsers}
                                         />
-                                    </>
+                                    </div>
                                 )}
                             </>
                         </div>
-                    </>
+                    </div>
                 </>
             )}
         </>

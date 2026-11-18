@@ -37,7 +37,7 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
     return (
         <>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm">
-                <}}}
+                <div
                     className="glass-panel w-full max-w-lg shadow-2xl overflow-hidden"
                 >
                     <div className="flex items-center justify-between p-6 border-b border-card-border bg-hover-bg/30">
@@ -88,8 +88,9 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
                             <div className="flex flex-col justify-end pb-3 pl-2">
                                 <label className="flex items-center gap-2 cursor-pointer group">
                                     <div className={`w-10 h-6 rounded-full transition-colors relative ${formData.acceptsBarter ? 'bg-primary' : 'bg-card/20 border border-card-border'}`}>
-                                        <}
+                                        <div
                                             className="absolute top-1 left-0 w-4 h-4 bg-foreground rounded-full shadow-sm"
+                                            style={{ transform: `translateX(${formData.acceptsBarter ? 18 : 2}px)` }}
                                         />
                                     </div>
                                     <input
@@ -122,7 +123,7 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
                             </Button>
                         </div>
                     </form>
-                </>
+                </div>
             </div>
         </>
     );

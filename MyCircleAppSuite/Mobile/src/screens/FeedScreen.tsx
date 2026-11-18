@@ -293,10 +293,6 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
     };
 
-    const handleDistanceChange = useCallback((radius: number) => {
-        setDistanceRadius(radius);
-    }, []);
-
     const filterPosts = useCallback(() => {
         let result = [...(postsData || [])].filter(matchesActiveFilters);
 

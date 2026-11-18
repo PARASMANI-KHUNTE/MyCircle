@@ -1,25 +1,30 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 /**
  * Loading spinner with multiple size variants
- * 
+ *
  * Design rationale:
  * - Uses CSS border instead of border-[3px] for consistency
  * - Fullscreen includes backdrop blur for modal loading
  * - Includes text option for contextual loading states
+ * - Respects user's reduced motion preference
  */
 const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
+    const shouldReduceMotion = useReducedMotion();
+    const animate = shouldReduceMotion ? undefined : { rotate: 360 };
+    const transition = shouldReduceMotion ? undefined : {
+        duration: size === 'sm' ? 0.6 : 0.8,
+        repeat: Infinity,
+        ease: 'linear'
+    };
+
     const spinner = (
         <div className="flex flex-col items-center gap-3">
             <motion.div
                 className={`${size === 'sm' ? 'border-2' : 'border-3'} border-primary/20 border-t-primary rounded-full`}
-                animate={{ rotate: 360 }}
-                transition={{ 
-                    duration: size === 'sm' ? 0.6 : 0.8, 
-                    repeat: Infinity, 
-                    ease: 'linear' 
-                }}
+                animate={animate}
+                transition={transition}
             />
             {text && (
                 <p className="text-sm text-foreground-muted font-medium">{text}</p>
@@ -29,7 +34,7 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
 
     if (fullscreen) {
         return (
-            <div 
+            <div
                 className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[var(--z-modal)] flex items-center justify-center"
                 role="status"
                 aria-live="polite"
@@ -45,8 +50,8 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
             <span className="inline-flex items-center gap-2 text-sm text-foreground-muted">
                 <motion.div
                     className={`${size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} border-primary/20 border-t-primary rounded-full`}
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    animate={animate}
+                    transition={shouldReduceMotion ? undefined : { duration: 0.8, repeat: Infinity, ease: 'linear' }}
                 />
                 {text}
             </span>

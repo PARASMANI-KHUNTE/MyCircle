@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../utils/cn';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
@@ -698,10 +697,8 @@ const Explore = () => {
                     ) : (
                         <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                             {filteredMapPosts.map((post) => (
-                                <motion.div
-                                    key={post._id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
+                                <
+                                    key={post._id}}}
                                     className="group"
                                 >
                                     <PostCard 
@@ -710,7 +707,7 @@ const Explore = () => {
                                         onClick={() => handlePostClick(post._id)}
                                         onMarkerClick={() => openMapForPost(post._id)}
                                     />
-                                </motion.div>
+                                </>
                             ))}
                         </div>
                     )}
@@ -950,21 +947,14 @@ const Explore = () => {
             )}
 
             {/* FAB */}
-            <AnimatePresence>
+            <>
                 {quickViewPost && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <}}}
                         className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4"
                         onClick={() => setQuickViewPost(null)}
                     >
                         <div className="absolute inset-0 z-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.div
-                            initial={{ y: '100%', opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: '100%', opacity: 0 }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        <}}}}
                             onClick={(e) => e.stopPropagation()}
                             className="relative z-10 w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
                         >
@@ -1064,10 +1054,10 @@ const Explore = () => {
                                     </Button>
                                 </div>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </>
+                    </>
                 )}
-            </AnimatePresence>
+            </>
 
         </div>
     );

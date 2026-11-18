@@ -16,7 +16,6 @@
     "axios": "^1.21.0",
     "clsx": "^2.1.0",
     "firebase": "^13.1.0",
-    "framer-motion": "^14.9.0",
     "leaflet": "^1.9.4",
     "lib": "^5.1.0",
     "lucide-react": "^1.66.0",

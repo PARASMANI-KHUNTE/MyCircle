@@ -1,7 +1,6 @@
 import React from 'react';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Outlet, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 
@@ -47,22 +46,17 @@ const Layout = () => {
             <Navbar />
 
             <main className="min-h-screen relative pt-16 md:pt-20 overflow-x-clip">
-                <AnimatePresence mode="wait">
-                    <motion.div
+                <>
+                    <
                         key={location.pathname}
-                        initial="initial"
-                        animate="in"
-                        exit="out"
-                        variants={pageVariants}
-                        transition={pageTransition}
                         className={cn(
                             'container mx-auto px-0 sm:px-6 lg:px-8 pb-0',
                             !isExplorePage && 'pt-0 md:pt-8'
                         )}
                     >
                         <Outlet />
-                    </motion.div>
-                </AnimatePresence>
+                    </>
+                </>
             </main>
 
             <BottomNav />

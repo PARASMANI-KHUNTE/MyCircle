@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 import Button from './Button';
@@ -256,11 +255,7 @@ const PostCard = ({
     };
 
     return (
-        <motion.article
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: index * 0.03 }}
-            whileHover={{ y: -2 }}
+        <}}}}
             onClick={onClick}
             className={cn(
                 'group relative bg-card rounded-2xl border border-card-border overflow-hidden cursor-pointer',
@@ -268,12 +263,9 @@ const PostCard = ({
                 !isActive && 'opacity-60 grayscale'
             )}
         >
-            <AnimatePresence>
+            <>
                 {showAnalytics && analyticsData && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <}}}
                         className="absolute inset-0 z-50 bg-card/95 backdrop-blur-xl p-6 flex flex-col"
                     >
                         <div className="flex items-center justify-between mb-6">
@@ -301,9 +293,9 @@ const PostCard = ({
                         <Button variant="outline" className="mt-auto" onClick={handleShowAnalytics}>
                             Close
                         </Button>
-                    </motion.div>
+                    </>
                 )}
-            </AnimatePresence>
+            </>
 
             <div className="relative aspect-[16/10] overflow-hidden bg-background-secondary">
                 {images && images.length > 0 ? (
@@ -365,12 +357,9 @@ const PostCard = ({
                     </div>
                 </div>
 
-                <AnimatePresence>
+                <>
                     {expanded && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
+                        <}}}
                             className="overflow-hidden"
                         >
                             {(user?.reputation?.trustScore || user?.reputation?.averageRating) && (
@@ -449,9 +438,9 @@ const PostCard = ({
                                     </Button>
                                 </div>
                             )}
-                        </motion.div>
+                        </>
                     )}
-                </AnimatePresence>
+                </>
 
                 {description && (
                     <div className="mb-4">
@@ -461,12 +450,9 @@ const PostCard = ({
                     </div>
                 )}
 
-                <AnimatePresence>
+                <>
                     {(isGeneratingAI || aiResult) && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
+                        <}}}
                             className={cn('p-4 rounded-xl mb-4 border', aiResult?.type === 'owner' ? 'bg-success/10 border-success/20' : 'bg-primary/10 border-primary/20')}
                         >
                             {isGeneratingAI ? (
@@ -481,36 +467,36 @@ const PostCard = ({
                                     <p className="text-xs opacity-80">{aiResult.details}</p>
                                 </>
                             )}
-                        </motion.div>
+                        </>
                     )}
-                </AnimatePresence>
+                </>
 
                 <footer className="pt-4 border-t border-card-border">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-1 flex-wrap">
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleGetAIInsights} className={cn('p-2 rounded-xl transition-all', aiResult ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card-hover text-primary hover:bg-primary/10')}>
+                            <}} onClick={handleGetAIInsights} className={cn('p-2 rounded-xl transition-all', aiResult ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card-hover text-primary hover:bg-primary/10')}>
                                 <Sparkles className={cn('w-4 h-4', isGeneratingAI && 'animate-spin')} />
-                            </motion.button>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleLike} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', isLiked ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500')}>
+                            </>
+                            <}} onClick={handleLike} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', isLiked ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-card-hover text-foreground-muted hover:bg-pink-500/10 hover:text-pink-500')}>
                                 <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} /> <span className="text-xs font-bold">{likes.length}</span>
-                            </motion.button>
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleShare} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', hasShared ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500')}>
+                            </>
+                            <}} onClick={handleShare} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', hasShared ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-card-hover text-foreground-muted hover:bg-blue-500/10 hover:text-blue-500')}>
                                 <Share2 className="w-4 h-4" /> <span className="text-xs font-bold">{sharesCount}</span>
-                            </motion.button>
+                            </>
                             {isOwnPost && (
-                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleShowAnalytics} className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all">
+                                <}} onClick={handleShowAnalytics} className="p-2 rounded-xl bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary transition-all">
                                     <BarChart2 className="w-4 h-4" />
-                                </motion.button>
+                                </>
                             )}
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', expanded ? 'bg-primary text-primary-foreground' : 'bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary')}>
+                            <}} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className={cn('p-2 rounded-xl transition-all flex items-center gap-1.5', expanded ? 'bg-primary text-primary-foreground' : 'bg-card-hover text-foreground-muted hover:bg-primary/10 hover:text-primary')}>
                                 {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                 <span className="text-xs font-bold">{expanded ? 'Less' : 'More'}</span>
-                            </motion.button>
+                            </>
                         </div>
                     </div>
                 </footer>
             </div>
-        </motion.article>
+        </>
     );
 };
 

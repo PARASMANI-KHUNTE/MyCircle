@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell, Settings, LogOut, User, CircleDot, Inbox } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
@@ -138,25 +137,18 @@ const Navbar = () => {
 
     const visibleLinks = navLinks.filter(link => !link.auth || !!user);
     const mobileDrawer = (
-        <AnimatePresence>
+        <>
             {isMobileMenuOpen && (
                 <>
-                    <motion.button
-                        type="button"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <
+                        type="button"}}}
                         className="fixed inset-0 z-[1200] bg-black/45 md:hidden"
                         aria-label="Close menu overlay"
                         onClick={() => setIsMobileMenuOpen(false)}
                     />
 
-                    <motion.aside
-                        id="mobile-nav-drawer"
-                        initial={{ x: '-100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '-100%' }}
-                        transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
+                    <
+                        id="mobile-nav-drawer"}}}}
                         className="fixed top-0 left-0 bottom-0 z-[1210] w-[min(84vw,20rem)] md:hidden bg-background/95 backdrop-blur-xl border-r border-card-border shadow-2xl"
                     >
                         <div className="flex h-full flex-col">
@@ -256,18 +248,15 @@ const Navbar = () => {
                                 )}
                             </div>
                         </div>
-                    </motion.aside>
+                    </>
                 </>
             )}
-        </AnimatePresence>
+        </>
     );
 
     return (
         <>
-            <motion.nav
-                initial={{ y: -100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+            <}}}
                 className={cn(
                     'fixed top-0 left-0 right-0 z-[1100] transition-all duration-300',
                     isScrolled 
@@ -313,7 +302,7 @@ const Navbar = () => {
                                     {link.icon && <link.icon className="w-4 h-4" />}
                                     {link.name}
                                     {location.pathname === link.path && (
-                                        <motion.div
+                                        <
                                             layoutId="navbar-indicator"
                                             className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-7 h-0.5 bg-primary rounded-full"
                                         />
@@ -326,9 +315,7 @@ const Navbar = () => {
                             {isAuthenticated ? (
                                 <>
                                     {/* Chat - hidden on mobile (BottomNav), visible lg+ */}
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
+                                    <}}
                                         onClick={() => setIsChatDrawerOpen(true)}
                                         className="icon-btn relative hidden lg:inline-flex"
                                         aria-label="Open messages"
@@ -339,7 +326,7 @@ const Navbar = () => {
                                                 {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
                                             </span>
                                         )}
-                                    </motion.button>
+                                    </>
 
                                     {/* Notifications - hidden on mobile (BottomNav), visible lg+ */}
                                     <Link to="/notifications" className="icon-btn relative hidden lg:inline-flex" aria-label="Notifications">
@@ -366,9 +353,7 @@ const Navbar = () => {
 
                                     {/* Profile always visible */}
                                     <div className="relative" ref={dropdownRef}>
-                                        <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
+                                        <}}
                                             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                                             className="ml-2 rounded-full avatar-ring"
                                         >
@@ -377,15 +362,11 @@ const Navbar = () => {
                                                 alt={user?.displayName || 'Profile'}
                                                 className="w-9 h-9 rounded-full object-cover"
                                             />
-                                        </motion.button>
+                                        </>
 
-                                        <AnimatePresence>
+                                        <>
                                             {isProfileDropdownOpen && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    transition={{ duration: 0.2 }}
+                                                <}}}}
                                                     className="absolute right-0 top-full mt-2 w-64 bg-card rounded-2xl border border-card-border shadow-lg overflow-hidden"
                                                 >
                                                     <div className="p-4 border-b border-card-border">
@@ -411,9 +392,9 @@ const Navbar = () => {
                                                             <span className="text-sm font-medium">Sign out</span>
                                                         </button>
                                                     </div>
-                                                </motion.div>
+                                                </>
                                             )}
-                                        </AnimatePresence>
+                                        </>
                                     </div>
                                 </>
                             ) : (
@@ -431,7 +412,7 @@ const Navbar = () => {
                     </div>
                 </div>
 
-            </motion.nav>
+            </>
 
             {typeof document !== 'undefined' ? createPortal(mobileDrawer, document.body) : null}
             <ChatDrawer isOpen={isChatDrawerOpen} onClose={() => setIsChatDrawerOpen(false)} />

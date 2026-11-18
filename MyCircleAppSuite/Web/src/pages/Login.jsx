@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { CircleDot, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
@@ -42,10 +41,7 @@ const Login = () => {
                 style={{ background: 'radial-gradient(circle, rgb(16 185 129), transparent 70%)' }}
             />
 
-            <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            <}}}
                 className="relative w-full max-w-md"
             >
                 <div className="bg-card rounded-3xl border border-card-border p-8" style={{ boxShadow: 'var(--shadow-xl)' }}>
@@ -122,7 +118,7 @@ const Login = () => {
                         </p>
                     </div>
                 </div>
-            </motion.div>
+            </>
         </div>
     );
 };

@@ -22,43 +22,7 @@ const Button = ({
     iconRight: IconRight,
     ...props 
 }) => {
-    const variants = {
-        primary: cn(
-            'bg-primary text-primary-foreground hover:bg-primary-hover',
-            'shadow-sm hover:shadow-md',
-            'active:shadow-sm'
-        ),
-        secondary: cn(
-            'bg-secondary text-secondary-foreground hover:bg-secondary-hover',
-            'shadow-sm hover:shadow-md',
-            'active:shadow-sm'
-        ),
-        accent: cn(
-            'bg-accent text-accent-foreground hover:bg-accent-hover',
-            'shadow-sm hover:shadow-md',
-            'active:shadow-sm'
-        ),
-        outline: cn(
-            'border border-card-border bg-transparent text-foreground',
-            'hover:border-card-border-hover hover:bg-card-hover',
-            'active:bg-background-secondary'
-        ),
-        ghost: cn(
-            'bg-transparent text-foreground-muted',
-            'hover:text-foreground hover:bg-card-hover',
-            'active:bg-background-secondary'
-        ),
-        danger: cn(
-            'bg-error text-white hover:bg-error/90',
-            'shadow-sm hover:shadow-md',
-            'active:shadow-sm'
-        ),
-        success: cn(
-            'bg-success text-white hover:bg-success/90',
-            'shadow-sm hover:shadow-md',
-            'active:shadow-sm'
-        ),
-    };
+    const;
 
     const sizes = {
         xs: 'px-3 py-1.5 text-xs font-semibold rounded-lg gap-1.5 min-h-[32px]',

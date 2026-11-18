@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Maximize2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ChatList from './ChatList';
@@ -126,24 +125,17 @@ const ChatDrawer = ({ isOpen, onClose }) => {
     };
 
     return (
-        <AnimatePresence>
+        <>
             {isOpen && (
                 <>
                     {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <}}}
                         onClick={onClose}
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1250]"
                     />
 
                     {/* Drawer Panel */}
-                    <motion.div
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    <}}}}
                         className="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-background border-l border-card-border z-[1300] flex flex-col shadow-2xl"
                     >
                         {/* Drawer Header */}
@@ -171,13 +163,10 @@ const ChatDrawer = ({ isOpen, onClose }) => {
 
                         {/* Drawer Content */}
                         <div className="flex-1 overflow-hidden relative">
-                            <AnimatePresence mode="wait">
+                            <>
                                 {selectedConversation ? (
-                                    <motion.div
-                                        key="window"
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 20 }}
+                                    <
+                                        key="window"}}}
                                         className="absolute inset-0 bg-background"
                                     >
                                         <ChatWindow
@@ -197,13 +186,10 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                                                 }));
                                             }}
                                         />
-                                    </motion.div>
+                                    </>
                                 ) : (
-                                    <motion.div
-                                        key="list"
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -20 }}
+                                    <
+                                        key="list"}}}
                                         className="absolute inset-0 overflow-y-auto"
                                     >
                                         <ChatList
@@ -215,14 +201,14 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                                             onConversationDeleted={handleConversationDeleted}
                                             typingUsers={typingUsers}
                                         />
-                                    </motion.div>
+                                    </>
                                 )}
-                            </AnimatePresence>
+                            </>
                         </div>
-                    </motion.div>
+                    </>
                 </>
             )}
-        </AnimatePresence>
+        </>
     );
 };
 

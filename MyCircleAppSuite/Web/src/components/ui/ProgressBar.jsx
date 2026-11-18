@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 const ProgressBar = ({ progress, showLabel = true, size = 'md', color = 'primary' }) => {
     const sizes = {
@@ -24,11 +23,8 @@ const ProgressBar = ({ progress, showLabel = true, size = 'md', color = 'primary
                 </div>
             )}
             <div className={`w-full bg-white/5 rounded-full overflow-hidden ${sizes[size]}`}>
-                <motion.div
-                    className={`${colors[color]} ${sizes[size]} rounded-full`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                <
+                    className={`${colors[color]} ${sizes[size]} rounded-full`}}%` }}}
                 />
             </div>
         </div>

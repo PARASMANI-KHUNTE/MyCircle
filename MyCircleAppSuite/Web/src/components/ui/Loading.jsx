@@ -1,30 +1,18 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 
 /**
- * Loading spinner with multiple size variants
- *
- * Design rationale:
- * - Uses CSS border instead of border-[3px] for consistency
- * - Fullscreen includes backdrop blur for modal loading
- * - Includes text option for contextual loading states
- * - Respects user's reduced motion preference
+ * Loading spinner with multiple size variants - CSS only, no animations library
  */
 const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
-    const shouldReduceMotion = useReducedMotion();
-    const animate = shouldReduceMotion ? undefined : { rotate: 360 };
-    const transition = shouldReduceMotion ? undefined : {
-        duration: size === 'sm' ? 0.6 : 0.8,
-        repeat: Infinity,
-        ease: 'linear'
-    };
+    const spinnerSize = size === 'sm' ? 'w-6 h-6 border-2' : 'w-8 h-8 border-3';
+    const inlineSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
 
     const spinner = (
         <div className="flex flex-col items-center gap-3">
-            <motion.div
-                className={`${size === 'sm' ? 'border-2' : 'border-3'} border-primary/20 border-t-primary rounded-full`}
-                animate={animate}
-                transition={transition}
+            <div
+                className={`${spinnerSize} border-primary/20 border-t-primary rounded-full animate-spin`}
+                role="status"
+                aria-label={text || 'Loading'}
             />
             {text && (
                 <p className="text-sm text-foreground-muted font-medium">{text}</p>
@@ -48,10 +36,10 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
     if (inline) {
         return (
             <span className="inline-flex items-center gap-2 text-sm text-foreground-muted">
-                <motion.div
-                    className={`${size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} border-primary/20 border-t-primary rounded-full`}
-                    animate={animate}
-                    transition={shouldReduceMotion ? undefined : { duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                <div
+                    className={`${inlineSize} border-primary/20 border-t-primary rounded-full animate-spin`}
+                    role="status"
+                    aria-label={text || 'Loading'}
                 />
                 {text}
             </span>
@@ -63,13 +51,9 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
 
 /**
  * Skeleton loader for content placeholders
- * 
- * Design rationale:
- * - Uses shimmer animation from design system
- * - Maintains aspect ratio via className prop
  */
 export const Skeleton = ({ className = '', ...props }) => (
-    <div 
+    <div
         className={`skeleton ${className}`}
         aria-hidden="true"
         {...props}
@@ -78,16 +62,12 @@ export const Skeleton = ({ className = '', ...props }) => (
 
 /**
  * Empty state component for lists and sections
- * 
- * Design rationale:
- * - Clear visual hierarchy (icon, title, description, action)
- * - Icon uses primary color for brand consistency
  */
-export const EmptyState = ({ 
+export const EmptyState = ({
     icon: Icon,
     title,
     description,
-    action: Action 
+    action: Action
 }) => (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
         {Icon && (

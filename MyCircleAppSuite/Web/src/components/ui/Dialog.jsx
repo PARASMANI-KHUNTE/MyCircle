@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
 const sizes = {
@@ -31,16 +30,12 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
     }, [isOpen]);
 
     return (
-        <AnimatePresence>
+        <>
             {isOpen && (
                 <>
                     {/* Backdrop — z-modal(30) */}
-                    <motion.div
-                        key="backdrop"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                    <
+                        key="backdrop"}}}}
                         onClick={onClose}
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[30]"
                         aria-hidden="true"
@@ -53,12 +48,8 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
                         aria-modal="true"
                         aria-labelledby="dialog-title"
                     >
-                        <motion.div
-                            key="dialog"
-                            initial={{ opacity: 0, scale: 0.94, y: 16 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.94, y: 16 }}
-                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        <
+                            key="dialog"}}}}
                             className={`relative w-full ${sizes[size]} bg-card rounded-2xl border border-card-border overflow-hidden`}
                             style={{ boxShadow: 'var(--shadow-2xl)' }}
                             onClick={(e) => e.stopPropagation()}
@@ -99,11 +90,11 @@ const Dialog = ({ isOpen, onClose, title, description, children, actions, size =
                                     {actions}
                                 </div>
                             )}
-                        </motion.div>
+                        </>
                     </div>
                 </>
             )}
-        </AnimatePresence>
+        </>
     );
 };
 

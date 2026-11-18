@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import { useSocket } from '../context/SocketContext';
@@ -280,7 +279,7 @@ const Requests = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <AnimatePresence>
+                        <>
                             {requests.map((req, index) => {
                                 const otherUser = activeTab === 'received' ? req.requester : req.recipient;
                                 const badge = getStatusBadge(req.status);
@@ -289,11 +288,8 @@ const Requests = () => {
                                 const isAccepted = req.status === 'accepted';
 
                                 return (
-                                    <motion.div
-                                        key={req._id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
+                                    <
+                                        key={req._id}}}}
                                         className="bg-card border border-border rounded-2xl overflow-hidden"
                                     >
                                         {/* Post Info */}
@@ -481,10 +477,10 @@ const Requests = () => {
                                                 <Trash2 className="w-3 h-3" />
                                             </Button>
                                         </div>
-                                    </motion.div>
+                                    </>
                                 );
                             })}
-                        </AnimatePresence>
+                        </>
                     </div>
                 )}
             </div>

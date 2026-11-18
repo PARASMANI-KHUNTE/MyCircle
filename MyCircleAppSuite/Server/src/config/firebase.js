@@ -1,6 +1,25 @@
 const { initializeApp, cert, getApps, getApp } = require('firebase-admin/app');
-const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
-const { getAuth } = require('firebase-admin/auth');
+
+let getAuth = null;
+let getFirestore = null;
+let Timestamp = null;
+let FieldValue = null;
+
+try {
+    const authModule = require('firebase-admin/auth');
+    getAuth = authModule.getAuth;
+} catch (error) {
+    console.warn('⚠️ Firebase Admin Auth module could not be loaded:', error.message);
+}
+
+try {
+    const firestoreModule = require('firebase-admin/firestore');
+    getFirestore = firestoreModule.getFirestore;
+    Timestamp = firestoreModule.Timestamp;
+    FieldValue = firestoreModule.FieldValue;
+} catch (error) {
+    console.warn('⚠️ Firebase Admin Firestore module could not be loaded. Firestore features will be disabled:', error.message);
+}
 
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
 const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL;
@@ -32,7 +51,9 @@ if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
     }
 }
 
-const db = getApps().length > 0 ? getFirestore(firebaseApp || undefined) : null;
+const db = (getApps().length > 0 && typeof getFirestore === 'function')
+    ? getFirestore(firebaseApp || undefined)
+    : null;
 
 // Backward-compatible admin wrapper for existing codebase usage
 const admin = {
@@ -45,11 +66,19 @@ const admin = {
     credential: {
         cert,
     },
-    auth: (app = firebaseApp) => getAuth(app || undefined),
-    firestore: Object.assign((app = firebaseApp) => (getApps().length > 0 ? getFirestore(app || undefined) : null), {
-        Timestamp,
-        FieldValue,
-    }),
+    auth: (app = firebaseApp) => (typeof getAuth === 'function' ? getAuth(app || undefined) : null),
+    firestore: Object.assign(
+        (app = firebaseApp) => ((getApps().length > 0 && typeof getFirestore === 'function') ? getFirestore(app || undefined) : null),
+        {
+            Timestamp: Timestamp || {
+                fromDate: (date) => ({ toDate: () => date, toMillis: () => (date instanceof Date ? date.getTime() : Date.now()) }),
+                now: () => ({ toDate: () => new Date(), toMillis: () => Date.now() }),
+            },
+            FieldValue: FieldValue || {
+                serverTimestamp: () => new Date(),
+            },
+        }
+    ),
 };
 
 module.exports = { admin, db };

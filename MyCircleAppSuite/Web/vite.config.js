@@ -7,7 +7,24 @@ export default defineConfig({
   server: {
     hmr: {
       overlay: true,
+      // Ensure WebSocket connection for HMR works reliably
+      protocol: 'ws',
+      host: 'localhost',
     },
+    // Prevent port conflicts causing full reloads
+    port: 5173,
+    strictPort: false,
+  },
+  // Optimize deps to prevent re-optimization on config change
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'framer-motion',
+      'axios',
+      'socket.io-client',
+    ],
   },
   build: {
     rollupOptions: {

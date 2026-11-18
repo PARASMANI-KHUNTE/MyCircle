@@ -7,6 +7,7 @@
     "android:win": "powershell -ExecutionPolicy Bypass -File scripts/run-android-shortpath.ps1",
     "ios": "react-native run-ios",
     "lint": "eslint .",
+    "generate:icons": "node scripts/generate-icons.js",
     "typecheck": "tsc --noEmit",
     "postinstall": "patch-package",
     "start": "react-native start --config metro.config.js",

@@ -28,8 +28,6 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [location, setLocation] = useState('');
     const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [price, setPrice] = useState('');
-    const [budgetMin, setBudgetMin] = useState('');
-    const [budgetMax, setBudgetMax] = useState('');
     const [availability, setAvailability] = useState('');
     const [acceptsBarter, setAcceptsBarter] = useState(false);
     const [duration, setDuration] = useState(40320); // 28 days
@@ -59,8 +57,6 @@ const CreatePostScreen = ({ navigation }: any) => {
         subType ||
         location ||
         price ||
-        budgetMin ||
-        budgetMax ||
         images.length > 0 ||
         step > 1
     );
@@ -74,8 +70,6 @@ const CreatePostScreen = ({ navigation }: any) => {
         setLocation('');
         setCoordinates(null);
         setPrice('');
-        setBudgetMin('');
-        setBudgetMax('');
         setAvailability('');
         setAcceptsBarter(false);
         setDuration(40320);
@@ -178,8 +172,6 @@ const CreatePostScreen = ({ navigation }: any) => {
                 formData.append('longitude', coordinates.lng.toString());
             }
             formData.append('price', price || '0');
-            if (budgetMin) formData.append('budgetMin', budgetMin);
-            if (budgetMax) formData.append('budgetMax', budgetMax);
             if (availability.trim()) formData.append('availability', availability.trim());
             formData.append('duration', duration.toString());
             formData.append('isUrgent', isUrgent.toString());
@@ -279,7 +271,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                         onChangeText={setDescription}
                     />
                 </View>
-                <View style={styles.inputGroup}>
+                <View style={[styles.inputGroup, { marginBottom: 0 }]}>
                     <Text style={styles.label}>Availability</Text>
                     <TextInput
                         style={[styles.glassInput, styles.textAreaSmall]}
@@ -289,30 +281,6 @@ const CreatePostScreen = ({ navigation }: any) => {
                         multiline
                         onChangeText={setAvailability}
                     />
-                </View>
-                <View style={[styles.dualInputRow, { marginBottom: 0 }]}>
-                    <View style={[styles.inputGroup, styles.dualInput]}>
-                        <Text style={styles.label}>Budget Min</Text>
-                        <TextInput
-                            style={styles.glassInput}
-                            keyboardType="numeric"
-                            placeholder="300"
-                            placeholderTextColor="#64748b"
-                            value={budgetMin}
-                            onChangeText={setBudgetMin}
-                        />
-                    </View>
-                    <View style={[styles.inputGroup, styles.dualInput]}>
-                        <Text style={styles.label}>Budget Max</Text>
-                        <TextInput
-                            style={styles.glassInput}
-                            keyboardType="numeric"
-                            placeholder="1200"
-                            placeholderTextColor="#64748b"
-                            value={budgetMax}
-                            onChangeText={setBudgetMax}
-                        />
-                    </View>
                 </View>
             </View>
 
@@ -433,11 +401,6 @@ const CreatePostScreen = ({ navigation }: any) => {
                 <Text style={styles.previewDesc} numberOfLines={4}>{description}</Text>
                 {!!availability && (
                     <Text style={styles.previewMeta}>Availability: {availability}</Text>
-                )}
-                {(budgetMin || budgetMax) && (
-                    <Text style={styles.previewMeta}>
-                        Budget Range: ₹{budgetMin || '0'} - ₹{budgetMax || budgetMin || '0'}
-                    </Text>
                 )}
                 <View style={styles.previewFooter}>
                     <View style={styles.footerInfo}><MapPin size={12} color="#94a3b8" /><Text style={styles.footerInfoText}>{location}</Text></View>

@@ -260,9 +260,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 16,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
     },
     selectionTitle: {
         fontSize: 18,
@@ -284,13 +284,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContent: {
-        paddingTop: 12,
+        paddingTop: 8,
         paddingBottom: 40,
     },
     sectionHeader: {
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        marginTop: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginTop: 4,
     },
     sectionHeaderText: {
         fontSize: 12,

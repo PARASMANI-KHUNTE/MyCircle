@@ -120,16 +120,16 @@ const LandingScreen = ({ navigation }: any) => {
                         {/* Floating Icons */}
                         <Animated.View
                             entering={FadeInDown.delay(600).duration(600).springify()}
-                            style={[styles.floatingIcon, { top: -20, right: -30 }]}
+                            style={[styles.floatingIcon, { top: -6, right: -10 }]}
                         >
-                            <Sparkles size={24} color="#af25f4" />
+                            <Sparkles size={20} color="#af25f4" />
                         </Animated.View>
                         
                         <Animated.View
                             entering={FadeInDown.delay(800).duration(600).springify()}
-                            style={[styles.floatingIcon, { top: 20, right: -50 }]}
+                            style={[styles.floatingIcon, { bottom: -6, left: -10 }]}
                         >
-                            <Zap size={20} color="#00f5ff" />
+                            <Zap size={18} color="#00f5ff" />
                         </Animated.View>
                     </Animated.View>
 
@@ -270,17 +270,17 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: 24,
-        paddingTop: 60,
+        paddingHorizontal: 20,
+        paddingTop: 24,
         paddingBottom: 40,
     },
     heroSection: {
         alignItems: 'center',
-        marginBottom: 60,
+        marginBottom: 36,
     },
     logoContainer: {
         position: 'relative',
-        marginBottom: 32,
+        marginBottom: 20,
     },
     logoGlow: {
         shadowColor: '#af25f4',
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     mainTitle: {
-        fontSize: 42,
+        fontSize: 36,
         fontWeight: '800',
         color: '#ffffff',
         fontFamily: 'System',
@@ -329,33 +329,33 @@ const styles = StyleSheet.create({
         color: '#af25f4',
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#94a3b8',
         textAlign: 'center',
-        marginTop: 12,
-        lineHeight: 24,
-        maxWidth: 280,
+        marginTop: 8,
+        lineHeight: 22,
+        maxWidth: 290,
     },
     featuresSection: {
-        marginBottom: 60,
+        marginBottom: 32,
     },
     featureCard: {
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 20,
-        padding: 24,
-        marginBottom: 16,
+        padding: 20,
+        marginBottom: 12,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     featureIcon: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     featureTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '700',
         color: '#ffffff',
-        marginBottom: 8,
+        marginBottom: 6,
     },
     featureDescription: {
         fontSize: 14,
@@ -364,11 +364,11 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     actionSection: {
-        marginBottom: 40,
+        marginBottom: 28,
     },
     primaryButton: {
         borderRadius: 16,
-        marginBottom: 16,
+        marginBottom: 14,
         shadowColor: '#af25f4',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -379,8 +379,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 18,
-        paddingHorizontal: 32,
+        paddingVertical: 15,
+        paddingHorizontal: 28,
         borderRadius: 16,
         backgroundColor: '#af25f4',
     },

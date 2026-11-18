@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
 import { ArrowLeft, MessageCircle, ChevronRight, CheckSquare, Square, X, Trash2, CheckCheck } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -12,6 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 const getParticipantId = (participant: any) => participant?._id?.toString?.() || participant?.id?.toString?.();
 
 const ChatListScreen = ({ navigation }: any) => {
+    const { colors, isDark } = useTheme();
     const auth = useAuth() as any;
     const { socket } = useSocket() as any;
     const [conversations, setConversations] = useState([]);
@@ -164,6 +166,7 @@ const ChatListScreen = ({ navigation }: any) => {
                 >
                     <View style={[
                         styles.conversationCard, 
+                        { backgroundColor: colors.card, borderColor: colors.borderSoft },
                         hasUnread ? styles.unreadCard : {},
                         isSelected ? styles.selectedCard : {}
                     ]}>
@@ -171,9 +174,9 @@ const ChatListScreen = ({ navigation }: any) => {
                             {isSelectionMode && (
                                 <View style={styles.checkboxContainer}>
                                     {isSelected ? (
-                                        <CheckSquare size={24} color="#af25f4" />
+                                        <CheckSquare size={24} color={colors.primary} />
                                     ) : (
-                                        <Square size={24} color="#64748b" />
+                                        <Square size={24} color={colors.textSecondary} />
                                     )}
                                 </View>
                             )}
@@ -187,8 +190,8 @@ const ChatListScreen = ({ navigation }: any) => {
 
                             <View style={styles.contentContainer}>
                                 <View style={styles.nameRow}>
-                                    <Text style={[styles.userName, hasUnread && styles.unreadText]}>{otherUser?.displayName}</Text>
-                                    <Text style={styles.timeText}>
+                                    <Text style={[styles.userName, { color: colors.text }, hasUnread && styles.unreadText]}>{otherUser?.displayName}</Text>
+                                    <Text style={[styles.timeText, { color: colors.textSecondary }]}>
                                         {item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                     </Text>
                                 </View>
@@ -199,7 +202,7 @@ const ChatListScreen = ({ navigation }: any) => {
                                     </Text>
                                 ) : (
                                     <View style={styles.messageRow}>
-                                        <Text style={[styles.lastMessage, hasUnread && styles.unreadMessageText]} numberOfLines={1}>
+                                        <Text style={[styles.lastMessage, { color: colors.textSecondary }, hasUnread && styles.unreadMessageText]} numberOfLines={1}>
                                             {lastMsg ? lastMsg.text : 'Start a conversation'}
                                         </Text>
                                         {hasUnread && (
@@ -210,7 +213,7 @@ const ChatListScreen = ({ navigation }: any) => {
                                     </View>
                                 )}
                             </View>
-                            {!isSelectionMode && <ChevronRight size={18} color="#64748b" />}
+                            {!isSelectionMode && <ChevronRight size={18} color={colors.textSecondary} />}
                         </View>
                     </View>
                 </TouchableOpacity>
@@ -221,24 +224,24 @@ const ChatListScreen = ({ navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
             
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientStart }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientMiddle, opacity: isDark ? 0.8 : 0.45 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientEnd, opacity: isDark ? 0.6 : 0.32 }]} />
             </View>
 
             {/* Header */}
             {isSelectionMode ? (
                 <View style={styles.header}>
                     <View style={styles.selectionHeader}>
-                        <TouchableOpacity onPress={exitSelectionMode} style={styles.backButton}>
-                            <X color="#ffffff" size={24} />
+                        <TouchableOpacity onPress={exitSelectionMode} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                            <X color={colors.text} size={24} />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>{selectedItems.size} Selected</Text>
+                        <Text style={[styles.headerTitle, { color: colors.text }]}>{selectedItems.size} Selected</Text>
                         <View style={styles.selectionActions}>
                             <TouchableOpacity onPress={handleMarkAsRead} style={styles.actionButton}>
                                 <CheckCheck size={22} color="#10b981" />
@@ -251,16 +254,16 @@ const ChatListScreen = ({ navigation }: any) => {
                 </View>
             ) : (
                 <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft color="#ffffff" size={24} />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                        <ArrowLeft color={colors.text} size={24} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Messages</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
                 </Animated.View>
             )}
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator color="#af25f4" size="large" />
+                    <ActivityIndicator color={colors.primary} size="large" />
                 </View>
             ) : (
                 <FlatList
@@ -270,14 +273,14 @@ const ChatListScreen = ({ navigation }: any) => {
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
-                        <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor="#af25f4" />
+                        <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor={colors.primary} />
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
-                            <View style={styles.emptyIconWrapper}>
-                                <MessageCircle size={48} color="#af25f4" />
+                            <View style={[styles.emptyIconWrapper, { backgroundColor: colors.primary + '1a' }]}>
+                                <MessageCircle size={48} color={colors.primary} />
                             </View>
-                            <Text style={styles.emptyText}>No conversations yet.</Text>
+                            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No conversations yet.</Text>
                         </View>
                     }
                 />

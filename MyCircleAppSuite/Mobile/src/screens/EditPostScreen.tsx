@@ -7,6 +7,7 @@ import { MapPin, Check, X, Camera, Briefcase, Wrench, ShoppingBag, Package, Hand
 import { WebView } from 'react-native-webview';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { DARK_TILE_URL, LABELS_TILE_URL, MAP_ATTRIBUTION, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
 
 const EditPostScreen = ({ navigation, route }: any) => {
     const { post } = route.params;
@@ -328,7 +329,8 @@ const EditPostScreen = ({ navigation, route }: any) => {
                                 html: `
                                 <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>body { margin: 0; padding: 0; } #map { height: 100vh; width: 100vw; }</style></head><body><div id="map"></div><script>
                                     var map = L.map('map').setView([${coordinates?.lat || 28.6139}, ${coordinates?.lng || 77.2090}], 13);
-                                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+                                    L.tileLayer('${DARK_TILE_URL}', { attribution: '${MAP_ATTRIBUTION}', maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
+                                    L.tileLayer('${LABELS_TILE_URL}', { maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
                                     var marker; ${coordinates ? `marker = L.marker([${coordinates.lat}, ${coordinates.lng}]).addTo(map);` : ''}
                                     map.on('click', function(e) { if (marker) map.removeLayer(marker); marker = L.marker(e.latlng).addTo(map); window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng })); });
                                 </script></body></html>

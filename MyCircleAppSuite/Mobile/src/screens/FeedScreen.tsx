@@ -19,6 +19,7 @@ import Sound from 'react-native-sound';
 import PostCard from '../components/ui/PostCard';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
+import { LIGHT_TILE_URL, DARK_TILE_URL, LABELS_TILE_URL, MAP_ATTRIBUTION, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
 
 // Enable playback in silent mode
 Sound.setCategory('Playback');
@@ -550,15 +551,14 @@ const FeedScreen = ({ navigation, route }: any) => {
                     };
 
                     var isDark = ${colors.background === '#000000'};
-                    var mapStyle = isDark 
-                        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+                    var mapStyle = isDark ? '${DARK_TILE_URL}' : '${LIGHT_TILE_URL}';
 
                     L.tileLayer(mapStyle, {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                        subdomains: 'abcd',
-                        maxZoom: 20
+                        attribution: '${MAP_ATTRIBUTION}',
+                        maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM},
+                        maxZoom: 19
                     }).addTo(map);
+                    L.tileLayer('${LABELS_TILE_URL}', { maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
 
                     // Add user location marker with premium animation
                     if (userLoc) {

@@ -18,7 +18,8 @@ import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 import './Explore.css';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, CircleMarker } from 'react-leaflet';
+import { MapContainer, Marker, Popup, Circle, useMap, CircleMarker } from 'react-leaflet';
+import MapTiles from '../components/MapTiles';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -716,10 +717,7 @@ const Explore = () => {
                         className="w-full h-[calc(100vh-150px)] sm:h-[calc(100vh-180px)] z-0"
                     >
                         <MapUpdater center={safeUserLocation ? [safeUserLocation.lat, safeUserLocation.lng] : null} zoom={mapZoom} />
-                        <TileLayer
-                            attribution='&copy; <a href=\"https://openstreetmap.org\">OpenStreetMap</a>'
-                            url={isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
-                        />
+                        <MapTiles dark={isDark} />
                         
                          {/* Custom Map Controls */}
                         <div className="enhanced-map-controls">

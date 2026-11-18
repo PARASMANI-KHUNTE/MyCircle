@@ -11,11 +11,7 @@ const BlockedUsers = () => {
     const [loading, setLoading] = useState(true);
     const dialog = useDialog();
 
-    useEffect(() => {
-        fetchBlockedUsers();
-    }, []);
-
-    const fetchBlockedUsers = async () => {
+    const fetchBlockedUsers = React.useCallback(async () => {
         try {
             const res = await api.get('/user/blocked');
             setBlockedUsers(res.data);
@@ -24,7 +20,11 @@ const BlockedUsers = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchBlockedUsers();
+    }, [fetchBlockedUsers]);
 
     const handleUnblock = async (userId, displayName) => {
         const confirmed = await dialog.confirm(

@@ -36,6 +36,8 @@ const Navbar = () => {
         window.location.href = `${apiURL}/auth/google?returnTo=${returnTo}`;
     };
 
+    const fetchUnreadMsgCountRef = useRef(null);
+
     const fetchUnreadMsgCount = useCallback(async () => {
         if (unreadRequestInFlightRef.current) {
             unreadRefreshQueuedRef.current = true;
@@ -54,11 +56,15 @@ const Navbar = () => {
                 unreadRefreshQueuedRef.current = false;
                 window.clearTimeout(unreadRefreshTimeoutRef.current);
                 unreadRefreshTimeoutRef.current = window.setTimeout(() => {
-                    void fetchUnreadMsgCount();
+                    void fetchUnreadMsgCountRef.current?.();
                 }, 150);
             }
         }
     }, []);
+
+    useEffect(() => {
+        fetchUnreadMsgCountRef.current = fetchUnreadMsgCount;
+    }, [fetchUnreadMsgCount]);
 
     useEffect(() => {
         const handleScroll = () => {

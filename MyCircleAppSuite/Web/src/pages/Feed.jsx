@@ -109,12 +109,22 @@ const Feed = () => {
     const filteredPosts = React.useMemo(() => posts, [posts]);
 
     const mapPosts = React.useMemo(() => {
+        const getOffset = (id, salt) => {
+            const str = String(id || '') + salt;
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.005;
+        };
+
         return filteredPosts
             .filter(p => p.locationCoords?.coordinates)
             .map(p => ({
                 ...p,
-                displayLat: p.locationCoords.coordinates[1] + (Math.random() - 0.5) * 0.005,
-                displayLng: p.locationCoords.coordinates[0] + (Math.random() - 0.5) * 0.005
+                displayLat: p.locationCoords.coordinates[1] + getOffset(p._id, 'lat'),
+                displayLng: p.locationCoords.coordinates[0] + getOffset(p._id, 'lng')
             }));
     }, [filteredPosts]);
 

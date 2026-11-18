@@ -128,10 +128,12 @@ const PostCard = ({
         return minLabel || maxLabel || null;
     }, [budgetFloor, budgetCeiling, currencySymbol]);
 
+    const [currentTime] = useState(() => Date.now());
+
     const lifecycleMeta = useMemo(() => {
         if (!post.expiresAt) return null;
 
-        const now = Date.now();
+        const now = currentTime;
         const expires = new Date(post.expiresAt).getTime();
         const fallbackDurationMs = (Number(post.duration) || 28) * 24 * 60 * 60 * 1000;
         const created = post.createdAt
@@ -178,7 +180,7 @@ const PostCard = ({
             expiresLabel: formatDate(post.expiresAt),
             daysLive
         };
-    }, [post.createdAt, post.duration, post.expiresAt, status]);
+    }, [currentTime, post.createdAt, post.duration, post.expiresAt, status]);
 
     const handleGetAIInsights = async (e) => {
         e?.stopPropagation();

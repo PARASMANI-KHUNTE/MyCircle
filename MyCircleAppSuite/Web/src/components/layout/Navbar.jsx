@@ -27,6 +27,7 @@ const Navbar = () => {
     const unreadRefreshQueuedRef = useRef(false);
     const unreadRefreshTimeoutRef = useRef(null);
     const location = useLocation();
+    const isChatPage = location.pathname.startsWith('/chat');
 
     const apiURL = getSocketBaseUrl();
 
@@ -110,6 +111,7 @@ const Navbar = () => {
     useEffect(() => {
         setIsMobileMenuOpen(false);
         setIsProfileDropdownOpen(false);
+        setIsChatDrawerOpen(false);
     }, [location.pathname]);
 
     useEffect(() => {
@@ -313,19 +315,21 @@ const Navbar = () => {
                         <div className="flex items-center gap-2">
                             {isAuthenticated ? (
                                 <>
-                                    {/* Chat - hidden on mobile (BottomNav), visible lg+ */}
-                                    <button
-                                        onClick={() => setIsChatDrawerOpen(true)}
-                                        className="icon-btn relative hidden lg:inline-flex"
-                                        aria-label="Open messages"
-                                    >
-                                        <MessageCircle className="w-5 h-5" />
-                                        {unreadMsgCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
-                                                {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
-                                            </span>
-                                        )}
-                                    </button>
+                                    {/* Chat - hidden on mobile (BottomNav) and on the full chat page, visible lg+ */}
+                                    {!isChatPage && (
+                                        <button
+                                            onClick={() => setIsChatDrawerOpen(true)}
+                                            className="icon-btn relative hidden lg:inline-flex"
+                                            aria-label="Open messages"
+                                        >
+                                            <MessageCircle className="w-5 h-5" />
+                                            {unreadMsgCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
+                                                    {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                    )}
 
                                     {/* Notifications - hidden on mobile (BottomNav), visible lg+ */}
                                     <Link to="/notifications" className="icon-btn relative hidden lg:inline-flex" aria-label="Notifications">
@@ -414,7 +418,9 @@ const Navbar = () => {
             </nav>
 
             {typeof document !== 'undefined' ? createPortal(mobileDrawer, document.body) : null}
-            <ChatDrawer isOpen={isChatDrawerOpen} onClose={() => setIsChatDrawerOpen(false)} />
+            {!isChatPage && (
+                <ChatDrawer isOpen={isChatDrawerOpen} onClose={() => setIsChatDrawerOpen(false)} />
+            )}
         </>
     );
 };

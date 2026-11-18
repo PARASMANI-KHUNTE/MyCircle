@@ -65,7 +65,6 @@ const BottomNav = () => {
         '/edit-post', 
         '/settings',
         '/edit-profile',
-        '/chat',
     ];
     
     // Hide if current route matches any hide route

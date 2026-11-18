@@ -62,6 +62,22 @@ If everything is set up correctly, you should see your new app running in the An
 
 This is one way to run your app — you can also build it directly from Android Studio or Xcode.
 
+## API connectivity (development)
+
+The mobile client resolves the API host automatically, so it keeps working when
+your LAN IP changes or when you switch between an emulator and a physical
+device:
+
+- If `DEV_API_URL` is set and reachable, it is used first.
+- Otherwise the host running Metro is used (the same machine serving the JS
+  bundle).
+- Android emulators fall back to `http://10.0.2.2:5000/api`.
+- For USB devices, run `npm run android:reverse` to forward Metro (8081) and
+  the API (5000) over ADB.
+
+The resolved host is logged in development as `API ready at ...`. Release
+builds always use `API_URL`, which must be HTTPS.
+
 ## Step 3: Modify your app
 
 Now that you have successfully run the app, let's make changes!

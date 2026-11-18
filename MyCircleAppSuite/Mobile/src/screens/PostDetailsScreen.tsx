@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MapPin, MessageCircle, ArrowLeft, ChevronRight, Share2, Heart, MoreVertical, Sparkles } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { formatDurationMinutesLong } from '../utils/formatDuration';
-import api, { BASE_URL } from '../services/api';
+import api, { getApiBaseUrl } from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
 import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
@@ -114,7 +114,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             
             await api.post(`/posts/${id}/share`);
             setShares(shares + 1);
-            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+            const serverBase = getApiBaseUrl().replace(/\/api\/?$/, '');
             Clipboard.setString(`${serverBase}/post/${id}`);
             Alert.alert("Copied", "Post link copied!");
         } catch (err) {

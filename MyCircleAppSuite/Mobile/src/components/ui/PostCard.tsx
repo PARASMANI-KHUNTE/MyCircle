@@ -18,7 +18,7 @@ import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { useTheme } from '../../context/ThemeContext';
-import api, { BASE_URL } from '../../services/api';
+import api, { getApiBaseUrl } from '../../services/api';
 import { getPlaceholderSuggestions } from '../../services/aiService';
 import { formatDurationMinutesCompact } from '../../utils/formatDuration';
 import GlassView from './GlassView';
@@ -98,7 +98,7 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
             await AsyncStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
             setHasShared(true);
             await api.post(`/posts/${post._id}/share`);
-            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+            const serverBase = getApiBaseUrl().replace(/\/api\/?$/, '');
             Clipboard.setString(`${serverBase}/post/${post._id}`);
             Alert.alert("Copied", "Post link copied!");
         } catch {

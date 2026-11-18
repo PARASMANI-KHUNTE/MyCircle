@@ -2,14 +2,14 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { io, Socket } from 'socket.io-client';
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { useAuth } from './AuthContext';
-import { BASE_URL } from '../services/api';
+import { resolveApiBaseUrl } from '../services/api';
 import { navigate } from '../services/navigationService';
 
-const getSocketUrl = () => {
-    if (!BASE_URL) {
-        throw new Error('BASE_URL is not configured. Check DEV_API_URL/API_URL in mobile env.');
+const getSocketUrl = (baseUrl: string) => {
+    if (!baseUrl) {
+        throw new Error('API base URL is not configured. Check DEV_API_URL/API_URL in mobile env.');
     }
-    return BASE_URL.replace(/\/api\/?$/, '');
+    return baseUrl.replace(/\/api\/?$/, '');
 };
 
 interface SocketContextType {
@@ -136,88 +136,105 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             return;
         }
 
-        const socketUrl = getSocketUrl();
-        console.log('Connecting to socket at:', socketUrl);
-        
-        if (socketRef.current) {
-            socketRef.current.disconnect();
-        }
+        let cancelled = false;
+        let newSocket: Socket | null = null;
 
-        const newSocket = io(socketUrl, {
-            transports: ['websocket'],
-            forceNew: true,
-            auth: {
-                token: accessToken
-            }
-        });
-
-        socketRef.current = newSocket;
-        setSocket(newSocket);
-
-        newSocket.on('connect', () => {
-            console.log('Socket connected mobile:', newSocket.id);
-            setConnected(true);
-        });
-
-        newSocket.on('disconnect', () => {
-            console.log('Socket disconnected mobile');
-            setConnected(false);
-        });
-
-        newSocket.on('connect_error', (err) => {
-            console.log('Socket connection error mobile:', err.message);
-            setConnected(false);
-        });
-
-        newSocket.on('new_notification', async (data: any) => {
+        const connect = async () => {
             try {
-                const channelId = await notifee.createChannel({
-                    id: 'mycircle_channel_v1',
-                    name: 'MyCircle Notifications',
-                    importance: AndroidImportance.HIGH,
-                    sound: 'default',
-                    vibration: true,
-                    vibrationPattern: [300, 500],
+                const baseUrl = await resolveApiBaseUrl();
+                if (cancelled) {
+                    return;
+                }
+
+                const socketUrl = getSocketUrl(baseUrl);
+                console.log('Connecting to socket at:', socketUrl);
+
+                if (socketRef.current) {
+                    socketRef.current.disconnect();
+                }
+
+                newSocket = io(socketUrl, {
+                    transports: ['websocket'],
+                    forceNew: true,
+                    auth: {
+                        token: accessToken
+                    }
                 });
 
-                const notifeeData: any = {
-                    type: String(data.type || ''),
-                };
-                if (data.postId || data.relatedId) notifeeData.postId = String(data.postId || data.relatedId);
-                if (data.conversationId) notifeeData.conversationId = String(data.conversationId);
-                if (data.relatedId) notifeeData.relatedId = String(data.relatedId);
-                if (data.link) notifeeData.link = String(data.link);
+                socketRef.current = newSocket;
+                setSocket(newSocket);
 
-                await notifee.displayNotification({
-                    title: data.title || getNotificationTitle(data.type),
-                    body: data.message || generateNotificationBody(data),
-                    data: notifeeData,
-                    android: {
-                        channelId,
-                        pressAction: {
-                            id: 'default',
-                        },
-                        vibrationPattern: [300, 500],
-                        smallIcon: 'ic_launcher',
-                    },
-                    ios: {
-                        sound: 'default',
-                        foregroundPresentationOptions: {
-                            badge: true,
-                            sound: true,
-                            banner: true,
-                            list: true,
-                        },
-                    },
+                newSocket.on('connect', () => {
+                    console.log('Socket connected mobile:', newSocket?.id);
+                    setConnected(true);
                 });
-            } catch (err) {
-                console.error('Notification error:', err);
+
+                newSocket.on('disconnect', () => {
+                    console.log('Socket disconnected mobile');
+                    setConnected(false);
+                });
+
+                newSocket.on('connect_error', (err) => {
+                    console.log('Socket connection error mobile:', err.message);
+                    setConnected(false);
+                });
+
+                newSocket.on('new_notification', async (data: any) => {
+                    try {
+                        const channelId = await notifee.createChannel({
+                            id: 'mycircle_channel_v1',
+                            name: 'MyCircle Notifications',
+                            importance: AndroidImportance.HIGH,
+                            sound: 'default',
+                            vibration: true,
+                            vibrationPattern: [300, 500],
+                        });
+
+                        const notifeeData: any = {
+                            type: String(data.type || ''),
+                        };
+                        if (data.postId || data.relatedId) notifeeData.postId = String(data.postId || data.relatedId);
+                        if (data.conversationId) notifeeData.conversationId = String(data.conversationId);
+                        if (data.relatedId) notifeeData.relatedId = String(data.relatedId);
+                        if (data.link) notifeeData.link = String(data.link);
+
+                        await notifee.displayNotification({
+                            title: data.title || getNotificationTitle(data.type),
+                            body: data.message || generateNotificationBody(data),
+                            data: notifeeData,
+                            android: {
+                                channelId,
+                                pressAction: {
+                                    id: 'default',
+                                },
+                                vibrationPattern: [300, 500],
+                                smallIcon: 'ic_launcher',
+                            },
+                            ios: {
+                                sound: 'default',
+                                foregroundPresentationOptions: {
+                                    badge: true,
+                                    sound: true,
+                                    banner: true,
+                                    list: true,
+                                },
+                            },
+                        });
+                    } catch (err) {
+                        console.error('Notification error:', err);
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to connect socket:', error);
             }
-        });
+        };
+
+        connect();
 
         return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
+            cancelled = true;
+            newSocket?.disconnect();
+            if (socketRef.current === newSocket) {
                 socketRef.current = null;
             }
         };

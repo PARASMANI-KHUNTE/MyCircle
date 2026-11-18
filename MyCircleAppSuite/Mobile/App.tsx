@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { ToastProvider } from './src/components/ui/Toast';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { useTheme } from './src/context/ThemeContext';
 import { navigationRef } from './src/services/navigationService';
+import { warmUpApi } from './src/services/api';
 import StartupAnimation from './src/components/animations/StartupAnimation';
 import { getNavigationTheme } from './src/theme/theme';
 import { RootStackParamList } from './src/navigation/types';
@@ -110,6 +111,12 @@ const MainContent = () => {
 };
 
 const App = () => {
+    useEffect(() => {
+        // Resolve the dev API host / wake free-tier hosts while the splash
+        // screen is visible so the first user action does not fail.
+        warmUpApi();
+    }, []);
+
     return (
         <SafeAreaProvider>
             <ThemeProvider>

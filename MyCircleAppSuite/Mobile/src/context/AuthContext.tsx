@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Alert } from '../utils/alert';
-import * as Keychain from 'react-native-keychain';
 import api from '../services/api';
 import { setUnauthorizedHandler } from '../services/api';
+import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from '../services/tokenStorage';
 
 interface AuthContextType {
     accessToken: string | null;
@@ -16,9 +16,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-const ACCESS_TOKEN_KEY = 'access_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -44,15 +41,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         const loadAuth = async () => {
             try {
-                const [accessCreds, refreshCreds] = await Promise.all([
-                    Keychain.getGenericPassword({ service: ACCESS_TOKEN_KEY }),
-                    Keychain.getGenericPassword({ service: REFRESH_TOKEN_KEY }),
+                const [storedAccessToken, storedRefreshToken] = await Promise.all([
+                    getAccessToken(),
+                    getRefreshToken(),
                 ]);
-                if (accessCreds) {
-                    setAccessToken(accessCreds.password);
+                if (storedAccessToken) {
+                    setAccessToken(storedAccessToken);
                 }
-                if (refreshCreds) {
-                    setRefreshToken(refreshCreds.password);
+                if (storedRefreshToken) {
+                    setRefreshToken(storedRefreshToken);
                 }
             } catch (e) {
                 console.error('Failed to load credentials', e);
@@ -73,10 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const res = await api.post('/auth/refresh', { refreshToken });
             const { accessToken: newAccessToken, refreshToken: newRefreshToken } = res.data;
 
-            await Promise.all([
-                Keychain.setGenericPassword(ACCESS_TOKEN_KEY, newAccessToken),
-                Keychain.setGenericPassword(REFRESH_TOKEN_KEY, newRefreshToken),
-            ]);
+            await saveTokens(newAccessToken, newRefreshToken);
 
             setAccessToken(newAccessToken);
             setRefreshToken(newRefreshToken);
@@ -108,10 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const login = async (newAccessToken: string, newRefreshToken: string) => {
         try {
-            await Promise.all([
-                Keychain.setGenericPassword(ACCESS_TOKEN_KEY, newAccessToken),
-                Keychain.setGenericPassword(REFRESH_TOKEN_KEY, newRefreshToken),
-            ]);
+            await saveTokens(newAccessToken, newRefreshToken);
             setAccessToken(newAccessToken);
             setRefreshToken(newRefreshToken);
         } catch (e) {
@@ -129,10 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     console.warn('Server logout failed, clearing local tokens anyway', e);
                 }
             }
-            await Promise.all([
-                Keychain.resetGenericPassword({ service: ACCESS_TOKEN_KEY }),
-                Keychain.resetGenericPassword({ service: REFRESH_TOKEN_KEY }),
-            ]);
+            await clearTokens();
             setAccessToken(null);
             setRefreshToken(null);
             setUser(null);

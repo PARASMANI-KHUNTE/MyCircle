@@ -5,6 +5,7 @@
   "scripts": {
     "android": "react-native run-android",
     "android:win": "powershell -ExecutionPolicy Bypass -File scripts/run-android-shortpath.ps1",
+    "android:reverse": "adb reverse tcp:8081 tcp:8081 && adb reverse tcp:5000 tcp:5000",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

@@ -1,4 +1,6 @@
 {
+  "name": "MyCircleMobileBare",
+  "displayName": "MyCircle",
   "expo": {
     "name": "MyCircle",
     "slug": "mycircle",
@@ -21,7 +23,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.mypost.mycircle"
+      "package": "com.mycirclemobilebare"
     },
     "web": {
       "favicon": "./assets/favicon.png"

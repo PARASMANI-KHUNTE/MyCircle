@@ -16,7 +16,6 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Alert } from '../utils/alert';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     MapPin,
     MessageCircle,
@@ -57,8 +56,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         'none' | 'pending' | 'accepted' | 'approved' | 'rejected' | 'expired'
     >('none');
     const [likes, setLikes] = useState<string[]>([]);
-    const [shares, setShares] = useState(0);
-    const [hasShared, setHasShared] = useState(false);
     const [comments, setComments] = useState<any[]>([]);
 
     // AI State
@@ -89,25 +86,12 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const hasChatAccess =
         contactRequestStatus === 'accepted' || contactRequestStatus === 'approved';
 
-    useEffect(() => {
-        const checkShared = async () => {
-            try {
-                const sharedPosts = JSON.parse(
-                    (await AsyncStorage.getItem('sharedPosts')) || '[]'
-                );
-                setHasShared(sharedPosts.includes(id));
-            } catch {}
-        };
-        checkShared();
-    }, [id]);
-
     const fetchPostDetails = useCallback(async () => {
         try {
             setLoading(true);
             const res = await api.get(`/posts/${id}`);
             setPost(res.data);
             setLikes(res.data.likes || []);
-            setShares(res.data.shares || 0);
             setComments(res.data.comments || []);
             setContactRequestStatus(
                 res.data.contactRequestStatus || (res.data.hasRequested ? 'pending' : 'none')
@@ -161,8 +145,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             });
 
             if (result.action === Share.sharedAction) {
-                setHasShared(true);
-                setShares((prev) => prev + 1);
                 api.post(`/posts/${id}/share`).catch(() => {});
             }
         } catch (err: any) {

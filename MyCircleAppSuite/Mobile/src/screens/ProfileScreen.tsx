@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Sty
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Settings, LogOut, MessageCircle, Clock, Edit, Trash2, Wallet } from 'lucide-react-native';
+import { ArrowLeft, Settings, LogOut, MessageCircle, Clock, Edit, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
@@ -326,9 +326,6 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             <>
                                 <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.iconButton}>
                                     <Edit size={20} color="#ffffff" />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => navigation.navigate('Wallet')} style={[styles.iconButton, { marginLeft: 8 }]}>
-                                    <Wallet size={20} color="#ffffff" />
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={[styles.iconButton, { marginLeft: 8 }]}>
                                     <Settings size={20} color="#ffffff" />

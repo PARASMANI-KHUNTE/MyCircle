@@ -26,7 +26,6 @@ export type RootStackParamList = {
     BlockedUsers: undefined;
     UserProfile: { userId?: string } | undefined;
     EditPost: { id: string };
-    Wallet: undefined;
     NotFound: { path?: string } | undefined;
 };
 

@@ -16,7 +16,6 @@ import ImagePreviewModal from '../components/ui/ImagePreviewModal';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import CheckoutModal from '../components/ui/CheckoutModal';
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -57,10 +56,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const [aiPlaceholderSuggestion, setAiPlaceholderSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
     const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-    // Checkout State
-    const [checkoutVisible, setCheckoutVisible] = useState(false);
-    const [purchaseLoading, setPurchaseLoading] = useState(false);
 
     const isLiked = auth?.user?._id && likes.includes(auth.user._id);
     const isOwnPost = auth?.user?._id === post?.user?._id;
@@ -160,23 +155,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             navigation.navigate('ChatWindow', { conversation });
         } catch (err) {
             Alert.alert("Error", "Failed to start chat.");
-        }
-    };
-
-    const handleConfirmPurchase = async () => {
-        setPurchaseLoading(true);
-        try {
-            // Mock purchase logic
-            await new Promise((resolve) => {
-                setTimeout(resolve as () => void, 2000);
-            });
-            setCheckoutVisible(false);
-            Alert.alert("Success", "Purchase successful! You can now contact the author.");
-            setContactRequestStatus('approved');
-        } catch (err) {
-            Alert.alert("Error", "Purchase failed.");
-        } finally {
-            setPurchaseLoading(false);
         }
     };
 
@@ -397,28 +375,19 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                 <Heart size={24} color={isLiked ? "#ef4444" : "#fff"} fill={isLiked ? "#ef4444" : "transparent"} />
                             </TouchableOpacity>
 
-                            {post.price > 0 && contactRequestStatus === 'none' ? (
-                                <TouchableOpacity
-                                    onPress={() => setCheckoutVisible(true)}
-                                    className="bg-primary flex-[3] py-4 rounded-full items-center shadow-lg shadow-primary/30 mx-2"
-                                >
-                                    <Text className="text-white font-black text-lg tracking-wider">BUY NOW</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity
-                                    onPress={handleRequestContact}
-                                    style={[
-                                        styles.requestBtn,
-                                        { backgroundColor: contactRequestStatus === 'pending' ? 'rgba(255,255,255,0.1)' : '#af25f4' }
-                                    ]}
-                                    disabled={contactRequestStatus !== 'none'}
-                                    className="flex-[3] py-4 rounded-full items-center shadow-lg mx-2"
-                                >
-                                    <Text className="text-white font-black text-sm tracking-wider uppercase">
-                                        {contactRequestStatus === 'none' ? 'Request Contact' : contactRequestStatus}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
+                            <TouchableOpacity
+                                onPress={handleRequestContact}
+                                style={[
+                                    styles.requestBtn,
+                                    { backgroundColor: contactRequestStatus === 'pending' ? 'rgba(255,255,255,0.1)' : '#af25f4' }
+                                ]}
+                                disabled={contactRequestStatus !== 'none'}
+                                className="flex-[3] py-4 rounded-full items-center shadow-lg mx-2"
+                            >
+                                <Text className="text-white font-black text-sm tracking-wider uppercase">
+                                    {contactRequestStatus === 'none' ? 'Request Contact' : contactRequestStatus}
+                                </Text>
+                            </TouchableOpacity>
 
                             <TouchableOpacity
                                 onPress={handleMessage}
@@ -429,16 +398,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                         </View>
                     </View>
                 </View>
-
-                <CheckoutModal
-                    visible={checkoutVisible}
-                    onClose={() => setCheckoutVisible(false)}
-                    onConfirm={handleConfirmPurchase}
-                    postTitle={post.title}
-                    price={post.price}
-                    loading={purchaseLoading}
-                    balance={auth.user?.walletBalance || 5000} // Mock balance if missing
-                />
 
                 <ImagePreviewModal
                     visible={imagePreviewVisible}

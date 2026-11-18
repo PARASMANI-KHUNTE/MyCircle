@@ -16,7 +16,8 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import { cn } from '../utils/cn';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
+import MapTiles from '../components/MapTiles';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -365,12 +366,7 @@ const Feed = () => {
                             className="w-full h-full"
                         >
                             <MapUpdater center={userLocation ? [userLocation.lat, userLocation.lng] : null} zoom={userLocation ? 13 : 5} />
-                            <TileLayer
-                                attribution='&copy; OpenStreetMap'
-                                url={isDark
-                                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
-                            />
+                            <MapTiles dark={isDark} />
                             {userLocation && (
                                 <Marker position={[userLocation.lat, userLocation.lng]}>
                                     <Popup>You are here</Popup>

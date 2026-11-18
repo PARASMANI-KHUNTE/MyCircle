@@ -11,6 +11,7 @@ import { getCurrentLocation } from '../utils/location';
 import { useTheme } from '../context/ThemeContext';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Stepper from '../components/ui/Stepper';
+import { DARK_TILE_URL, LABELS_TILE_URL, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
 
 const CreatePostScreen = ({ navigation }: any) => {
     const { colors, isDark } = useTheme();
@@ -531,7 +532,8 @@ const CreatePostScreen = ({ navigation }: any) => {
                                 <div id="map"></div><button class="locate-btn" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type:'requestLoc'}))">GPS</button>
                                 <script>
                                     var map = L.map('map', { zoomControl: false }).setView([${coordinates?.lat || 28.61}, ${coordinates?.lng || 77.20}], 15);
-                                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+                                    L.tileLayer('${DARK_TILE_URL}', { maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
+                                    L.tileLayer('${LABELS_TILE_URL}', { maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
                                     var marker; map.on('click', function(e) { if(marker) map.removeLayer(marker); marker = L.marker(e.latlng).addTo(map); window.ReactNativeWebView.postMessage(JSON.stringify({type:'location', lat:e.latlng.lat, lng:e.latlng.lng})); });
                                     window.updateCenter = function(lat, lng) { map.flyTo([lat, lng], 16); if(marker) map.removeLayer(marker); marker = L.marker([lat, lng]).addTo(map); };
                                 </script></body></html>

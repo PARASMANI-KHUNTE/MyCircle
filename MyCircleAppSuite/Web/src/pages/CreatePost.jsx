@@ -5,7 +5,8 @@ import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { AlertCircle, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import MapTiles from '../components/MapTiles';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ITEM_CATEGORIES, JOB_TYPES } from '../constants';
@@ -602,7 +603,7 @@ const CreatePost = () => {
                                             zoom={13}
                                             style={{ height: '100%', width: '100%' }}
                                         >
-                                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                                            <MapTiles dark />
                                             <LocationPicker
                                                 position={formData.latitude ? { lat: formData.latitude, lng: formData.longitude } : null}
                                                 setPosition={async (pos) => {

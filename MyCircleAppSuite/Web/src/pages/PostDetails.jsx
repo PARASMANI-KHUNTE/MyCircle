@@ -16,7 +16,8 @@ import {
 import { useDialog } from '../hooks/useDialog';
 import { useTheme } from '../context/ThemeContext';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, Marker, Popup } from 'react-leaflet';
+import MapTiles from '../components/MapTiles';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -580,12 +581,7 @@ const PostDetails = () => {
                                             zoom={15}
                                             className="h-full w-full"
                                         >
-                                            <TileLayer
-                                                url={isDark
-                                                    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                                                    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                }
-                                            />
+                                            <MapTiles dark={isDark} />
                                             <Marker position={[post.locationCoordinates.lat, post.locationCoordinates.lng]}>
                                                 <Popup>{post.location}</Popup>
                                             </Marker>

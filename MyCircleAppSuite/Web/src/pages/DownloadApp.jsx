@@ -9,9 +9,11 @@ import {
     CheckCircle2,
     ArrowLeft,
     FileText,
-    Settings,
-    HelpCircle
+    ExternalLink
 } from 'lucide-react';
+
+const APK_DOWNLOAD_URL = 'https://github.com/PARASMANI-KHUNTE/MyCircle/releases/latest/download/mycircle.apk';
+const RELEASES_PAGE_URL = 'https://github.com/PARASMANI-KHUNTE/MyCircle/releases/tag/v1.0.0';
 
 const DownloadApp = () => {
     const navigate = useNavigate();
@@ -59,12 +61,23 @@ const DownloadApp = () => {
 
                         <div className="flex flex-col sm:flex-row gap-3 pt-2">
                             <a
-                                href="/mycircle.apk"
+                                href={APK_DOWNLOAD_URL}
                                 download="MyCircle.apk"
-                                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all text-base"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all text-base cursor-pointer"
                             >
                                 <Download className="w-5 h-5" />
                                 <span>Download APK (Direct)</span>
+                            </a>
+                            <a
+                                href={RELEASES_PAGE_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-card-border bg-card hover:bg-card-hover font-semibold transition-all text-sm"
+                            >
+                                <ExternalLink className="w-4 h-4 text-foreground-secondary" />
+                                <span>GitHub Releases</span>
                             </a>
                             <Button
                                 variant="outline"
@@ -80,15 +93,15 @@ const DownloadApp = () => {
                         <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-foreground-muted">
                             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-card-border bg-card">
                                 <Smartphone className="w-3.5 h-3.5 text-primary" />
-                                Android 8.0+
+                                Android 8.0+ (API 26+)
                             </span>
                             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-card-border bg-card">
                                 <FileText className="w-3.5 h-3.5 text-secondary" />
-                                ~190 MB (Debug/Release APK)
+                                ~75 MB (Release APK)
                             </span>
                             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-card-border bg-card">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
-                                Verified & Safe
+                                Verified & Signed
                             </span>
                         </div>
                     </div>
@@ -148,7 +161,7 @@ const DownloadApp = () => {
                             </div>
                             <h3 className="font-semibold text-base mb-1.5">Download APK</h3>
                             <p className="text-xs text-foreground-muted leading-relaxed">
-                                Tap the <strong>Download APK</strong> button above to download <code className="text-primary">mycircle.apk</code> to your device.
+                                Tap the <strong>Download APK</strong> button above to download the verified <code className="text-primary font-medium">mycircle.apk</code> directly to your device.
                             </p>
                         </div>
 

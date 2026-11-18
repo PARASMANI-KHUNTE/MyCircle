@@ -50,4 +50,14 @@ router.get('/ready', async (req, res) => {
     }
 });
 
+const LATEST_APK_URL = 'https://github.com/PARASMANI-KHUNTE/MyCircle/releases/latest/download/mycircle.apk';
+
+router.get('/download/apk', (req, res) => {
+    res.redirect(302, LATEST_APK_URL);
+});
+
+router.get('/app/download', (req, res) => {
+    res.redirect(302, LATEST_APK_URL);
+});
+
 module.exports = router;

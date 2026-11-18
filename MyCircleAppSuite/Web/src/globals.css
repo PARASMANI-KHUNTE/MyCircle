@@ -396,7 +396,10 @@
     display: none !important;
 }
 
-.leaflet-popup {
+/* Explore's map opens a custom quick-view modal on marker click, so Leaflet's
+   own popups are hidden there only. Other maps (e.g. PostDetails) rely on
+   popups for their marker content and must keep them visible. */
+.map-container .leaflet-popup {
     display: none !important;
 }
 

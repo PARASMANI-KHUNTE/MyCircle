@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, Dimensions, KeyboardAvoidingView, Platform, StatusBar, Clipboard } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, Dimensions, KeyboardAvoidingView, Platform, StatusBar, Share } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Alert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -99,24 +100,33 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleShare = async () => {
-        if (hasShared) {
-            Alert.alert("Already Shared", "Link already copied!");
-            return;
-        }
-        
         try {
-            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
-            sharedPosts.push(id);
-            await AsyncStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
-            setHasShared(true);
-            
-            await api.post(`/posts/${id}/share`);
-            setShares(shares + 1);
             const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
-            Clipboard.setString(`${serverBase}/post/${id}`);
-            Alert.alert("Copied", "Post link copied!");
-        } catch (err) {
-            Alert.alert("Error", "Failed to share");
+            const postUrl = `${serverBase}/post/${id}`;
+            const shareTitle = post?.title || 'Check out this post on MyCircle';
+            const shareMessage = `Check out "${shareTitle}" on MyCircle: ${postUrl}`;
+
+            const result = await Share.share({
+                title: shareTitle,
+                message: Platform.OS === 'android' ? shareMessage : shareTitle,
+                url: postUrl,
+            });
+
+            if (result.action === Share.sharedAction) {
+                setHasShared(true);
+                setShares((prev) => prev + 1);
+                api.post(`/posts/${id}/share`).catch(() => {});
+            }
+        } catch (err: any) {
+            if (err?.message && !err.message.includes('dismissed') && !err.message.includes('cancelled')) {
+                try {
+                    const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+                    Clipboard.setString(`${serverBase}/post/${id}`);
+                    Alert.alert('Link Copied', 'Post link copied to clipboard!');
+                } catch {
+                    Alert.alert('Error', 'Failed to share');
+                }
+            }
         }
     };
 

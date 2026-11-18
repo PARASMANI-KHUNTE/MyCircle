@@ -171,7 +171,10 @@ const CreatePostScreen = ({ navigation }: any) => {
                 formData.append('latitude', coordinates.lat.toString());
                 formData.append('longitude', coordinates.lng.toString());
             }
-            formData.append('price', price || '0');
+            const cleanPrice = String(price || '').replace(/[^0-9.]/g, '');
+            const parsedPrice = parseFloat(cleanPrice);
+            const validPrice = (!isNaN(parsedPrice) && parsedPrice >= 0) ? String(parsedPrice) : '0';
+            formData.append('price', validPrice);
             if (availability.trim()) formData.append('availability', availability.trim());
             formData.append('duration', duration.toString());
             formData.append('isUrgent', isUrgent.toString());
@@ -347,7 +350,19 @@ const CreatePostScreen = ({ navigation }: any) => {
             <View style={styles.inputCard}>
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Price / Budget (₹)</Text>
-                    <TextInput style={styles.glassInput} keyboardType="numeric" value={price} onChangeText={setPrice} placeholder="0" placeholderTextColor="#64748b" />
+                    <TextInput
+                        style={styles.glassInput}
+                        keyboardType="decimal-pad"
+                        value={price}
+                        onChangeText={(text) => {
+                            const clean = text.replace(/[^0-9.]/g, '');
+                            const parts = clean.split('.');
+                            const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : clean;
+                            setPrice(sanitized);
+                        }}
+                        placeholder="0"
+                        placeholderTextColor="#64748b"
+                    />
                 </View>
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Expected Duration</Text>
@@ -414,6 +429,15 @@ const CreatePostScreen = ({ navigation }: any) => {
         if (step === 1 && !subType) return showAlert('Error', 'Please select a type');
         if (step === 2 && (!title || !description)) return showAlert('Error', 'Details are required');
         if (step === 3 && !location) return showAlert('Error', 'Location is required');
+        if (step === 4) {
+            const clean = String(price || '').trim();
+            if (clean !== '') {
+                const parsed = Number(clean);
+                if (!Number.isFinite(parsed) || parsed < 0) {
+                    return showAlert('Error', 'Price must be a valid non-negative number');
+                }
+            }
+        }
         if (step < 5) setStep(step + 1);
         else handleCreate();
     };

@@ -90,7 +90,10 @@ const EditPostScreen = ({ navigation, route }: any) => {
             formData.append('title', title);
             formData.append('description', description);
             formData.append('type', type);
-            formData.append('price', price || '0');
+            const cleanPrice = String(price || '').replace(/[^0-9.]/g, '');
+            const parsedPrice = parseFloat(cleanPrice);
+            const validPrice = (!isNaN(parsedPrice) && parsedPrice >= 0) ? String(parsedPrice) : '0';
+            formData.append('price', validPrice);
             formData.append('acceptsBarter', acceptsBarter ? 'true' : 'false');
             formData.append('location', location);
             formData.append('duration', duration.toString());
@@ -230,8 +233,13 @@ const EditPostScreen = ({ navigation, route }: any) => {
                         <TextInput
                             style={styles.input}
                             value={price}
-                            onChangeText={setPrice}
-                            keyboardType="numeric"
+                            onChangeText={(text) => {
+                                const clean = text.replace(/[^0-9.]/g, '');
+                                const parts = clean.split('.');
+                                const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : clean;
+                                setPrice(sanitized);
+                            }}
+                            keyboardType="decimal-pad"
                             placeholder="0"
                             placeholderTextColor="#64748b"
                         />

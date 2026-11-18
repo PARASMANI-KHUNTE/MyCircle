@@ -340,10 +340,12 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
 
     let docRef;
     try {
-        // Use MongoDB ID as Firestore Doc ID for perfect sync
-        const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
-        await messagesRef.doc(mongoMessage._id.toString()).set(messageData);
-        docRef = { id: mongoMessage._id.toString() };
+        if (db) {
+            // Use MongoDB ID as Firestore Doc ID for perfect sync
+            const messagesRef = db.collection('conversations').doc(conversation._id.toString()).collection('messages');
+            await messagesRef.doc(mongoMessage._id.toString()).set(messageData);
+            docRef = { id: mongoMessage._id.toString() };
+        }
     } catch (fsError) {
         console.error('[Firestore Error] Failed to save message:', fsError.message);
         // If Firestore fails, we SHOULD NOT rollback MongoDB, as Mongo is the persistent record.

@@ -12,7 +12,8 @@ import {
     ExternalLink
 } from 'lucide-react';
 
-const APK_DOWNLOAD_URL = 'https://github.com/PARASMANI-KHUNTE/MyCircle/releases/latest/download/mycircle.apk';
+const LOCAL_APK_URL = '/mycircle.apk';
+const GITHUB_APK_URL = 'https://github.com/PARASMANI-KHUNTE/MyCircle/releases/download/v1.0.0/mycircle.apk';
 const RELEASES_PAGE_URL = 'https://github.com/PARASMANI-KHUNTE/MyCircle/releases/tag/v1.0.0';
 
 const DownloadApp = () => {
@@ -59,25 +60,31 @@ const DownloadApp = () => {
                             Stay connected on the go. Chat in real-time with verified local neighbors, post requests, and get instant push notifications right in your pocket.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-2">
                             <a
-                                href={APK_DOWNLOAD_URL}
+                                href={LOCAL_APK_URL}
                                 download="MyCircle.apk"
-                                target="_blank"
-                                rel="noopener noreferrer"
                                 className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all text-base cursor-pointer"
                             >
                                 <Download className="w-5 h-5" />
                                 <span>Download APK (Direct)</span>
                             </a>
                             <a
+                                href={GITHUB_APK_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-card-border bg-card hover:bg-card-hover font-semibold transition-all text-sm cursor-pointer"
+                            >
+                                <ExternalLink className="w-4 h-4 text-primary" />
+                                <span>GitHub Mirror</span>
+                            </a>
+                            <a
                                 href={RELEASES_PAGE_URL}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-card-border bg-card hover:bg-card-hover font-semibold transition-all text-sm"
+                                className="inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl border border-card-border bg-card/60 hover:bg-card-hover font-medium transition-all text-sm cursor-pointer"
                             >
-                                <ExternalLink className="w-4 h-4 text-foreground-secondary" />
-                                <span>GitHub Releases</span>
+                                <span>Release v1.0.0</span>
                             </a>
                             <Button
                                 variant="outline"

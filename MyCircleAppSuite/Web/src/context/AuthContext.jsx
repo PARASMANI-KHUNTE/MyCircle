@@ -167,10 +167,8 @@ export const AuthProvider = ({ children }) => {
                             height: '40px',
                             border: '3px solid rgba(139, 92, 246, 0.3)',
                             borderTopColor: '#8b5cf6',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite'
+                            borderRadius: '50%'
                         }} />
-                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                         <span>Loading...</span>
                     </div>
                 </div>

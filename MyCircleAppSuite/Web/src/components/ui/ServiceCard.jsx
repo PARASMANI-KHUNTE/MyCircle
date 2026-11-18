@@ -30,7 +30,7 @@ const ServiceCard = ({ user, searchedSkill }) => {
     };
 
     return (
-        <}}
+        <div
             className="bg-card rounded-card p-6 border border-card-border shadow-card hover:shadow-lg transition-all h-full flex flex-col group"
         >
             <div className="flex items-start gap-4 mb-4">
@@ -91,7 +91,7 @@ const ServiceCard = ({ user, searchedSkill }) => {
                     </Button>
                 </Link>
             </div>
-        </>
+        </div>
     );
 };
 

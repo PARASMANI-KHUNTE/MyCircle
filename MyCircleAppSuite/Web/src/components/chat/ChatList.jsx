@@ -81,7 +81,7 @@ const ChatList = ({ conversations, selectedId, onSelect, loading, currentUserId,
                                 <div className="flex justify-between items-center">
                                     <p className={`text-xs truncate ${isUnread ? 'text-foreground font-medium' : 'text-foreground-muted'}`}>
                                         {typingUsers[conv._id] ? (
-                                            <span className="text-primary font-semibold animate-pulse">Typing...</span>
+                                            <span className="text-primary font-semibold">Typing...</span>
                                         ) : conv.lastMessage ? (
                                             <span>
                                                 {conv.lastMessage.sender?.toString() === strUserId && 'You: '}

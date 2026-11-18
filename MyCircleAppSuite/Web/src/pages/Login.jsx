@@ -41,7 +41,7 @@ const Login = () => {
                 style={{ background: 'radial-gradient(circle, rgb(16 185 129), transparent 70%)' }}
             />
 
-            <}}}
+            <div
                 className="relative w-full max-w-md"
             >
                 <div className="bg-card rounded-3xl border border-card-border p-8" style={{ boxShadow: 'var(--shadow-xl)' }}>
@@ -118,7 +118,7 @@ const Login = () => {
                         </p>
                     </div>
                 </div>
-            </>
+            </div>
         </div>
     );
 };

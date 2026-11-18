@@ -32,7 +32,7 @@ const Home = () => {
 
                 {/* Session expired alert */}
                 {isExpired && (
-                    <div className="mb-6 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-warning animate-fade-in">
+                    <div className="mb-6 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
                         Session expired. Please sign in again to continue.
                     </div>
                 )}

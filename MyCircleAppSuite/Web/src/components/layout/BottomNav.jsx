@@ -99,12 +99,12 @@ const BottomNav = () => {
                         >
                             {/* Highlight pill for Create */}
                             {item.highlight ? (
-                                <}}
+                                <div
                                     className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center -translate-y-4 shadow-lg"
                                     style={{ boxShadow: '0 4px 20px rgb(245 158 11 / 0.4)' }}
                                 >
                                     <Icon className="w-6 h-6 text-primary-foreground" />
-                                </>
+                                </div>
                             ) : (
                                 <>
                                     <div className="relative">
@@ -129,10 +129,7 @@ const BottomNav = () => {
 
                                     {/* Active indicator dot */}
                                     {isActive && (
-                                        <
-                                            layoutId="bottom-nav-dot"
-                                            className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary"}
-                                        />
+                                        <div className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary" />
                                     )}
                                 </>
                             )}

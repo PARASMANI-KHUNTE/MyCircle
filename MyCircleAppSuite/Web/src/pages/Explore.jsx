@@ -87,13 +87,6 @@ const MAP_STYLES = `
   .leaflet-popup-tip {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
   }
-  .user-location-marker {
-    animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-  }
-  @keyframes pulse-ring {
-    0% { transform: scale(0.33); opacity: 1; }
-    80%, 100% { opacity: 0; }
-  }
 `;
 
 const CATEGORIES = [
@@ -150,8 +143,7 @@ const MapUpdater = ({ center, zoom }) => {
 
         lastTargetRef.current = targetKey;
         map.setView([parsedCenter.lat, parsedCenter.lng], normalizedZoom, { 
-            animate: true,
-            duration: 1
+            animate: false
         });
     }, [center, zoom, map]);
     return null;
@@ -183,7 +175,7 @@ const EnhancedMapControls = ({ map }) => {
                 const lat = Number(userMarker.getAttribute('cy'));
                 const lng = Number(userMarker.getAttribute('cx'));
                 if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                    map.setView([20.5937, 78.9629], 13, { animate: true });
+                    map.setView([20.5937, 78.9629], 13, { animate: false });
                 }
             }
         }
@@ -535,12 +527,12 @@ const Explore = () => {
                             {/* Location Status */}
                             {locationStatus === 'success' ? (
                                 <div className="flex items-center gap-1.5 px-3 py-2.5 bg-green-500/10 text-green-500 rounded-xl text-xs font-medium">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                    <div className="w-2 h-2 bg-green-500 rounded-full" />
                                     <MapPin className="w-3 h-3" />
                                 </div>
                             ) : locationStatus === 'loading' ? (
                                 <div className="flex items-center gap-1.5 px-3 py-2.5 bg-card border border-card-border rounded-xl text-xs font-medium">
-                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    <Loader2 className="w-3 h-3" />
                                 </div>
                             ) : (
                                 <button onClick={() => {
@@ -679,7 +671,7 @@ const Explore = () => {
                 <div className="container mx-auto p-3">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-sm font-medium text-foreground-muted">
-                            {loading ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</span> : `${filteredMapPosts.length} results`}
+                            {loading ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4" /> Loading...</span> : `${filteredMapPosts.length} results`}
                         </p>
                         {userLocation && (
                             <span className="text-xs text-foreground-muted flex items-center gap-1">
@@ -697,8 +689,8 @@ const Explore = () => {
                     ) : (
                         <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                             {filteredMapPosts.map((post) => (
-                                <
-                                    key={post._id}}}
+                                <div
+                                    key={post._id}
                                     className="group"
                                 >
                                     <PostCard 
@@ -707,7 +699,7 @@ const Explore = () => {
                                         onClick={() => handlePostClick(post._id)}
                                         onMarkerClick={() => openMapForPost(post._id)}
                                     />
-                                </>
+                                </div>
                             ))}
                         </div>
                     )}
@@ -741,7 +733,7 @@ const Explore = () => {
                             <button 
                                 onClick={() => {
                                     if (safeUserLocation && mapRef.current) {
-                                        mapRef.current.setView([safeUserLocation.lat, safeUserLocation.lng], 15, { animate: true });
+                                        mapRef.current.setView([safeUserLocation.lat, safeUserLocation.lng], 15, { animate: false });
                                         setMapZoom(15);
                                     }
                                 }} 
@@ -949,12 +941,12 @@ const Explore = () => {
             {/* FAB */}
             <>
                 {quickViewPost && (
-                    <}}}
+                    <div
                         className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4"
                         onClick={() => setQuickViewPost(null)}
                     >
                         <div className="absolute inset-0 z-0 bg-black/60 backdrop-blur-sm" />
-                        <}}}}
+                        <div
                             onClick={(e) => e.stopPropagation()}
                             className="relative z-10 w-full sm:max-w-lg bg-background rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
                         >
@@ -1054,8 +1046,8 @@ const Explore = () => {
                                     </Button>
                                 </div>
                             </div>
-                        </>
-                    </>
+                        </div>
+                    </div>
                 )}
             </>
 

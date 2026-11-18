@@ -23,8 +23,9 @@ const ProgressBar = ({ progress, showLabel = true, size = 'md', color = 'primary
                 </div>
             )}
             <div className={`w-full bg-white/5 rounded-full overflow-hidden ${sizes[size]}`}>
-                <
-                    className={`${colors[color]} ${sizes[size]} rounded-full`}}%` }}}
+                <div
+                    className={`${colors[color]} ${sizes[size]} rounded-full`}
+                    style={{ width: `${progress}%` }}
                 />
             </div>
         </div>

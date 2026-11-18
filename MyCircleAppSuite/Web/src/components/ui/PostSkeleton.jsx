@@ -1,8 +1,7 @@
 import React from 'react';
 
 /**
- * PostSkeleton — mirrors the PostCard layout exactly,
- * with a gradient shimmer animation instead of a flat pulse.
+ * PostSkeleton — mirrors the PostCard layout exactly.
  */
 const PostSkeleton = () => {
     return (

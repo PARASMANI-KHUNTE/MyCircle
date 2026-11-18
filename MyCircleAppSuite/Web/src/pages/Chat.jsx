@@ -148,7 +148,7 @@ const Chat = () => {
                     <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling: touch min-h-0">
                         {loading ? (
                             <div className="p-8 text-center">
-                                <div className="w-10 h-10 border-3 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+                                <div className="w-10 h-10 border-3 border-primary/20 border-t-primary rounded-full mx-auto mb-3"></div>
                                 <span className="text-sm text-foreground-muted">Loading...</span>
                             </div>
                         ) : conversations.length === 0 ? (

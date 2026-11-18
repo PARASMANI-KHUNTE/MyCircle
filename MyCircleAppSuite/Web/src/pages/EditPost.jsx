@@ -275,7 +275,7 @@ const EditPost = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Loader2 className="w-8 h-8 text-primary" />
             </div>
         );
     }
@@ -627,7 +627,7 @@ const EditPost = () => {
                     </Button>
                     <Button type="submit" disabled={saving} className="flex-1">
                         {saving ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                            <><Loader2 className="w-4 h-4 mr-2" /> Saving...</>
                         ) : (
                             <><Check className="w-4 h-4 mr-2" /> Save Changes</>
                         )}

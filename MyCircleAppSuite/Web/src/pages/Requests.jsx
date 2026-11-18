@@ -210,7 +210,7 @@ const Requests = () => {
                             onClick={fetchRequests}
                             className="gap-2"
                         >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            <RefreshCw className="w-4 h-4" />
                         </Button>
                     </div>
 
@@ -260,7 +260,7 @@ const Requests = () => {
                 <div className="container mx-auto px-3 sm:px-4 py-6 max-w-2xl">
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
-                        <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+                        <RefreshCw className="w-8 h-8 text-muted-foreground" />
                     </div>
                 ) : requests.length === 0 ? (
                     <div className="text-center py-20">
@@ -280,7 +280,7 @@ const Requests = () => {
                 ) : (
                     <div className="space-y-4">
                         <>
-                            {requests.map((req, index) => {
+                            {requests.map((req) => {
                                 const otherUser = activeTab === 'received' ? req.requester : req.recipient;
                                 const badge = getStatusBadge(req.status);
                                 const BadgeIcon = badge.Icon;
@@ -288,8 +288,7 @@ const Requests = () => {
                                 const isAccepted = req.status === 'accepted';
 
                                 return (
-                                    <
-                                        key={req._id}}}}
+                                    <div
                                         className="bg-card border border-border rounded-2xl overflow-hidden"
                                     >
                                         {/* Post Info */}
@@ -379,7 +378,7 @@ const Requests = () => {
                                                         className="gap-1.5 flex-1 sm:flex-none justify-center"
                                                     >
                                                         {actionLoading === req._id ? (
-                                                            <RefreshCw className="w-3 h-3 animate-spin" />
+                                                            <RefreshCw className="w-3 h-3" />
                                                         ) : (
                                                             <Check className="w-3 h-3" />
                                                         )}
@@ -408,7 +407,7 @@ const Requests = () => {
                                                     className="gap-1.5 flex-1 sm:flex-none justify-center text-red-400 border-red-400/30 hover:bg-red-500/10"
                                                 >
                                                     {actionLoading === req._id ? (
-                                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                                        <RefreshCw className="w-3 h-3" />
                                                     ) : (
                                                         <X className="w-3 h-3" />
                                                     )}
@@ -460,7 +459,7 @@ const Requests = () => {
                                                     className="gap-1.5 flex-1 sm:flex-none justify-center text-blue-400 border-blue-400/30"
                                                 >
                                                     {actionLoading === req._id ? (
-                                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                                        <RefreshCw className="w-3 h-3" />
                                                     ) : (
                                                         <CheckCircle className="w-3 h-3" />
                                                     )}
@@ -477,7 +476,7 @@ const Requests = () => {
                                                 <Trash2 className="w-3 h-3" />
                                             </Button>
                                         </div>
-                                    </>
+                                    </div>
                                 );
                             })}
                         </>

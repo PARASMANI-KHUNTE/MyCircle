@@ -16,16 +16,16 @@ const NotFound = () => {
                     404
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <}}
+                    <div
                         className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center shadow-2xl"
                         style={{ boxShadow: '0 16px 48px rgb(245 158 11 / 0.35)' }}
                     >
                         <Compass className="text-primary-foreground w-11 h-11" />
-                    </>
+                    </div>
                 </div>
             </div>
 
-            <}}}
+            <div
             >
                 <h1 className="text-3xl sm:text-4xl font-bold font-display tracking-tight mb-3">
                     Lost in the Circle?
@@ -48,7 +48,7 @@ const NotFound = () => {
                         </Button>
                     </Link>
                 </div>
-            </>
+            </div>
         </div>
     );
 };

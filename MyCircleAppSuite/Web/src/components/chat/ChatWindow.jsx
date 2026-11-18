@@ -62,7 +62,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
 
     const scrollToBottom = () => {
         setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
         }, 100);
     };
 
@@ -373,7 +373,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
                         <h3 className="font-semibold text-foreground text-sm">{otherParticipant?.displayName}</h3>
                         {otherParticipant?.isOnline && (
                             <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                                 Online
                             </span>
                         )}
@@ -443,7 +443,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
 
             <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-background min-h-0">
                 {loading ? (
-                    <div className="text-center text-foreground-muted mt-10 font-medium animate-pulse">Loading messages...</div>
+                    <div className="text-center text-foreground-muted mt-10 font-medium">Loading messages...</div>
                 ) : messagesError ? (
                     <div className="text-center mt-10">
                         <p className="text-sm text-error font-medium">{messagesError}</p>
@@ -510,7 +510,7 @@ const ChatWindow = ({ conversation, socket, currentUser, onBack, onMessagesRead,
             )}
 
             {isTyping && (
-                <div className="px-3 py-2 text-xs text-foreground-muted italic animate-pulse bg-card border-t border-card-border shrink-0">
+                <div className="px-3 py-2 text-xs text-foreground-muted italic bg-card border-t border-card-border shrink-0">
                     {otherParticipant?.displayName} is typing...
                 </div>
             )}

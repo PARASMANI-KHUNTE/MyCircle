@@ -10,7 +10,7 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
     const spinner = (
         <div className="flex flex-col items-center gap-3">
             <div
-                className={`${spinnerSize} border-primary/20 border-t-primary rounded-full animate-spin`}
+                className={`${spinnerSize} border-primary/20 border-t-primary rounded-full`}
                 role="status"
                 aria-label={text || 'Loading'}
             />
@@ -37,7 +37,7 @@ const Loading = ({ size = 'md', fullscreen = false, text, inline = false }) => {
         return (
             <span className="inline-flex items-center gap-2 text-sm text-foreground-muted">
                 <div
-                    className={`${inlineSize} border-primary/20 border-t-primary rounded-full animate-spin`}
+                    className={`${inlineSize} border-primary/20 border-t-primary rounded-full`}
                     role="status"
                     aria-label={text || 'Loading'}
                 />

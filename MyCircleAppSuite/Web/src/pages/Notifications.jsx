@@ -91,7 +91,7 @@ const Notifications = () => {
                 </div>
             ) : notifications.length === 0 ? (
                 /* Empty state */
-                <}}
+                <div
                     className="flex flex-col items-center justify-center py-24 text-center"
                 >
                     <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mb-6">
@@ -101,7 +101,7 @@ const Notifications = () => {
                     <p className="text-sm text-foreground-muted max-w-xs">
                         You have no new notifications. When something happens, it'll appear here.
                     </p>
-                </>
+                </div>
             ) : (
                 <>
                     <div className="space-y-3">
@@ -111,9 +111,7 @@ const Notifications = () => {
                             const TypeIcon = config.icon;
 
                             return (
-                                <
-                                    key={n._id}
-                                    layout}}}}
+                                <div
                                     onClick={() => handleNotificationClick(n)}
                                     className={cn(
                                         'relative flex gap-4 p-5 rounded-2xl border cursor-pointer transition-all duration-200',
@@ -186,7 +184,7 @@ const Notifications = () => {
                                             </button>
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             );
                         })}
                     </div>

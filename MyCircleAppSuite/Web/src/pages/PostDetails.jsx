@@ -188,7 +188,7 @@ const PostDetails = () => {
             setTimeout(() => {
                 const element = document.getElementById('comments');
                 if (element) {
-                    element.scrollIntoView({ behavior: 'smooth' });
+                    element.scrollIntoView({ behavior: 'auto' });
                 }
             }, 500);
         }
@@ -344,7 +344,7 @@ const PostDetails = () => {
     const timeRemaining = getTimeRemaining();
 
     return (
-        <}}
+        <div
             className="container mx-auto px-3 sm:px-6 py-16 sm:py-24 min-h-screen text-foreground"
         >
             <button
@@ -376,7 +376,7 @@ const PostDetails = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
                 <div className="lg:col-span-2">
-                    <}}
+                    <div
                         className="relative rounded-3xl overflow-hidden mb-8 shadow-2xl"
                     >
                         {post.images && post.images.length > 0 ? (
@@ -395,7 +395,7 @@ const PostDetails = () => {
                                 Expired
                             </div>
                         )}
-                    </>
+                    </div>
 
                     <div className="mb-6">
                         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-text-heading mb-4 leading-tight">
@@ -503,7 +503,7 @@ const PostDetails = () => {
                                 </div>
                                 {isFetchingAi ? (
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full" />
                                         <span className="text-text-muted font-medium">Generating summary...</span>
                                     </div>
                                 ) : aiSummary ? (
@@ -527,7 +527,7 @@ const PostDetails = () => {
                                 </div>
                                 {isFetchingAi ? (
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin" />
+                                        <div className="w-5 h-5 border-2 border-secondary/30 border-t-secondary rounded-full" />
                                         <span className="text-text-muted font-medium">Generating insights...</span>
                                     </div>
                                 ) : aiInsights ? (
@@ -702,7 +702,7 @@ const PostDetails = () => {
                                                     )}
 
                                                     {replyingTo === comment._id && (
-                                                        <div className="mt-3 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                        <div className="mt-3 flex gap-3">
                                                             <input
                                                                 type="text"
                                                                 value={replyText}
@@ -794,7 +794,7 @@ const PostDetails = () => {
                                     )}
                                 >
                                     {requestLoading ? (
-                                        <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                                        <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full" />
                                     ) : (
                                         <>
                                             {requestSent ? <UserCheck className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
@@ -846,7 +846,7 @@ const PostDetails = () => {
                     </div>
                 </aside>
             </div>
-        </>
+        </div>
     );
 };
 

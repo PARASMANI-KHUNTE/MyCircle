@@ -182,26 +182,26 @@ const Feed = () => {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-4">
-                            <}}
+                            <div
                                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold"
                             >
                                 <Sparkles className="w-4 h-4" />
                                 <span>Discover Local</span>
-                            </>
-                            <}}}
+                            </div>
+                            <h1
                                 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight"
                             >
                                 Your <span className="gradient-text">Feed</span>
-                            </>
-                            <}}}
+                            </h1>
+                            <p
                                 className="text-lg text-foreground-muted max-w-xl"
                             >
                                 Explore trusted services, unique items, and connect with your local community.
-                            </>
+                            </p>
                         </div>
 
                         {/* View Toggle */}
-                        <}}}
+                        <div
                             className="flex items-center gap-2 p-1 bg-card rounded-xl border border-card-border"
                         >
                             <button
@@ -222,7 +222,7 @@ const Feed = () => {
                             >
                                 <MapIcon className="w-4 h-4" />
                             </button>
-                        </>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -272,7 +272,7 @@ const Feed = () => {
                     {/* Expanded Filters */}
                     <>
                         {isFilterExpanded && (
-                            <}}}
+                            <div
                                 className="overflow-hidden"
                             >
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
@@ -311,7 +311,7 @@ const Feed = () => {
                                         </button>
                                     </div>
                                 </div>
-                            </>
+                            </div>
                         )}
                     </>
 
@@ -345,7 +345,7 @@ const Feed = () => {
                         ))}
                     </div>
                 ) : viewMode === 'map' ? (
-                    <}}
+                    <div
                         className="relative z-10 rounded-2xl overflow-hidden border border-card-border shadow-xl h-[350px] sm:h-[450px] md:h-[600px]"
                     >
                         <MapContainer
@@ -427,22 +427,20 @@ const Feed = () => {
                         {loadingLocation && (
                             <div className="absolute inset-0 z-[1000] bg-background/80 backdrop-blur-sm flex items-center justify-center">
                                 <div className="text-center">
-                                    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                                    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
                                     <p className="font-medium">Locating you...</p>
                                 </div>
                             </div>
                         )}
-                    </>
+                    </div>
                 ) : (
-                    <,
-                            visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
-                        }}
+                    <div
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
                         {filteredPosts.length > 0 ? (
                             filteredPosts.map((post, index) => (
-                                <
-                                    key={post._id}, visible: { opacity: 1, y: 0 } }}
+                                <div
+                                    key={post._id}
                                     onClick={() => handlePostClick(post._id)}
                                     className="cursor-pointer"
                                 >
@@ -455,7 +453,7 @@ const Feed = () => {
                                         onRequestContact={(postId, e) => handleContactRequest(e, post)}
                                         index={index}
                                     />
-                                </>
+                                </div>
                             ))
                         ) : (
                             <EmptyState
@@ -464,7 +462,7 @@ const Feed = () => {
                                 showCreate
                             />
                         )}
-                    </>
+                    </div>
                 )}
             </div>
         </div>

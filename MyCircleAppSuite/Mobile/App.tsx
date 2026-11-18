@@ -15,6 +15,7 @@ import { navigationRef } from './src/services/navigationService';
 import StartupAnimation from './src/components/animations/StartupAnimation';
 import { getNavigationTheme } from './src/theme/theme';
 import { RootStackParamList } from './src/navigation/types';
+import CodePush from 'react-native-code-push';
 
 // Screen Placeholders
 import LandingScreen from './src/screens/LandingScreen';
@@ -141,4 +142,10 @@ const styles = StyleSheet.create({
     },
 });
 
-export default App;
+const codePushOptions = {
+    checkFrequency: CodePush.CheckFrequency.ON_APP_RESUME,
+    installMode: CodePush.InstallMode.ON_NEXT_RESUME,
+    minimumBackgroundDuration: 120,
+};
+
+export default __DEV__ ? App : CodePush(codePushOptions)(App);

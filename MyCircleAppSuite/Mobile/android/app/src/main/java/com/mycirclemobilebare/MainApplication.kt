@@ -1,4 +1,4 @@
-package com.tempmobile
+package com.mycirclemobilebare
 
 import android.app.Application
 import com.facebook.react.PackageList

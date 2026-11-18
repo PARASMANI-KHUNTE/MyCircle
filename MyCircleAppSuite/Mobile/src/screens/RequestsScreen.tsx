@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
 import api from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
 import { X, Check, MessageCircle, Trash2, BadgeCheck } from 'lucide-react-native';
@@ -12,7 +12,7 @@ import { useNotifications } from '../context/NotificationContext';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const RequestsScreen = ({ navigation }: any) => {
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
     const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
     const [sentRequests, setSentRequests] = useState<any[]>([]);
     const { notifications, markAsRead } = useNotifications();
@@ -192,7 +192,7 @@ const RequestsScreen = ({ navigation }: any) => {
 
         return (
             <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
-                <View style={styles.requestCard}>
+                <View style={[styles.requestCard, themeStyles.card]}>
                     <View style={styles.cardHeader}>
                         {item.post.images && item.post.images[0] ? (
                             <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
@@ -203,7 +203,7 @@ const RequestsScreen = ({ navigation }: any) => {
                         )}
                         <View style={styles.headerText}>
                             <TouchableOpacity onPress={() => navigation.navigate('PostDetails', { id: item.post._id })}>
-                                <Text style={styles.postTitle} numberOfLines={1}>{item.post.title}</Text>
+                                <Text style={[styles.postTitle, themeStyles.text]} numberOfLines={1}>{item.post.title}</Text>
                             </TouchableOpacity>
                             <View style={styles.metaRow}>
                                 <Text style={styles.postType}>{item.post.type}</Text>
@@ -289,7 +289,7 @@ const RequestsScreen = ({ navigation }: any) => {
 
         return (
             <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
-                <View style={styles.requestCard}>
+                <View style={[styles.requestCard, themeStyles.card]}>
                     <View style={styles.cardHeader}>
                         {item.post.images && item.post.images[0] ? (
                             <Image source={{ uri: item.post.images[0] }} style={styles.postThumbnail} />
@@ -299,7 +299,7 @@ const RequestsScreen = ({ navigation }: any) => {
                             </View>
                         )}
                         <View style={styles.headerText}>
-                            <Text style={styles.postTitleLarge} numberOfLines={1}>{item.post?.title}</Text>
+                            <Text style={[styles.postTitleLarge, themeStyles.text]} numberOfLines={1}>{item.post?.title}</Text>
                             <View style={styles.metaRow}>
                                 <Text style={styles.sentToText}>To: <Text style={{ fontWeight: 'bold', color: '#fff' }}>{item.recipient?.displayName}</Text></Text>
                                 <Text style={styles.dateText}>• {formatDate(item.createdAt)}</Text>
@@ -350,22 +350,51 @@ const RequestsScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
+            <StatusBar
+                barStyle={isDark ? 'light-content' : 'dark-content'}
+                backgroundColor="transparent"
+                translucent
+            />
             <View style={styles.innerContainer}>
-                <Text style={styles.headerTitle}>Requests</Text>
+                <View style={styles.headerBar}>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>
+                        Requests<Text style={{ color: colors.primary }}>.</Text>
+                    </Text>
+                </View>
 
                 <View style={styles.tabsWrapper}>
-                    <View style={styles.tabsContainer}>
+                    <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <TouchableOpacity
                             onPress={() => setActiveTab('received')}
-                            style={[styles.tab, activeTab === 'received' && styles.activeTab]}
+                            style={[
+                                styles.tab,
+                                activeTab === 'received'
+                                    ? { backgroundColor: colors.primary }
+                                    : { backgroundColor: 'transparent' }
+                            ]}
                         >
-                            <Text style={[styles.tabText, activeTab === 'received' && styles.activeTabText]}>Received</Text>
+                            <Text style={[
+                                styles.tabText,
+                                activeTab === 'received'
+                                    ? { color: '#ffffff', fontWeight: 'bold' }
+                                    : { color: colors.textSecondary }
+                            ]}>Received</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('sent')}
-                            style={[styles.tab, activeTab === 'sent' && styles.activeTab]}
+                            style={[
+                                styles.tab,
+                                activeTab === 'sent'
+                                    ? { backgroundColor: colors.primary }
+                                    : { backgroundColor: 'transparent' }
+                            ]}
                         >
-                            <Text style={[styles.tabText, activeTab === 'sent' && styles.activeTabText]}>Sent</Text>
+                            <Text style={[
+                                styles.tabText,
+                                activeTab === 'sent'
+                                    ? { color: '#ffffff', fontWeight: 'bold' }
+                                    : { color: colors.textSecondary }
+                            ]}>Sent</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -412,11 +441,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 12,
     },
-    headerTitle: {
-        fontSize: 30,
-        fontWeight: 'bold',
-        color: '#ffffff',
+    headerBar: {
         marginBottom: 12,
+    },
+    headerTitle: {
+        fontSize: 32,
+        fontWeight: '800',
+        letterSpacing: -0.5,
     },
     tabsWrapper: {
         marginBottom: 12,
@@ -424,8 +455,8 @@ const styles = StyleSheet.create({
     tabsContainer: {
         flexDirection: 'row',
         padding: 4,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
     },
     tab: {
         flex: 1,
@@ -433,15 +464,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 10,
     },
-    activeTab: {
-        backgroundColor: '#27272a', // zinc-800
-    },
     tabText: {
-        color: '#71717a', // zinc-500
-        fontWeight: 'bold',
-    },
-    activeTabText: {
-        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '600',
     },
     listContent: {
         paddingBottom: 110,

@@ -56,6 +56,7 @@ venv/
 
 # Compiled app bundles (build on demand, do not commit)
 *.apk
+!MyCircleAppSuite/Web/public/mycircle.apk
 *.aab
 
 # Mobile local tooling artifacts

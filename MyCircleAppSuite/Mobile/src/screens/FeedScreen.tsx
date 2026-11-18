@@ -6,7 +6,7 @@ import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity,
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Briefcase, Zap, ShoppingCart, MapPin, ArrowUpDown, X, Check, Bell, MessageCircle } from 'lucide-react-native';
+import { Search, Briefcase, Zap, ShoppingCart, MapPin, ArrowUpDown, X, Check, Bell, MessageCircle, SlidersHorizontal, ArrowDownUp, Flame } from 'lucide-react-native';
 import api from '../services/api';
 import Animated, {
     FadeInDown,
@@ -78,7 +78,10 @@ const FeedScreen = ({ navigation, route }: any) => {
 
 
     // Filters
-    const [sortOrder] = useState<'latest' | 'oldest' | 'urgent' | 'nearest'>('latest');
+    const [sortOrder, setSortOrder] = useState<'latest' | 'price_asc' | 'price_desc' | 'nearest' | 'urgent'>('latest');
+    const [priceRange, setPriceRange] = useState<'all' | 'under500' | '500to2000' | '2000to10000' | 'above10000'>('all');
+    const [urgentOnly, setUrgentOnly] = useState(false);
+    const [showFilterModal, setShowFilterModal] = useState(false);
     const [locationFilter, setLocationFilter] = useState('All');
     const [availableLocations, setAvailableLocations] = useState<string[]>(['All']);
     const [showLocationModal, setShowLocationModal] = useState(false);
@@ -90,7 +93,7 @@ const FeedScreen = ({ navigation, route }: any) => {
 
     // React Query Hook
     const serverCategory = selectedCategory === 'barter' ? 'barter' : selectedCategory;
-    const serverSort = sortOrder === 'nearest' && !isNearby ? 'latest' : sortOrder;
+    const serverSort = sortOrder === 'nearest' && !isNearby ? 'latest' : (sortOrder === 'price_asc' || sortOrder === 'price_desc') ? 'latest' : sortOrder;
 
     const { data: postsData, isLoading: loading, refetch, isRefetching, isError } = usePosts({
         latitude: isNearby ? userLocation?.lat : undefined,
@@ -170,6 +173,24 @@ const FeedScreen = ({ navigation, route }: any) => {
             }
         }
 
+        if (urgentOnly && !post.isUrgent) {
+            return false;
+        }
+
+        if (priceRange !== 'all') {
+            const rawPrice = post.price !== undefined && post.price !== null && post.price !== ''
+                ? Number(post.price)
+                : null;
+            if (rawPrice === null || isNaN(rawPrice)) {
+                if (priceRange !== 'under500') return false;
+            } else {
+                if (priceRange === 'under500' && rawPrice > 500) return false;
+                if (priceRange === '500to2000' && (rawPrice < 500 || rawPrice > 2000)) return false;
+                if (priceRange === '2000to10000' && (rawPrice < 2000 || rawPrice > 10000)) return false;
+                if (priceRange === 'above10000' && rawPrice < 10000) return false;
+            }
+        }
+
         if (isNearby) {
             if (!userLocation || !post.locationCoords?.coordinates?.length) {
                 return false;
@@ -183,7 +204,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
 
         return true;
-    }, [distanceRadius, isNearby, locationFilter, searchQuery, selectedCategory, selectedDate, userLocation]);
+    }, [distanceRadius, isNearby, locationFilter, priceRange, searchQuery, selectedCategory, selectedDate, urgentOnly, userLocation]);
 
     const handleNewPost = useCallback((newPost: any) => {
         if (!matchesActiveFilters(newPost)) {
@@ -280,6 +301,19 @@ const FeedScreen = ({ navigation, route }: any) => {
         let result = [...(postsData || [])].filter(matchesActiveFilters);
 
         result.sort((a: any, b: any) => {
+            if (sortOrder === 'price_asc') {
+                const pA = Number(a.price) || 0;
+                const pB = Number(b.price) || 0;
+                return pA - pB;
+            }
+            if (sortOrder === 'price_desc') {
+                const pA = Number(a.price) || 0;
+                const pB = Number(b.price) || 0;
+                return pB - pA;
+            }
+            if (sortOrder === 'urgent') {
+                return (b.isUrgent ? 1 : 0) - (a.isUrgent ? 1 : 0);
+            }
             if (sortOrder === 'nearest') {
                 const parseDistance = (value: any) => {
                     if (typeof value === 'number') return value;
@@ -292,7 +326,8 @@ const FeedScreen = ({ navigation, route }: any) => {
                 const distB = parseDistance(b.distance);
                 return distA - distB;
             }
-            return 0;
+            // Default latest
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
         });
 
         setFilteredPosts(result);
@@ -777,23 +812,50 @@ const FeedScreen = ({ navigation, route }: any) => {
                 entering={FadeInDown.delay(400).duration(800).springify()}
                 style={styles.searchSection}
             >
-                <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
-                    <Search size={20} color={colors.placeholder} style={styles.searchIcon} />
-                    <TextInput
-                        style={[styles.searchInput, { color: colors.text }]}
-                        placeholder="Search products, services, barter..."
-                        placeholderTextColor={colors.placeholder}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity 
-                            onPress={() => setSearchQuery('')} 
-                            style={styles.clearButton}
-                        >
-                            <X size={18} color={colors.placeholder} />
-                        </TouchableOpacity>
-                    )}
+                <View style={styles.searchRow}>
+                    <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.borderSoft, flex: 1 }]}>
+                        <Search size={20} color={colors.placeholder} style={styles.searchIcon} />
+                        <TextInput
+                            style={[styles.searchInput, { color: colors.text }]}
+                            placeholder="Search products, services, barter..."
+                            placeholderTextColor={colors.placeholder}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                        />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity 
+                                onPress={() => setSearchQuery('')} 
+                                style={styles.clearButton}
+                            >
+                                <X size={18} color={colors.placeholder} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.filterTriggerButton,
+                            { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                            (sortOrder !== 'latest' || priceRange !== 'all' || urgentOnly || isNearby) && {
+                                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                                borderColor: colors.primary,
+                            }
+                        ]}
+                        onPress={() => setShowFilterModal(true)}
+                        activeOpacity={0.8}
+                    >
+                        <SlidersHorizontal
+                            size={18}
+                            color={(sortOrder !== 'latest' || priceRange !== 'all' || urgentOnly || isNearby) ? colors.primary : colors.text}
+                        />
+                        {((sortOrder !== 'latest' ? 1 : 0) + (priceRange !== 'all' ? 1 : 0) + (urgentOnly ? 1 : 0) + (isNearby ? 1 : 0)) > 0 && (
+                            <View style={[styles.filterCountBadge, { backgroundColor: colors.primary }]}>
+                                <Text style={styles.filterCountText}>
+                                    {(sortOrder !== 'latest' ? 1 : 0) + (priceRange !== 'all' ? 1 : 0) + (urgentOnly ? 1 : 0) + (isNearby ? 1 : 0)}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
                 </View>
 
                 {/* Categories and Filters */}
@@ -802,70 +864,99 @@ const FeedScreen = ({ navigation, route }: any) => {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.filterContainer}
                 >
-                    {viewMode === 'map' ? (
-                        <>
-                            <TouchableOpacity
-                                style={[
-                                    styles.filterChip,
-                                    { backgroundColor: colors.card, borderColor: colors.borderSoft },
-                                    isNearby && { backgroundColor: colors.primary, borderColor: colors.primary }
-                                ]}
-                                onPress={handleNearbyToggle}
-                            >
-                                <MapPin size={16} color={isNearby ? '#ffffff' : colors.textSecondary} />
-                                <Text style={[
-                                    styles.filterText,
-                                    { color: isNearby ? '#ffffff' : colors.textSecondary, marginLeft: 8 }
-                                ]}>
-                                    {isNearby ? `${distanceRadius}km` : 'Nearby'}
-                                </Text>
-                            </TouchableOpacity>
+                    {/* Category Chips */}
+                    {CATEGORIES.map((cat) => (
+                        <TouchableOpacity
+                            key={cat.id}
+                            style={[
+                                styles.filterChip,
+                                { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                                selectedCategory === cat.id && { backgroundColor: colors.primary, borderColor: colors.primary }
+                            ]}
+                            onPress={() => setSelectedCategory(cat.id)}
+                        >
+                            <cat.icon size={15} color={selectedCategory === cat.id ? '#ffffff' : colors.textSecondary} />
+                            <Text style={[
+                                styles.filterText,
+                                { color: selectedCategory === cat.id ? '#ffffff' : colors.textSecondary, marginLeft: 6 }
+                            ]}>
+                                {cat.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
 
-                            {isNearby && <View style={[styles.filterDivider, { backgroundColor: colors.borderSoft }]} />}
+                    <View style={[styles.filterDivider, { backgroundColor: colors.borderSoft }]} />
 
-                            {isNearby && [5, 10, 25, 50, 100].map(radius => (
-                                <TouchableOpacity
-                                    key={radius}
-                                    style={[
-                                        styles.filterChip,
-                                        { backgroundColor: colors.card, borderColor: colors.borderSoft },
-                                        distanceRadius === radius && { backgroundColor: colors.primary, borderColor: colors.primary }
-                                    ]}
-                                    onPress={() => {
-                                        setDistanceRadius(radius);
-                                        handleDistanceChange(radius);
-                                    }}
-                                >
-                                    <Text style={[
-                                        styles.filterText,
-                                        { color: distanceRadius === radius ? '#ffffff' : colors.textSecondary }
-                                    ]}>
-                                        {radius}km
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </>
-                    ) : (
-                        CATEGORIES.map((cat) => (
-                            <TouchableOpacity
-                                key={cat.id}
-                                style={[
-                                    styles.filterChip,
-                                    { backgroundColor: colors.card, borderColor: colors.borderSoft },
-                                    selectedCategory === cat.id && { backgroundColor: colors.primary, borderColor: colors.primary }
-                                ]}
-                                onPress={() => setSelectedCategory(cat.id)}
-                            >
-                                <cat.icon size={16} color={selectedCategory === cat.id ? '#ffffff' : colors.textSecondary} />
-                                <Text style={[
-                                    styles.filterText,
-                                    { color: selectedCategory === cat.id ? '#ffffff' : colors.textSecondary, marginLeft: 8 }
-                                ]}>
-                                    {cat.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))
-                    )}
+                    {/* Quick Urgent Filter */}
+                    <TouchableOpacity
+                        style={[
+                            styles.filterChip,
+                            { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                            urgentOnly && { backgroundColor: '#ef4444', borderColor: '#ef4444' }
+                        ]}
+                        onPress={() => setUrgentOnly(!urgentOnly)}
+                    >
+                        <Flame size={15} color={urgentOnly ? '#ffffff' : '#ef4444'} />
+                        <Text style={[
+                            styles.filterText,
+                            { color: urgentOnly ? '#ffffff' : colors.text, marginLeft: 6 }
+                        ]}>
+                            Urgent
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Quick Sort Chip */}
+                    <TouchableOpacity
+                        style={[
+                            styles.filterChip,
+                            { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                            sortOrder !== 'latest' && { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: colors.primary }
+                        ]}
+                        onPress={() => setShowFilterModal(true)}
+                    >
+                        <ArrowDownUp size={15} color={sortOrder !== 'latest' ? colors.primary : colors.textSecondary} />
+                        <Text style={[
+                            styles.filterText,
+                            { color: sortOrder !== 'latest' ? colors.primary : colors.textSecondary, marginLeft: 6 }
+                        ]}>
+                            {sortOrder === 'price_asc' ? 'Price ↑' : sortOrder === 'price_desc' ? 'Price ↓' : sortOrder === 'nearest' ? 'Nearest' : sortOrder === 'urgent' ? 'Urgent' : 'Newest'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Quick Price Chip */}
+                    <TouchableOpacity
+                        style={[
+                            styles.filterChip,
+                            { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                            priceRange !== 'all' && { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: colors.primary }
+                        ]}
+                        onPress={() => setShowFilterModal(true)}
+                    >
+                        <Text style={[
+                            styles.filterText,
+                            { color: priceRange !== 'all' ? colors.primary : colors.textSecondary }
+                        ]}>
+                            {priceRange === 'under500' ? '< ₹500' : priceRange === '500to2000' ? '₹500 - 2k' : priceRange === '2000to10000' ? '₹2k - 10k' : priceRange === 'above10000' ? '₹10k+' : 'All Prices'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Nearby Distance Filter */}
+                    <TouchableOpacity
+                        style={[
+                            styles.filterChip,
+                            { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                            isNearby && { backgroundColor: colors.primary, borderColor: colors.primary }
+                        ]}
+                        onPress={handleNearbyToggle}
+                    >
+                        <MapPin size={15} color={isNearby ? '#ffffff' : colors.textSecondary} />
+                        <Text style={[
+                            styles.filterText,
+                            { color: isNearby ? '#ffffff' : colors.textSecondary, marginLeft: 6 }
+                        ]}>
+                            {isNearby ? `${distanceRadius}km` : 'Nearby'}
+                        </Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </Animated.View>
 
@@ -942,6 +1033,152 @@ const FeedScreen = ({ navigation, route }: any) => {
                         </ScrollView>
                     </View>
                 </TouchableOpacity>
+            </Modal>
+            {/* Advanced Filter and Sorting Modal */}
+            <Modal
+                transparent={true}
+                visible={showFilterModal}
+                animationType="slide"
+                onRequestClose={() => setShowFilterModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.filterModalCard, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                        <View style={styles.filterModalHeader}>
+                            <Text style={[styles.filterModalTitle, { color: colors.text }]}>
+                                Filter & Sort Marketplace
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowFilterModal(false)} style={styles.modalCloseBtn}>
+                                <X size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+                            {/* Sort Section */}
+                            <Text style={[styles.filterSectionTitle, { color: colors.textSecondary }]}>SORT BY</Text>
+                            <View style={styles.filterOptionGroup}>
+                                {[
+                                    { id: 'latest', label: '🕒 Newest First' },
+                                    { id: 'price_asc', label: '💰 Price: Low to High' },
+                                    { id: 'price_desc', label: '💎 Price: High to Low' },
+                                    { id: 'urgent', label: '⚡ Urgent Deals First' },
+                                    { id: 'nearest', label: '📍 Distance: Nearest' },
+                                ].map((opt) => (
+                                    <TouchableOpacity
+                                        key={opt.id}
+                                        style={[
+                                            styles.filterOptionPill,
+                                            { backgroundColor: colors.background, borderColor: colors.borderSoft },
+                                            sortOrder === opt.id && { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: colors.primary }
+                                        ]}
+                                        onPress={() => setSortOrder(opt.id as any)}
+                                    >
+                                        <Text style={[
+                                            styles.filterOptionText,
+                                            { color: sortOrder === opt.id ? colors.primary : colors.text }
+                                        ]}>
+                                            {opt.label}
+                                        </Text>
+                                        {sortOrder === opt.id && <Check size={16} color={colors.primary} />}
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Price Range Section */}
+                            <Text style={[styles.filterSectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>PRICE RANGE</Text>
+                            <View style={styles.filterOptionGroup}>
+                                {[
+                                    { id: 'all', label: 'All Prices' },
+                                    { id: 'under500', label: 'Under ₹500' },
+                                    { id: '500to2000', label: '₹500 - ₹2,000' },
+                                    { id: '2000to10000', label: '₹2,000 - ₹10,000' },
+                                    { id: 'above10000', label: '₹10,000+' },
+                                ].map((opt) => (
+                                    <TouchableOpacity
+                                        key={opt.id}
+                                        style={[
+                                            styles.filterOptionPill,
+                                            { backgroundColor: colors.background, borderColor: colors.borderSoft },
+                                            priceRange === opt.id && { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: colors.primary }
+                                        ]}
+                                        onPress={() => setPriceRange(opt.id as any)}
+                                    >
+                                        <Text style={[
+                                            styles.filterOptionText,
+                                            { color: priceRange === opt.id ? colors.primary : colors.text }
+                                        ]}>
+                                            {opt.label}
+                                        </Text>
+                                        {priceRange === opt.id && <Check size={16} color={colors.primary} />}
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Distance Radius Section */}
+                            <Text style={[styles.filterSectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>DISTANCE RADIUS</Text>
+                            <View style={styles.distanceChipsRow}>
+                                {[5, 10, 25, 50].map((radius) => (
+                                    <TouchableOpacity
+                                        key={radius}
+                                        style={[
+                                            styles.distanceRadiusChip,
+                                            { backgroundColor: colors.background, borderColor: colors.borderSoft },
+                                            isNearby && distanceRadius === radius && { backgroundColor: colors.primary, borderColor: colors.primary }
+                                        ]}
+                                        onPress={() => {
+                                            setIsNearby(true);
+                                            setDistanceRadius(radius);
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.filterOptionText,
+                                            { color: isNearby && distanceRadius === radius ? '#ffffff' : colors.text }
+                                        ]}>
+                                            {radius} km
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                                <TouchableOpacity
+                                    style={[
+                                        styles.distanceRadiusChip,
+                                        { backgroundColor: colors.background, borderColor: colors.borderSoft },
+                                        !isNearby && { backgroundColor: colors.primary, borderColor: colors.primary }
+                                    ]}
+                                    onPress={() => setIsNearby(false)}
+                                >
+                                    <Text style={[
+                                        styles.filterOptionText,
+                                        { color: !isNearby ? '#ffffff' : colors.text }
+                                    ]}>
+                                        Anywhere
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+
+                        {/* Modal Action Buttons */}
+                        <View style={styles.modalActionButtons}>
+                            <TouchableOpacity
+                                style={[styles.filterResetBtn, { borderColor: colors.borderSoft }]}
+                                onPress={() => {
+                                    setSortOrder('latest');
+                                    setPriceRange('all');
+                                    setUrgentOnly(false);
+                                    setIsNearby(false);
+                                    setDistanceRadius(50);
+                                }}
+                            >
+                                <Text style={[styles.filterResetBtnText, { color: colors.textSecondary }]}>Reset All</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.applyButton, { backgroundColor: colors.primary }]}
+                                onPress={() => setShowFilterModal(false)}
+                            >
+                                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
             </Modal>
         </SafeAreaView >
     );
@@ -1237,6 +1474,124 @@ const styles = StyleSheet.create({
     modalItemText: {
         color: '#d4d4d8',
         fontSize: 16,
+    },
+    searchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 10,
+    },
+    filterTriggerButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    filterCountBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    filterCountText: {
+        color: '#ffffff',
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    filterModalCard: {
+        width: '90%',
+        borderRadius: 24,
+        borderWidth: 1,
+        padding: 20,
+        maxHeight: '85%',
+    },
+    filterModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(148, 163, 184, 0.15)',
+    },
+    filterModalTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    modalCloseBtn: {
+        padding: 4,
+    },
+    filterSectionTitle: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 10,
+    },
+    filterOptionGroup: {
+        gap: 8,
+    },
+    filterOptionPill: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 14,
+        borderWidth: 1,
+    },
+    filterOptionText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    distanceChipsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    distanceRadiusChip: {
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 14,
+        borderWidth: 1,
+    },
+    modalActionButtons: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 20,
+        paddingTop: 14,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(148, 163, 184, 0.15)',
+    },
+    filterResetBtn: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    filterResetBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    applyButton: {
+        flex: 2,
+        paddingVertical: 12,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    applyButtonText: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '700',
     },
 });
 

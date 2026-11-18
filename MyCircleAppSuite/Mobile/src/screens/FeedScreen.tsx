@@ -740,7 +740,7 @@ const FeedScreen = ({ navigation, route }: any) => {
             >
                 <View style={styles.topBar}>
                     <Text style={[styles.headerTitle, { color: colors.text }]}>
-                        Explore<Text style={{ color: colors.primary }}>.</Text>
+                        Marketplace<Text style={{ color: colors.primary }}>.</Text>
                     </Text>
                     <View style={styles.headerIcons}>
                         <TouchableOpacity 
@@ -781,7 +781,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                     <Search size={20} color={colors.placeholder} style={styles.searchIcon} />
                     <TextInput
                         style={[styles.searchInput, { color: colors.text }]}
-                        placeholder="Find something..."
+                        placeholder="Search products, services, barter..."
                         placeholderTextColor={colors.placeholder}
                         value={searchQuery}
                         onChangeText={setSearchQuery}

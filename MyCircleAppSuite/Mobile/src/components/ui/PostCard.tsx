@@ -1,33 +1,25 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-
-import { View, Text, TouchableOpacity, Image, StyleSheet, Pressable, Share, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    Image,
+    StyleSheet,
+    Pressable,
+    Share,
+    Platform,
+} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Alert } from '../../utils/alert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MapPin, Heart, Share2 } from 'lucide-react-native';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
-import Animated, {
-
-
-    useSharedValue,
-    useAnimatedStyle,
-    withSpring,
-    withSequence,
-    withTiming
-} from 'react-native-reanimated';
+import { MapPin, Heart, Share2, ArrowRight } from 'lucide-react-native';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../components/ui/Toast';
 import { useTheme } from '../../context/ThemeContext';
 import api, { BASE_URL } from '../../services/api';
 import { getPlaceholderSuggestions } from '../../services/aiService';
-import { formatDurationMinutesCompact } from '../../utils/formatDuration';
-import GlassView from './GlassView';
-
 import GenerativePlaceholder from './GenerativePlaceholder';
-import { Palette } from '../../constants/design';
 import TrustBadge from './TrustBadge';
-
 
 interface PostCardProps {
     post: {
@@ -36,15 +28,15 @@ interface PostCardProps {
         description: string;
         type: string;
         location: string;
-        price?: number;
+        price?: number | string;
         createdAt: string;
         likes?: string[];
         shares?: number;
         user: {
             _id: string;
             displayName: string;
-            avatar: string;
-            reputation?: { // Added reputation to type definition
+            avatar?: string;
+            reputation?: {
                 trustScore: number;
                 isVerified: boolean;
             };
@@ -57,6 +49,7 @@ interface PostCardProps {
         budgetMax?: number;
         availability?: string;
         duration?: number;
+        acceptsBarter?: boolean;
     };
     onPress?: () => void;
     isOwnPost?: boolean;
@@ -65,21 +58,15 @@ interface PostCardProps {
 
 const PostCard = ({ post, onPress }: PostCardProps) => {
     const { user: currentUser } = useAuth();
-    const { error } = useToast();
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
-    const [hasShared, setHasShared] = useState(false);
-    const lastTapRef = useRef<number>(0);
     const [aiSuggestion, setAiSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
-    const budgetFloor = post.budgetMin ?? post.price;
-    const budgetCeiling = post.budgetMax ?? post.price;
 
     const checkShared = useCallback(async () => {
         try {
-            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
-            setHasShared(sharedPosts.includes(post._id));
+            await AsyncStorage.getItem('sharedPosts');
         } catch {}
-    }, [post._id]);
+    }, []);
 
     useEffect(() => {
         if (!post.images || post.images.length === 0) {
@@ -88,12 +75,32 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
         checkShared();
     }, [post._id, post.title, post.description, post.images, checkShared]);
 
+    const isLiked = currentUser && likes.includes(currentUser._id);
+
+    const handleLike = async () => {
+        if (!currentUser) {
+            Alert.alert('Login Required', 'Please login to save favorite items.');
+            return;
+        }
+
+        const newLikes = isLiked
+            ? likes.filter((id) => id !== currentUser._id)
+            : [...likes, currentUser._id];
+        setLikes(newLikes);
+
+        try {
+            await api.post(`/posts/${post._id}/like`);
+        } catch {
+            setLikes(likes);
+        }
+    };
+
     const handleShare = async () => {
         try {
             const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
             const postUrl = `${serverBase}/post/${post._id}`;
-            const shareTitle = post.title || 'Check out this post on MyCircle';
-            const shareMessage = `Check out "${shareTitle}" on MyCircle: ${postUrl}`;
+            const shareTitle = post.title || 'Check out this listing on MyCircle';
+            const shareMessage = `Check out "${shareTitle}" on MyCircle Marketplace: ${postUrl}`;
 
             const result = await Share.share({
                 title: shareTitle,
@@ -102,7 +109,6 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
             });
 
             if (result.action === Share.sharedAction) {
-                setHasShared(true);
                 api.post(`/posts/${post._id}/share`).catch(() => {});
             }
         } catch (err: any) {
@@ -110,7 +116,7 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
                 try {
                     const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
                     Clipboard.setString(`${serverBase}/post/${post._id}`);
-                    Alert.alert('Link Copied', 'Post link copied to clipboard!');
+                    Alert.alert('Link Copied', 'Listing link copied to clipboard!');
                 } catch {
                     Alert.alert('Error', 'Failed to share');
                 }
@@ -118,402 +124,364 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
         }
     };
 
-
-    const isLiked = currentUser && likes.includes(currentUser._id);
-    const scale = useSharedValue(1);
-    const heartScale = useSharedValue(0);
-
-    const handlePressIn = () => {
-        scale.value = withSpring(0.97);
-    };
-
-    const handlePressOut = () => {
-        scale.value = withSpring(1);
-    };
-
-    const animatedCardStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-
-    const animatedHeartStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: heartScale.value }],
-        opacity: heartScale.value,
-    }));
-
-    const triggerHeartAnimation = () => {
-        heartScale.value = 1;
-        heartScale.value = withSequence(
-            withSpring(1.5),
-            withTiming(0, { duration: 500 })
-        );
-    };
-
-    const handleDoubleTap = () => {
-        const now = Date.now();
-        const DOUBLE_TAP_DELAY = 300;
-        if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-            handleLike();
-            triggerHeartAnimation();
-        } else {
-            setTimeout(() => { // Single tap delay check
-                if (Date.now() - lastTapRef.current >= DOUBLE_TAP_DELAY) {
-                    if (onPress) onPress();
-                }
-            }, DOUBLE_TAP_DELAY);
-        }
-        lastTapRef.current = now;
-    };
-
-    const getPostImage = (post: any) => {
-        if (post.images && post.images.length > 0) return post.images[0];
-        return null;
-    };
-
-
-
-    const handleLike = async () => {
-        if (!currentUser) return error("Please login to like");
-        const newLikes = isLiked
-            ? likes.filter(id => id !== currentUser._id)
-            : [...likes, currentUser._id];
-        setLikes(newLikes);
-        triggerHeartAnimation(); // Always pop heart on dedicated like button too
-
-        try {
-            await api.post(`/posts/${post._id}/like`);
-        } catch (err) {
-            console.error(err);
-            setLikes(likes);
-            error("Failed to like post");
-        }
-    };
-
-    const getTypeColor = () => {
+    const getTypeBadgeColor = () => {
         switch (post.type) {
-            case 'job': return Palette.info; // Blue
-            case 'service': return Palette.cyan[500]; // Teal/Cyan
             case 'sell':
-            case 'rent': return Palette.warning; // Orange/Amber
-            default: return Palette.pink[500];
+                return '#10b981'; // Emerald
+            case 'rent':
+                return '#3b82f6'; // Blue
+            case 'service':
+                return '#06b6d4'; // Cyan
+            case 'job':
+                return '#8b5cf6'; // Violet
+            case 'barter':
+                return '#f59e0b'; // Amber
+            default:
+                return colors.primary;
         }
     };
+
+    const formatPrice = () => {
+        if (post.price !== undefined && post.price !== '' && post.price !== null) {
+            const numeric = Number(post.price);
+            if (!isNaN(numeric)) {
+                return `₹${numeric.toLocaleString()}`;
+            }
+            return `₹${post.price}`;
+        }
+        if (post.acceptsBarter) {
+            return 'Barter';
+        }
+        return 'Contact';
+    };
+
+    const heroImage = post.images && post.images.length > 0 ? post.images[0] : null;
 
     return (
         <Pressable
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            onPress={handleDoubleTap}
-            style={styles.cardContainer}
+            onPress={onPress}
+            style={[
+                styles.cardContainer,
+                {
+                    backgroundColor: colors.card,
+                    borderColor: colors.borderSoft,
+                },
+            ]}
         >
-            <Animated.View style={[styles.cardWrapper, animatedCardStyle]}>
-                {/* Full Background Image or Generative Alternative */}
-                {getPostImage(post) ? (
+            {/* Top Product / Listing Image Container */}
+            <View style={styles.imageContainer}>
+                {heroImage ? (
                     <Image
-                        source={{ uri: getPostImage(post)! }}
-                        style={styles.backgroundImage}
+                        source={{ uri: heroImage }}
+                        style={styles.cardImage as any}
                         resizeMode="cover"
                     />
                 ) : (
                     <GenerativePlaceholder
                         id={post._id}
                         type={post.type}
-                        style={styles.backgroundImage}
-                        iconSize={120}
+                        style={styles.cardImage}
+                        iconSize={90}
                         aiIcon={aiSuggestion?.icon}
                         aiGifKeyword={aiSuggestion?.gifKeywords?.[0]}
                     />
-
                 )}
 
-
-
-                {/* Dark Gradient Overlay - Refined for Neon Dark */}
-                <Svg style={StyleSheet.absoluteFill}>
-                    <Defs>
-                        <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                            <Stop offset="0" stopColor="#000" stopOpacity="0.4" />
-                            <Stop offset="0.4" stopColor="#000" stopOpacity="0" />
-                            <Stop offset="0.7" stopColor="#af25f4" stopOpacity="0.1" />
-                            <Stop offset="1" stopColor="#000" stopOpacity="0.95" />
-                        </SvgLinearGradient>
-                    </Defs>
-                    <Rect width="100%" height="100%" fill="url(#grad)" />
-                </Svg>
-
-
-                {/* Floating Top Elements */}
-                <View style={styles.topRow}>
-                    <GlassView intensity={30} borderRadius={16} style={styles.typeBadge}>
-                        <View style={[styles.typeDot, { backgroundColor: getTypeColor() }]} />
-                        <Text style={styles.typeText}>{post.subType || post.type}</Text>
-                    </GlassView>
-
-                    <GlassView intensity={30} borderRadius={20} style={styles.likeButtonContainer}>
-                        <TouchableOpacity onPress={handleLike} hitSlop={10} style={styles.likeButton}>
-                            <Heart
-                                size={20}
-                                color={isLiked ? "#ef4444" : "#fff"}
-                                fill={isLiked ? "#ef4444" : "transparent"}
-                            />
-                        </TouchableOpacity>
-                    </GlassView>
-                    <GlassView intensity={30} borderRadius={20} style={styles.likeButtonContainer}>
-                        <TouchableOpacity onPress={handleShare} hitSlop={10} style={styles.likeButton}>
-                            <Share2
-                                size={20}
-                                color={hasShared ? "#3b82f6" : "#fff"}
-                            />
-                        </TouchableOpacity>
-                    </GlassView>
+                {/* Listing Type Tag */}
+                <View
+                    style={[
+                        styles.typeBadge,
+                        { backgroundColor: getTypeBadgeColor() },
+                    ]}
+                >
+                    <Text style={styles.typeBadgeText}>
+                        {(post.subType || post.type).toUpperCase()}
+                    </Text>
                 </View>
 
-                {/* Big Heart Animation Overlay */}
-                <View style={[StyleSheet.absoluteFill, styles.centered]} pointerEvents="none">
-                    <Animated.View style={animatedHeartStyle}>
-                        <Heart size={100} color="#fff" fill="#fff" />
-                    </Animated.View>
+                {/* Urgent Tag if applicable */}
+                {post.isUrgent && (
+                    <View style={styles.urgentBadge}>
+                        <Text style={styles.urgentBadgeText}>URGENT</Text>
+                    </View>
+                )}
+
+                {/* Action Buttons Overlay (Wishlist & Share) */}
+                <View style={styles.topRightActions}>
+                    <TouchableOpacity
+                        onPress={handleLike}
+                        style={[
+                            styles.circleActionBtn,
+                            {
+                                backgroundColor: isDark
+                                    ? 'rgba(15, 23, 42, 0.75)'
+                                    : 'rgba(255, 255, 255, 0.85)',
+                            },
+                        ]}
+                        activeOpacity={0.7}
+                    >
+                        <Heart
+                            size={16}
+                            color={isLiked ? '#ef4444' : isDark ? '#ffffff' : '#0f172a'}
+                            fill={isLiked ? '#ef4444' : 'transparent'}
+                        />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={handleShare}
+                        style={[
+                            styles.circleActionBtn,
+                            {
+                                backgroundColor: isDark
+                                    ? 'rgba(15, 23, 42, 0.75)'
+                                    : 'rgba(255, 255, 255, 0.85)',
+                                marginTop: 6,
+                            },
+                        ]}
+                        activeOpacity={0.7}
+                    >
+                        <Share2 size={15} color={isDark ? '#ffffff' : '#0f172a'} />
+                    </TouchableOpacity>
                 </View>
+            </View>
 
-                {/* Bottom Content Area */}
-                <View style={styles.contentOverlay}>
-                    <View style={styles.mainInfo}>
-                        <Text style={styles.title} numberOfLines={2}>
-                            {post.title}
-                        </Text>
-
-                        <View style={styles.locationRow}>
-                            <MapPin size={14} color={colors.textSecondary} />
-                            <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
-                                {post.location.split(',')[0]} • {post.distance || '2km'} away
+            {/* Marketplace Information Details */}
+            <View style={styles.contentBody}>
+                {/* Price and Category Tag */}
+                <View style={styles.priceRow}>
+                    <Text style={[styles.priceText, { color: colors.primary }]}>
+                        {formatPrice()}
+                    </Text>
+                    {post.distance && (
+                        <View style={styles.distanceTag}>
+                            <MapPin size={12} color={colors.textSecondary} />
+                            <Text
+                                style={[
+                                    styles.distanceText,
+                                    { color: colors.textSecondary },
+                                ]}
+                            >
+                                {post.distance}
                             </Text>
                         </View>
-                        {(post.availability || post.duration || budgetFloor || budgetCeiling) && (
-                            <View style={styles.metaRow}>
-                                {(budgetFloor || budgetCeiling) && (
-                                    <View style={styles.metaChipPrimary}>
-                                        <Text style={styles.metaChipPrimaryText}>
-                                            Budget ₹{budgetFloor || 0}{budgetCeiling && budgetCeiling !== budgetFloor ? `-₹${budgetCeiling}` : ''}
-                                        </Text>
-                                    </View>
-                                )}
-                                {post.duration ? (
-                                    <View style={styles.metaChip}>
-                                        <Text style={styles.metaChipText}>{formatDurationMinutesCompact(post.duration)}</Text>
-                                    </View>
-                                ) : null}
-                                {post.availability ? (
-                                    <View style={styles.metaChip}>
-                                        <Text style={styles.metaChipText} numberOfLines={1}>{post.availability}</Text>
-                                    </View>
-                                ) : null}
-                            </View>
-                        )}
-                    </View>
-
-                    <View style={styles.footerRow}>
-                        <View style={styles.userSection}>
-                            <Image source={{ uri: getAvatarUrl(post.user) }} style={styles.avatar} />
-                            <View>
-                                <Text style={styles.userName}>{post.user.displayName}</Text>
-                                {post.user && (
-                                    <View style={{ marginTop: 2 }}>
-                                        <TrustBadge
-                                            score={post.user.reputation?.trustScore ?? 50}
-                                            isVerified={Boolean(post.user.reputation?.isVerified)}
-                                            size="small"
-                                        />
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-
-                        {post.price != null && (
-                            <View style={styles.priceTag}>
-                                <Text style={[styles.priceSymbol, { color: colors.primary }]}>₹</Text>
-                                <Text style={styles.priceValue}>{post.price.toLocaleString()}</Text>
-                            </View>
-                        )}
-                    </View>
+                    )}
                 </View>
 
-            </Animated.View>
+                {/* Listing Title */}
+                <Text
+                    style={[styles.listingTitle, { color: colors.text }]}
+                    numberOfLines={2}
+                >
+                    {post.title}
+                </Text>
+
+                {/* Location Text */}
+                {post.location && (
+                    <View style={styles.locationContainer}>
+                        <MapPin size={13} color={colors.textSecondary} />
+                        <Text
+                            style={[
+                                styles.locationText,
+                                { color: colors.textSecondary },
+                            ]}
+                            numberOfLines={1}
+                        >
+                            {post.location.split(',')[0]}
+                        </Text>
+                    </View>
+                )}
+
+                {/* Divider */}
+                <View
+                    style={[
+                        styles.cardDivider,
+                        { backgroundColor: colors.borderSoft },
+                    ]}
+                />
+
+                {/* Seller / Author Row & Inquire CTA */}
+                <View style={styles.cardFooter}>
+                    <View style={styles.sellerInfo}>
+                        <Image
+                            source={{ uri: getAvatarUrl(post.user) }}
+                            style={[styles.sellerAvatar as any, { borderColor: colors.borderSoft }]}
+                        />
+                        <View style={styles.sellerTextGroup}>
+                            <Text
+                                style={[styles.sellerName, { color: colors.text }]}
+                                numberOfLines={1}
+                            >
+                                {post.user?.displayName || 'Neighbor'}
+                            </Text>
+                            <TrustBadge
+                                score={post.user?.reputation?.trustScore ?? 50}
+                                isVerified={Boolean(post.user?.reputation?.isVerified)}
+                                size="small"
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.inquireButton}>
+                        <Text style={[styles.inquireButtonText, { color: colors.primary }]}>
+                            Details
+                        </Text>
+                        <ArrowRight size={14} color={colors.primary} style={{ marginLeft: 4 }} />
+                    </View>
+                </View>
+            </View>
         </Pressable>
     );
 };
 
 const styles = StyleSheet.create({
     cardContainer: {
-        marginBottom: 20,
-        width: '100%',
-    },
-    cardWrapper: {
-        width: '100%',
-        height: 480,
-        borderRadius: 32,
-        overflow: 'hidden',
-        backgroundColor: '#0a0a0a',
+        marginBottom: 16,
+        marginHorizontal: 16,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 3,
     },
-    backgroundImage: {
-        ...StyleSheet.absoluteFillObject,
+    imageContainer: {
         width: '100%',
-        height: '100%',
+        height: 180,
+        position: 'relative',
+        backgroundColor: 'rgba(148, 163, 184, 0.1)',
     },
-    centered: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 20,
-    },
-    topRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        padding: 20,
+    cardImage: {
         width: '100%',
-        zIndex: 10,
+        height: 180,
     },
     typeBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    typeDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        marginRight: 8,
-    },
-    typeText: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 12,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    likeButtonContainer: {
-        width: 48,
-        height: 48,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-    },
-    likeButton: {
-        width: '100%',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    contentOverlay: {
         position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: 24,
-    },
-    mainInfo: {
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: '#fff',
-        marginBottom: 10,
-        fontFamily: 'Plus Jakarta Sans',
-        lineHeight: 32,
-    },
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    locationText: {
-        color: '#a1a1aa',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    metaRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 14,
-    },
-    metaChip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.78)',
-        borderRadius: 14,
+        top: 12,
+        left: 12,
         paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        paddingVertical: 5,
+        borderRadius: 8,
     },
-    metaChipPrimary: {
-        backgroundColor: 'rgba(175, 37, 244, 0.18)',
-        borderRadius: 14,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(175, 37, 244, 0.32)',
-    },
-    metaChipText: {
-        color: '#e2e8f0',
-        fontSize: 11,
-        fontWeight: '700',
-    },
-    metaChipPrimaryText: {
+    typeBadgeText: {
         color: '#ffffff',
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '800',
+        letterSpacing: 0.8,
     },
-    footerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    urgentBadge: {
+        position: 'absolute',
+        top: 12,
+        left: 90,
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        borderRadius: 8,
+    },
+    urgentBadgeText: {
+        color: '#ffffff',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.8,
+    },
+    topRightActions: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
         alignItems: 'center',
-        marginTop: 8,
     },
-    userSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        padding: 8,
-        paddingRight: 16,
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
-    },
-    avatar: {
+    circleActionBtn: {
         width: 32,
         height: 32,
         borderRadius: 16,
-        borderWidth: 1.5,
-        borderColor: '#fff',
-        marginRight: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    userName: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '700',
+    contentBody: {
+        padding: 16,
     },
-    priceTag: {
+    priceRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(175, 37, 244, 0.15)',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(175, 37, 244, 0.3)',
+        justifyContent: 'space-between',
+        marginBottom: 6,
     },
-    priceSymbol: {
+    priceText: {
+        fontSize: 20,
+        fontWeight: '800',
+    },
+    distanceTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    distanceText: {
+        fontSize: 12,
+        marginLeft: 4,
+        fontWeight: '500',
+    },
+    listingTitle: {
         fontSize: 16,
         fontWeight: '700',
-        marginRight: 2,
+        lineHeight: 22,
+        marginBottom: 6,
     },
-    priceValue: {
-        color: '#fff',
-        fontSize: 22,
-        fontWeight: '900',
-    }
+    locationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    locationText: {
+        fontSize: 13,
+        marginLeft: 4,
+    },
+    cardDivider: {
+        height: 1,
+        marginBottom: 12,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    sellerInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 10,
+    },
+    sellerAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        borderWidth: 1,
+    },
+    sellerTextGroup: {
+        marginLeft: 8,
+        flex: 1,
+    },
+    sellerName: {
+        fontSize: 13,
+        fontWeight: '600',
+        marginBottom: 1,
+    },
+    inquireButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    },
+    inquireButtonText: {
+        fontSize: 13,
+        fontWeight: '700',
+    },
 });
 
 export default PostCard;

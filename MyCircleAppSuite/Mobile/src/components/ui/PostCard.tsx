@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-import { View, Text, TouchableOpacity, Image, StyleSheet, Pressable, Clipboard } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Pressable, Share, Platform } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Alert } from '../../utils/alert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MapPin, Heart, Share2 } from 'lucide-react-native';
@@ -88,21 +89,32 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
     }, [post._id, post.title, post.description, post.images, checkShared]);
 
     const handleShare = async () => {
-        if (hasShared) {
-            Alert.alert("Already Shared", "Link already copied!");
-            return;
-        }
         try {
-            const sharedPosts = JSON.parse(await AsyncStorage.getItem('sharedPosts') || '[]');
-            sharedPosts.push(post._id);
-            await AsyncStorage.setItem('sharedPosts', JSON.stringify(sharedPosts));
-            setHasShared(true);
-            await api.post(`/posts/${post._id}/share`);
             const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
-            Clipboard.setString(`${serverBase}/post/${post._id}`);
-            Alert.alert("Copied", "Post link copied!");
-        } catch {
-            Alert.alert("Error", "Failed to share");
+            const postUrl = `${serverBase}/post/${post._id}`;
+            const shareTitle = post.title || 'Check out this post on MyCircle';
+            const shareMessage = `Check out "${shareTitle}" on MyCircle: ${postUrl}`;
+
+            const result = await Share.share({
+                title: shareTitle,
+                message: Platform.OS === 'android' ? shareMessage : shareTitle,
+                url: postUrl,
+            });
+
+            if (result.action === Share.sharedAction) {
+                setHasShared(true);
+                api.post(`/posts/${post._id}/share`).catch(() => {});
+            }
+        } catch (err: any) {
+            if (err?.message && !err.message.includes('dismissed') && !err.message.includes('cancelled')) {
+                try {
+                    const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
+                    Clipboard.setString(`${serverBase}/post/${post._id}`);
+                    Alert.alert('Link Copied', 'Post link copied to clipboard!');
+                } catch {
+                    Alert.alert('Error', 'Failed to share');
+                }
+            }
         }
     };
 

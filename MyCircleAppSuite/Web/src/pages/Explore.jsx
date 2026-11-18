@@ -314,7 +314,7 @@ const Explore = () => {
     const [priceMax, setPriceMax] = useState('');
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
 
-    const mapRef = useRef<L.Map>(null);
+    const mapRef = useRef(null);
     const fallbackUserLocation = useMemo(
         () => toValidCoords(user?.latitude, user?.longitude),
         [user?.latitude, user?.longitude]
@@ -708,12 +708,12 @@ const Explore = () => {
                 /* Map View - Full screen */
             <div className="map-container">
                     <MapContainer
+                        ref={mapRef}
                         center={mapCenter}
                         zoom={mapZoom}
                         scrollWheelZoom={true}
                         zoomControl={false}
                         className="w-full h-[calc(100vh-150px)] sm:h-[calc(100vh-180px)] z-0"
-                        whenCreated={(map) => { mapRef.current = map; }}
                     >
                         <MapUpdater center={safeUserLocation ? [safeUserLocation.lat, safeUserLocation.lng] : null} zoom={mapZoom} />
                         <TileLayer

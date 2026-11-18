@@ -25,9 +25,14 @@ const Home = () => {
                         </div>
                         <span className="text-xl font-bold tracking-tight">MyCircle</span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-                        Sign in
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => navigate('/download')}>
+                            Get App
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => navigate('/login')}>
+                            Sign in
+                        </Button>
+                    </div>
                 </header>
 
                 {/* Session expired alert */}
@@ -63,6 +68,14 @@ const Home = () => {
                             </Button>
                             <Button 
                                 variant="outline" 
+                                size="lg" 
+                                onClick={() => navigate('/download')} 
+                                className="w-full sm:w-auto"
+                            >
+                                Get Mobile App
+                            </Button>
+                            <Button 
+                                variant="ghost" 
                                 size="lg" 
                                 onClick={() => navigate('/explore')} 
                                 className="w-full sm:w-auto"

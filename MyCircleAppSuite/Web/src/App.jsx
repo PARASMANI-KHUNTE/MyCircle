@@ -28,6 +28,7 @@ const MyPosts = lazy(() => import('./pages/MyPosts'));
 const Settings = lazy(() => import('./pages/Settings'));
 const BlockedUsers = lazy(() => import('./pages/BlockedUsers'));
 const LoginSuccess = lazy(() => import('./pages/LoginSuccess'));
+const DownloadApp = lazy(() => import('./pages/DownloadApp'));
 
 function AppContent() {
   return (
@@ -86,6 +87,8 @@ function AuthRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/login/success" element={<LoginSuccess />} />
       <Route path="/welcome" element={<Home />} />
+      <Route path="/download" element={<DownloadApp />} />
+      <Route path="/apk" element={<DownloadApp />} />
       {isAuthenticated ? (
         <Route element={<Layout />}>
           <Route path="/" element={<Explore />} />

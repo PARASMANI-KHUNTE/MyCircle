@@ -98,7 +98,7 @@ exports.createPost = asyncHandler(async (req, res) => {
     });
 
     const post = await newPost.save();
-    const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
+    const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar', 'reputation', 'rating']);
 
     const io = req.app.get('io');
     if (io) {
@@ -266,7 +266,13 @@ exports.getPosts = async (req, res, next) => {
                     },
                     {
                         $project: {
-                            user: { _id: '$user._id', displayName: '$user.displayName', avatar: '$user.avatar' },
+                            user: {
+                                _id: '$user._id',
+                                displayName: '$user.displayName',
+                                avatar: '$user.avatar',
+                                reputation: '$user.reputation',
+                                rating: '$user.rating'
+                            },
                             type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
                             isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
                             locationCoords: 1, duration: 1, availability: 1, budgetMin: 1, budgetMax: 1,
@@ -323,7 +329,7 @@ exports.getPosts = async (req, res, next) => {
 exports.getPostById = async (req, res, next) => {
     try {
         const post = await Post.findById(req.params.id)
-            .populate('user', ['displayName', 'avatar'])
+            .populate('user', ['displayName', 'avatar', 'reputation', 'rating'])
             .populate({
                 path: 'comments',
                 populate: [
@@ -472,7 +478,13 @@ exports.getMyPosts = async (req, res, next) => {
                 },
                 {
                     $project: {
-                        user: { _id: '$user._id', displayName: '$user.displayName', avatar: '$user.avatar' },
+                        user: {
+                            _id: '$user._id',
+                            displayName: '$user.displayName',
+                            avatar: '$user.avatar',
+                            reputation: '$user.reputation',
+                            rating: '$user.rating'
+                        },
                         type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
                         isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1, locationCoords: 1,
                         contactPhone: 1, contactWhatsapp: 1, expiresAt: 1, duration: 1,
@@ -666,7 +678,7 @@ exports.updatePost = async (req, res, next) => {
         }
 
         await post.save();
-        const updatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar']);
+        const updatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar', 'reputation', 'rating']);
         res.json(updatedPost);
     } catch (err) {
         if (err.kind === 'ObjectId') {
@@ -808,7 +820,7 @@ exports.getRelatedPosts = async (req, res, next) => {
             ]
         })
             .limit(4)
-            .populate('user', ['displayName', 'avatar'])
+            .populate('user', ['displayName', 'avatar', 'reputation', 'rating'])
             .sort({ createdAt: -1 });
 
         res.json(relatedPosts);

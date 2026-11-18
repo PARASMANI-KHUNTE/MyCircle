@@ -8,10 +8,12 @@ import Animated, { FadeInDown, FadeInRight, FadeOutLeft } from 'react-native-rea
 
 import api from '../services/api';
 import { getCurrentLocation } from '../utils/location';
+import { useTheme } from '../context/ThemeContext';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Stepper from '../components/ui/Stepper';
 
 const CreatePostScreen = ({ navigation }: any) => {
+    const { colors, isDark } = useTheme();
     const webviewRef = useRef<any>(null);
 
     // Wizard State
@@ -391,24 +393,24 @@ const CreatePostScreen = ({ navigation }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.mainContainer}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <SafeAreaView style={[styles.mainContainer, { backgroundColor: colors.background }]}>
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientStart }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientMiddle, opacity: isDark ? 0.8 : 0.45 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientEnd, opacity: isDark ? 0.6 : 0.32 }]} />
             </View>
 
             {/* Header */}
             <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
-                <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.headerBackButton}>
-                    <ArrowLeft size={20} color="#ffffff" />
+                <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={[styles.headerBackButton, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                    <ArrowLeft size={20} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitleMain}>New Post</Text>
+                <Text style={[styles.headerTitleMain, { color: colors.text }]}>New Post</Text>
                 <TouchableOpacity onPress={() => { }} style={styles.helpButton}>
-                    <Info size={20} color="#94a3b8" />
+                    <Info size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
             </Animated.View>
 

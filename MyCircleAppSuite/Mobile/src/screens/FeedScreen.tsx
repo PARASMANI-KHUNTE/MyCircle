@@ -59,7 +59,7 @@ const { width, height } = Dimensions.get('window');
 const FeedScreen = ({ navigation, route }: any) => {
     const { isAuthenticated } = useAuth();
     const initialViewMode = route?.params?.viewMode || 'list';
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
     const { socket } = useSocket() as any; // Type assertion if needed
     const { success } = useToast();
     const queryClient = useQueryClient();
@@ -678,8 +678,8 @@ const FeedScreen = ({ navigation, route }: any) => {
                         <View style={styles.emptyIconContainer}>
                             <Search size={48} color="#af25f4" />
                         </View>
-                        <Text style={styles.emptyTitle}>No posts found</Text>
-                        <Text style={styles.emptySubtitle}>
+                        <Text style={[styles.emptyTitle, { color: colors.text }]}>No posts found</Text>
+                        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                             {searchQuery || selectedCategory !== 'all' || locationFilter !== 'All' 
                                 ? "Try adjusting your filters to see more results" 
                                 : "Be the first to create a post in your area!"}
@@ -705,18 +705,18 @@ const FeedScreen = ({ navigation, route }: any) => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientStart }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientMiddle, opacity: isDark ? 0.8 : 0.45 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientEnd, opacity: isDark ? 0.6 : 0.32 }]} />
             </View>
 
             {/* Subtle Grid Pattern */}
-            <View style={styles.gridPattern}>
+            <View style={[styles.gridPattern, { opacity: isDark ? 0.1 : 0.04 }]}>
                 {[...Array(15)].map((_, i) => (
                     <View
                         key={i}
@@ -727,6 +727,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                                 top: Math.floor(i / 5) * (height / 3),
                                 width: 1,
                                 height: height / 3,
+                                backgroundColor: colors.primary,
                             }
                         ]}
                     />
@@ -738,8 +739,8 @@ const FeedScreen = ({ navigation, route }: any) => {
                 style={styles.headerSection}
             >
                 <View style={styles.topBar}>
-                    <Text style={styles.headerTitle}>
-                        Explore<Text style={styles.titleDot}>.</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>
+                        Explore<Text style={{ color: colors.primary }}>.</Text>
                     </Text>
                     <View style={styles.headerIcons}>
                         <TouchableOpacity 
@@ -747,7 +748,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                             style={styles.iconButton}
                             activeOpacity={0.8}
                         >
-                            <Bell size={24} color="#ffffff" />
+                            <Bell size={24} color={colors.text} />
                             {unreadCount > 0 && (
                                 <View style={[styles.badge, { backgroundColor: '#ef4444' }]}>
                                     <Text style={styles.badgeText}>{unreadCount}</Text>
@@ -760,7 +761,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                             style={styles.iconButton}
                             activeOpacity={0.8}
                         >
-                            <MessageCircle size={24} color="#ffffff" />
+                            <MessageCircle size={24} color={colors.text} />
                             {unreadMsgCount > 0 && (
                                 <View style={[styles.badge, { backgroundColor: '#af25f4' }]}>
                                     <Text style={styles.badgeText}>{unreadMsgCount}</Text>
@@ -776,12 +777,12 @@ const FeedScreen = ({ navigation, route }: any) => {
                 entering={FadeInDown.delay(400).duration(800).springify()}
                 style={styles.searchSection}
             >
-                <View style={styles.searchContainer}>
-                    <Search size={20} color="#94a3b8" style={styles.searchIcon} />
+                <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                    <Search size={20} color={colors.placeholder} style={styles.searchIcon} />
                     <TextInput
-                        style={styles.searchInput}
+                        style={[styles.searchInput, { color: colors.text }]}
                         placeholder="Find something..."
-                        placeholderTextColor="#94a3b8"
+                        placeholderTextColor={colors.placeholder}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                     />
@@ -790,7 +791,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                             onPress={() => setSearchQuery('')} 
                             style={styles.clearButton}
                         >
-                            <X size={18} color="#94a3b8" />
+                            <X size={18} color={colors.placeholder} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -806,27 +807,29 @@ const FeedScreen = ({ navigation, route }: any) => {
                             <TouchableOpacity
                                 style={[
                                     styles.filterChip,
-                                    isNearby && styles.filterChipActive
+                                    { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                                    isNearby && { backgroundColor: colors.primary, borderColor: colors.primary }
                                 ]}
                                 onPress={handleNearbyToggle}
                             >
-                                <MapPin size={16} color={isNearby ? '#ffffff' : '#94a3b8'} />
+                                <MapPin size={16} color={isNearby ? '#ffffff' : colors.textSecondary} />
                                 <Text style={[
                                     styles.filterText,
-                                    { color: isNearby ? '#ffffff' : '#94a3b8', marginLeft: 8 }
+                                    { color: isNearby ? '#ffffff' : colors.textSecondary, marginLeft: 8 }
                                 ]}>
                                     {isNearby ? `${distanceRadius}km` : 'Nearby'}
                                 </Text>
                             </TouchableOpacity>
 
-                            {isNearby && <View style={styles.filterDivider} />}
+                            {isNearby && <View style={[styles.filterDivider, { backgroundColor: colors.borderSoft }]} />}
 
                             {isNearby && [5, 10, 25, 50, 100].map(radius => (
                                 <TouchableOpacity
                                     key={radius}
                                     style={[
                                         styles.filterChip,
-                                        distanceRadius === radius && styles.filterChipActive
+                                        { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                                        distanceRadius === radius && { backgroundColor: colors.primary, borderColor: colors.primary }
                                     ]}
                                     onPress={() => {
                                         setDistanceRadius(radius);
@@ -835,7 +838,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                                 >
                                     <Text style={[
                                         styles.filterText,
-                                        { color: distanceRadius === radius ? '#ffffff' : '#94a3b8' }
+                                        { color: distanceRadius === radius ? '#ffffff' : colors.textSecondary }
                                     ]}>
                                         {radius}km
                                     </Text>
@@ -848,14 +851,15 @@ const FeedScreen = ({ navigation, route }: any) => {
                                 key={cat.id}
                                 style={[
                                     styles.filterChip,
-                                    selectedCategory === cat.id && styles.filterChipActive
+                                    { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                                    selectedCategory === cat.id && { backgroundColor: colors.primary, borderColor: colors.primary }
                                 ]}
                                 onPress={() => setSelectedCategory(cat.id)}
                             >
-                                <cat.icon size={16} color={selectedCategory === cat.id ? '#ffffff' : '#94a3b8'} />
+                                <cat.icon size={16} color={selectedCategory === cat.id ? '#ffffff' : colors.textSecondary} />
                                 <Text style={[
                                     styles.filterText,
-                                    { color: selectedCategory === cat.id ? '#ffffff' : '#94a3b8', marginLeft: 8 }
+                                    { color: selectedCategory === cat.id ? '#ffffff' : colors.textSecondary, marginLeft: 8 }
                                 ]}>
                                     {cat.label}
                                 </Text>

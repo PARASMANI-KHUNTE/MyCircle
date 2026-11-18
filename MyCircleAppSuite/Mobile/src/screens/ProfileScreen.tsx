@@ -16,7 +16,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const ProfileScreen = ({ navigation, route }: any) => {
     const { user: authUser, logout } = useAuth();
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -286,18 +286,18 @@ const ProfileScreen = ({ navigation, route }: any) => {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
             
             {/* Modern Gradient Background */}
             <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientStart }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientMiddle, opacity: isDark ? 0.8 : 0.45 }]} />
+                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientEnd, opacity: isDark ? 0.6 : 0.32 }]} />
             </View>
 
             {/* Subtle Grid Pattern */}
-            <View style={styles.gridPattern}>
+            <View style={[styles.gridPattern, { opacity: isDark ? 0.1 : 0.04 }]}>
                 {[...Array(12)].map((_, i) => (
                     <View
                         key={i}
@@ -308,6 +308,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                 top: Math.floor(i / 4) * (SCREEN_HEIGHT / 3),
                                 width: 1,
                                 height: SCREEN_HEIGHT / 3,
+                                backgroundColor: colors.primary,
                             }
                         ]}
                     />
@@ -317,17 +318,17 @@ const ProfileScreen = ({ navigation, route }: any) => {
             {/* Header */}
             <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
                 <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#ffffff" />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                        <ArrowLeft size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Profile</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
                     <View style={styles.headerRight}>
                         {isOwnProfile && (
                             <>
-                                <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.iconButton}>
-                                    <Edit size={20} color="#ffffff" />
+                                <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={[styles.iconButton, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                                    <Edit size={20} color={colors.text} />
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={handleLogout} style={[styles.iconButton, { marginLeft: 8, borderColor: 'rgba(239, 68, 68, 0.5)' }]}>
+                                <TouchableOpacity onPress={handleLogout} style={[styles.iconButton, { marginLeft: 8, backgroundColor: colors.card, borderColor: 'rgba(239, 68, 68, 0.5)' }]}>
                                     <LogOut size={20} color="#ef4444" />
                                 </TouchableOpacity>
                             </>
@@ -338,12 +339,12 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#af25f4" />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Profile Card */}
                 <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.profileSection}>
-                    <View style={styles.profileCard}>
+                    <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
                         <View style={styles.avatarWrapper}>
                             <Image
                                 source={{ uri: user.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${user.displayName}` }}
@@ -351,8 +352,8 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             />
                             <View style={styles.onlineBadge} />
                         </View>
-                        <Text style={styles.name}>{user.displayName}</Text>
-                        <Text style={styles.email}>{user.email}</Text>
+                        <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
+                        <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
                         <View style={styles.trustBadgeContainer}>
                             <TrustBadge
                                 score={user.reputation?.trustScore || 50}
@@ -366,15 +367,15 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 {/* Stats Section */}
                 <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.statsSection}>
                     <View style={styles.statsLayout}>
-                        <View style={styles.statTile}>
-                            <Text style={styles.statValue}>{stats.posts}</Text>
+                        <View style={[styles.statTile, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                            <Text style={[styles.statValue, { color: colors.text }]}>{stats.posts}</Text>
                             <Text style={[styles.statLabel, { color: '#af25f4' }]}>POSTS</Text>
                         </View>
-                        <View style={styles.statTile}>
-                            <Text style={styles.statValue}>{stats.requests}</Text>
+                        <View style={[styles.statTile, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                            <Text style={[styles.statValue, { color: colors.text }]}>{stats.requests}</Text>
                             <Text style={[styles.statLabel, { color: '#3b82f6' }]}>REQUESTS</Text>
                         </View>
-                        <View style={styles.statTile}>
+                        <View style={[styles.statTile, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
                             <Text style={[styles.statValue, { color: '#22c55e' }]}>{stats.rating.toFixed(1)}</Text>
                             <Text style={[styles.statLabel, { color: '#22c55e' }]}>RATING</Text>
                         </View>
@@ -383,16 +384,16 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
                 {/* Bio Section */}
                 <Animated.View entering={FadeInDown.delay(400).duration(800).springify()} style={styles.bioSection}>
-                    <View style={styles.bioCard}>
-                        <Text style={styles.sectionTitle}>Bio</Text>
-                        <Text style={styles.sectionContent}>
+                    <View style={[styles.bioCard, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Bio</Text>
+                        <Text style={[styles.sectionContent, { color: colors.text }]}>
                             {user.bio || "No bio added yet."}
                         </Text>
 
-                        <View style={styles.divider} />
+                        <View style={[styles.divider, { backgroundColor: colors.borderSoft }]} />
 
-                        <Text style={styles.sectionTitle}>Skills & Interests</Text>
-                        <Text style={styles.sectionContent}>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Skills & Interests</Text>
+                        <Text style={[styles.sectionContent, { color: colors.text }]}>
                             {user.skills && user.skills.length > 0 ? user.skills.join(', ') : "No skills listed."}
                         </Text>
                     </View>
@@ -401,7 +402,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 {/* My Posts Section */}
                 <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.postsSection}>
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>My Posts</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>My Posts</Text>
                         {isOwnProfile && (
                             <View style={styles.viewModeToggle}>
                                 <TouchableOpacity onPress={() => setViewMode('list')} style={[styles.viewModeBtn, viewMode === 'list' && { backgroundColor: '#af25f4' }]}>
@@ -452,7 +453,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                             </View>
                                         </View>
                                     ) : (
-                                        <View style={[styles.listCard, { borderLeftColor: getTypeColor(post.type) }]}>
+                                        <View style={[styles.listCard, { backgroundColor: colors.card, borderColor: colors.borderSoft, borderLeftColor: getTypeColor(post.type) }]}>
                                             {getPostImage(post) ? (
                                                 <Image source={{ uri: getPostImage(post)! }} style={styles.listImage} />
                                             ) : (
@@ -467,7 +468,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                             )}
                                             <View style={styles.listContent}>
                                                 <Text style={[styles.typeLabel, { color: getTypeColor(post.type) }]}>{post.type.toUpperCase()}</Text>
-                                                <Text style={styles.listTitle} numberOfLines={1}>{post.title}</Text>
+                                                <Text style={[styles.listTitle, { color: colors.text }]} numberOfLines={1}>{post.title}</Text>
                                                 {renderExpirationBar(post)}
                                             </View>
                                             <View style={styles.listActionArea}>

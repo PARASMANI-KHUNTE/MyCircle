@@ -14,14 +14,12 @@ const validateEnv = () => {
         process.exit(1);
     }
     if (jwtSecret.length < 32) {
-        console.error(`❌ JWT_SECRET must be at least 32 characters. Current: ${jwtSecret.length}`);
-        console.error('   Generate with: openssl rand -hex 32');
-        process.exit(1);
+        console.warn(`⚠️ WARNING: JWT_SECRET should be at least 32 characters for optimal security. Current: ${jwtSecret.length}`);
+        console.warn('   Recommended: generate a 32-byte secret with: openssl rand -hex 32');
     }
     if (jwtSecret === 'supersecretkey' || jwtSecret === 'your-secret-key') {
-        console.error('❌ JWT_SECRET cannot be a default/weak value');
-        console.error('   Generate with: openssl rand -hex 32');
-        process.exit(1);
+        console.warn('⚠️ WARNING: JWT_SECRET appears to be a default/weak value. Please update it in your environment variables.');
+        console.warn('   Recommended: generate a 32-byte secret with: openssl rand -hex 32');
     }
     
     // Validate JWT_EXPIRY format

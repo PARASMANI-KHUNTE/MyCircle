@@ -15,6 +15,8 @@
     "test": "jest",
     "build:android:release": "cd android && ./gradlew assembleRelease",
     "build:android:debug": "cd android && ./gradlew assembleDebug",
+    "bundle:android": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output dist/bundles/index.android.bundle --assets-dest dist/bundles/android",
+    "bundle:ios": "react-native bundle --platform ios --dev false --entry-file index.js --bundle-output dist/bundles/main.jsbundle --assets-dest dist/bundles/ios",
     "codepush:android:staging": "appcenter codepush release-react -a YourOrg/MyCircleMobileBare -d Staging",
     "codepush:android:production": "appcenter codepush release-react -a YourOrg/MyCircleMobileBare -d Production",
     "codepush:ios:staging": "appcenter codepush release-react -a YourOrg/MyCircleMobileBare-iOS -d Staging",

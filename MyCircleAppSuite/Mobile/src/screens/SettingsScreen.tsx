@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { Bell, ChevronRight, Moon, Sun, Trash2, UserX } from 'lucide-react-native';
+import { Bell, ChevronRight, Moon, RefreshCw, Sun, Trash2, UserX } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import AppScreen from '../components/layout/AppScreen';
@@ -8,11 +8,14 @@ import ScreenHeader from '../components/layout/ScreenHeader';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { checkForAppUpdate, UpdateStatusState } from '../services/updateService';
 
 const SettingsScreen = ({ navigation }: any) => {
     const { logout } = useAuth() as any;
     const { theme, toggleTheme, colors } = useTheme();
     const [notifications, setNotifications] = useState({ push: true });
+    const [updateStatus, setUpdateStatus] = useState<string>('');
+    const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
         title: string;
@@ -28,6 +31,26 @@ const SettingsScreen = ({ navigation }: any) => {
         onConfirm: () => { },
         isDestructive: false,
     });
+
+    const handleCheckUpdate = async () => {
+        setIsCheckingUpdate(true);
+        setUpdateStatus('Checking for updates...');
+        const result = await checkForAppUpdate({
+            isManual: true,
+            onStatusChange: (state: UpdateStatusState) => {
+                setUpdateStatus(state.statusText);
+            },
+        });
+        setIsCheckingUpdate(false);
+        setAlertConfig({
+            visible: true,
+            title: result.success ? 'App Updates' : 'Update Check',
+            message: result.message,
+            confirmText: 'OK',
+            isDestructive: false,
+            onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+        });
+    };
 
     const handleDeleteAccount = () => {
         setAlertConfig({
@@ -130,6 +153,19 @@ const SettingsScreen = ({ navigation }: any) => {
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(400).duration(800).springify()} style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Updates</Text>
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(450).duration(800).springify()}>
+                    <View style={[styles.group, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <SettingItem
+                            icon={RefreshCw}
+                            label={isCheckingUpdate ? 'Checking for updates...' : (updateStatus || 'Check for Updates')}
+                            onPress={handleCheckUpdate}
+                        />
+                    </View>
+                </Animated.View>
+
+                <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Privacy</Text>
                 </Animated.View>
                 <Animated.View entering={FadeInDown.delay(450).duration(800).springify()}>

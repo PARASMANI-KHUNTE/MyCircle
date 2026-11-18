@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, CheckCircle2, MessageCircle, Info, Trash2, Heart, BellOff } from 'lucide-react';
 import Button from '../components/ui/Button';
 import api from '../utils/api';
@@ -92,9 +91,7 @@ const Notifications = () => {
                 </div>
             ) : notifications.length === 0 ? (
                 /* Empty state */
-                <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <}}
                     className="flex flex-col items-center justify-center py-24 text-center"
                 >
                     <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mb-6">
@@ -104,9 +101,9 @@ const Notifications = () => {
                     <p className="text-sm text-foreground-muted max-w-xs">
                         You have no new notifications. When something happens, it'll appear here.
                     </p>
-                </motion.div>
+                </>
             ) : (
-                <AnimatePresence mode="popLayout">
+                <>
                     <div className="space-y-3">
                         {notifications.map((n) => {
                             const copy = getNotificationCopy(n);
@@ -114,13 +111,9 @@ const Notifications = () => {
                             const TypeIcon = config.icon;
 
                             return (
-                                <motion.div
+                                <
                                     key={n._id}
-                                    layout
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
-                                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                                    layout}}}}
                                     onClick={() => handleNotificationClick(n)}
                                     className={cn(
                                         'relative flex gap-4 p-5 rounded-2xl border cursor-pointer transition-all duration-200',
@@ -193,11 +186,11 @@ const Notifications = () => {
                                             </button>
                                         </div>
                                     </div>
-                                </motion.div>
+                                </>
                             );
                         })}
                     </div>
-                </AnimatePresence>
+                </>
             )}
         </div>
     );

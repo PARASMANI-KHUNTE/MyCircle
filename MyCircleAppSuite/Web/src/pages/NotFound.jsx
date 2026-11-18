@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Compass, ArrowLeft, Home } from 'lucide-react';
 import Button from '../components/ui/Button';
 
@@ -17,21 +16,16 @@ const NotFound = () => {
                     404
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div
-                        animate={{ y: [0, -8, 0] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                    <}}
                         className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center shadow-2xl"
                         style={{ boxShadow: '0 16px 48px rgb(245 158 11 / 0.35)' }}
                     >
                         <Compass className="text-primary-foreground w-11 h-11" />
-                    </motion.div>
+                    </>
                 </div>
             </div>
 
-            <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, duration: 0.4 }}
+            <}}}
             >
                 <h1 className="text-3xl sm:text-4xl font-bold font-display tracking-tight mb-3">
                     Lost in the Circle?
@@ -54,7 +48,7 @@ const NotFound = () => {
                         </Button>
                     </Link>
                 </div>
-            </motion.div>
+            </>
         </div>
     );
 };

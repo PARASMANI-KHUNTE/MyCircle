@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 import PostCard from '../components/ui/PostCard';
@@ -183,37 +182,26 @@ const Feed = () => {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-4">
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
+                            <}}
                                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold"
                             >
                                 <Sparkles className="w-4 h-4" />
                                 <span>Discover Local</span>
-                            </motion.div>
-                            <motion.h1
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
+                            </>
+                            <}}}
                                 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight"
                             >
                                 Your <span className="gradient-text">Feed</span>
-                            </motion.h1>
-                            <motion.p
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
+                            </>
+                            <}}}
                                 className="text-lg text-foreground-muted max-w-xl"
                             >
                                 Explore trusted services, unique items, and connect with your local community.
-                            </motion.p>
+                            </>
                         </div>
 
                         {/* View Toggle */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.3 }}
+                        <}}}
                             className="flex items-center gap-2 p-1 bg-card rounded-xl border border-card-border"
                         >
                             <button
@@ -234,7 +222,7 @@ const Feed = () => {
                             >
                                 <MapIcon className="w-4 h-4" />
                             </button>
-                        </motion.div>
+                        </>
                     </div>
                 </div>
             </div>
@@ -282,12 +270,9 @@ const Feed = () => {
                     </div>
 
                     {/* Expanded Filters */}
-                    <AnimatePresence>
+                    <>
                         {isFilterExpanded && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
+                            <}}}
                                 className="overflow-hidden"
                             >
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
@@ -326,9 +311,9 @@ const Feed = () => {
                                         </button>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </>
                         )}
-                    </AnimatePresence>
+                    </>
 
                     {/* Category Tabs */}
                     <div className="flex items-center gap-2 overflow-x-auto pb-2 mt-4 -mx-4 px-4 scrollbar-hide">
@@ -360,9 +345,7 @@ const Feed = () => {
                         ))}
                     </div>
                 ) : viewMode === 'map' ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                    <}}
                         className="relative z-10 rounded-2xl overflow-hidden border border-card-border shadow-xl h-[350px] sm:h-[450px] md:h-[600px]"
                     >
                         <MapContainer
@@ -449,22 +432,17 @@ const Feed = () => {
                                 </div>
                             </div>
                         )}
-                    </motion.div>
+                    </>
                 ) : (
-                    <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        variants={{
-                            hidden: { opacity: 0 },
+                    <,
                             visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
                         }}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
                         {filteredPosts.length > 0 ? (
                             filteredPosts.map((post, index) => (
-                                <motion.div
-                                    key={post._id}
-                                    variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                                <
+                                    key={post._id}, visible: { opacity: 1, y: 0 } }}
                                     onClick={() => handlePostClick(post._id)}
                                     className="cursor-pointer"
                                 >
@@ -477,7 +455,7 @@ const Feed = () => {
                                         onRequestContact={(postId, e) => handleContactRequest(e, post)}
                                         index={index}
                                     />
-                                </motion.div>
+                                </>
                             ))
                         ) : (
                             <EmptyState
@@ -486,7 +464,7 @@ const Feed = () => {
                                 showCreate
                             />
                         )}
-                    </motion.div>
+                    </>
                 )}
             </div>
         </div>

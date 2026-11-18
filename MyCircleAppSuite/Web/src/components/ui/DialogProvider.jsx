@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, HelpCircle, X } from 'lucide-react';
 import Button from './Button';
 import { DialogProvider as DialogContextProvider, useDialog } from '../../hooks/useDialog';
@@ -28,21 +27,15 @@ const DialogUI = () => {
     };
 
     return (
-        <AnimatePresence>
+        <>
             {isOpen && (
                 <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <}}}
                         onClick={handleCancel}
                         className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9998]"
                     />
                     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        <}}}
                             className="glass-panel w-full max-w-md p-10 relative shadow-2xl"
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -81,11 +74,11 @@ const DialogUI = () => {
                                     {confirmText}
                                 </Button>
                             </div>
-                        </motion.div>
+                        </>
                     </div>
                 </>
             )}
-        </AnimatePresence>
+        </>
     );
 };
 

@@ -5,7 +5,6 @@ import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { AlertCircle, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -300,13 +299,10 @@ const CreatePost = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="max-w-lg mx-auto px-3 sm:px-4 py-6">
-                <AnimatePresence mode="wait">
+                <>
                     {step === 1 && (
-                        <motion.div
-                            key="step1"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
+                        <
+                            key="step1"}}}
                             className="space-y-4"
                         >
                         <div className="text-center py-8">
@@ -341,15 +337,12 @@ const CreatePost = () => {
                                     </button>
                                 ))}
                             </div>
-                        </motion.div>
+                        </>
                     )}
 
                     {step === 2 && (
-                        <motion.div
-                            key="step2"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
+                        <
+                            key="step2"}}}
                             className="space-y-4"
                         >
                             {formData.type === 'job' && (
@@ -515,15 +508,12 @@ const CreatePost = () => {
                                 <AlertTriangle className={cn("w-4 h-4", formData.isUrgent ? "text-warning" : "text-foreground-muted")} />
                                 <span className="text-sm font-medium">Mark as urgent</span>
                             </label>
-                        </motion.div>
+                        </>
                     )}
 
                     {step === 3 && (
-                        <motion.div
-                            key="step3"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
+                        <
+                            key="step3"}}}
                             className="space-y-4"
                         >
                             <div className="text-center py-4">
@@ -638,15 +628,12 @@ const CreatePost = () => {
                                     )}
                                 </div>
                             )}
-                        </motion.div>
+                        </>
                     )}
 
                     {step === 4 && (
-                        <motion.div
-                            key="step4"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
+                        <
+                            key="step4"}}}
                             className="space-y-4"
                         >
                             <div className="text-center py-4">
@@ -695,9 +682,9 @@ const CreatePost = () => {
                                 </div>
                             )}
 
-                        </motion.div>
+                        </>
                     )}
-                </AnimatePresence>
+                </>
 
                 {error && (
                     <div className="mt-4 p-4 rounded-xl bg-error/10 border border-error/20 flex items-center gap-2">

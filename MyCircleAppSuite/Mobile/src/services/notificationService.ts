@@ -1,18 +1,35 @@
-import messaging, { AuthorizationStatus } from '@react-native-firebase/messaging';
+import {
+    getMessaging,
+    requestPermission,
+    getToken,
+    onMessage,
+    onNotificationOpenedApp,
+    getInitialNotification,
+    AuthorizationStatus,
+    type FirebaseMessagingTypes,
+} from '@react-native-firebase/messaging';
+import { getApp, getApps } from '@react-native-firebase/app';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Alert } from '../utils/alert';
 
-const isFirebaseMessagingConfigured = () => {
-    if (Platform.OS === 'ios') {
-        return true;
+const getMessagingInstance = () => {
+    try {
+        if (getApps().length === 0) {
+            return null;
+        }
+        return getMessaging(getApp());
+    } catch {
+        return null;
     }
+};
 
-    // Android Firebase Messaging requires google-services.json at build time.
-    return typeof messaging === 'function';
+export const isFirebaseMessagingConfigured = () => {
+    return !!getMessagingInstance();
 };
 
 export const requestUserPermission = async () => {
-    if (!isFirebaseMessagingConfigured()) {
+    const messaging = getMessagingInstance();
+    if (!messaging) {
         console.warn('Firebase messaging is not configured for this build.');
         return false;
     }
@@ -25,7 +42,7 @@ export const requestUserPermission = async () => {
         }
     }
 
-    const authStatus = await messaging().requestPermission();
+    const authStatus = await requestPermission(messaging);
     const enabled =
         authStatus === AuthorizationStatus.AUTHORIZED ||
         authStatus === AuthorizationStatus.PROVISIONAL;
@@ -38,12 +55,13 @@ export const requestUserPermission = async () => {
 };
 
 export const getFCMToken = async () => {
-    if (!isFirebaseMessagingConfigured()) {
+    const messaging = getMessagingInstance();
+    if (!messaging) {
         return null;
     }
 
     try {
-        const token = await messaging().getToken();
+        const token = await getToken(messaging);
         console.log('FCM Token:', token);
         return token;
     } catch (error) {
@@ -53,13 +71,13 @@ export const getFCMToken = async () => {
 };
 
 export const notificationListener = () => {
-    if (!isFirebaseMessagingConfigured()) {
+    const messaging = getMessagingInstance();
+    if (!messaging) {
         return () => undefined;
     }
 
     // Assume a message-notification contains a "type" property in data payload of screen to open
-
-    const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {
+    const unsubscribeOpened = onNotificationOpenedApp(messaging, (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
         console.log(
             'Notification caused app to open from background state:',
             remoteMessage.notification,
@@ -68,7 +86,7 @@ export const notificationListener = () => {
     });
 
     // Check whether an initial notification is available
-    messaging().getInitialNotification().then(remoteMessage => {
+    getInitialNotification(messaging).then((remoteMessage: FirebaseMessagingTypes.RemoteMessage | null) => {
         if (remoteMessage) {
             console.log(
                 'Notification caused app to open from quit state:',
@@ -78,7 +96,7 @@ export const notificationListener = () => {
     });
 
     // Foreground messages
-    const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
+    const unsubscribeForeground = onMessage(messaging, async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
         Alert.alert(
             remoteMessage.notification?.title || 'New Notification',
             remoteMessage.notification?.body || ''
@@ -90,6 +108,7 @@ export const notificationListener = () => {
         unsubscribeForeground();
     };
 };
+
 const initialize = async () => {
     const hasPermission = await requestUserPermission();
     if (hasPermission) {
@@ -98,6 +117,7 @@ const initialize = async () => {
 };
 
 export default {
+    isFirebaseMessagingConfigured,
     requestUserPermission,
     getFCMToken,
     notificationListener,

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, User as UserIcon, MessageSquare } from 'lucide-react';
 import api from '../../utils/api';
 import { getAvatarUrl } from '../../utils/avatar';
@@ -35,20 +34,14 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
     if (!isOpen) return null;
 
     return (
-        <AnimatePresence>
+        <>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                <}}}
                     onClick={onClose}
                     className="absolute inset-0 bg-background/60 backdrop-blur-sm"
                 />
 
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                <}}}
                     className="relative w-full max-w-md glass-panel shadow-2xl overflow-hidden"
                 >
                     {/* Header */}
@@ -124,9 +117,9 @@ const NewMessageModal = ({ isOpen, onClose, onSelectUser }) => {
                             Cancel
                         </Button>
                     </div>
-                </motion.div>
+                </>
             </div>
-        </AnimatePresence>
+        </>
     );
 };
 

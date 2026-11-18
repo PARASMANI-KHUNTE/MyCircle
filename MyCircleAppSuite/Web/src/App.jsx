@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { MotionConfig } from 'framer-motion';
 import Layout from './components/layout/Layout';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
@@ -119,15 +118,13 @@ function AuthRoutes() {
 
 function App() {
   return (
-    <MotionConfig reducedMotion="always">
-      <ThemeProvider>
-        <ToastProvider>
-          <ErrorBoundary>
-            <AppContent />
-          </ErrorBoundary>
-        </ToastProvider>
-      </ThemeProvider>
-    </MotionConfig>
+    <ThemeProvider>
+      <ToastProvider>
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import api from '../utils/api';
-import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../components/ui/Button';
 import PostCard from '../components/ui/PostCard';
 import { useAuth } from '../context/AuthContext';
@@ -345,9 +344,7 @@ const PostDetails = () => {
     const timeRemaining = getTimeRemaining();
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+        <}}
             className="container mx-auto px-3 sm:px-6 py-16 sm:py-24 min-h-screen text-foreground"
         >
             <button
@@ -379,9 +376,7 @@ const PostDetails = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
                 <div className="lg:col-span-2">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                    <}}
                         className="relative rounded-3xl overflow-hidden mb-8 shadow-2xl"
                     >
                         {post.images && post.images.length > 0 ? (
@@ -400,7 +395,7 @@ const PostDetails = () => {
                                 Expired
                             </div>
                         )}
-                    </motion.div>
+                    </>
 
                     <div className="mb-6">
                         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-text-heading mb-4 leading-tight">
@@ -851,7 +846,7 @@ const PostDetails = () => {
                     </div>
                 </aside>
             </div>
-        </motion.div>
+        </>
     );
 };
 

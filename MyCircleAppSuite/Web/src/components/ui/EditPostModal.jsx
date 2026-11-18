@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Package, Tag, Repeat } from 'lucide-react';
 import Button from './Button';
 import api from '../../utils/api';
@@ -36,12 +35,9 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
     if (!isOpen) return null;
 
     return (
-        <AnimatePresence>
+        <>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                <}}}
                     className="glass-panel w-full max-w-lg shadow-2xl overflow-hidden"
                 >
                     <div className="flex items-center justify-between p-6 border-b border-card-border bg-hover-bg/30">
@@ -92,8 +88,7 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
                             <div className="flex flex-col justify-end pb-3 pl-2">
                                 <label className="flex items-center gap-2 cursor-pointer group">
                                     <div className={`w-10 h-6 rounded-full transition-colors relative ${formData.acceptsBarter ? 'bg-primary' : 'bg-card/20 border border-card-border'}`}>
-                                        <motion.div
-                                            animate={{ x: formData.acceptsBarter ? 18 : 2 }}
+                                        <}
                                             className="absolute top-1 left-0 w-4 h-4 bg-foreground rounded-full shadow-sm"
                                         />
                                     </div>
@@ -127,9 +122,9 @@ const EditPostModal = ({ post, isOpen, onClose, onUpdate }) => {
                             </Button>
                         </div>
                     </form>
-                </motion.div>
+                </>
             </div>
-        </AnimatePresence>
+        </>
     );
 };
 

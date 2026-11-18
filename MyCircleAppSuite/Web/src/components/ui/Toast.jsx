@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X, MessageCircle, Heart, UserPlus } from 'lucide-react';
 
 const ToastContext = createContext(null);
@@ -41,11 +40,11 @@ export const ToastProvider = ({ children }) => {
             {children}
             {/* Keep toast layer above navbars, drawers, and fixed overlays */}
             <div className="fixed top-20 right-3 left-3 md:top-4 md:right-4 md:left-auto z-[1300] flex flex-col gap-2.5 pointer-events-none w-auto md:w-full max-w-sm">
-                <AnimatePresence mode="popLayout">
+                <>
                     {toasts.map(({ id, message, type }) => (
                         <ToastItem key={id} message={message} type={type} onClose={() => removeToast(id)} />
                     ))}
-                </AnimatePresence>
+                </>
             </div>
         </ToastContext.Provider>
     );
@@ -101,12 +100,8 @@ const ToastItem = ({ message, type, onClose }) => {
     const Icon = config.icon;
 
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, x: 64, scale: 0.92 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 64, scale: 0.92 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        <
+            layout}}}}
             className={`relative overflow-hidden rounded-2xl border pointer-events-auto ${config.containerClass}`}
             style={{ boxShadow: 'var(--shadow-lg)' }}
         >
@@ -130,6 +125,6 @@ const ToastItem = ({ message, type, onClose }) => {
             >
                 <X className="w-4 h-4" />
             </button>
-        </motion.div>
+        </>
     );
 };

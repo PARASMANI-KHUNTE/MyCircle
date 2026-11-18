@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, PlusSquare, Bell, MessageCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useSocket } from '../../context/SocketContext';
 import { useNotifications } from '../../context/NotificationContext';
 import api from '../../utils/api';
@@ -100,14 +99,12 @@ const BottomNav = () => {
                         >
                             {/* Highlight pill for Create */}
                             {item.highlight ? (
-                                <motion.div
-                                    whileHover={{ scale: 1.08 }}
-                                    whileTap={{ scale: 0.93 }}
+                                <}}
                                     className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center -translate-y-4 shadow-lg"
                                     style={{ boxShadow: '0 4px 20px rgb(245 158 11 / 0.4)' }}
                                 >
                                     <Icon className="w-6 h-6 text-primary-foreground" />
-                                </motion.div>
+                                </>
                             ) : (
                                 <>
                                     <div className="relative">
@@ -132,10 +129,9 @@ const BottomNav = () => {
 
                                     {/* Active indicator dot */}
                                     {isActive && (
-                                        <motion.div
+                                        <
                                             layoutId="bottom-nav-dot"
-                                            className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary"
-                                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                                            className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary"}
                                         />
                                     )}
                                 </>

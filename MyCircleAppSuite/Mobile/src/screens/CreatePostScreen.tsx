@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,8 +48,73 @@ const CreatePostScreen = ({ navigation }: any) => {
         message: '',
         confirmText: 'Confirm',
         onConfirm: () => { },
+        onCancel: () => { },
         isDestructive: false,
     });
+    const isSubmittingRef = useRef(false);
+
+    const hasUnsavedChanges = Boolean(
+        title.trim() ||
+        description.trim() ||
+        subType ||
+        location ||
+        price ||
+        budgetMin ||
+        budgetMax ||
+        images.length > 0 ||
+        step > 1
+    );
+
+    const resetForm = useCallback(() => {
+        setStep(1);
+        setTitle('');
+        setDescription('');
+        setType('job');
+        setSubType('');
+        setLocation('');
+        setCoordinates(null);
+        setPrice('');
+        setBudgetMin('');
+        setBudgetMax('');
+        setAvailability('');
+        setAcceptsBarter(false);
+        setDuration(40320);
+        setIsUrgent(false);
+        setExchangePreference('money');
+        setImages([]);
+    }, []);
+
+    const promptDiscardConfirmation = useCallback((onConfirmDiscard: () => void) => {
+        setAlertConfig({
+            visible: true,
+            title: 'Discard Post?',
+            message: 'You have unsaved changes. Are you sure you want to discard this post?',
+            confirmText: 'Discard',
+            isDestructive: true,
+            onConfirm: () => {
+                resetForm();
+                setAlertConfig((p: any) => ({ ...p, visible: false }));
+                onConfirmDiscard();
+            },
+            onCancel: () => {
+                setAlertConfig((p: any) => ({ ...p, visible: false }));
+            }
+        });
+    }, [resetForm]);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+            if (!hasUnsavedChanges || isSubmittingRef.current) {
+                return;
+            }
+            e.preventDefault();
+            promptDiscardConfirmation(() => {
+                navigation.dispatch(e.data.action);
+            });
+        });
+
+        return unsubscribe;
+    }, [navigation, hasUnsavedChanges, promptDiscardConfirmation]);
 
     const categories = [
         { id: 'job', label: 'Job Post', sub: 'Hire help for tasks', icon: Briefcase },
@@ -127,7 +192,10 @@ const CreatePostScreen = ({ navigation }: any) => {
 
             await api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
+            isSubmittingRef.current = true;
+            resetForm();
             showAlert('Success', 'Post created successfully!', () => {
+                isSubmittingRef.current = false;
                 navigation.navigate('Feed');
             });
         } catch (error: any) {
@@ -388,8 +456,14 @@ const CreatePostScreen = ({ navigation }: any) => {
     };
 
     const goBack = () => {
-        if (step > 1) setStep(step - 1);
-        else navigation.goBack();
+        if (step > 1) {
+            setStep(step - 1);
+        } else if (hasUnsavedChanges) {
+            promptDiscardConfirmation(() => navigation.goBack());
+        } else {
+            resetForm();
+            navigation.goBack();
+        }
     };
 
     return (
@@ -405,7 +479,19 @@ const CreatePostScreen = ({ navigation }: any) => {
 
             {/* Header */}
             <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.header}>
-                <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={[styles.headerBackButton, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
+                <TouchableOpacity
+                    onPress={() => {
+                        if (step > 1) {
+                            setStep(step - 1);
+                        } else if (hasUnsavedChanges) {
+                            promptDiscardConfirmation(() => navigation.goBack());
+                        } else {
+                            resetForm();
+                            navigation.goBack();
+                        }
+                    }}
+                    style={[styles.headerBackButton, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}
+                >
                     <ArrowLeft size={20} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitleMain, { color: colors.text }]}>New Post</Text>
@@ -482,7 +568,21 @@ const CreatePostScreen = ({ navigation }: any) => {
                 </View>
             </Modal>
 
-            <ThemedAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} confirmText={alertConfig.confirmText} onCancel={() => setAlertConfig({ ...alertConfig, visible: false })} onConfirm={alertConfig.onConfirm} />
+            <ThemedAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText}
+                isDestructive={alertConfig.isDestructive}
+                onCancel={() => {
+                    if (alertConfig.onCancel) {
+                        alertConfig.onCancel();
+                    } else {
+                        setAlertConfig((p: any) => ({ ...p, visible: false }));
+                    }
+                }}
+                onConfirm={alertConfig.onConfirm}
+            />
         </SafeAreaView>
     );
 };

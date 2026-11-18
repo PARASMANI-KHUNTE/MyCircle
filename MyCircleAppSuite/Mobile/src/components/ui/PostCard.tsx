@@ -303,11 +303,11 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
                             <Image source={{ uri: getAvatarUrl(post.user) }} style={styles.avatar} />
                             <View>
                                 <Text style={styles.userName}>{post.user.displayName}</Text>
-                                {post.user.reputation && (
+                                {post.user && (
                                     <View style={{ marginTop: 2 }}>
                                         <TrustBadge
-                                            score={post.user.reputation.trustScore}
-                                            isVerified={post.user.reputation.isVerified}
+                                            score={post.user.reputation?.trustScore ?? 50}
+                                            isVerified={Boolean(post.user.reputation?.isVerified)}
                                             size="small"
                                         />
                                     </View>

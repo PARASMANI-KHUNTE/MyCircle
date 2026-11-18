@@ -65,16 +65,16 @@ const ProfileScreen = ({ navigation, route }: any) => {
             if (isOwnProfile) {
                 const statsRes = await api.get('/user/stats');
                 setStats({
-                    posts: statsRes.data.stats.totalPosts || 0,
-                    requests: statsRes.data.stats.receivedRequests || 0,
-                    rating: statsRes.data.rating || 5.0
+                    posts: statsRes.data.stats?.totalPosts || 0,
+                    requests: statsRes.data.stats?.receivedRequests || 0,
+                    rating: typeof statsRes.data.rating === 'number' ? statsRes.data.rating : (Number(res.data?.rating) || 0)
                 });
                 fetchMyPosts();
             } else {
                 setStats({
                     posts: res.data.postsCount || 0,
                     requests: res.data.requestsCount || 0,
-                    rating: res.data.rating || 5.0
+                    rating: typeof res.data.rating === 'number' ? res.data.rating : 0
                 });
             }
         } catch (error) {
@@ -356,8 +356,8 @@ const ProfileScreen = ({ navigation, route }: any) => {
                         <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
                         <View style={styles.trustBadgeContainer}>
                             <TrustBadge
-                                score={user.reputation?.trustScore || 50}
-                                isVerified={user.reputation?.isVerified}
+                                score={user.reputation?.trustScore ?? 50}
+                                isVerified={Boolean(user.reputation?.isVerified)}
                                 showLabel
                             />
                         </View>
@@ -376,7 +376,9 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             <Text style={[styles.statLabel, { color: '#3b82f6' }]}>REQUESTS</Text>
                         </View>
                         <View style={[styles.statTile, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
-                            <Text style={[styles.statValue, { color: '#22c55e' }]}>{stats.rating.toFixed(1)}</Text>
+                            <Text style={[styles.statValue, { color: '#22c55e' }]}>
+                                {stats.rating > 0 ? stats.rating.toFixed(1) : (user?.reviews > 0 ? '0.0' : '5.0')}
+                            </Text>
                             <Text style={[styles.statLabel, { color: '#22c55e' }]}>RATING</Text>
                         </View>
                     </View>

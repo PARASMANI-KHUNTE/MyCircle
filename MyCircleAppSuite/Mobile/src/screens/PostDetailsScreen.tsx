@@ -285,7 +285,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                 <Image source={{ uri: getAvatarUrl(post.user) }} style={styles.detailsAvatar} />
                                 <View className="flex-1 ml-4">
                                     <Text className="text-white font-bold text-lg">{post.user?.displayName}</Text>
-                                    <TrustBadge score={post.user?.reputation?.trustScore || 85} isVerified={true} size="small" />
+                                    <TrustBadge score={post.user?.reputation?.trustScore ?? 50} isVerified={Boolean(post.user?.reputation?.isVerified)} size="small" />
                                 </View>
                                 <ChevronRight size={20} color="#71717a" />
                             </TouchableOpacity>

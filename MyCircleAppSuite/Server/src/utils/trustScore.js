@@ -31,6 +31,9 @@ const applyNewRating = async (user, score) => {
 
     user.reviews = previousReviews + 1;
     user.rating = Number((totalScore / user.reviews).toFixed(2));
+    if (!user.reputation) {
+        user.reputation = {};
+    }
     user.reputation.reviewsCount = user.reviews;
     user.reputation.trustScore = calculateTrustScore(user);
 
@@ -38,6 +41,9 @@ const applyNewRating = async (user, score) => {
 };
 
 const refreshTrustScore = async (user) => {
+    if (!user.reputation) {
+        user.reputation = {};
+    }
     user.reputation.trustScore = calculateTrustScore(user);
     await user.save();
 };

@@ -1,10 +1,12 @@
 import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
+import Toast from 'react-native-toast-message';
 import { API_URL, DEV_API_URL } from '@env';
 
 type UnauthorizedHandler = () => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 let lastUnauthorizedAt = 0;
+let lastToastErrorAt = 0;
 
 export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null) => {
     unauthorizedHandler = handler;
@@ -79,6 +81,25 @@ api.interceptors.response.use(
                     url: error.config?.url,
                     data: error.response.data
                 });
+            } else if (error.response.status >= 500) {
+                console.error('API Error Response:', {
+                    status: error.response.status,
+                    url: error.config?.url,
+                    data: error.response.data
+                });
+                const now = Date.now();
+                if (now - lastToastErrorAt > 5000) {
+                    lastToastErrorAt = now;
+                    try {
+                        Toast.show({
+                            type: 'error',
+                            text1: 'Server Error',
+                            text2: 'Something went wrong on our server. Please try again shortly.',
+                            position: 'top',
+                            visibilityTime: 4000,
+                        });
+                    } catch {}
+                }
             } else {
                 console.error('API Error Response:', {
                     status: error.response.status,
@@ -87,8 +108,21 @@ api.interceptors.response.use(
                 });
             }
         } else if (error.request) {
-            // Request made but no response
+            // Request made but no response (network timeout or offline)
             console.error('API No Response:', error.message);
+            const now = Date.now();
+            if (now - lastToastErrorAt > 5000) {
+                lastToastErrorAt = now;
+                try {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Connection Error',
+                        text2: 'Unable to reach the server. Please check your internet connection.',
+                        position: 'top',
+                        visibilityTime: 4000,
+                    });
+                } catch {}
+            }
         } else {
             // Error setting up request
             console.error('API Request Setup Error:', error.message);

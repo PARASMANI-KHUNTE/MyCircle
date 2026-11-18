@@ -16,6 +16,7 @@ import StartupAnimation from './src/components/animations/StartupAnimation';
 import { getNavigationTheme } from './src/theme/theme';
 import { RootStackParamList } from './src/navigation/types';
 import CodePush from 'react-native-code-push';
+import ErrorBoundary from './src/components/ui/ErrorBoundary';
 
 // Screen Placeholders
 import LandingScreen from './src/screens/LandingScreen';
@@ -104,31 +105,35 @@ const MainContent = () => {
     }
 
     return (
-        <NavigationContainer ref={navigationRef} theme={getNavigationTheme(appTheme)}>
-            <RootNavigator />
-        </NavigationContainer>
+        <ErrorBoundary>
+            <NavigationContainer ref={navigationRef} theme={getNavigationTheme(appTheme)}>
+                <RootNavigator />
+            </NavigationContainer>
+        </ErrorBoundary>
     );
 };
 
 const App = () => {
     return (
-        <SafeAreaProvider>
-            <ThemeProvider>
-                <QueryClientProvider client={queryClient}>
-                    <AlertProvider>
-                        <ToastProvider>
-                            <AuthProvider>
-                                <SocketProvider>
-                                    <NotificationProvider>
-                                        <MainContent />
-                                    </NotificationProvider>
-                                </SocketProvider>
-                            </AuthProvider>
-                        </ToastProvider>
-                    </AlertProvider>
-                </QueryClientProvider>
-            </ThemeProvider>
-        </SafeAreaProvider>
+        <ErrorBoundary>
+            <SafeAreaProvider>
+                <ThemeProvider>
+                    <QueryClientProvider client={queryClient}>
+                        <AlertProvider>
+                            <ToastProvider>
+                                <AuthProvider>
+                                    <SocketProvider>
+                                        <NotificationProvider>
+                                            <MainContent />
+                                        </NotificationProvider>
+                                    </SocketProvider>
+                                </AuthProvider>
+                            </ToastProvider>
+                        </AlertProvider>
+                    </QueryClientProvider>
+                </ThemeProvider>
+            </SafeAreaProvider>
+        </ErrorBoundary>
     );
 };
 

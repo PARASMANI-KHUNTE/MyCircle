@@ -102,3 +102,7 @@ android/gradlew_help_check.txt
 # Firebase
 android/app/google-services.json
 ios/GoogleService-Info.plist
+
+# Bundles & Build outputs
+dist/
+*.apk

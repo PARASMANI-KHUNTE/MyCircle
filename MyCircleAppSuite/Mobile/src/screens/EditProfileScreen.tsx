@@ -300,8 +300,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#0a0a0a',
     },
     header: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -350,11 +351,11 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
     },
     avatarSection: {
         alignItems: 'center',
-        marginVertical: 40,
+        marginVertical: 24,
     },
     avatarWrapper: {
         position: 'relative',

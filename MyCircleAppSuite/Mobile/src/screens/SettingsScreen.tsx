@@ -219,7 +219,7 @@ const SettingsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
     },
     scrollContent: {
         paddingBottom: 40,

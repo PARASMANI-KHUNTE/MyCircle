@@ -976,8 +976,8 @@ const styles = StyleSheet.create({
     },
     headerSection: {
         paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 8,
+        paddingTop: 12,
+        paddingBottom: 4,
     },
     headerTitle: {
         fontSize: 32,
@@ -1021,8 +1021,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     searchSection: {
-        paddingHorizontal: 20,
-        marginBottom: 20,
+        paddingHorizontal: 16,
+        marginBottom: 12,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -1080,17 +1080,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContent: {
-        paddingHorizontal: 12,
-        paddingTop: 8,
+        paddingHorizontal: 16,
+        paddingTop: 4,
+        paddingBottom: 110,
     },
     gridItemWrapper: {
         flex: 1,
+        marginBottom: 12,
     },
     emptyContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 80,
+        paddingTop: 60,
+        paddingBottom: 110,
         paddingHorizontal: 20,
     },
     emptyIconContainer: {

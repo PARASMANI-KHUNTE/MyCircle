@@ -410,16 +410,16 @@ const styles = StyleSheet.create({
     innerContainer: {
         flex: 1,
         paddingHorizontal: 16,
-        paddingTop: 16,
+        paddingTop: 12,
     },
     headerTitle: {
         fontSize: 30,
         fontWeight: 'bold',
         color: '#ffffff',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     tabsWrapper: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     tabsContainer: {
         flexDirection: 'row',
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
         color: '#ffffff',
     },
     listContent: {
-        paddingBottom: 20,
+        paddingBottom: 110,
     },
     requestCard: {
         marginBottom: 12,

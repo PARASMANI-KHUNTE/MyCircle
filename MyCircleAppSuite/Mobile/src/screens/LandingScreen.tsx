@@ -1,23 +1,28 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image, Dimensions, StyleSheet, StatusBar, ScrollView } from 'react-native';
-import { Alert } from '../utils/alert';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
 import { GOOGLE_WEB_CLIENT_ID } from '@env';
-import Animated, {
-    useSharedValue,
-    FadeInDown,
-    FadeInUp
-} from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, Sparkles, Users, Zap } from 'lucide-react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { ArrowRight, ShieldCheck, ShoppingBag, Sparkles, Zap } from 'lucide-react-native';
 
-const { width, height } = Dimensions.get('window');
+import AppScreen from '../components/layout/AppScreen';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import api from '../services/api';
+import { Alert } from '../utils/alert';
 
 const LandingScreen = ({ navigation }: any) => {
+    const { colors } = useTheme();
     const { login, isLoading: authLoading } = useAuth();
-    const scrollY = useSharedValue(0);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     useEffect(() => {
         GoogleSignin.configure({
@@ -28,427 +33,345 @@ const LandingScreen = ({ navigation }: any) => {
 
     const handleGoogleLogin = async () => {
         try {
+            setGoogleLoading(true);
             await GoogleSignin.hasPlayServices();
             try {
                 await GoogleSignin.signOut();
-            } catch (error) { }
+            } catch { }
             const googleResponse = await GoogleSignin.signIn();
-            const idToken = 'data' in googleResponse ? googleResponse.data?.idToken : null;
+            const idToken = 'data' in googleResponse ? googleResponse.data?.idToken : (googleResponse as any)?.idToken;
 
             if (!idToken) {
-                Alert.alert("Error", "No ID token received from Google.");
+                Alert.alert('Sign In Error', 'Could not obtain Google authentication credentials. Please try again.');
                 return;
             }
 
             const apiResponse = await api.post('/auth/google-mobile', { idToken });
 
-            if (apiResponse.data.token) {
+            if (apiResponse.data?.token) {
                 await login(apiResponse.data.token);
             } else {
-                Alert.alert("Login Failed", apiResponse.data.msg || "Could not verify account.");
+                Alert.alert('Login Failed', apiResponse.data?.msg || 'Could not verify your account.');
             }
         } catch (error: any) {
-            if (error.code !== statusCodes.SIGN_IN_CANCELLED) {
+            if (error?.code !== statusCodes.SIGN_IN_CANCELLED) {
                 console.error('Google Sign-In Error:', error);
-                Alert.alert("Sign In Error", error);
+                Alert.alert('Sign In Error', error);
             }
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
     if (authLoading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#af25f4" />
-            </View>
+            <AppScreen withBackground>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </AppScreen>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" />
-
-            {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />
-            </View>
-
-            {/* Subtle Grid Pattern */}
-            <View style={styles.gridPattern}>
-                {[...Array(15)].map((_, i) => (
-                    <View
-                        key={i}
-                        style={[
-                            styles.gridLine,
-                            {
-                                left: (i % 5) * (width / 5),
-                                top: Math.floor(i / 5) * (height / 3),
-                                width: 1,
-                                height: height / 3,
-                            }
-                        ]}
-                    />
-                ))}
-            </View>
-
+        <AppScreen withBackground edges={['top', 'bottom']}>
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
-                onScroll={(event) => {
-                    scrollY.value = event.nativeEvent.contentOffset.y;
-                }}
-                scrollEventThrottle={16}
             >
-                {/* Hero Section */}
-                <View style={styles.heroSection}>
-                    <Animated.View
-                        entering={FadeInDown.delay(200).duration(800).springify()}
-                        style={styles.logoContainer}
-                    >
-                        <View style={styles.logoGlow}>
-                            <View style={styles.logoCircle}>
-                                <Image
-                                    source={require('../assets/logo.png')}
-                                    style={styles.logoImage}
-                                    resizeMode="contain"
-                                />
-                            </View>
+                {/* Hero Header */}
+                <Animated.View entering={FadeInDown.delay(100).duration(700).springify()} style={styles.heroSection}>
+                    <View style={[styles.logoWrapper, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <Image
+                            source={require('../assets/logo.png')}
+                            style={styles.logoImage}
+                            resizeMode="contain"
+                        />
+                    </View>
+
+                    <View style={[styles.tagPill, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <Sparkles size={13} color={colors.primary} style={styles.tagIcon} />
+                        <Text style={[styles.tagText, { color: colors.textSecondary }]}>Hyperlocal Community & Trade</Text>
+                    </View>
+
+                    <Text style={[styles.brandTitle, { color: colors.text }]}>
+                        MyCircle<Text style={{ color: colors.primary }}>.</Text>
+                    </Text>
+
+                    <Text style={[styles.tagline, { color: colors.textSecondary }]}>
+                        Connect with neighbors, trade & barter goods, discover local services, and grow trusted connections.
+                    </Text>
+                </Animated.View>
+
+                {/* Features Highlights */}
+                <Animated.View entering={FadeInDown.delay(250).duration(800).springify()} style={styles.featuresContainer}>
+                    <View style={[styles.featureCard, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <View style={[styles.featureIconContainer, { backgroundColor: colors.backdrop }]}>
+                            <ShoppingBag size={20} color={colors.primary} />
                         </View>
-                        
-                        {/* Floating Icons */}
-                        <Animated.View
-                            entering={FadeInDown.delay(600).duration(600).springify()}
-                            style={[styles.floatingIcon, { top: -6, right: -10 }]}
-                        >
-                            <Sparkles size={20} color="#af25f4" />
-                        </Animated.View>
-                        
-                        <Animated.View
-                            entering={FadeInDown.delay(800).duration(600).springify()}
-                            style={[styles.floatingIcon, { bottom: -6, left: -10 }]}
-                        >
-                            <Zap size={18} color="#00f5ff" />
-                        </Animated.View>
-                    </Animated.View>
-
-                    <Animated.View
-                        entering={FadeInUp.delay(400).duration(800).springify()}
-                        style={styles.titleContainer}
-                    >
-                        <Text style={styles.mainTitle}>
-                            MyCircle<Text style={styles.titleDot}>.</Text>
-                        </Text>
-                        <Text style={styles.subtitle}>
-                            Where high-performance communities thrive
-                        </Text>
-                    </Animated.View>
-                </View>
-
-                {/* Features Section */}
-                <Animated.View
-                    entering={FadeInUp.delay(600).duration(800).springify()}
-                    style={styles.featuresSection}
-                >
-                    <View style={styles.featureCard}>
-                        <Users size={32} color="#af25f4" style={styles.featureIcon} />
-                        <Text style={styles.featureTitle}>Connect</Text>
-                        <Text style={styles.featureDescription}>
-                            Join exclusive communities of like-minded professionals
-                        </Text>
+                        <View style={styles.featureTextContainer}>
+                            <Text style={[styles.featureTitle, { color: colors.text }]}>Trade & Barter</Text>
+                            <Text style={[styles.featureSubtitle, { color: colors.textSecondary }]}>
+                                Buy, sell, or exchange items with neighbors easily
+                            </Text>
+                        </View>
                     </View>
 
-                    <View style={styles.featureCard}>
-                        <Sparkles size={32} color="#00f5ff" style={styles.featureIcon} />
-                        <Text style={styles.featureTitle}>Create</Text>
-                        <Text style={styles.featureDescription}>
-                            Share your ideas and build your personal brand
-                        </Text>
+                    <View style={[styles.featureCard, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <View style={[styles.featureIconContainer, { backgroundColor: colors.backdrop }]}>
+                            <Zap size={20} color={colors.accent || colors.primary} />
+                        </View>
+                        <View style={styles.featureTextContainer}>
+                            <Text style={[styles.featureTitle, { color: colors.text }]}>Services & Gigs</Text>
+                            <Text style={[styles.featureSubtitle, { color: colors.textSecondary }]}>
+                                Offer your skills or hire verified talent nearby
+                            </Text>
+                        </View>
                     </View>
 
-                    <View style={styles.featureCard}>
-                        <Zap size={32} color="#af25f4" style={styles.featureIcon} />
-                        <Text style={styles.featureTitle}>Thrive</Text>
-                        <Text style={styles.featureDescription}>
-                            Grow your network and unlock new opportunities
-                        </Text>
+                    <View style={[styles.featureCard, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <View style={[styles.featureIconContainer, { backgroundColor: colors.backdrop }]}>
+                            <ShieldCheck size={20} color={colors.success || '#10b981'} />
+                        </View>
+                        <View style={styles.featureTextContainer}>
+                            <Text style={[styles.featureTitle, { color: colors.text }]}>Verified & Safe</Text>
+                            <Text style={[styles.featureSubtitle, { color: colors.textSecondary }]}>
+                                Community trust scores and direct local messaging
+                            </Text>
+                        </View>
                     </View>
                 </Animated.View>
 
-                {/* Action Section */}
-                <Animated.View
-                    entering={FadeInUp.delay(800).duration(800).springify()}
-                    style={styles.actionSection}
-                >
-                    {/* Primary Action */}
+                {/* Actions / Buttons */}
+                <Animated.View entering={FadeInUp.delay(400).duration(800).springify()} style={styles.actionSection}>
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('Login')}
-                        activeOpacity={0.9}
-                        style={styles.primaryButton}
+                        onPress={() => navigation.navigate('Register')}
+                        activeOpacity={0.88}
+                        style={[styles.primaryButton, { backgroundColor: colors.primary }]}
                     >
-                        <View style={styles.buttonGradient}>
-                            <Text style={styles.primaryButtonText}>Get Started</Text>
-                            <ArrowRight size={20} color="#fff" style={styles.buttonIcon} />
-                        </View>
+                        <Text style={[styles.primaryButtonText, { color: colors.white }]}>Get Started</Text>
+                        <ArrowRight size={20} color={colors.white} style={styles.arrowIcon} />
                     </TouchableOpacity>
 
-                    {/* Secondary Action */}
+                    <View style={styles.dividerRow}>
+                        <View style={[styles.dividerLine, { backgroundColor: colors.borderSoft }]} />
+                        <Text style={[styles.dividerText, { color: colors.textMuted }]}>or continue with</Text>
+                        <View style={[styles.dividerLine, { backgroundColor: colors.borderSoft }]} />
+                    </View>
+
                     <TouchableOpacity
                         onPress={handleGoogleLogin}
-                        activeOpacity={0.8}
-                        style={styles.secondaryButton}
+                        activeOpacity={0.85}
+                        style={[
+                            styles.googleButton,
+                            { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft },
+                            googleLoading && styles.disabled,
+                        ]}
+                        disabled={googleLoading}
                     >
-                        <View style={styles.googleIconContainer}>
-                            <Image
-                                source={{ uri: 'https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7Lx2rjqD02G6DRtLU-q333L-RyXVw_Z_9_ls6Y9.png' }}
-                                style={styles.googleIcon}
-                                resizeMode="contain"
-                            />
-                        </View>
-                        <Text style={styles.secondaryButtonText}>Continue with Google</Text>
+                        {googleLoading ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                            <>
+                                <Image
+                                    source={{ uri: 'https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7Lx2rjqD02G6DRtLU-q333L-RyXVw_Z_9_ls6Y9.png' }}
+                                    style={styles.googleIcon}
+                                    resizeMode="contain"
+                                />
+                                <Text style={[styles.googleButtonText, { color: colors.text }]}>Continue with Google</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
 
-                    {/* Login Link */}
-                    <View style={styles.loginLinkContainer}>
-                        <Text style={styles.loginText}>Already have an account?</Text>
+                    <View style={styles.signInRow}>
+                        <Text style={[styles.signInLabel, { color: colors.textSecondary }]}>Already have an account?</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                            <Text style={styles.loginLink}>Sign In</Text>
+                            <Text style={[styles.signInLink, { color: colors.primary }]}>Sign In</Text>
                         </TouchableOpacity>
                     </View>
                 </Animated.View>
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>
-                        By continuing, you agree to our{'\n'}
-                        <Text style={styles.footerLink}>Terms of Service</Text> and{' '}
-                        <Text style={styles.footerLink}>Privacy Policy</Text>
+                    <Text style={[styles.footerText, { color: colors.textMuted }]}>
+                        By continuing, you agree to our{' '}
+                        <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Terms of Service</Text> and{' '}
+                        <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Privacy Policy</Text>
                     </Text>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </AppScreen>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0a0a0a',
-    },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#0a0a0a',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gradientLayer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gridPattern: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.1,
-    },
-    gridLine: {
-        position: 'absolute',
-        backgroundColor: '#af25f4',
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: 20,
-        paddingTop: 24,
-        paddingBottom: 40,
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        paddingBottom: 32,
+        justifyContent: 'space-between',
     },
     heroSection: {
         alignItems: 'center',
-        marginBottom: 36,
-    },
-    logoContainer: {
-        position: 'relative',
+        marginTop: 8,
         marginBottom: 20,
     },
-    logoGlow: {
-        shadowColor: '#af25f4',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
-    },
-    logoCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#af25f4',
+    logoWrapper: {
+        width: 76,
+        height: 76,
+        borderRadius: 24,
+        borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: 'rgba(175, 37, 244, 0.3)',
+        marginBottom: 16,
     },
     logoImage: {
-        width: 50,
-        height: 50,
+        width: 48,
+        height: 48,
     },
-    floatingIcon: {
-        position: 'absolute',
-        backgroundColor: 'rgba(10, 10, 11, 0.8)',
-        borderRadius: 20,
-        padding: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    titleContainer: {
+    tagPill: {
+        flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        marginBottom: 12,
     },
-    mainTitle: {
-        fontSize: 36,
+    tagIcon: {
+        marginRight: 6,
+    },
+    tagText: {
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: 0.3,
+    },
+    brandTitle: {
+        fontSize: 34,
         fontWeight: '800',
-        color: '#ffffff',
-        fontFamily: 'System',
-        letterSpacing: -1,
-        textAlign: 'center',
+        letterSpacing: -0.8,
+        marginBottom: 8,
     },
-    titleDot: {
-        color: '#af25f4',
-    },
-    subtitle: {
+    tagline: {
         fontSize: 15,
-        color: '#94a3b8',
-        textAlign: 'center',
-        marginTop: 8,
         lineHeight: 22,
-        maxWidth: 290,
+        textAlign: 'center',
+        paddingHorizontal: 8,
     },
-    featuresSection: {
-        marginBottom: 32,
+    featuresContainer: {
+        gap: 10,
+        marginBottom: 24,
     },
     featureCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 12,
+        flexDirection: 'row',
         alignItems: 'center',
+        padding: 14,
+        borderRadius: 18,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
-    featureIcon: {
-        marginBottom: 12,
+    featureIconContainer: {
+        width: 42,
+        height: 42,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
+    },
+    featureTextContainer: {
+        flex: 1,
     },
     featureTitle: {
-        fontSize: 18,
+        fontSize: 15,
         fontWeight: '700',
-        color: '#ffffff',
-        marginBottom: 6,
+        marginBottom: 2,
     },
-    featureDescription: {
-        fontSize: 14,
-        color: '#94a3b8',
-        textAlign: 'center',
-        lineHeight: 20,
+    featureSubtitle: {
+        fontSize: 13,
+        lineHeight: 18,
     },
     actionSection: {
-        marginBottom: 28,
+        marginTop: 'auto',
     },
     primaryButton: {
-        borderRadius: 16,
-        marginBottom: 14,
-        shadowColor: '#af25f4',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    buttonGradient: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 15,
-        paddingHorizontal: 28,
         borderRadius: 16,
-        backgroundColor: '#af25f4',
+        paddingVertical: 17,
     },
     primaryButtonText: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '700',
-        color: '#ffffff',
-        marginRight: 8,
     },
-    buttonIcon: {
+    arrowIcon: {
         marginLeft: 8,
     },
-    secondaryButton: {
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 14,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+    },
+    dividerText: {
+        fontSize: 12,
+        paddingHorizontal: 10,
+        fontWeight: '500',
+    },
+    googleButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
         borderRadius: 16,
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+        paddingVertical: 15,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.15)',
-    },
-    googleIconContainer: {
-        width: 24,
-        height: 24,
-        marginRight: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     googleIcon: {
         width: 20,
         height: 20,
+        marginRight: 10,
     },
-    secondaryButtonText: {
-        fontSize: 16,
+    googleButtonText: {
+        fontSize: 15,
         fontWeight: '600',
-        color: '#ffffff',
     },
-    loginLinkContainer: {
+    disabled: {
+        opacity: 0.6,
+    },
+    signInRow: {
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 24,
+        justifyContent: 'center',
+        marginTop: 16,
     },
-    loginText: {
+    signInLabel: {
         fontSize: 14,
-        color: '#64748b',
         marginRight: 6,
     },
-    loginLink: {
+    signInLink: {
         fontSize: 14,
-        fontWeight: '600',
-        color: '#af25f4',
+        fontWeight: '700',
     },
     footer: {
         alignItems: 'center',
-        paddingTop: 20,
+        marginTop: 18,
     },
     footerText: {
-        fontSize: 12,
-        color: '#64748b',
+        fontSize: 11,
         textAlign: 'center',
-        lineHeight: 18,
+        lineHeight: 16,
     },
     footerLink: {
-        color: '#af25f4',
-        textDecorationLine: 'underline',
+        fontWeight: '600',
     },
 });
 

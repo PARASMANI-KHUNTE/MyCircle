@@ -49,8 +49,8 @@ const LandingScreen = ({ navigation }: any) => {
             }
         } catch (error: any) {
             if (error.code !== statusCodes.SIGN_IN_CANCELLED) {
-                console.error('Google Sign-In Error:', JSON.stringify(error, null, 2));
-                Alert.alert("Error", `Something went wrong: ${error.message || error.code || 'Unknown error'}`);
+                console.error('Google Sign-In Error:', error);
+                Alert.alert("Sign In Error", error);
             }
         }
     };

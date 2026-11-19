@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Alert } from '../utils/alert';
 import { Eye, EyeOff } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GOOGLE_WEB_CLIENT_ID } from '@env';
 
 import AppScreen from '../components/layout/AppScreen';
 import ScreenHeader from '../components/layout/ScreenHeader';
@@ -16,8 +18,48 @@ const LoginScreen = ({ navigation }: any) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
+
+    useEffect(() => {
+        GoogleSignin.configure({
+            webClientId: GOOGLE_WEB_CLIENT_ID,
+            offlineAccess: false,
+        });
+    }, []);
+
+    const handleGoogleLogin = async () => {
+        try {
+            setGoogleLoading(true);
+            await GoogleSignin.hasPlayServices();
+            try {
+                await GoogleSignin.signOut();
+            } catch { }
+            const googleResponse = await GoogleSignin.signIn();
+            const idToken = 'data' in googleResponse ? googleResponse.data?.idToken : (googleResponse as any)?.idToken;
+
+            if (!idToken) {
+                Alert.alert('Sign In Error', 'Could not obtain Google authentication credentials. Please try again.');
+                return;
+            }
+
+            const apiResponse = await api.post('/auth/google-mobile', { idToken });
+
+            if (apiResponse.data?.token) {
+                await auth.login(apiResponse.data.token);
+            } else {
+                Alert.alert('Login Failed', apiResponse.data?.msg || 'Could not verify your account.');
+            }
+        } catch (error: any) {
+            if (error?.code !== statusCodes.SIGN_IN_CANCELLED) {
+                console.error('Google Sign-In Error:', error);
+                Alert.alert('Sign In Error', error);
+            }
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -34,7 +76,7 @@ const LoginScreen = ({ navigation }: any) => {
                 Alert.alert('Login Failed', 'No token received');
             }
         } catch (error: any) {
-            Alert.alert('Login Failed', error.response?.data?.msg || 'Invalid credentials');
+            Alert.alert('Login Failed', error);
         } finally {
             setLoading(false);
         }
@@ -107,8 +149,38 @@ const LoginScreen = ({ navigation }: any) => {
                                 </View>
                             </View>
 
-                            <TouchableOpacity activeOpacity={0.9} style={[styles.primaryButton, { backgroundColor: colors.primary }, loading && styles.disabled]} onPress={handleLogin} disabled={loading}>
+                            <TouchableOpacity activeOpacity={0.9} style={[styles.primaryButton, { backgroundColor: colors.primary }, loading && styles.disabled]} onPress={handleLogin} disabled={loading || googleLoading}>
                                 <Text style={[styles.primaryButtonText, { color: colors.white }]}>{loading ? 'Signing In...' : 'Sign In'}</Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.dividerRow}>
+                                <View style={[styles.dividerLine, { backgroundColor: colors.borderSoft }]} />
+                                <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or continue with</Text>
+                                <View style={[styles.dividerLine, { backgroundColor: colors.borderSoft }]} />
+                            </View>
+
+                            <TouchableOpacity
+                                activeOpacity={0.85}
+                                style={[
+                                    styles.googleButton,
+                                    { backgroundColor: colors.backdrop, borderColor: colors.borderSoft },
+                                    googleLoading && styles.disabled,
+                                ]}
+                                onPress={handleGoogleLogin}
+                                disabled={loading || googleLoading}
+                            >
+                                {googleLoading ? (
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                ) : (
+                                    <>
+                                        <Image
+                                            source={{ uri: 'https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7Lx2rjqD02G6DRtLU-q333L-RyXVw_Z_9_ls6Y9.png' }}
+                                            style={styles.googleIcon}
+                                            resizeMode="contain"
+                                        />
+                                        <Text style={[styles.googleButtonText, { color: colors.text }]}>Continue with Google</Text>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
@@ -196,6 +268,37 @@ const styles = StyleSheet.create({
     primaryButtonText: {
         fontSize: 18,
         fontWeight: '700',
+    },
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+    },
+    dividerText: {
+        fontSize: 13,
+        paddingHorizontal: 12,
+        fontWeight: '500',
+    },
+    googleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 16,
+        paddingVertical: 16,
+        borderWidth: 1,
+    },
+    googleIcon: {
+        width: 22,
+        height: 22,
+        marginRight: 12,
+    },
+    googleButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
     },
     footer: {
         alignItems: 'center',

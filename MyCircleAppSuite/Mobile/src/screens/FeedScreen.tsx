@@ -858,6 +858,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
+                    style={styles.categoryScrollView}
                     contentContainerStyle={styles.filterContainer}
                 >
                     {/* Category Chips */}
@@ -1282,8 +1283,13 @@ const styles = StyleSheet.create({
     clearButton: {
         marginLeft: 12,
     },
+    categoryScrollView: {
+        marginTop: 14,
+        marginBottom: 8,
+    },
     filterContainer: {
         paddingHorizontal: 4,
+        paddingVertical: 2,
         gap: 8,
     },
     filterChip: {

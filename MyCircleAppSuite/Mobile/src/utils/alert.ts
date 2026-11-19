@@ -1,3 +1,5 @@
+import { formatErrorMessage } from './errorMessage';
+
 export type AlertButton = {
     text?: string;
     onPress?: () => void;
@@ -25,10 +27,11 @@ export const setAlertHandler = (handler: AlertHandler | null) => {
 };
 
 export const Alert = {
-    alert(title: string, message?: string, buttons?: AlertButton[], options?: AlertOptions) {
+    alert(title: string, message?: any, buttons?: AlertButton[], options?: AlertOptions) {
+        const sanitizedMessage = message ? formatErrorMessage(message, typeof message === 'string' ? message : undefined) : undefined;
         const request: AlertRequest = {
             title,
-            message,
+            message: sanitizedMessage,
             buttons,
             options,
         };
@@ -38,7 +41,7 @@ export const Alert = {
             return;
         }
 
-        const fallbackMessage = message ? ` ${message}` : '';
+        const fallbackMessage = sanitizedMessage ? ` ${sanitizedMessage}` : '';
         console.warn(`[CustomAlert missing provider] ${title}.${fallbackMessage}`);
         buttons?.[0]?.onPress?.();
     },

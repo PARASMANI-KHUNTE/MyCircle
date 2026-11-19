@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
+import { formatErrorMessage } from '../utils/errorMessage';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
@@ -261,7 +262,7 @@ const EditPost = () => {
         } catch (err) {
             console.error(err);
             setError({
-                message: err.response?.data?.msg || err.response?.data?.error || 'Failed to update post'
+                message: formatErrorMessage(err, 'Failed to update post. Please try again.')
             });
         } finally {
             setSaving(false);

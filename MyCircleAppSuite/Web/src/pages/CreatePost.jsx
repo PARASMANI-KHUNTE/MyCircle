@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { formatErrorMessage } from '../utils/errorMessage';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { AlertCircle, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight } from 'lucide-react';
@@ -225,7 +226,7 @@ const CreatePost = () => {
         } catch (err) {
             console.error(err);
             setError({
-                message: err.response?.data?.msg || err.response?.data?.error || 'Something went wrong'
+                message: formatErrorMessage(err, 'Failed to create post. Please try again.')
             });
         } finally {
             setLoading(false);

@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
 import Toast from 'react-native-toast-message';
 import { API_URL, DEV_API_URL } from '@env';
+import { formatErrorMessage } from '../utils/errorMessage';
 
 type UnauthorizedHandler = () => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
@@ -60,6 +61,7 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
+        error.userFriendlyMessage = formatErrorMessage(error);
         const status = error?.response?.status;
         if (status === 401 && unauthorizedHandler) {
             const now = Date.now();

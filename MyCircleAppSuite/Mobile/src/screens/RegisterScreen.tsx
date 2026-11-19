@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Alert } from '../utils/alert';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GOOGLE_WEB_CLIENT_ID } from '@env';
 
 import AppScreen from '../components/layout/AppScreen';
 import ScreenHeader from '../components/layout/ScreenHeader';
@@ -18,9 +20,49 @@ const RegisterScreen = ({ navigation }: any) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [focusedInput, setFocusedInput] = useState<'displayName' | 'email' | 'password' | 'confirmPassword' | null>(null);
+
+    useEffect(() => {
+        GoogleSignin.configure({
+            webClientId: GOOGLE_WEB_CLIENT_ID,
+            offlineAccess: false,
+        });
+    }, []);
+
+    const handleGoogleLogin = async () => {
+        try {
+            setGoogleLoading(true);
+            await GoogleSignin.hasPlayServices();
+            try {
+                await GoogleSignin.signOut();
+            } catch { }
+            const googleResponse = await GoogleSignin.signIn();
+            const idToken = 'data' in googleResponse ? googleResponse.data?.idToken : (googleResponse as any)?.idToken;
+
+            if (!idToken) {
+                Alert.alert('Sign In Error', 'Could not obtain Google authentication credentials. Please try again.');
+                return;
+            }
+
+            const apiResponse = await api.post('/auth/google-mobile', { idToken });
+
+            if (apiResponse.data?.token) {
+                await auth.login(apiResponse.data.token);
+            } else {
+                Alert.alert('Login Failed', apiResponse.data?.msg || 'Could not verify your account.');
+            }
+        } catch (error: any) {
+            if (error?.code !== statusCodes.SIGN_IN_CANCELLED) {
+                console.error('Google Sign-In Error:', error);
+                Alert.alert('Sign In Error', error);
+            }
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
 
     const handleRegister = async () => {
         if (!displayName || !email || !password) {
@@ -41,7 +83,7 @@ const RegisterScreen = ({ navigation }: any) => {
                 Alert.alert('Registration Failed', 'No token received');
             }
         } catch (error: any) {
-            Alert.alert('Registration Failed', error.response?.data?.msg || 'Something went wrong');
+            Alert.alert('Registration Failed', error);
         } finally {
             setLoading(false);
         }
@@ -166,8 +208,38 @@ const RegisterScreen = ({ navigation }: any) => {
                                 onToggle: () => setShowConfirmPassword(prev => !prev),
                             })}
 
-                            <TouchableOpacity activeOpacity={0.9} style={[styles.primaryButton, { backgroundColor: colors.primary }, loading && styles.disabled]} onPress={handleRegister} disabled={loading}>
+                            <TouchableOpacity activeOpacity={0.9} style={[styles.primaryButton, { backgroundColor: colors.primary }, loading && styles.disabled]} onPress={handleRegister} disabled={loading || googleLoading}>
                                 <Text style={[styles.primaryButtonText, { color: colors.white }]}>{loading ? 'Creating...' : 'Sign Up'}</Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.dividerRow}>
+                                <View style={[styles.dividerLine, { backgroundColor: colors.borderSoft }]} />
+                                <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or continue with</Text>
+                                <View style={[styles.dividerLine, { backgroundColor: colors.borderSoft }]} />
+                            </View>
+
+                            <TouchableOpacity
+                                activeOpacity={0.85}
+                                style={[
+                                    styles.googleButton,
+                                    { backgroundColor: colors.backdrop, borderColor: colors.borderSoft },
+                                    googleLoading && styles.disabled,
+                                ]}
+                                onPress={handleGoogleLogin}
+                                disabled={loading || googleLoading}
+                            >
+                                {googleLoading ? (
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                ) : (
+                                    <>
+                                        <Image
+                                            source={{ uri: 'https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7Lx2rjqD02G6DRtLU-q333L-RyXVw_Z_9_ls6Y9.png' }}
+                                            style={styles.googleIcon}
+                                            resizeMode="contain"
+                                        />
+                                        <Text style={[styles.googleButtonText, { color: colors.text }]}>Continue with Google</Text>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
@@ -176,10 +248,6 @@ const RegisterScreen = ({ navigation }: any) => {
                         <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkRow}>
                             <Text style={[styles.linkLabel, { color: colors.textMuted }]}>Already have an account?</Text>
                             <Text style={[styles.linkValue, { color: colors.primary }]}>Sign In</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => Alert.alert('Google Sign In', 'Google registration will be available soon.')} style={styles.linkOnly}>
-                            <Text style={[styles.linkLabel, { color: colors.textMuted }]}>Or use Google Sign In</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={styles.linkOnly}>
@@ -259,6 +327,37 @@ const styles = StyleSheet.create({
     primaryButtonText: {
         fontSize: 18,
         fontWeight: '700',
+    },
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+    },
+    dividerText: {
+        fontSize: 13,
+        paddingHorizontal: 12,
+        fontWeight: '500',
+    },
+    googleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 16,
+        paddingVertical: 16,
+        borderWidth: 1,
+    },
+    googleIcon: {
+        width: 22,
+        height: 22,
+        marginRight: 12,
+    },
+    googleButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
     },
     footer: {
         alignItems: 'center',

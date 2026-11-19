@@ -9,6 +9,7 @@ import Animated, { FadeInDown, FadeInRight, FadeOutLeft } from 'react-native-rea
 import api from '../services/api';
 import { getCurrentLocation } from '../utils/location';
 import { useTheme } from '../context/ThemeContext';
+import { formatErrorMessage } from '../utils/errorMessage';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Stepper from '../components/ui/Stepper';
 import { DARK_TILE_URL, LABELS_TILE_URL, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
@@ -196,17 +197,17 @@ const CreatePostScreen = ({ navigation }: any) => {
             });
         } catch (error: any) {
             console.error(error);
-            showAlert('Error', error?.response?.data?.msg || 'Failed to create post');
+            showAlert('Error', formatErrorMessage(error, 'Failed to create post. Please try again.'));
         } finally {
             setLoading(false);
         }
     };
 
-    const showAlert = (title: string, message: string, onConfirm?: () => void) => {
+    const showAlert = (title: string, message: any, onConfirm?: () => void) => {
         setAlertConfig({
             visible: true,
             title,
-            message,
+            message: formatErrorMessage(message, typeof message === 'string' ? message : 'An error occurred'),
             confirmText: 'OK',
             onConfirm: onConfirm || (() => setAlertConfig((p: any) => ({ ...p, visible: false }))),
             isDestructive: false,

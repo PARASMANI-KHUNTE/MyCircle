@@ -559,7 +559,7 @@ const Explore = () => {
 
                         
                         {/* Category Pills and Controls Container */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3.5">
                             {/* Category Pills */}
                             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1 items-center flex-1">
                                 {CATEGORIES.map((cat) => {

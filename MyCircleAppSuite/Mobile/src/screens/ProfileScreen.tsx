@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl, StatusBar, Dimensions } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl, StatusBar } from 'react-native';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,8 +10,6 @@ import api from '../services/api';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 
 const ProfileScreen = ({ navigation, route }: any) => {
@@ -290,29 +288,10 @@ const ProfileScreen = ({ navigation, route }: any) => {
             <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
             
             {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
+            <View pointerEvents="none" style={styles.backgroundGradient}>
                 <View style={[styles.gradientLayer, { backgroundColor: colors.gradientStart }]} />
                 <View style={[styles.gradientLayer, { backgroundColor: colors.gradientMiddle, opacity: isDark ? 0.8 : 0.45 }]} />
                 <View style={[styles.gradientLayer, { backgroundColor: colors.gradientEnd, opacity: isDark ? 0.6 : 0.32 }]} />
-            </View>
-
-            {/* Subtle Grid Pattern */}
-            <View style={[styles.gridPattern, { opacity: isDark ? 0.1 : 0.04 }]}>
-                {[...Array(12)].map((_, i) => (
-                    <View
-                        key={i}
-                        style={[
-                            styles.gridLine,
-                            {
-                                left: (i % 4) * (SCREEN_WIDTH / 4),
-                                top: Math.floor(i / 4) * (SCREEN_HEIGHT / 3),
-                                width: 1,
-                                height: SCREEN_HEIGHT / 3,
-                                backgroundColor: colors.primary,
-                            }
-                        ]}
-                    />
-                ))}
             </View>
 
             {/* Header */}

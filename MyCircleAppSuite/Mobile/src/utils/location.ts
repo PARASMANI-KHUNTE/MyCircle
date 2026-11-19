@@ -1,5 +1,4 @@
 import { PermissionsAndroid, Platform } from 'react-native';
-import { Alert } from './alert';
 import Geolocation from '@react-native-community/geolocation';
 
 export interface LocationObject {
@@ -22,7 +21,6 @@ export const getCurrentLocation = async (): Promise<LocationObject | null> => {
                 }
             );
             if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-                Alert.alert('Permission Denied', 'Location permission is required to fetch your location.');
                 return null;
             }
         } catch (err) {

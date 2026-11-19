@@ -324,13 +324,20 @@ const CreatePostScreen = ({ navigation }: any) => {
                 {locationMethod === 'detect' && (
                     <TouchableOpacity onPress={async () => {
                         setLocationLoading(true);
-                        const loc = await getCurrentLocation();
-                        if (loc) {
-                            setCoordinates({ lat: loc.latitude, lng: loc.longitude });
-                            const addr = await reverseGeocode(loc.latitude, loc.longitude);
-                            setLocation(addr);
+                        try {
+                            const loc = await getCurrentLocation();
+                            if (loc) {
+                                setCoordinates({ lat: loc.latitude, lng: loc.longitude });
+                                const addr = await reverseGeocode(loc.latitude, loc.longitude);
+                                setLocation(addr || loc.address);
+                            } else {
+                                showAlert('Location Access', 'Please ensure location permissions and GPS are enabled to detect your location.');
+                            }
+                        } catch {
+                            showAlert('Location Error', 'Unable to retrieve your current location. Please try pinning on the map.');
+                        } finally {
+                            setLocationLoading(false);
                         }
-                        setLocationLoading(false);
                     }} style={styles.detectBtn}>
                         {locationLoading ? <ActivityIndicator color="#af25f4" /> : <><Crosshair size={20} color="#af25f4" /><Text style={styles.detectBtnText}>Detect My Location</Text></>}
                     </TouchableOpacity>

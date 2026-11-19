@@ -60,7 +60,7 @@ const FeedScreen = ({ navigation, route }: any) => {
     const initialViewMode = route?.params?.viewMode || 'list';
     const { colors } = useTheme();
     const { socket } = useSocket() as any; // Type assertion if needed
-    const { success } = useToast();
+    const { success, error: showError, info: showInfo } = useToast();
     const queryClient = useQueryClient();
     const { unreadCount } = useNotifications();
     const [searchQuery, setSearchQuery] = useState('');
@@ -269,11 +269,19 @@ const FeedScreen = ({ navigation, route }: any) => {
     const handleNearbyToggle = async () => {
         if (!isNearby) {
             setNearbyLoading(true);
-            const loc = await getCurrentLocation() as any;
-            if (loc) {
-                setIsNearby(true);
-                setLocationFilter('All');
-            } else {
+            try {
+                const loc = await getCurrentLocation();
+                if (loc) {
+                    setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+                    setIsNearby(true);
+                    setLocationFilter('All');
+                    showInfo('Filtered by nearby posts');
+                } else {
+                    showError('Please grant location permission to view nearby posts');
+                }
+            } catch {
+                showError('Unable to retrieve location');
+            } finally {
                 setNearbyLoading(false);
             }
         } else {
@@ -1087,9 +1095,20 @@ const FeedScreen = ({ navigation, route }: any) => {
                                             { backgroundColor: colors.background, borderColor: colors.borderSoft },
                                             isNearby && distanceRadius === radius && { backgroundColor: colors.primary, borderColor: colors.primary }
                                         ]}
-                                        onPress={() => {
-                                            setIsNearby(true);
-                                            setDistanceRadius(radius);
+                                        onPress={async () => {
+                                            if (!userLocation) {
+                                                const loc = await getCurrentLocation();
+                                                if (loc) {
+                                                    setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+                                                    setIsNearby(true);
+                                                    setDistanceRadius(radius);
+                                                } else {
+                                                    showError('Please grant location permission to filter by distance');
+                                                }
+                                            } else {
+                                                setIsNearby(true);
+                                                setDistanceRadius(radius);
+                                            }
                                         }}
                                     >
                                         <Text style={[

@@ -162,12 +162,10 @@ const Navbar = () => {
                     >
                         <div className="flex h-full flex-col">
                             <div className="flex items-center justify-between px-4 py-4 border-b border-card-border">
-                                <Link to="/" className="flex items-center gap-3 group">
-                                    <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-md" style={{ boxShadow: '0 4px 12px rgb(245 158 11 / 0.35)' }}>
-                                        <CircleDot className="w-4 h-4" />
-                                    </div>
-                                    <span className="text-lg font-semibold tracking-tight font-display">
-                                        MyCircle
+                                <Link to="/" className="flex items-center gap-2.5 group">
+                                    <img src="/logo.png" alt="MyCircle" className="w-8 h-8 rounded-lg object-contain shadow-sm" />
+                                    <span className="text-lg font-bold tracking-tight font-display">
+                                        MyCircle<span className="text-primary">.</span>
                                     </span>
                                 </Link>
 
@@ -286,12 +284,10 @@ const Navbar = () => {
                                 {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                             </button>
 
-                            <Link to="/" className="hidden md:flex items-center gap-3 group">
-                                <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition-all duration-300 shadow-md" style={{ boxShadow: '0 4px 12px rgb(245 158 11 / 0.35)' }}>
-                                    <CircleDot className="w-4 h-4" />
-                                </div>
-                                <span className="text-xl font-semibold tracking-tight hidden sm:block font-display">
-                                    MyCircle
+                            <Link to="/" className="flex items-center gap-2.5 group">
+                                <img src="/logo.png" alt="MyCircle" className="w-8 h-8 rounded-lg object-contain shadow-sm" />
+                                <span className="text-xl font-bold tracking-tight font-display">
+                                    MyCircle<span className="text-primary">.</span>
                                 </span>
                             </Link>
                         </div>

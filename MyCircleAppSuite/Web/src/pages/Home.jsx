@@ -19,11 +19,15 @@ const Home = () => {
             <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
                 {/* Header - consistent height */}
                 <header className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                            <Zap className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-xl font-bold tracking-tight">MyCircle</span>
+                    <div className="flex items-center gap-2.5">
+                        <img
+                            src="/logo.png"
+                            alt="MyCircle"
+                            className="w-8 h-8 rounded-lg object-contain shadow-sm"
+                        />
+                        <span className="text-xl font-bold tracking-tight">
+                            MyCircle<span className="text-primary">.</span>
+                        </span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => navigate('/download')}>

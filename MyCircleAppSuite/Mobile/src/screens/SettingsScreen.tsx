@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { Bell, ChevronRight, Moon, RefreshCw, Sun, Trash2, UserX } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -198,8 +198,9 @@ const SettingsScreen = ({ navigation }: any) => {
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(600).duration(800).springify()} style={styles.footer}>
+                    <Image source={require('../assets/logo.png')} style={styles.footerLogo} resizeMode="contain" />
                     <Text style={[styles.versionText, { color: colors.textSecondary }]}>MyCircle v1.0.0</Text>
-                    <Text style={[styles.copyrightText, { color: colors.textMuted }]}>© 2026 Antigravity Technologies</Text>
+                    <Text style={[styles.copyrightText, { color: colors.textMuted }]}>Hyperlocal Community & Marketplace</Text>
                 </Animated.View>
             </ScrollView>
 
@@ -275,6 +276,12 @@ const styles = StyleSheet.create({
         marginTop: 40,
         paddingVertical: 40,
         alignItems: 'center',
+    },
+    footerLogo: {
+        width: 36,
+        height: 36,
+        marginBottom: 10,
+        opacity: 0.85,
     },
     versionText: {
         fontSize: 13,

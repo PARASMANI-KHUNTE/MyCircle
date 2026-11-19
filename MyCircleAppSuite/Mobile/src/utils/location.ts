@@ -7,97 +7,119 @@ export interface LocationObject {
     longitude: number;
 }
 
+try {
+    Geolocation.setRNConfiguration({
+        skipPermissionRequests: false,
+        locationProvider: 'auto',
+    });
+} catch {
+    // Ignore configuration error in test environments
+}
+
 export const getCurrentLocation = async (): Promise<LocationObject | null> => {
     if (Platform.OS === 'android') {
         try {
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                {
-                    title: "Location Permission",
-                    message: "MyCircle needs access to your location to tag your posts.",
-                    buttonNeutral: "Ask Me Later",
-                    buttonNegative: "Cancel",
-                    buttonPositive: "OK"
+            const hasFine = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+            const hasCoarse = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION);
+
+            if (!hasFine && !hasCoarse) {
+                const granted = await PermissionsAndroid.requestMultiple([
+                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                    PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+                ]);
+
+                const fineGranted = granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED;
+                const coarseGranted = granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED;
+
+                if (!fineGranted && !coarseGranted) {
+                    return null;
                 }
-            );
-            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-                return null;
             }
         } catch (err) {
-            console.warn("Permission request failed:", err);
+            console.warn('Permission request failed:', err);
             return null;
         }
     }
 
     return new Promise((resolve) => {
-        // Primary attempt - fast low accuracy
-        const attemptLocation = (attempt: number = 1) => {
-            const options = {
-                enableHighAccuracy: false,
-                timeout: 10000, // 10 seconds max
-                maximumAge: 300000 // Allow cached location up to 5 minutes
-            };
+        let settled = false;
 
+        const finish = (result: LocationObject | null) => {
+            if (!settled) {
+                settled = true;
+                resolve(result);
+            }
+        };
+
+        const fetchPosition = (highAccuracy: boolean) => {
             Geolocation.getCurrentPosition(
                 async (position) => {
                     try {
                         const { latitude, longitude } = position.coords;
                         let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
-                        // Quick geocoding attempt
                         try {
                             const controller = new AbortController();
                             const timeoutId = setTimeout(() => controller.abort(), 3000);
-                            
+
                             const response = await fetch(
                                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
                                 {
                                     headers: { 'User-Agent': 'MyCircleApp/1.0' },
-                                    signal: controller.signal
+                                    signal: controller.signal,
                                 }
                             );
                             clearTimeout(timeoutId);
-                            
+
                             const data = await response.json();
                             if (data && data.address) {
                                 const suburb = data.address.suburb || data.address.neighbourhood || data.address.residential;
                                 const city = data.address.city || data.address.town || data.address.village || data.address.state_district;
                                 const state = data.address.state;
 
-                                let parts = [];
+                                const parts = [];
                                 if (suburb) parts.push(suburb);
                                 if (city) parts.push(city);
                                 if (state && state !== city) parts.push(state);
 
-                                address = parts.join(', ') || address;
+                                if (parts.length > 0) {
+                                    address = parts.join(', ');
+                                }
                             }
-                        } catch (error) {
-                            console.log('Geocoding failed, using coordinates');
+                        } catch {
+                            // Fallback to coordinates string
                         }
 
-                        resolve({ address, latitude, longitude });
-                    } catch (error) {
-                        console.error('Location processing error:', error);
-                        resolve({ address: "Current Location", latitude: position.coords.latitude, longitude: position.coords.longitude });
+                        finish({ address, latitude, longitude });
+                    } catch {
+                        finish({
+                            address: 'Current Location',
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                        });
                     }
                 },
                 (error) => {
-                    console.warn(`Location attempt ${attempt} failed:`, error.code, error.message);
-                    
-                    // Retry once with very relaxed settings
-                    if (attempt === 1) {
-                        console.log('Retrying location with relaxed settings...');
-                        setTimeout(() => attemptLocation(2), 500);
+                    console.warn(`Location attempt (highAccuracy=${highAccuracy}) failed:`, error?.code, error?.message);
+                    if (highAccuracy) {
+                        fetchPosition(false);
                     } else {
-                        // Silent fail - return null without alerts
-                        console.log('Location failed after retries, returning null');
-                        resolve(null);
+                        finish(null);
                     }
                 },
-                options
+                {
+                    enableHighAccuracy: highAccuracy,
+                    timeout: highAccuracy ? 8000 : 10000,
+                    maximumAge: highAccuracy ? 10000 : 120000,
+                }
             );
         };
 
-        attemptLocation(1);
+        // Absolute safety timeout of 18 seconds so the promise never hangs
+        setTimeout(() => {
+            finish(null);
+        }, 18000);
+
+        fetchPosition(true);
     });
 };

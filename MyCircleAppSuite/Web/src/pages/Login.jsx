@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CircleDot, AlertTriangle, Clock } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Loading from '../components/ui/Loading';
@@ -47,13 +47,14 @@ const Login = () => {
                 <div className="bg-card rounded-3xl border border-card-border p-8" style={{ boxShadow: 'var(--shadow-xl)' }}>
                     {/* Brand mark */}
                     <div className="flex items-center gap-3 mb-8">
-                        <div
-                            className="w-11 h-11 rounded-2xl bg-primary flex items-center justify-center"
-                            style={{ boxShadow: '0 4px 16px rgb(245 158 11 / 0.4)' }}
-                        >
-                            <CircleDot className="w-5 h-5 text-primary-foreground" />
-                        </div>
-                        <span className="text-xl font-bold tracking-tight font-display">MyCircle</span>
+                        <img
+                            src="/logo.png"
+                            alt="MyCircle"
+                            className="w-11 h-11 rounded-2xl object-contain shadow-md"
+                        />
+                        <span className="text-xl font-bold tracking-tight font-display">
+                            MyCircle<span className="text-primary">.</span>
+                        </span>
                     </div>
 
                     {/* Heading */}

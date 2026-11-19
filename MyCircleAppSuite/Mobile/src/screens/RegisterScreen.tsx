@@ -160,6 +160,13 @@ const RegisterScreen = ({ navigation }: any) => {
                     </Animated.View>
 
                     <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.hero}>
+                        <View style={[styles.logoWrapper, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                            <Image
+                                source={require('../assets/logo.png')}
+                                style={styles.logoImage}
+                                resizeMode="contain"
+                            />
+                        </View>
                         <Text style={[styles.title, { color: colors.text }]}>Join MyCircle</Text>
                         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Create your profile and start connecting locally.</Text>
                     </Animated.View>
@@ -270,6 +277,19 @@ const styles = StyleSheet.create({
     hero: {
         marginTop: 12,
         marginBottom: 32,
+    },
+    logoWrapper: {
+        width: 60,
+        height: 60,
+        borderRadius: 20,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+    logoImage: {
+        width: 38,
+        height: 38,
     },
     title: {
         fontSize: 32,

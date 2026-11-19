@@ -25,11 +25,15 @@ const DownloadApp = () => {
                 {/* Header */}
                 <header className="flex items-center justify-between py-4 border-b border-card-border mb-8">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/welcome')}>
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-md shadow-primary/20">
-                            <Zap className="w-5 h-5 text-white" />
-                        </div>
+                        <img
+                            src="/logo.png"
+                            alt="MyCircle"
+                            className="w-9 h-9 rounded-xl object-contain shadow-md"
+                        />
                         <div>
-                            <span className="text-xl font-bold tracking-tight">MyCircle</span>
+                            <span className="text-xl font-bold tracking-tight">
+                                MyCircle<span className="text-primary">.</span>
+                            </span>
                             <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                                 Mobile App
                             </span>

@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -50,9 +50,13 @@ const StartupAnimation = ({ onComplete }: { onComplete: () => void }) => {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Animated.View style={[styles.logoContainer, logoStyle]}>
-                {/* Modern "MyCircle" Symbol */}
-                <View style={[styles.logoCircle, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.logoLetter, { color: colors.background }]}>M</Text>
+                {/* Official MyCircle Logo */}
+                <View style={[styles.logoCircle, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                    <Image
+                        source={require('../../assets/logo.png')}
+                        style={styles.logoImage}
+                        resizeMode="contain"
+                    />
                 </View>
             </Animated.View>
 
@@ -82,9 +86,10 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     logoCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 88,
+        height: 88,
+        borderRadius: 28,
+        borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
         elevation: 10,
@@ -93,9 +98,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 10,
     },
-    logoLetter: {
-        fontSize: 48,
-        fontWeight: 'bold',
+    logoImage: {
+        width: 58,
+        height: 58,
     },
     textContainer: {
         alignItems: 'center',

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, AppState, StatusBar, Dimensions } from 'react-native';
+import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, AppState, StatusBar, Dimensions, Image } from 'react-native';
 
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
@@ -770,9 +770,16 @@ const FeedScreen = ({ navigation, route }: any) => {
                 style={styles.headerSection}
             >
                 <View style={styles.topBar}>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>
-                        Marketplace<Text style={{ color: colors.primary }}>.</Text>
-                    </Text>
+                    <View style={styles.brandContainer}>
+                        <Image
+                            source={require('../assets/logo.png')}
+                            style={styles.headerLogo}
+                            resizeMode="contain"
+                        />
+                        <Text style={[styles.headerTitle, { color: colors.text }]}>
+                            MyCircle<Text style={{ color: colors.primary }}>.</Text>
+                        </Text>
+                    </View>
                     <View style={styles.headerIcons}>
                         <TouchableOpacity 
                             onPress={() => navigation.navigate('Notifications')} 
@@ -1232,6 +1239,16 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 12,
+    },
+    brandContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    headerLogo: {
+        width: 30,
+        height: 30,
+        borderRadius: 8,
     },
     headerIcons: {
         flexDirection: 'row',

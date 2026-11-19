@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, AppState, StatusBar, Dimensions, Image } from 'react-native';
+import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, Image } from 'react-native';
 
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AppScreen from '../components/layout/AppScreen';
 import { Search, Briefcase, Zap, ShoppingCart, MapPin, ArrowUpDown, X, Check, Bell, MessageCircle, SlidersHorizontal, ArrowDownUp, Flame } from 'lucide-react-native';
 import api from '../services/api';
 import Animated, {
@@ -55,12 +55,10 @@ const CATEGORIES = [
     { id: 'barter', label: 'Barter', icon: ArrowUpDown },
 ];
 
-const { width, height } = Dimensions.get('window');
-
 const FeedScreen = ({ navigation, route }: any) => {
     const { isAuthenticated } = useAuth();
     const initialViewMode = route?.params?.viewMode || 'list';
-    const { colors, isDark } = useTheme();
+    const { colors } = useTheme();
     const { socket } = useSocket() as any; // Type assertion if needed
     const { success } = useToast();
     const queryClient = useQueryClient();
@@ -264,18 +262,7 @@ const FeedScreen = ({ navigation, route }: any) => {
 
     const onRefresh = useCallback(async () => {
         refetch();
-        if (!userLocation) requestLocationPermission();
-    }, [refetch, requestLocationPermission, userLocation]);
-
-    // Auto-check location when returning to app (e.g. from Settings)
-    useEffect(() => {
-        const subscription = AppState.addEventListener('change', nextAppState => {
-            if (nextAppState === 'active') {
-                requestLocationPermission();
-            }
-        });
-        return () => subscription.remove();
-    }, [requestLocationPermission]);
+    }, [refetch]);
 
     // Removed manual fetchPosts function
 
@@ -331,14 +318,12 @@ const FeedScreen = ({ navigation, route }: any) => {
     }, [matchesActiveFilters, postsData, sortOrder]);
 
     useEffect(() => {
-        requestLocationPermission();
-
         if (isAuthenticated) {
             void fetchUnreadMsgCount();
         } else {
             setUnreadMsgCount(0);
         }
-    }, [requestLocationPermission, fetchUnreadMsgCount, isAuthenticated]);
+    }, [fetchUnreadMsgCount, isAuthenticated]);
 
     useEffect(() => {
         if (socket) {
@@ -736,46 +721,20 @@ const FeedScreen = ({ navigation, route }: any) => {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
-
-            {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
-                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientStart }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientMiddle, opacity: isDark ? 0.8 : 0.45 }]} />
-                <View style={[styles.gradientLayer, { backgroundColor: colors.gradientEnd, opacity: isDark ? 0.6 : 0.32 }]} />
-            </View>
-
-            {/* Subtle Grid Pattern */}
-            <View style={[styles.gridPattern, { opacity: isDark ? 0.1 : 0.04 }]}>
-                {[...Array(15)].map((_, i) => (
-                    <View
-                        key={i}
-                        style={[
-                            styles.gridLine,
-                            {
-                                left: (i % 5) * (width / 5),
-                                top: Math.floor(i / 5) * (height / 3),
-                                width: 1,
-                                height: height / 3,
-                                backgroundColor: colors.primary,
-                            }
-                        ]}
-                    />
-                ))}
-            </View>
-
+        <AppScreen withBackground edges={['top']}>
             <Animated.View
                 entering={FadeInDown.delay(200).duration(600).springify()}
                 style={styles.headerSection}
             >
                 <View style={styles.topBar}>
                     <View style={styles.brandContainer}>
-                        <Image
-                            source={require('../assets/logo.png')}
-                            style={styles.headerLogo}
-                            resizeMode="contain"
-                        />
+                        <View style={[styles.logoWrapper, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                            <Image
+                                source={require('../assets/logo.png')}
+                                style={styles.headerLogo}
+                                resizeMode="contain"
+                            />
+                        </View>
                         <Text style={[styles.headerTitle, { color: colors.text }]}>
                             MyCircle<Text style={{ color: colors.primary }}>.</Text>
                         </Text>
@@ -1184,50 +1143,22 @@ const FeedScreen = ({ navigation, route }: any) => {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView >
+        </AppScreen>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0a0a0a',
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gradientLayer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    gridPattern: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.1,
-    },
-    gridLine: {
-        position: 'absolute',
-        backgroundColor: '#af25f4',
     },
     headerSection: {
         paddingHorizontal: 16,
-        paddingTop: 12,
+        paddingTop: 8,
         paddingBottom: 4,
     },
     headerTitle: {
-        fontSize: 32,
+        fontSize: 30,
         fontWeight: '800',
-        color: '#ffffff',
         fontFamily: 'System',
         letterSpacing: -0.5,
     },
@@ -1243,12 +1174,19 @@ const styles = StyleSheet.create({
     brandContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: 10,
+    },
+    logoWrapper: {
+        width: 36,
+        height: 36,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
     },
     headerLogo: {
-        width: 30,
-        height: 30,
-        borderRadius: 8,
+        width: 24,
+        height: 24,
     },
     headerIcons: {
         flexDirection: 'row',

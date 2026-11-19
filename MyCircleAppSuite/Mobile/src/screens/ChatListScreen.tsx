@@ -228,7 +228,7 @@ const ChatListScreen = ({ navigation }: any) => {
             <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
             
             {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
+            <View pointerEvents="none" style={styles.backgroundGradient}>
                 <View style={[styles.gradientLayer, { backgroundColor: colors.gradientStart }]} />
                 <View style={[styles.gradientLayer, { backgroundColor: colors.gradientMiddle, opacity: isDark ? 0.8 : 0.45 }]} />
                 <View style={[styles.gradientLayer, { backgroundColor: colors.gradientEnd, opacity: isDark ? 0.6 : 0.32 }]} />

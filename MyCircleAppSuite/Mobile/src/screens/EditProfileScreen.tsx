@@ -132,7 +132,7 @@ const EditProfileScreen = ({ navigation }: any) => {
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
             
             {/* Modern Gradient Background */}
-            <View style={styles.backgroundGradient}>
+            <View pointerEvents="none" style={styles.backgroundGradient}>
                 <View style={[styles.gradientLayer, { backgroundColor: '#0a0a0a' }]} />
                 <View style={[styles.gradientLayer, { backgroundColor: '#1a1a2e', opacity: 0.8 }]} />
                 <View style={[styles.gradientLayer, { backgroundColor: '#16213e', opacity: 0.6 }]} />

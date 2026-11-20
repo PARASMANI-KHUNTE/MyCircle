@@ -4,6 +4,7 @@ export const MAX_POST_IMAGES = 5;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+export const LOCATION_SOURCES = ['current', 'map'];
 
 const SECTION_ORDER = ['category', 'details', 'location', 'exchange'];
 
@@ -14,6 +15,34 @@ const parseNumber = (value) => {
 };
 
 const validationError = (section, field, message) => ({ section, field, message });
+
+export function getLocationSource(method) {
+    if (method === 'detect') return 'current';
+    if (method === 'pin') return 'map';
+    return null;
+}
+
+export function switchLocationMethod(selection, nextMethod) {
+    if (selection.method === nextMethod) return selection;
+
+    return {
+        method: nextMethod,
+        location: '',
+        latitude: null,
+        longitude: null,
+    };
+}
+
+export function getLocationPayload(selection) {
+    const source = getLocationSource(selection.method);
+    const latitude = parseNumber(selection.latitude);
+    const longitude = parseNumber(selection.longitude);
+    const location = (selection.location || '').trim();
+
+    if (!source || latitude === null || longitude === null || !location) return null;
+
+    return { location, latitude, longitude, locationSource: source };
+}
 
 const validateCategory = (draft) => {
     if (!draft.type) {
@@ -50,6 +79,12 @@ const validateDetails = (draft) => {
 const validateLocation = (draft) => {
     const latitude = parseNumber(draft.latitude);
     const longitude = parseNumber(draft.longitude);
+
+    if (draft.locationSource !== undefined) {
+        if (!draft.locationSource || !LOCATION_SOURCES.includes(draft.locationSource)) {
+            return validationError('location', 'location', 'Confirm a location using one option: detect GPS or pin on the map.');
+        }
+    }
 
     if (latitude === null || longitude === null) {
         return validationError('location', 'location', 'Detect your location or pin a spot on the map.');

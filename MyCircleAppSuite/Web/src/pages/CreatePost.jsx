@@ -5,8 +5,11 @@ import { formatErrorMessage } from '../utils/errorMessage';
 import {
     ALLOWED_IMAGE_TYPES,
     DESCRIPTION_MAX_LENGTH,
+    getLocationPayload,
+    getLocationSource,
     MAX_IMAGE_BYTES,
     MAX_POST_IMAGES,
+    switchLocationMethod,
     TITLE_MAX_LENGTH,
     validatePostDraft,
 } from '../utils/postValidation';
@@ -116,6 +119,7 @@ const CreatePost = () => {
     const [gettingLocation, setGettingLocation] = useState(false);
     const [locationStatus, setLocationStatus] = useState('idle');
     const [locationMethod, setLocationMethod] = useState('detect');
+    const [locationSource, setLocationSource] = useState(null);
     const hasAutoDetected = React.useRef(false);
     const locationRequestRef = React.useRef(0);
 
@@ -123,6 +127,11 @@ const CreatePost = () => {
     const descLimit = DESCRIPTION_MAX_LENGTH;
 
     const fieldError = (field) => validationError?.field === field ? validationError.message : null;
+
+    const validationDraft = () => ({
+        ...formData,
+        locationSource,
+    });
 
     const hasUnsavedChanges = Boolean(
         formData.type || formData.title.trim() || formData.description.trim() ||
@@ -154,6 +163,31 @@ const CreatePost = () => {
         return () => window.removeEventListener('beforeunload', warnBeforeUnload);
     }, [hasUnsavedChanges]);
 
+    const changeLocationMethod = (nextMethod) => {
+        if (nextMethod === locationMethod) return;
+
+        const cleared = switchLocationMethod({
+            method: locationMethod,
+            location: formData.location,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+        }, nextMethod);
+
+        locationRequestRef.current += 1;
+        setGettingLocation(false);
+        setLocationStatus('idle');
+        setLocationSource(null);
+        setFormData(prev => ({
+            ...prev,
+            location: cleared.location,
+            latitude: cleared.latitude,
+            longitude: cleared.longitude,
+        }));
+        setLocationMethod(nextMethod);
+        hasAutoDetected.current = nextMethod !== 'detect';
+        setValidationError(null);
+    };
+
     const getCurrentLocation = () => {
         if (!navigator.geolocation) {
             showError('Geolocation not supported');
@@ -184,6 +218,7 @@ const CreatePost = () => {
 
                     if (requestId !== locationRequestRef.current) return;
                     setFormData(prev => ({ ...prev, latitude, longitude, location: label }));
+                    setLocationSource(getLocationSource('detect'));
                     setLocationStatus('found');
                 } catch {
                     if (requestId !== locationRequestRef.current) return;
@@ -193,6 +228,7 @@ const CreatePost = () => {
                         longitude,
                         location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
                     }));
+                    setLocationSource(getLocationSource('detect'));
                     setLocationStatus('found');
                 } finally {
                     if (requestId === locationRequestRef.current) setGettingLocation(false);
@@ -248,10 +284,23 @@ const CreatePost = () => {
             return;
         }
 
-        const invalid = validatePostDraft('all', { ...formData, latitude: formData.latitude, longitude: formData.longitude });
+        const invalid = validatePostDraft('all', validationDraft());
         if (invalid) {
             setValidationError(invalid);
             setStep(invalid.section === 'category' ? 1 : invalid.section === 'details' ? 2 : invalid.section === 'location' ? 3 : 4);
+            return;
+        }
+
+        const locationFields = getLocationPayload({
+            method: locationMethod,
+            location: formData.location,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+        });
+
+        if (!locationFields) {
+            setValidationError({ field: 'location', section: 'location', message: 'Confirm a location using one option before publishing.' });
+            setStep(3);
             return;
         }
 
@@ -265,9 +314,10 @@ const CreatePost = () => {
             data.append('itemCategory', formData.itemCategory || '');
             data.append('title', formData.title);
             data.append('description', formData.description);
-            data.append('location', formData.location);
-            data.append('latitude', formData.latitude);
-            data.append('longitude', formData.longitude);
+            data.append('location', locationFields.location);
+            data.append('latitude', locationFields.latitude);
+            data.append('longitude', locationFields.longitude);
+            data.append('locationSource', locationFields.locationSource);
             data.append('price', formData.price);
             data.append('duration', formData.duration);
             data.append('exchangePreference', formData.exchangePreference);
@@ -292,7 +342,7 @@ const CreatePost = () => {
         if (step >= 4) return;
 
         const sectionByStep = { 1: 'category', 2: 'details', 3: 'location' };
-        const invalid = validatePostDraft(sectionByStep[step], formData);
+        const invalid = validatePostDraft(sectionByStep[step], validationDraft());
         if (invalid) {
             setValidationError(invalid);
             return;
@@ -607,7 +657,7 @@ const CreatePost = () => {
                             <div className="flex bg-card rounded-xl border border-card-border p-1">
                                 <button
                                     type="button"
-                                    onClick={() => setLocationMethod('detect')}
+                                    onClick={() => changeLocationMethod('detect')}
                                     className={cn(
                                         'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all',
                                         locationMethod === 'detect' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-foreground-muted hover:text-foreground'
@@ -617,11 +667,7 @@ const CreatePost = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        locationRequestRef.current += 1;
-                                        setGettingLocation(false);
-                                        setLocationMethod('pin');
-                                    }}
+                                    onClick={() => changeLocationMethod('pin')}
                                     className={cn(
                                         'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all',
                                         locationMethod === 'pin' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-foreground-muted hover:text-foreground'
@@ -694,15 +740,20 @@ const CreatePost = () => {
                                             <LocationPicker
                                                 position={formData.latitude ? { lat: formData.latitude, lng: formData.longitude } : null}
                                                 setPosition={async (pos) => {
+                                                    const requestId = locationRequestRef.current;
                                                     setFormData(prev => ({ ...prev, latitude: pos.lat, longitude: pos.lng }));
+                                                    setLocationSource(getLocationSource('pin'));
                                                     try {
                                                         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&format=json`);
                                                         const data = await res.json();
+                                                        if (requestId !== locationRequestRef.current) return;
                                                         const addr = data.address || {};
                                                         const parts = [addr.building || addr.house_number, addr.road, addr.neighbourhood || addr.suburb, addr.city || addr.town || addr.village].filter(Boolean);
                                                         setFormData(prev => ({ ...prev, location: parts.join(', ') || `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}` }));
                                                     } catch {
-                                                        setFormData(prev => ({ ...prev, location: `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}` }));
+                                                        if (requestId === locationRequestRef.current) {
+                                                            setFormData(prev => ({ ...prev, location: `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}` }));
+                                                        }
                                                     }
                                                 }}
                                             />

@@ -4,6 +4,24 @@ export const MAX_POST_IMAGES = 5;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+export const LOCATION_SOURCES = ['current', 'map'] as const;
+
+export type LocationSource = typeof LOCATION_SOURCES[number];
+export type LocationMethod = 'detect' | 'pin';
+
+export interface LocationSelection {
+    method: LocationMethod | null;
+    location: string;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
+}
+
+export interface LocationPayload {
+    location: string;
+    latitude: number;
+    longitude: number;
+    locationSource: LocationSource;
+}
 
 export type ValidationSection = 'category' | 'details' | 'location' | 'exchange' | 'all';
 
@@ -23,6 +41,7 @@ export interface PostDraft {
     location?: string;
     latitude?: number | string | null;
     longitude?: number | string | null;
+    locationSource?: LocationSource | null;
     price?: number | string;
     duration?: number | string;
     exchangePreference?: string;
@@ -46,6 +65,37 @@ const error = (
     field: string,
     message: string
 ): ValidationError => ({ section, field, message });
+
+export function getLocationSource(method: LocationMethod | null): LocationSource | null {
+    if (method === 'detect') return 'current';
+    if (method === 'pin') return 'map';
+    return null;
+}
+
+export function switchLocationMethod(
+    selection: LocationSelection,
+    nextMethod: LocationMethod
+): LocationSelection {
+    if (selection.method === nextMethod) return selection;
+
+    return {
+        method: nextMethod,
+        location: '',
+        latitude: null,
+        longitude: null,
+    };
+}
+
+export function getLocationPayload(selection: LocationSelection): LocationPayload | null {
+    const source = getLocationSource(selection.method);
+    const latitude = parseNumber(selection.latitude);
+    const longitude = parseNumber(selection.longitude);
+    const location = (selection.location || '').trim();
+
+    if (!source || latitude === null || longitude === null || !location) return null;
+
+    return { location, latitude, longitude, locationSource: source };
+}
 
 const validateCategory = (draft: PostDraft): ValidationError | null => {
     if (!draft.type) {
@@ -82,6 +132,14 @@ const validateDetails = (draft: PostDraft): ValidationError | null => {
 const validateLocation = (draft: PostDraft): ValidationError | null => {
     const latitude = parseNumber(draft.latitude);
     const longitude = parseNumber(draft.longitude);
+
+    // New clients always send a single explicit source. Older drafts remain valid
+    // so posts created before this change can still be edited and published.
+    if (draft.locationSource !== undefined) {
+        if (!draft.locationSource || !LOCATION_SOURCES.includes(draft.locationSource)) {
+            return error('location', 'location', 'Confirm a location using one option: detect GPS or pin on the map.');
+        }
+    }
 
     if (latitude === null || longitude === null) {
         return error('location', 'location', 'Detect your location or pin a spot on the map.');

@@ -225,7 +225,7 @@ const ChatListScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
             
             {/* Modern Gradient Background */}
             <View pointerEvents="none" style={styles.backgroundGradient}>

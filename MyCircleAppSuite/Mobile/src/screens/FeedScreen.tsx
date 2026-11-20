@@ -675,7 +675,6 @@ const FeedScreen = ({ navigation, route }: any) => {
                 data={filteredPosts}
                 keyExtractor={(item: any) => item._id}
                 numColumns={1}
-                estimatedItemSize={450}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 refreshControl={

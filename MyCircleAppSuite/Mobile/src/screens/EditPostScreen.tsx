@@ -146,7 +146,7 @@ const EditPostScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <StatusBar barStyle="light-content" />
 
             {/* Modern Gradient Background */}
             <View pointerEvents="none" style={styles.backgroundGradient}>

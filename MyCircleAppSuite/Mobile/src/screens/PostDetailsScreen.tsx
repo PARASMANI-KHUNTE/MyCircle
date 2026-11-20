@@ -256,7 +256,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             >
                 <StatusBar
                     barStyle={isDark ? 'light-content' : 'dark-content'}
-                    backgroundColor={colors.background}
                 />
                 <ActivityIndicator size="large" color={colors.primary} />
             </SafeAreaView>
@@ -280,8 +279,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <StatusBar
                     barStyle={isDark ? 'light-content' : 'dark-content'}
-                    backgroundColor="transparent"
-                    translucent
                 />
 
                 {/* Top Floating Navigation Header */}

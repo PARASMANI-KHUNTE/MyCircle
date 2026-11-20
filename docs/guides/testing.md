@@ -32,17 +32,18 @@
 
 | Feature | Action | Expected Result |
 |---------|--------|-----------------|
-| Create Post - Step 1 | Select category | Advances to Details step |
-| Create Post - Step 2 | Enter title (100 chars max), description (1000 chars max) | Character counter updates, advances to Exchange |
-| Create Post - Step 3 | Set price, toggle Urgent, select Exchange preference | Options saved |
-| Create Post - Step 4 | Review preview card | Shows styled preview with badges |
-| Create Post - Submit | Tap "Post" | Creates post, shows success, resets form |
-| Urgent Toggle | Enable urgent toggle | Preview shows 🔥 URGENT badge |
-| Exchange Preference | Select Money/Barter/Flexible | Badge updates in preview |
-| Image Upload | Tap "Add" in image section | Opens gallery, adds images (up to 5) |
-| Location - Search | Type city name | Shows autocomplete suggestions |
-| Location - GPS | Tap "Detect GPS" | Fetches current location |
-| Location - Pin | Tap "Open Map" → Tap on map | Pins location at tap point |
+| Create Post - Step 1 | Select category and type/subtype | Advances to Details step |
+| Create Post - Step 2 | Enter title (200 chars max), description (5000 chars max), optional photos | Advances to Location step |
+| Create Post - Step 3 | Detect GPS or pin on map | Coordinates and location label are confirmed |
+| Create Post - Step 4 | Set price, duration, Urgent, Exchange preference | Options saved |
+| Create Post - Step 5 | Review preview card | Shows title, description, photos and exchange details |
+| Create Post - Submit | Tap "Launch" / "Publish" | Creates post, shows success, resets form |
+| Urgent Toggle | Enable urgent toggle | Preview shows URGENT badge |
+| Exchange Preference | Select Money/Barter/Flexible | Review shows selected preference |
+| Image Upload | Tap "Add Photo" / "Add photos" | Adds up to 5 JPEG, PNG or WebP images (5 MB each) |
+| Location - GPS | Tap "Detect My Location" / "Detect Location" | Fetches current location and label |
+| Location - Pin | Tap "Pin on Map" → Tap on map | Pins location at tap point |
+| Validation | Leave a required field empty and continue | Inline error appears; step does not advance |
 | View Post | Tap post card | Opens post detail screen |
 | Like Post | Tap heart icon | Heart fills red, like count increases |
 | Double-tap Like | Double-tap post image | Heart animation, post liked |

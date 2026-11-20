@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { formatErrorMessage } from '../utils/errorMessage';
+import {
+    ALLOWED_IMAGE_TYPES,
+    DESCRIPTION_MAX_LENGTH,
+    MAX_IMAGE_BYTES,
+    MAX_POST_IMAGES,
+    TITLE_MAX_LENGTH,
+    validatePostDraft,
+} from '../utils/postValidation';
 import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { AlertCircle, X, Plus, MapPin, Navigation, Loader2, ArrowRight, ArrowLeft, Check, Sparkles, Zap, Clock, AlertTriangle, ArrowLeftRight } from 'lucide-react';
@@ -104,23 +112,47 @@ const CreatePost = () => {
     const [previews, setPreviews] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [validationError, setValidationError] = useState(null);
     const [gettingLocation, setGettingLocation] = useState(false);
     const [locationStatus, setLocationStatus] = useState('idle');
     const [locationMethod, setLocationMethod] = useState('detect');
     const hasAutoDetected = React.useRef(false);
+    const locationRequestRef = React.useRef(0);
 
-    const titleLimit = 100;
-    const descLimit = 1000;
+    const titleLimit = TITLE_MAX_LENGTH;
+    const descLimit = DESCRIPTION_MAX_LENGTH;
+
+    const fieldError = (field) => validationError?.field === field ? validationError.message : null;
+
+    const hasUnsavedChanges = Boolean(
+        formData.type || formData.title.trim() || formData.description.trim() ||
+        formData.location || formData.price || images.length || step > 1
+    );
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        if (name === 'title' && value.length > titleLimit) return;
-        if (name === 'description' && value.length > descLimit) return;
+        setValidationError(null);
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
     };
+
+    useEffect(() => {
+        setValidationError(null);
+    }, [formData, images]);
+
+    useEffect(() => {
+        if (!hasUnsavedChanges) return undefined;
+
+        const warnBeforeUnload = (event) => {
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', warnBeforeUnload);
+        return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+    }, [hasUnsavedChanges]);
 
     const getCurrentLocation = () => {
         if (!navigator.geolocation) {
@@ -128,14 +160,13 @@ const CreatePost = () => {
             return;
         }
 
+        const requestId = ++locationRequestRef.current;
         setGettingLocation(true);
         setLocationStatus('locating');
 
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
-                
-                setFormData(prev => ({ ...prev, latitude, longitude }));
 
                 try {
                     const response = await fetch(
@@ -149,22 +180,26 @@ const CreatePost = () => {
                         addr.neighbourhood || addr.suburb,
                         addr.city || addr.town || addr.village
                     ].filter(Boolean);
-                    
-                    setFormData(prev => ({
-                        ...prev,
-                        location: parts.join(', ') || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-                    }));
+                    const label = parts.join(', ') || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+                    if (requestId !== locationRequestRef.current) return;
+                    setFormData(prev => ({ ...prev, latitude, longitude, location: label }));
+                    setLocationStatus('found');
                 } catch {
+                    if (requestId !== locationRequestRef.current) return;
                     setFormData(prev => ({
                         ...prev,
+                        latitude,
+                        longitude,
                         location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
                     }));
+                    setLocationStatus('found');
+                } finally {
+                    if (requestId === locationRequestRef.current) setGettingLocation(false);
                 }
-
-                setGettingLocation(false);
-                setLocationStatus('found');
             },
             () => {
+                if (requestId !== locationRequestRef.current) return;
                 setGettingLocation(false);
                 setLocationStatus('error');
                 showError('Could not get location');
@@ -174,29 +209,49 @@ const CreatePost = () => {
     };
 
     const handleImageChange = (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length + images.length > 5) {
-            showError('Maximum 5 images');
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        const remaining = MAX_POST_IMAGES - images.length;
+        if (files.length > remaining) {
+            showError(`You can add up to ${MAX_POST_IMAGES} photos.`);
+            e.target.value = '';
             return;
         }
-        setImages([...images, ...files]);
-        setPreviews([...previews, ...files.map(file => URL.createObjectURL(file))]);
+
+        const validFiles = files.filter(file =>
+            ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_IMAGE_BYTES
+        );
+
+        if (validFiles.length !== files.length) {
+            showError(`Use JPEG, PNG or WebP images under 5 MB. ${validFiles.length} photo(s) were added.`);
+        }
+
+        if (validFiles.length) {
+            setImages([...images, ...validFiles]);
+            setPreviews([...previews, ...validFiles.map(file => URL.createObjectURL(file))]);
+        }
+        e.target.value = '';
     };
 
     const removeImage = (index) => {
-        const newImages = [...images];
-        const newPreviews = [...previews];
-        newImages.splice(index, 1);
-        newPreviews.splice(index, 1);
-        setImages(newImages);
-        setPreviews(newPreviews);
+        URL.revokeObjectURL(previews[index]);
+        setImages(images.filter((_, i) => i !== index));
+        setPreviews(previews.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.latitude || !formData.longitude) {
-            setError({ message: 'Please share your location to continue' });
+        if (step !== 4) {
+            nextStep();
+            return;
+        }
+
+        const invalid = validatePostDraft('all', { ...formData, latitude: formData.latitude, longitude: formData.longitude });
+        if (invalid) {
+            setValidationError(invalid);
+            setStep(invalid.section === 'category' ? 1 : invalid.section === 'details' ? 2 : invalid.section === 'location' ? 3 : 4);
             return;
         }
 
@@ -233,20 +288,18 @@ const CreatePost = () => {
         }
     };
 
-    const canProceed = () => {
-        switch (step) {
-            case 1: return !!formData.type;
-            case 2:
-                if (formData.type === 'job') return formData.jobType && formData.title.trim() && formData.description.trim();
-                return formData.title.trim() && formData.description.trim();
-            case 3: return !!formData.latitude && !!formData.longitude;
-            case 4: return true;
-            default: return false;
-        }
-    };
-
     const nextStep = () => {
-        if (canProceed() && step < 4) setStep(step + 1);
+        if (step >= 4) return;
+
+        const sectionByStep = { 1: 'category', 2: 'details', 3: 'location' };
+        const invalid = validatePostDraft(sectionByStep[step], formData);
+        if (invalid) {
+            setValidationError(invalid);
+            return;
+        }
+
+        setValidationError(null);
+        setStep(step + 1);
     };
 
     const prevStep = () => {
@@ -267,7 +320,11 @@ const CreatePost = () => {
                 <div className="max-w-lg mx-auto px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-between">
                         <button
-                            onClick={() => navigate(-1)}
+                            onClick={() => {
+                                if (!hasUnsavedChanges || window.confirm('Discard this post? Your changes will be lost.')) {
+                                    navigate(-1);
+                                }
+                            }}
                             className="icon-btn -ml-2"
                             aria-label="Go back"
                         >
@@ -339,6 +396,9 @@ const CreatePost = () => {
                                     </button>
                                 ))}
                             </div>
+                            {fieldError('type') && (
+                                <p className="text-xs text-error">{fieldError('type')}</p>
+                            )}
                         </div>
                     )}
 
@@ -361,6 +421,9 @@ const CreatePost = () => {
                                             <option key={type.id} value={type.id}>{type.label}</option>
                                         ))}
                                     </select>
+                                    {fieldError('jobType') && (
+                                        <p className="mt-1 text-xs text-error">{fieldError('jobType')}</p>
+                                    )}
                                 </div>
                             )}
 
@@ -378,6 +441,9 @@ const CreatePost = () => {
                                             <option key={cat.id} value={cat.id}>{cat.label}</option>
                                         ))}
                                     </select>
+                                    {fieldError('itemCategory') && (
+                                        <p className="mt-1 text-xs text-error">{fieldError('itemCategory')}</p>
+                                    )}
                                 </div>
                             )}
 
@@ -390,9 +456,13 @@ const CreatePost = () => {
                                     name="title"
                                     value={formData.title}
                                     onChange={handleChange}
+                                    maxLength={titleLimit}
                                     placeholder={formData.type === 'job' ? "e.g. Need plumber for kitchen" : "e.g. Selling laptop"}
                                     className="w-full mt-1.5 px-4 py-3 rounded-xl border border-card-border bg-card text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                 />
+                                {fieldError('title') && (
+                                    <p className="mt-1 text-xs text-error">{fieldError('title')}</p>
+                                )}
                             </div>
 
                             <div>
@@ -405,9 +475,13 @@ const CreatePost = () => {
                                     value={formData.description}
                                     onChange={handleChange}
                                     rows={4}
+                                    maxLength={descLimit}
                                     placeholder="Describe what you need or offer..."
                                     className="w-full mt-1.5 px-4 py-3 rounded-xl border border-card-border bg-card text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all"
                                 />
+                                {fieldError('description') && (
+                                    <p className="mt-1 text-xs text-error">{fieldError('description')}</p>
+                                )}
                             </div>
 
                             <div>
@@ -415,11 +489,15 @@ const CreatePost = () => {
                                 <input
                                     name="price"
                                     type="number"
+                                    min="0"
                                     value={formData.price}
                                     onChange={handleChange}
                                     placeholder="0 or leave empty"
                                     className="w-full mt-1.5 px-4 py-3 rounded-xl border border-card-border bg-card text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                 />
+                                {fieldError('price') && (
+                                    <p className="mt-1 text-xs text-error">{fieldError('price')}</p>
+                                )}
                             </div>
 
                             <div>
@@ -539,7 +617,11 @@ const CreatePost = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setLocationMethod('pin')}
+                                    onClick={() => {
+                                        locationRequestRef.current += 1;
+                                        setGettingLocation(false);
+                                        setLocationMethod('pin');
+                                    }}
                                     className={cn(
                                         'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all',
                                         locationMethod === 'pin' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-foreground-muted hover:text-foreground'
@@ -548,6 +630,10 @@ const CreatePost = () => {
                                     Pin on Map
                                 </button>
                             </div>
+
+                            {fieldError('location') && (
+                                <p className="text-xs text-error">{fieldError('location')}</p>
+                            )}
 
                             {locationMethod === 'detect' ? (
                                 <div className={cn(
@@ -649,7 +735,12 @@ const CreatePost = () => {
                             <div className="p-5 rounded-2xl border border-card-border bg-background-secondary space-y-3">
                                 <div className="flex items-center gap-2">
                                     <span className="text-2xl">{CATEGORIES.find(c => c.id === formData.type)?.emoji}</span>
-                                    <span className="font-medium">{formData.type}</span>
+                                    <span className="font-medium capitalize">{formData.type}</span>
+                                    {(formData.jobType || formData.itemCategory) && (
+                                        <span className="text-xs text-foreground-muted capitalize">
+                                            · {formData.jobType || formData.itemCategory}
+                                        </span>
+                                    )}
                                     {formData.isUrgent && (
                                         <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-500 text-xs">Urgent</span>
                                     )}
@@ -662,13 +753,16 @@ const CreatePost = () => {
                                     <span className="flex items-center gap-1 font-medium text-foreground">
                                         {currencySymbol}{formData.price || '—'}
                                     </span>
+                                    <span className="flex items-center gap-1 capitalize">
+                                        {formData.exchangePreference}
+                                    </span>
                                     <span className="flex items-center gap-1">
                                         <Clock className="w-4 h-4" />
                                         {DURATIONS.find(d => d.id === formData.duration)?.label}
                                     </span>
                                     <span className="flex items-center gap-1 truncate">
                                         <MapPin className="w-4 h-4 shrink-0" />
-                                        {formData.location?.split(',')[0] || 'No location'}
+                                        {formData.location || 'No location'}
                                     </span>
                                 </div>
                             </div>
@@ -702,7 +796,7 @@ const CreatePost = () => {
                         </Button>
                     )}
                     {step < 4 ? (
-                        <Button type="button" onClick={nextStep} disabled={!canProceed()} className="flex-1">
+                        <Button type="button" onClick={nextStep} className="flex-1">
                             Continue <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                     ) : (

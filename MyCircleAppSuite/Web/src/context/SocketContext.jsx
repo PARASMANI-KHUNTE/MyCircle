@@ -43,8 +43,10 @@ export const SocketProvider = ({ children }) => {
                 withCredentials: true,
                 transports: ['polling', 'websocket'], // Try polling first to avoid WS errors in console
                 reconnection: true,
-                reconnectionAttempts: 3,
+                reconnectionAttempts: Infinity,
                 reconnectionDelay: 1000,
+                reconnectionDelayMax: 10000,
+                randomizationFactor: 0.5,
                 auth: { token: token || localStorage.getItem('token') },
                 timeout: 3000,
                 autoConnect: true,
@@ -74,6 +76,12 @@ export const SocketProvider = ({ children }) => {
                 } else {
                     setConnectionError(err.message);
                 }
+            });
+
+            newSocket.io?.on('reconnect', (attemptNumber) => {
+                console.info('[Socket] Reconnected after', attemptNumber, 'attempt(s)');
+                setConnected(true);
+                setConnectionError(null);
             });
 
             newSocket.io?.on('reconnect_failed', () => {

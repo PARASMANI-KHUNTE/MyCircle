@@ -1,3 +1,4 @@
+import notifee, { AndroidImportance } from '@notifee/react-native';
 import {
     getMessaging,
     requestPermission,
@@ -5,12 +6,29 @@ import {
     onMessage,
     onNotificationOpenedApp,
     getInitialNotification,
+    setBackgroundMessageHandler,
     AuthorizationStatus,
     type RemoteMessage,
 } from '@react-native-firebase/messaging';
 import { getApp, getApps } from '@react-native-firebase/app';
 import { PermissionsAndroid, Platform } from 'react-native';
-import { Alert } from '../utils/alert';
+import api from './api';
+import { navigate } from './navigationService';
+import {
+    getNotificationRoute,
+    getNotificationTitle,
+    type NotificationPayload,
+} from '../utils/notificationRouting';
+
+export const NOTIFICATION_CHANNEL_ID = 'mycircle_channel_v1';
+
+type NotificationData = Record<string, string>;
+
+let listenerUnsubscribe: (() => void) | null = null;
+let backgroundHandlerRegistered = false;
+let registeredDeviceToken: string | null = null;
+let pendingDeviceToken: string | null = null;
+let deviceTokenPromise: Promise<boolean> | null = null;
 
 const getMessagingInstance = () => {
     try {
@@ -25,6 +43,86 @@ const getMessagingInstance = () => {
 
 export const isFirebaseMessagingConfigured = () => {
     return !!getMessagingInstance();
+};
+
+const normalizeData = (data?: Record<string, any> | null): NotificationData => {
+    const normalized: NotificationData = {};
+    if (!data) return normalized;
+
+    Object.entries(data).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+        normalized[key] = typeof value === 'string' ? value : String(value);
+    });
+    return normalized;
+};
+
+const displayLocalNotification = async ({ title, body, data }: {
+    title: string;
+    body: string;
+    data: NotificationData;
+}) => {
+    await notifee.createChannel({
+        id: NOTIFICATION_CHANNEL_ID,
+        name: 'MyCircle Notifications',
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+        vibration: true,
+        vibrationPattern: [300, 500],
+    });
+
+    await notifee.displayNotification({
+        title,
+        body,
+        data,
+        android: {
+            channelId: NOTIFICATION_CHANNEL_ID,
+            importance: AndroidImportance.HIGH,
+            sound: 'default',
+            vibrationPattern: [300, 500],
+            pressAction: {
+                id: 'default',
+            },
+            smallIcon: 'ic_launcher',
+        },
+        ios: {
+            sound: 'default',
+            foregroundPresentationOptions: {
+                badge: true,
+                sound: true,
+                banner: true,
+                list: true,
+            },
+        },
+    });
+};
+
+const handleOpenedNotification = (remoteMessage?: RemoteMessage | null) => {
+    if (!remoteMessage) return;
+
+    const data = normalizeData(remoteMessage.data);
+    const route = getNotificationRoute(data as NotificationPayload);
+    if (route) {
+        navigate(route.name, route.params);
+    }
+};
+
+const registerBackgroundHandler = (messaging: ReturnType<typeof getMessaging> | null) => {
+    if (!messaging || backgroundHandlerRegistered) return;
+
+    setBackgroundMessageHandler(messaging, async (remoteMessage: RemoteMessage) => {
+        const data = normalizeData(remoteMessage.data);
+        const payload = {
+            ...data,
+            title: remoteMessage.notification?.title || data.title,
+        } as NotificationPayload;
+
+        await displayLocalNotification({
+            title: getNotificationTitle(payload),
+            body: remoteMessage.notification?.body || data.message || '',
+            data,
+        });
+    });
+    backgroundHandlerRegistered = true;
 };
 
 export const requestUserPermission = async () => {
@@ -70,46 +168,93 @@ export const getFCMToken = async () => {
     }
 };
 
+export const registerDeviceToken = async (): Promise<boolean> => {
+    const hasPermission = await requestUserPermission();
+    if (!hasPermission) return false;
+
+    const token = await getFCMToken();
+    if (!token) return false;
+    if (registeredDeviceToken === token) return true;
+    if (deviceTokenPromise && pendingDeviceToken === token) return deviceTokenPromise;
+
+    pendingDeviceToken = token;
+    deviceTokenPromise = (async () => {
+        try {
+            await api.post('/notifications/device-token', { token, platform: Platform.OS });
+            registeredDeviceToken = token;
+            return true;
+        } catch (error) {
+            console.error('Failed to register device token:', error);
+            return false;
+        } finally {
+            deviceTokenPromise = null;
+            pendingDeviceToken = null;
+        }
+    })();
+
+    return deviceTokenPromise;
+};
+
+export const unregisterDeviceToken = async (): Promise<void> => {
+    const token = registeredDeviceToken || await getFCMToken();
+    registeredDeviceToken = null;
+    pendingDeviceToken = null;
+    deviceTokenPromise = null;
+
+    if (!token) return;
+
+    try {
+        // Always scope the delete to this device so logging out on one phone
+        // never clears tokens belonging to the user's other devices.
+        await api.delete('/notifications/device-token', { data: { token } });
+    } catch (error) {
+        console.error('Failed to unregister device token:', error);
+    }
+};
+
 export const notificationListener = () => {
     const messaging = getMessagingInstance();
     if (!messaging) {
         return () => undefined;
     }
 
-    // Assume a message-notification contains a "type" property in data payload of screen to open
-    const unsubscribeOpened = onNotificationOpenedApp(messaging, (remoteMessage: RemoteMessage) => {
-        console.log(
-            'Notification caused app to open from background state:',
-            remoteMessage.notification,
-        );
-        // Navigation logic could go here later
-    });
+    registerBackgroundHandler(messaging);
+    if (listenerUnsubscribe) return listenerUnsubscribe;
 
-    // Check whether an initial notification is available
-    getInitialNotification(messaging).then((remoteMessage: RemoteMessage | null) => {
-        if (remoteMessage) {
-            console.log(
-                'Notification caused app to open from quit state:',
-                remoteMessage.notification,
-            );
+    const unsubscribeOpened = onNotificationOpenedApp(messaging, handleOpenedNotification);
+
+    getInitialNotification(messaging)
+        .then(handleOpenedNotification)
+        .catch(error => console.error('Failed to check initial notification:', error));
+
+    const unsubscribeForeground = onMessage(messaging, async (remoteMessage: RemoteMessage) => {
+        try {
+            const data = normalizeData(remoteMessage.data);
+            const payload = {
+                ...data,
+                title: remoteMessage.notification?.title || data.title,
+            } as NotificationPayload;
+
+            await displayLocalNotification({
+                title: getNotificationTitle(payload),
+                body: remoteMessage.notification?.body || data.message || '',
+                data,
+            });
+        } catch (error) {
+            console.error('Failed to display foreground notification:', error);
         }
     });
 
-    // Foreground messages
-    const unsubscribeForeground = onMessage(messaging, async (remoteMessage: RemoteMessage) => {
-        Alert.alert(
-            remoteMessage.notification?.title || 'New Notification',
-            remoteMessage.notification?.body || ''
-        );
-    });
-
-    return () => {
+    listenerUnsubscribe = () => {
         unsubscribeOpened();
         unsubscribeForeground();
+        listenerUnsubscribe = null;
     };
+    return listenerUnsubscribe;
 };
 
 const initialize = async () => {
+    registerBackgroundHandler(getMessagingInstance());
     const hasPermission = await requestUserPermission();
     if (hasPermission) {
         notificationListener();
@@ -117,9 +262,12 @@ const initialize = async () => {
 };
 
 export default {
+    NOTIFICATION_CHANNEL_ID,
     isFirebaseMessagingConfigured,
     requestUserPermission,
     getFCMToken,
+    registerDeviceToken,
+    unregisterDeviceToken,
     notificationListener,
     initialize,
 };

@@ -94,12 +94,18 @@
 
 | Feature | Action | Expected Result |
 |---------|--------|-----------------|
-| In-App List | Tap bell icon | Shows notification list |
-| Push Notification | Receive event while app backgrounded | System notification appears |
-| New Request Alert | Someone requests your post | Notification received |
-| Approval Alert | Your request approved | Notification received |
-| Like/Comment Alert | Someone engages your post | Notification received |
-| Message Alert | New chat message | Notification received |
+| In-App List | Tap bell icon | Shows notification list with a global unread badge |
+| Realtime Update | Trigger an event in a second session | Notification appears and badge increments without refresh |
+| Reconnect Catch-up | Go offline, trigger an event, reconnect | List and badge refresh automatically |
+| Push Notification | Receive event while app is foregrounded/backgrounded | Heads-up notification appears (FCM requires configured native credentials) |
+| Permission Prompt | Launch mobile app | Notification permission is requested once |
+| New Application / Request Alert | Someone requests your post | Notification received; tap opens Requests |
+| Approval Alert | Your request approved | Notification received; tap opens chat when available |
+| Rejection Alert | Your request rejected | Notification received with "Request Rejected"; tap opens Requests |
+| Post Status Alert | Owner changes post status | Requesters receive "Post Status Updated"; tap opens the post |
+| Like/Comment Alert | Someone engages your post | Notification received; tap opens the post |
+| Message Alert | New chat message | Notification received; tap opens the conversation |
+| Device Token | Log in, then log out | Token registered and cleared on the server |
 | Mark as Read | Tap notification | Marked as read, navigates to item |
 | Delete Notification | Swipe left → Delete | Removes notification |
 

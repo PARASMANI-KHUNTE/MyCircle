@@ -36,6 +36,31 @@ const parsePagination = (query, defaultLimit, maxLimit) => {
     };
 };
 
+const notifyRequestersOfStatusChange = async (io, post, status, senderId, requestsOverride = null) => {
+    try {
+        const requests = requestsOverride || await ContactRequest.find({
+            post: post._id,
+            status: { $in: ['pending', 'accepted', 'approved'] },
+        }).select('requester');
+
+        const recipientIds = [...new Set(requests.map((request) => request.requester?.toString()).filter(Boolean))];
+        const label = String(status).charAt(0).toUpperCase() + String(status).slice(1);
+
+        await Promise.all(recipientIds.map((recipient) => createNotification(io, {
+            recipient,
+            sender: senderId,
+            type: 'info',
+            event: 'post_status_changed',
+            title: 'Post Status Updated',
+            message: `The post "${post.title}" is now ${label.toLowerCase()}.`,
+            link: `/post/${post._id}`,
+            relatedId: post._id,
+        })));
+    } catch (err) {
+        console.error('Failed to notify requesters of post status change:', err);
+    }
+};
+
 // @desc    Create a post
 // @route   POST /api/posts
 // @access  Private
@@ -539,6 +564,7 @@ exports.togglePostStatus = async (req, res, next) => {
         }
 
         await post.save();
+        await notifyRequestersOfStatusChange(req.app.get('io'), post, post.status, req.user.id);
         res.json(post);
     } catch (err) {
         if (err.kind === 'ObjectId') {
@@ -865,6 +891,15 @@ exports.updatePostStatus = async (req, res, next) => {
 
         await post.save();
 
+        // Capture recipients before cleanup removes the related requests.
+        let statusRecipients = null;
+        if (status === 'sold' || status === 'completed') {
+            statusRecipients = await ContactRequest.find({
+                post: post._id,
+                status: { $in: ['pending', 'accepted', 'approved'] },
+            }).select('requester');
+        }
+
         // CHAT CLEANUP: If status is sold or completed, delete all conversations and requests linked to this post
         if (status === 'sold' || status === 'completed') {
             const io = req.app.get('io');
@@ -877,6 +912,8 @@ exports.updatePostStatus = async (req, res, next) => {
             await Notification.deleteMany({ relatedId: post._id });
         }
 
+        // Notify affected requesters after cleanup so the status update survives.
+        await notifyRequestersOfStatusChange(req.app.get('io'), post, status, req.user.id, statusRecipients);
         res.json(post);
     } catch (err) {
         if (err.kind === 'ObjectId') {

@@ -56,13 +56,14 @@ imageWorker.on('failed', (job, err) => {
 const notificationWorker = new Worker('notifications', async (job) => {
     logger.info({ jobId: job.id, data: job.data }, 'Processing notification');
     
-    const { recipient, sender, type, title, message, link, conversationId, relatedId, postId } = job.data;
-    
+    const { recipient, sender, type, event, title, message, link, conversationId, relatedId, postId } = job.data;
+
     try {
         await createNotification(null, {
             recipient,
             sender,
             type,
+            event,
             title,
             message,
             link,

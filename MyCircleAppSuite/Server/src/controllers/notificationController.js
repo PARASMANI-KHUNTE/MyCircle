@@ -1,6 +1,8 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
+const { publishNotification } = require('../utils/notificationBus');
 
 const DEFAULT_NOTIFICATION_LIMIT = 30;
 const MAX_NOTIFICATION_LIMIT = 100;
@@ -43,6 +45,14 @@ exports.getNotifications = asyncHandler(async (req, res, next) => {
     res.set('X-Has-More', String(skip + notifications.length < total));
 
     res.json(notifications);
+});
+
+// @desc    Get unread notification count
+// @route   GET /api/notifications/unread-count
+// @access  Private
+exports.getUnreadCount = asyncHandler(async (req, res) => {
+    const count = await Notification.countDocuments({ recipient: req.user.id, read: false });
+    res.json({ count });
 });
 
 // @desc    Mark notification as read
@@ -111,8 +121,54 @@ exports.deleteAll = async (req, res, next) => {
     }
 };
 
+// @desc    Register a device for push notifications
+// @route   POST /api/notifications/device-token
+// @access  Private
+exports.registerDeviceToken = asyncHandler(async (req, res) => {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    const platform = ['ios', 'android', 'web'].includes(req.body?.platform) ? req.body.platform : 'web';
+
+    if (!token) {
+        return res.status(400).json({ msg: 'A device token is required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.pushTokens = user.pushTokens || [];
+    const existing = user.pushTokens.find((entry) => entry.token === token);
+    if (existing) {
+        existing.platform = platform;
+        existing.createdAt = new Date();
+    } else {
+        user.pushTokens.push({ token, platform, createdAt: new Date() });
+    }
+
+    // Keep the most recent devices so a user cannot accumulate unbounded tokens.
+    user.pushTokens = user.pushTokens.slice(-10);
+    await user.save();
+
+    res.json({ msg: 'Device token registered' });
+});
+
+// @desc    Remove a device token (all tokens when none is supplied)
+// @route   DELETE /api/notifications/device-token
+// @access  Private
+exports.unregisterDeviceToken = asyncHandler(async (req, res) => {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+
+    const update = token
+        ? { $pull: { pushTokens: { token } } }
+        : { $set: { pushTokens: [] } };
+
+    await User.findByIdAndUpdate(req.user.id, update);
+    res.json({ msg: 'Device token removed' });
+});
+
 // Helper to create and emit notification (internal use)
-exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId, conversationId = null }) => {
+exports.createNotification = async (io, { recipient, sender, type, title, message, link, relatedId, conversationId = null, event }) => {
     try {
         if (!recipient) {
             console.error("[Notification] No recipient provided.");
@@ -125,36 +181,55 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
 
         if (senderIdStr && recipientIdStr === senderIdStr) return; // Don't notify self
 
+        const eventByType = {
+            request: 'contact_request',
+            approval: 'application_accepted',
+            message: 'message',
+            like: 'like',
+            comment: 'comment',
+        };
         const notification = new Notification({
             recipient,
             sender,
             type,
+            event: event || eventByType[type] || 'system',
             title,
             message,
             link,
             relatedId,
             conversationId
         });
-await notification.save();
+        await notification.save();
         await notification.populate('sender', 'displayName avatar');
 
-        if (io) {
-            const emittedNotification = notification.toObject();
-            if (relatedId) {
-                emittedNotification.postId = relatedId.toString();
-            }
-            if (conversationId) {
-                emittedNotification.conversationId = conversationId.toString();
-            }
-            
-            // Emit to the specific user's room
-            const userRoom = `user:${recipientIdStr}`;
-            io.to(userRoom).emit('new_notification', emittedNotification);
-            
-            console.log(`[Notification] Emitted to room ${userRoom}:`, emittedNotification.title);
-        } else {
-            console.log('[Notification] No io instance, notification saved but not emitted');
+        const emittedNotification = notification.toObject();
+        if (relatedId) {
+            emittedNotification.postId = relatedId.toString();
         }
+        if (conversationId) {
+            emittedNotification.conversationId = conversationId.toString();
+        }
+
+        // Redis fan-out covers PM2 cluster/worker processes. Direct emit is the
+        // fallback for local development where Redis is not configured.
+        const published = await publishNotification({
+            recipientId: recipientIdStr,
+            notification: emittedNotification,
+        });
+
+        if (published) {
+            console.log(`[Notification] Published to Redis for user ${recipientIdStr}:`, emittedNotification.title);
+            return;
+        }
+
+        if (!io) {
+            console.log('[Notification] No io instance, notification saved but not emitted');
+            return;
+        }
+
+        const userRoom = `user:${recipientIdStr}`;
+        io.to(userRoom).emit('new_notification', emittedNotification);
+        console.log(`[Notification] Emitted to room ${userRoom}:`, emittedNotification.title);
     } catch (err) {
         console.error("Notification creation failed:", err);
     }

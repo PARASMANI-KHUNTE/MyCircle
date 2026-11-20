@@ -58,6 +58,59 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Swipeable = ({ children }) => React.createElement(View, null, children);
+  return { __esModule: true, default: Swipeable };
+});
+
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { FlashList: (props) => React.createElement(View, props) };
+});
+
+jest.mock('lucide-react-native', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Icon = () => React.createElement(View);
+  return new Proxy({}, { get: () => Icon });
+});
+
+jest.mock('react-native-reanimated', () => {
+  const { View, Text, Image, ScrollView } = require('react-native');
+  const animation = () => ({});
+  const Animated = {
+    View,
+    Text,
+    Image,
+    ScrollView,
+    createAnimatedComponent: (Component) => Component,
+  };
+  return {
+    __esModule: true,
+    default: Animated,
+    FadeIn: animation,
+    FadeInDown: animation,
+    FadeInUp: animation,
+    FadeInRight: animation,
+    FadeOutDown: animation,
+    FadeOutLeft: animation,
+    SlideInRight: animation,
+    useSharedValue: (value) => ({ value }),
+    useAnimatedStyle: () => ({}),
+    withDelay: (delay, next) => next,
+    withRepeat: (next) => next,
+    withSequence: (...next) => next[next.length - 1],
+    withSpring: (value) => value,
+    withTiming: (value) => value,
+    Easing: { ease: (value) => value, inOut: (easing) => easing },
+    interpolate: () => 0,
+    Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
+  };
+});
+
 jest.mock('react-native-sound', () => {
   class SoundMock {
     static setCategory = jest.fn();
@@ -76,6 +129,31 @@ jest.mock('react-native-webview', () => {
   };
 });
 
+jest.mock('@react-native-community/geolocation', () => ({
+  setRNConfiguration: jest.fn(),
+  requestAuthorization: jest.fn((success) => success && success()),
+  getCurrentPosition: jest.fn(),
+  watchPosition: jest.fn(() => 1),
+  clearWatch: jest.fn(),
+}));
+
+jest.mock('react-native-android-location-enabler', () => ({
+  isLocationEnabled: jest.fn().mockResolvedValue(true),
+  promptForEnableLocationIfNeeded: jest.fn().mockResolvedValue('already-enabled'),
+}));
+
+const { PermissionsAndroid } = require('react-native');
+jest.spyOn(PermissionsAndroid, 'check').mockResolvedValue(true);
+jest.spyOn(PermissionsAndroid, 'request').mockResolvedValue(
+  PermissionsAndroid.RESULTS.GRANTED
+);
+
+jest.mock('react-native-keychain', () => ({
+  getGenericPassword: jest.fn().mockResolvedValue(false),
+  setGenericPassword: jest.fn().mockResolvedValue(false),
+  resetGenericPassword: jest.fn().mockResolvedValue(true),
+}));
+
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
   getString: jest.fn().mockResolvedValue(''),
@@ -90,8 +168,25 @@ jest.mock('react-native-code-push', () => {
   return cp;
 });
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-);
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map();
+  return {
+    __esModule: true,
+    default: {
+      getItem: jest.fn(async (key) => (store.has(key) ? store.get(key) : null)),
+      setItem: jest.fn(async (key, value) => {
+        store.set(key, value);
+      }),
+      removeItem: jest.fn(async (key) => {
+        store.delete(key);
+      }),
+      clear: jest.fn(async () => store.clear()),
+      getAllKeys: jest.fn(async () => Array.from(store.keys())),
+      multiGet: jest.fn(async (keys) => keys.map((key) => [key, store.get(key) ?? null])),
+      multiSet: jest.fn(async (entries) => entries.forEach(([key, value]) => store.set(key, value))),
+      multiRemove: jest.fn(async (keys) => keys.forEach((key) => store.delete(key))),
+    },
+  };
+});
 
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter');

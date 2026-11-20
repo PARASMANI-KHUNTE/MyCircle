@@ -27,6 +27,7 @@ import {
     Sparkles,
     Clock,
     Calendar,
+    Navigation,
 } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { formatDurationMinutesLong } from '../utils/formatDuration';
@@ -453,6 +454,19 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                         {post.location}
                                     </Text>
                                 </View>
+                            )}
+                            {post.approvedLocationShare?.lat != null && post.approvedLocationShare?.lng != null && (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        const url = `https://www.google.com/maps/dir/?api=1&destination=${post.approvedLocationShare.lat},${post.approvedLocationShare.lng}`;
+                                        import('react-native').then((RN) => RN.Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open maps')));
+                                    }}
+                                    style={styles.locationRow}
+                                    activeOpacity={0.8}
+                                >
+                                    <Navigation size={16} color={colors.primary} />
+                                    <Text style={[styles.locationText, { color: colors.primary, fontWeight: '700' }]}>Navigate to shared meeting location</Text>
+                                </TouchableOpacity>
                             )}
 
                             {/* Seller / Author Info Card */}

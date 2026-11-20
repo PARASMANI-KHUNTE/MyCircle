@@ -23,6 +23,8 @@ const NotificationSchema = new mongoose.Schema({
             'contact_request',
             'application_accepted',
             'application_rejected',
+            'location_shared',
+            'location_share_revoked',
             'post_status_changed',
             'message',
             'like',

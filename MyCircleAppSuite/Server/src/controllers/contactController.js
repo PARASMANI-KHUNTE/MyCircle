@@ -37,6 +37,64 @@ const normalizeRequestStatus = (status) => {
     return status;
 };
 
+const isLocationShareActive = (locationShare, requestStatus) => {
+    if (!locationShare) return false;
+    if (normalizeRequestStatus(requestStatus) !== 'accepted') return false;
+    if (locationShare.status !== 'granted') return false;
+    if (locationShare.revokedAt) return false;
+    if (locationShare.expiresAt && new Date(locationShare.expiresAt).getTime() <= Date.now()) return false;
+    const shared = locationShare.sharedLocation;
+    if (!shared || typeof shared.lat !== 'number' || typeof shared.lng !== 'number') return false;
+    if (shared.lat < -90 || shared.lat > 90 || shared.lng < -180 || shared.lng > 180) return false;
+    return true;
+};
+
+const buildLocationShareForViewer = (requestObject, viewerId) => {
+    const ls = requestObject.locationShare || { status: 'none' };
+    const viewerRole = requestObject.requester?._id?.toString?.() === viewerId || requestObject.requester?.toString?.() === viewerId
+        ? 'requester'
+        : 'recipient';
+
+    // Owner is recipient role in this app's naming (recipient is post owner)
+    if (viewerRole === 'recipient') {
+        const shared = ls.sharedLocation || null;
+        return {
+            status: ls.status || 'none',
+            grantedAt: ls.grantedAt || null,
+            expiresAt: ls.expiresAt || null,
+            revokedAt: ls.revokedAt || null,
+            sharedLocation: shared && typeof shared.lat === 'number' && typeof shared.lng === 'number'
+                ? {
+                    lat: shared.lat,
+                    lng: shared.lng,
+                    accuracy: shared.accuracy ?? null,
+                    note: shared.note || '',
+                    updatedAt: shared.updatedAt || null,
+                }
+                : null,
+        };
+    }
+
+    // Requester view: only expose coordinates if active
+    if (isLocationShareActive(ls, requestObject.status)) {
+        const shared = ls.sharedLocation;
+        return {
+            available: true,
+            grantedAt: ls.grantedAt || null,
+            expiresAt: ls.expiresAt || null,
+            sharedLocation: {
+                lat: shared.lat,
+                lng: shared.lng,
+                accuracy: shared.accuracy ?? null,
+                note: shared.note || '',
+                updatedAt: shared.updatedAt || null,
+            },
+        };
+    }
+
+    return { available: false };
+};
+
 const serializeRequest = (request, viewerId) => {
     const requestObject = request.toObject ? request.toObject() : request;
     const normalizedStatus = normalizeRequestStatus(requestObject.status);
@@ -52,6 +110,7 @@ const serializeRequest = (request, viewerId) => {
         ...requestObject,
         status: normalizedStatus,
         conversationId: requestObject.conversationId || null,
+        locationShare: buildLocationShareForViewer(requestObject, viewerId),
         viewerRole,
         counterparty,
         canMarkComplete: normalizedStatus === 'accepted' && viewerRole === 'recipient',
@@ -493,6 +552,130 @@ exports.deleteRequest = async (req, res, next) => {
         await ContactRequest.findByIdAndDelete(req.params.id);
 
         res.json({ msg: 'Request removed' });
+    } catch (err) {
+        return next(err);
+    }
+};
+
+exports.getLocationShare = async (req, res, next) => {
+    try {
+        const request = await ContactRequest.findById(req.params.id).populate('post', 'user title');
+        if (!request) return res.status(404).json({ msg: 'Request not found' });
+
+        const isParticipant = request.requester.toString() === req.user.id || request.recipient.toString() === req.user.id;
+        if (!isParticipant) return res.status(401).json({ msg: 'Not authorized' });
+
+        res.json(serializeRequest(request, req.user.id).locationShare || { available: false });
+    } catch (err) {
+        return next(err);
+    }
+};
+
+exports.setLocationShare = async (req, res, next) => {
+    try {
+        const request = await ContactRequest.findById(req.params.id).populate('post', 'user title');
+        if (!request) return res.status(404).json({ msg: 'Request not found' });
+
+        const post = request.post;
+        const isOwner = post?.user && post.user.toString() === req.user.id;
+        if (!isOwner) return res.status(403).json({ msg: 'Only the post owner can share location' });
+
+        if (normalizeRequestStatus(request.status) !== 'accepted') {
+            return res.status(400).json({ msg: 'Location can be shared only after a request is accepted' });
+        }
+
+        const { lat, lng, accuracy, note, expiresInMinutes, expiresAt } = req.body || {};
+        const numLat = Number(lat);
+        const numLng = Number(lng);
+        if (!Number.isFinite(numLat) || numLat < -90 || numLat > 90 || !Number.isFinite(numLng) || numLng < -180 || numLng > 180) {
+            return res.status(400).json({ msg: 'Valid latitude and longitude are required' });
+        }
+
+        let expires;
+        if (expiresAt) {
+            expires = new Date(expiresAt);
+            if (Number.isNaN(expires.getTime()) || expires.getTime() <= Date.now()) {
+                return res.status(400).json({ msg: 'expiresAt must be a future date' });
+            }
+        } else if (expiresInMinutes != null) {
+            const mins = Number(expiresInMinutes);
+            if (!Number.isFinite(mins) || mins <= 0) {
+                return res.status(400).json({ msg: 'expiresInMinutes must be a positive number' });
+            }
+            expires = new Date(Date.now() + mins * 60 * 1000);
+        }
+
+        request.locationShare = {
+            status: 'granted',
+            grantedBy: req.user.id,
+            grantedAt: new Date(),
+            expiresAt: expires || undefined,
+            revokedAt: undefined,
+            sharedLocation: {
+                lat: numLat,
+                lng: numLng,
+                accuracy: Number.isFinite(Number(accuracy)) ? Number(accuracy) : undefined,
+                note: typeof note === 'string' ? note.trim().slice(0, 300) : '',
+                updatedAt: new Date(),
+            },
+        };
+        await request.save();
+
+        const io = req.app.get('io');
+        try {
+            await createNotification(io, {
+                recipient: request.requester,
+                sender: req.user.id,
+                type: 'info',
+                event: 'location_shared',
+                title: 'Location shared',
+                message: `${req.user.displayName || 'The post owner'} shared a meeting location for "${post.title}".`,
+                link: '/requests',
+                relatedId: request.post,
+            });
+        } catch (e) {
+            console.error('Failed to send location shared notification:', e.message);
+        }
+
+        res.json(serializeRequest(request, req.user.id));
+    } catch (err) {
+        return next(err);
+    }
+};
+
+exports.revokeLocationShare = async (req, res, next) => {
+    try {
+        const request = await ContactRequest.findById(req.params.id).populate('post', 'user title');
+        if (!request) return res.status(404).json({ msg: 'Request not found' });
+
+        const post = request.post;
+        const isOwner = post?.user && post.user.toString() === req.user.id;
+        if (!isOwner) return res.status(403).json({ msg: 'Only the post owner can revoke location sharing' });
+
+        request.locationShare = {
+            ...(request.locationShare?.toObject ? request.locationShare.toObject() : request.locationShare || {}),
+            status: 'revoked',
+            revokedAt: new Date(),
+        };
+        await request.save();
+
+        const io = req.app.get('io');
+        try {
+            await createNotification(io, {
+                recipient: request.requester,
+                sender: req.user.id,
+                type: 'info',
+                event: 'location_share_revoked',
+                title: 'Location sharing revoked',
+                message: `${req.user.displayName || 'The post owner'} revoked location sharing for "${post.title}".`,
+                link: '/requests',
+                relatedId: request.post,
+            });
+        } catch (e) {
+            console.error('Failed to send location revoked notification:', e.message);
+        }
+
+        res.json(serializeRequest(request, req.user.id));
     } catch (err) {
         return next(err);
     }

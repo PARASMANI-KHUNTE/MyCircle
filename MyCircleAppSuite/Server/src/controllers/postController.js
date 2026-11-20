@@ -377,6 +377,7 @@ exports.getPostById = async (req, res, next) => {
         let hasRequested = false;
         let contactRequestStatus = 'none';
         let canViewContact = false;
+        let approvedLocationShare = null;
         const token = req.header('x-auth-token');
         if (token) {
             try {
@@ -389,10 +390,26 @@ exports.getPostById = async (req, res, next) => {
                         post: post._id
                     });
                     hasRequested = !!existingRequest;
-                    // Normalize status for frontend: 'accepted' -> 'approved'
                     const rawStatus = existingRequest?.status || 'none';
                     contactRequestStatus = rawStatus === 'accepted' ? 'approved' : rawStatus;
                     canViewContact = isPostOwner(post, requesterId) || contactRequestStatus === 'approved';
+
+                    if (!isPostOwner(post, requesterId) && existingRequest && contactRequestStatus === 'approved') {
+                        const ls = existingRequest.locationShare;
+                        if (ls && ls.status === 'granted' && !ls.revokedAt && (!ls.expiresAt || new Date(ls.expiresAt).getTime() > Date.now())) {
+                            const shared = ls.sharedLocation;
+                            if (shared && typeof shared.lat === 'number' && typeof shared.lng === 'number') {
+                                approvedLocationShare = {
+                                    lat: shared.lat,
+                                    lng: shared.lng,
+                                    accuracy: shared.accuracy ?? null,
+                                    note: shared.note || '',
+                                    expiresAt: ls.expiresAt || null,
+                                    grantedAt: ls.grantedAt || null,
+                                };
+                            }
+                        }
+                    }
                 }
             } catch (err) {
                 // Token invalid or expired, just ignore and keep hasRequested as false
@@ -410,7 +427,8 @@ exports.getPostById = async (req, res, next) => {
             ...postResponse,
             applicationCount,
             hasRequested,
-            contactRequestStatus
+            contactRequestStatus,
+            approvedLocationShare
         });
     } catch (err) {
         if (err.kind === 'ObjectId') {

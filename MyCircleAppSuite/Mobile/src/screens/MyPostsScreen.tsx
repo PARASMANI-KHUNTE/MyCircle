@@ -43,7 +43,7 @@ const MyPostsScreen = ({ navigation }: any) => {
         try {
             await api.patch(`/posts/${postId}/status`, { status: newStatus });
             fetchMyPosts();
-        } catch (error) {
+        } catch {
             Alert.alert('Error', 'Failed to update status');
         }
     };
@@ -61,7 +61,7 @@ const MyPostsScreen = ({ navigation }: any) => {
                         try {
                             await api.delete(`/posts/${postId}`);
                             setPosts(posts.filter((p: any) => p._id !== postId));
-                        } catch (error) {
+                        } catch {
                             Alert.alert('Error', 'Failed to delete post');
                         }
                     }

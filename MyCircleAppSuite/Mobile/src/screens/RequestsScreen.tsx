@@ -122,7 +122,7 @@ const RequestsScreen = ({ navigation }: any) => {
                 try {
                     await api.delete(`/contacts/${id}`);
                     fetchRequests();
-                } catch (error) {
+                } catch {
                     setAlertConfig({
                         visible: true,
                         title: 'Error',
@@ -352,8 +352,6 @@ const RequestsScreen = ({ navigation }: any) => {
         <SafeAreaView style={[styles.container, themeStyles.container]} edges={['top']}>
             <StatusBar
                 barStyle={isDark ? 'light-content' : 'dark-content'}
-                backgroundColor="transparent"
-                translucent
             />
             <View style={styles.innerContainer}>
                 <View style={styles.headerBar}>

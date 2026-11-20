@@ -140,7 +140,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             navigation.goBack();
                         }
                     });
-                } catch (error) {
+                } catch {
                     setAlertConfig({
                         visible: true,
                         title: "Error",
@@ -285,7 +285,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
             
             {/* Modern Gradient Background */}
             <View pointerEvents="none" style={styles.backgroundGradient}>

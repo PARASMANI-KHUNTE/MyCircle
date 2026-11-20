@@ -6,7 +6,7 @@ import {
     onNotificationOpenedApp,
     getInitialNotification,
     AuthorizationStatus,
-    type FirebaseMessagingTypes,
+    type RemoteMessage,
 } from '@react-native-firebase/messaging';
 import { getApp, getApps } from '@react-native-firebase/app';
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -77,7 +77,7 @@ export const notificationListener = () => {
     }
 
     // Assume a message-notification contains a "type" property in data payload of screen to open
-    const unsubscribeOpened = onNotificationOpenedApp(messaging, (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+    const unsubscribeOpened = onNotificationOpenedApp(messaging, (remoteMessage: RemoteMessage) => {
         console.log(
             'Notification caused app to open from background state:',
             remoteMessage.notification,
@@ -86,7 +86,7 @@ export const notificationListener = () => {
     });
 
     // Check whether an initial notification is available
-    getInitialNotification(messaging).then((remoteMessage: FirebaseMessagingTypes.RemoteMessage | null) => {
+    getInitialNotification(messaging).then((remoteMessage: RemoteMessage | null) => {
         if (remoteMessage) {
             console.log(
                 'Notification caused app to open from quit state:',
@@ -96,7 +96,7 @@ export const notificationListener = () => {
     });
 
     // Foreground messages
-    const unsubscribeForeground = onMessage(messaging, async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+    const unsubscribeForeground = onMessage(messaging, async (remoteMessage: RemoteMessage) => {
         Alert.alert(
             remoteMessage.notification?.title || 'New Notification',
             remoteMessage.notification?.body || ''

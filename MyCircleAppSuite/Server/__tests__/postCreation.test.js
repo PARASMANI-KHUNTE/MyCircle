@@ -13,7 +13,9 @@ jest.mock('../src/config/firebase', () => ({ db: {} }));
 jest.mock('../src/controllers/notificationController', () => ({ createNotification: jest.fn() }));
 jest.mock('../src/utils/chatLifecycle', () => ({ deletePostScopedChats: jest.fn() }));
 
-const { createPost } = require('../src/controllers/postController');
+const { createPost, updatePostStatus } = require('../src/controllers/postController');
+const { createNotification } = require('../src/controllers/notificationController');
+const ContactRequest = require('../src/models/ContactRequest');
 
 describe('createPost payload', () => {
     beforeEach(() => {
@@ -66,5 +68,46 @@ describe('createPost payload', () => {
         expect(mockPostModel.findById).toHaveBeenCalled();
         expect(mockPopulate).toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith({ _id: 'post-1' });
+    });
+
+    it('notifies affected requesters when a post status changes', async () => {
+        const post = {
+            _id: 'post-1',
+            title: 'Need a plumber',
+            user: 'user-1',
+            status: 'active',
+            isActive: true,
+            save: jest.fn().mockResolvedValue(undefined),
+        };
+        mockPostModel.findById.mockReturnValueOnce(post);
+        const findSpy = jest.spyOn(ContactRequest, 'find').mockReturnValue({
+            select: jest.fn().mockResolvedValue([
+                { requester: 'user-2' },
+                { requester: 'user-3' },
+            ]),
+        });
+
+        const req = {
+            params: { id: 'post-1' },
+            body: { status: 'inactive' },
+            user: { id: 'user-1' },
+            app: { get: jest.fn() },
+        };
+        const res = { json: jest.fn() };
+
+        await updatePostStatus(req, res, jest.fn());
+
+        expect(findSpy).toHaveBeenCalled();
+        expect(createNotification).toHaveBeenCalledWith(undefined, expect.objectContaining({
+            recipient: 'user-2',
+            event: 'post_status_changed',
+            relatedId: 'post-1',
+        }));
+        expect(createNotification).toHaveBeenCalledWith(undefined, expect.objectContaining({
+            recipient: 'user-3',
+            event: 'post_status_changed',
+        }));
+        expect(res.json).toHaveBeenCalledWith(post);
+        findSpy.mockRestore();
     });
 });

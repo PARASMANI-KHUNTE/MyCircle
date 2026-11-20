@@ -18,6 +18,7 @@ const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
 const User = require('./src/models/User');
 const { closeQueueConnection } = require('./src/utils/queue');
+const { onNotification } = require('./src/utils/notificationBus');
 
 validateEnv();
 
@@ -34,6 +35,7 @@ const logger = isProduction
     : pino({ level: 'debug', transport: { target: 'pino-pretty' } });
 
 app.set('logger', logger);
+global.appLogger = logger;
 
 const rawCorsOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_URL || '').toString();
 const corsOrigins = rawCorsOrigins
@@ -56,6 +58,12 @@ const io = new Server(server, {
 });
 
 app.set('io', io);
+
+// Fan out notifications published by other cluster workers/processes.
+onNotification(({ recipientId, notification }) => {
+    io.to(`user:${recipientId}`).emit('new_notification', notification);
+    logger.info({ recipientId, title: notification?.title }, 'Delivered cross-process notification');
+});
 
 io.use((socket, next) => {
     try {

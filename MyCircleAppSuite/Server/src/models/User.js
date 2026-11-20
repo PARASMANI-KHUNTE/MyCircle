@@ -76,6 +76,21 @@ const UserSchema = new mongoose.Schema({
     lastSeenAt: {
         type: Date,
     },
+    pushTokens: [{
+        token: {
+            type: String,
+            required: true,
+        },
+        platform: {
+            type: String,
+            enum: ['ios', 'android', 'web'],
+            default: 'web',
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now,
+        },
+    }],
     reports: [{
         reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         category: {
@@ -112,5 +127,6 @@ UserSchema.index({ createdAt: -1 });
 UserSchema.index({ following: 1 });
 UserSchema.index({ followers: 1 });
 UserSchema.index({ isOnline: 1, lastSeenAt: -1 });
+UserSchema.index({ 'pushTokens.token': 1 });
 
 module.exports = mongoose.model('User', UserSchema);

@@ -8,6 +8,11 @@ const GENERIC_TITLES = new Set([
     'request rejected',
     'request canceled',
     'work marked complete',
+    'application accepted',
+    'application rejected',
+    'post status changed',
+    'post status updated',
+    'status changed',
     'notification',
 ]);
 
@@ -26,6 +31,35 @@ const getSenderName = (notification) => {
 const buildFallbackMessage = (notification) => {
     const senderName = getSenderName(notification);
     const type = normalize(notification?.type).toLowerCase();
+    const event = normalize(notification?.event).toLowerCase();
+
+    if (event === 'application_accepted') {
+        return {
+            title: 'Application accepted',
+            message: 'Your application was accepted. You can now message them.'
+        };
+    }
+
+    if (event === 'application_rejected') {
+        return {
+            title: 'Application rejected',
+            message: 'Your application was not accepted this time.'
+        };
+    }
+
+    if (event === 'post_status_changed') {
+        return {
+            title: 'Post status updated',
+            message: 'The status of your post has changed.'
+        };
+    }
+
+    if (event === 'new_application' || event === 'contact_request') {
+        return {
+            title: 'New request',
+            message: `${senderName} sent you a new request.`
+        };
+    }
 
     if (type === 'message') {
         return {

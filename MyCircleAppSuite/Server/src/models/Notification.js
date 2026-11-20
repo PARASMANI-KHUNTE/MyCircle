@@ -15,6 +15,22 @@ const NotificationSchema = new mongoose.Schema({
         enum: ['request', 'approval', 'info', 'message', 'like', 'comment', 'system'],
         default: 'system'
     },
+    // Stable event name for client routing. `type` stays for backwards compatibility.
+    event: {
+        type: String,
+        enum: [
+            'new_application',
+            'contact_request',
+            'application_accepted',
+            'application_rejected',
+            'post_status_changed',
+            'message',
+            'like',
+            'comment',
+            'system',
+        ],
+        default: 'system',
+    },
     title: {
         type: String,
         required: true

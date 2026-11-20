@@ -152,7 +152,8 @@ exports.createRequest = asyncHandler(async (req, res) => {
         recipient: finalRecipientId,
         sender: requesterId,
         type: 'request',
-        title: 'New Contact Request',
+        event: post.type === 'job' ? 'new_application' : 'contact_request',
+        title: post.type === 'job' ? 'New Application' : 'New Contact Request',
         message: `${contactRequest.requester?.displayName || 'Someone'} sent you a request for your post: ${post.title}`,
         link: '/requests',
         relatedId: postId
@@ -377,6 +378,11 @@ exports.updateRequestStatus = async (req, res, next) => {
                 recipient: isRecipient ? requesterId : recipientId,
                 sender: req.user.id,
                 type: requestedStatus === 'accepted' ? 'approval' : 'info',
+                event: requestedStatus === 'accepted'
+                    ? 'application_accepted'
+                    : requestedStatus === 'rejected'
+                        ? 'application_rejected'
+                        : undefined,
                 title: requestedStatus === 'accepted'
                     ? 'Request Accepted'
                     : requestedStatus === 'completed'

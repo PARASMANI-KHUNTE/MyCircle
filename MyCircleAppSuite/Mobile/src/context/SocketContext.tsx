@@ -4,6 +4,8 @@ import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { useAuth } from './AuthContext';
 import { BASE_URL } from '../services/api';
 import { navigate } from '../services/navigationService';
+import { NOTIFICATION_CHANNEL_ID } from '../services/notificationService';
+import { getNotificationRoute, getNotificationTitle } from '../utils/notificationRouting';
 
 const getSocketUrl = () => {
     if (!BASE_URL) {
@@ -34,50 +36,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const handleNotificationPress = useCallback((data: any) => {
         if (!data) return;
 
-        console.log("Notification Pressed:", data);
-        const postId = data.postId || data.relatedId;
-
-        if (data.type === 'request' || data.type === 'info' || data.type === 'request_received') {
-            navigate('Requests');
-        } else if (data.type === 'approval' || data.type === 'request_approved') {
-            if (data.conversationId) {
-                navigate('ChatWindow', { id: data.conversationId });
-            } else {
-                navigate('Requests');
-            }
-        } else if (data.type === 'message') {
-            if (data.conversationId) {
-                navigate('ChatWindow', { id: data.conversationId });
-            } else {
-                navigate('ChatList');
-            }
-        } else if (data.type === 'comment' || data.type === 'like') {
-            if (postId) {
-                navigate('PostDetails', { id: postId });
-            }
+        console.log('Notification Pressed:', data);
+        const route = getNotificationRoute(data);
+        if (route) {
+            navigate(route.name, route.params);
         }
-    }, []);
-
-    const getNotificationTitle = useCallback((type: string) => {
-        switch (type) {
-            case 'request': return 'New Request';
-            case 'approval': return 'Request Approved';
-            case 'info': return 'Update';
-            case 'request_received': return 'New Request';
-            case 'request_approved': return 'Request Approved';
-            case 'request_rejected': return 'Request Rejected';
-            case 'like': return 'New Like';
-            case 'comment': return 'New Comment';
-            default: return 'New Notification';
-        }
-    }, []);
-
-    const generateNotificationBody = useCallback((data: any) => {
-        if (data.type === 'request' || data.type === 'request_received') return data.message || 'Someone sent you a request.';
-        if (data.type === 'approval' || data.type === 'request_approved') return data.message || 'Your request was approved.';
-        if (data.type === 'like') return data.message || 'Someone liked your post.';
-        if (data.type === 'comment') return data.message || 'Someone commented on your post.';
-        return data.message || 'You have a new update.';
     }, []);
 
     useEffect(() => {
@@ -85,10 +48,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             try {
                 await notifee.requestPermission();
                 await notifee.createChannel({
-                    id: 'default',
-                    name: 'Default Channel',
+                    id: NOTIFICATION_CHANNEL_ID,
+                    name: 'MyCircle Notifications',
                     importance: AndroidImportance.HIGH,
                     sound: 'default',
+                    vibration: true,
+                    vibrationPattern: [300, 500],
                 });
             } catch (error) {
                 console.error('Failed to setup notifications:', error);
@@ -144,8 +109,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         const newSocket = io(socketUrl, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
             forceNew: true,
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 10000,
+            randomizationFactor: 0.5,
             auth: {
                 token
             }
@@ -171,8 +141,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         newSocket.on('new_notification', async (data: any) => {
             try {
-                const channelId = await notifee.createChannel({
-                    id: 'mycircle_channel_v1',
+                await notifee.createChannel({
+                    id: NOTIFICATION_CHANNEL_ID,
                     name: 'MyCircle Notifications',
                     importance: AndroidImportance.HIGH,
                     sound: 'default',
@@ -180,24 +150,27 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                     vibrationPattern: [300, 500],
                 });
 
-                const notifeeData: any = {
-                    type: String(data.type || ''),
-                };
+                const notifeeData: Record<string, string> = {};
+                if (data._id) notifeeData._id = String(data._id);
+                if (data.type) notifeeData.type = String(data.type);
+                if (data.event) notifeeData.event = String(data.event);
                 if (data.postId || data.relatedId) notifeeData.postId = String(data.postId || data.relatedId);
                 if (data.conversationId) notifeeData.conversationId = String(data.conversationId);
                 if (data.relatedId) notifeeData.relatedId = String(data.relatedId);
                 if (data.link) notifeeData.link = String(data.link);
 
                 await notifee.displayNotification({
-                    title: data.title || getNotificationTitle(data.type),
-                    body: data.message || generateNotificationBody(data),
+                    title: getNotificationTitle(data),
+                    body: data.message || 'You have a new update.',
                     data: notifeeData,
                     android: {
-                        channelId,
+                        channelId: NOTIFICATION_CHANNEL_ID,
+                        importance: AndroidImportance.HIGH,
+                        sound: 'default',
+                        vibrationPattern: [300, 500],
                         pressAction: {
                             id: 'default',
                         },
-                        vibrationPattern: [300, 500],
                         smallIcon: 'ic_launcher',
                     },
                     ios: {
@@ -221,7 +194,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 socketRef.current = null;
             }
         };
-    }, [user?.id, token, getNotificationTitle, generateNotificationBody, handleNotificationPress]);
+    }, [user?.id, token, handleNotificationPress]);
 
     return (
         <SocketContext.Provider value={{ socket, connected }}>

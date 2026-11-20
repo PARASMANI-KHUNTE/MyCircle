@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { getNotificationCopy, getToastMessageFromNotification } from '../utils/notificationMessage';
+import { getNotificationDestination, mergeNotification } from '../utils/notificationRouting';
 
 const noopAsync = async () => {};
 const noop = () => {};
@@ -28,10 +29,29 @@ export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
+    const notificationsRef = useRef([]);
     const { socket } = useSocket();
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const { toast } = useToast();
+
+    const applyNotifications = useCallback((next) => {
+        const resolved = typeof next === 'function' ? next(notificationsRef.current) : next;
+        notificationsRef.current = resolved;
+        setNotifications(resolved);
+    }, []);
+
+    const fetchUnreadCount = useCallback(async () => {
+        try {
+            const res = await api.get('/notifications/unread-count');
+            const count = Number(res.data?.count);
+            if (Number.isFinite(count)) {
+                setUnreadCount(Math.max(0, count));
+            }
+        } catch (err) {
+            console.error('Failed to fetch unread notification count:', err);
+        }
+    }, []);
 
     const fetchNotifications = useCallback(async () => {
         setLoading(true);
@@ -51,14 +71,15 @@ export const NotificationProvider = ({ children }) => {
                 };
             });
 
-            setNotifications(normalizedNotifications);
-            setUnreadCount(normalizedNotifications.filter((n) => !n?.read).length);
+            applyNotifications(normalizedNotifications);
+            // The server count is authoritative (the list may be paginated).
+            await fetchUnreadCount();
         } catch (err) {
             console.error('Failed to fetch notifications:', err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [applyNotifications, fetchUnreadCount]);
 
     const playNotificationSound = useCallback(() => {
         try {
@@ -86,11 +107,11 @@ export const NotificationProvider = ({ children }) => {
         if (isAuthenticated) {
             void fetchNotifications();
         } else {
-            setNotifications([]);
+            applyNotifications([]);
             setUnreadCount(0);
             setLoading(false);
         }
-    }, [fetchNotifications, isAuthenticated]);
+    }, [applyNotifications, fetchNotifications, fetchUnreadCount, isAuthenticated]);
 
     useEffect(() => {
         if (!socket) return;
@@ -103,40 +124,48 @@ export const NotificationProvider = ({ children }) => {
                 message: copy.message,
             };
 
-            setNotifications((prev) => {
-                const existing = prev.find((item) => item._id === normalizedNotification._id);
-                const filtered = prev.filter((item) => item._id !== normalizedNotification._id);
-                if (!normalizedNotification.read && (!existing || existing.read)) {
-                    setUnreadCount((count) => count + 1);
-                }
-                return [normalizedNotification, ...filtered];
-            });
+            const { notifications: nextNotifications } = mergeNotification(
+                notificationsRef.current,
+                normalizedNotification
+            );
+            applyNotifications(nextNotifications);
+            // Keep the badge authoritative even if this event raced a reconnect refetch.
+            void fetchUnreadCount();
 
             // Play notification sound
             playNotificationSound();
 
             // Show toast with specific type
-            const toastType = ['message', 'like', 'request'].includes(notification.type) ? notification.type : 'info';
+            const toastType = ['message', 'like', 'request'].includes(normalizedNotification.type)
+                ? normalizedNotification.type
+                : 'info';
             toast(getToastMessageFromNotification(normalizedNotification), toastType);
         };
 
+        const handleConnect = () => {
+            // Catch up on anything emitted while the socket was disconnected.
+            void fetchNotifications();
+            void fetchUnreadCount();
+        };
+
         socket.on('new_notification', handleNewNotification);
+        socket.on('connect', handleConnect);
 
         return () => {
             socket.off('new_notification', handleNewNotification);
+            socket.off('connect', handleConnect);
         };
-    }, [playNotificationSound, socket, toast]);
+    }, [applyNotifications, fetchNotifications, fetchUnreadCount, playNotificationSound, socket, toast]);
 
     const markAsRead = async (id) => {
         try {
             await api.put(`/notifications/${id}/read`);
-            const wasUnread = notifications.some((n) => n._id === id && !n.read);
-            setNotifications(prev => prev.map((n) => {
-                if (n._id !== id) return n;
-                return { ...n, read: true };
-            }));
+            const wasUnread = notificationsRef.current.some((n) => n?._id === id && !n.read);
+            applyNotifications((prev) => prev.map((n) => (
+                n?._id === id ? { ...n, read: true } : n
+            )));
             if (wasUnread) {
-                setUnreadCount(prev => Math.max(0, prev - 1));
+                setUnreadCount((prev) => Math.max(0, prev - 1));
             }
         } catch (err) {
             console.error(err);
@@ -146,7 +175,7 @@ export const NotificationProvider = ({ children }) => {
     const markAllRead = async () => {
         try {
             await api.put('/notifications/read-all');
-            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            applyNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
             setUnreadCount(0);
         } catch (err) {
             console.error(err);
@@ -156,7 +185,7 @@ export const NotificationProvider = ({ children }) => {
     const clearAll = async () => {
         try {
             await api.delete('/notifications/delete-all');
-            setNotifications([]);
+            applyNotifications([]);
             setUnreadCount(0);
         } catch (err) {
             console.error(err);
@@ -164,36 +193,11 @@ export const NotificationProvider = ({ children }) => {
     };
 
     const handleNotificationClick = (notification) => {
-        // Mark as read
-        if (!notification.read) {
-            markAsRead(notification._id);
+        if (!notification?.read) {
+            void markAsRead(notification?._id);
         }
 
-        // Navigate based on notification type
-        if (notification.type === 'approval' && notification.conversationId) {
-            navigate(`/chat?conversationId=${notification.conversationId}`);
-            return;
-        }
-
-        if (notification.type === 'message') {
-            navigate(notification.conversationId ? `/chat?conversationId=${notification.conversationId}` : '/chat');
-            return;
-        }
-
-        if (notification.relatedId) {
-            if (notification.type === 'like') {
-                navigate(`/post/${notification.relatedId}`);
-            } else if (notification.type === 'comment' || notification.type === 'reply') {
-                navigate(`/post/${notification.relatedId}#comments`);
-            } else if (notification.type === 'request' || notification.type === 'approval' || notification.type === 'info') {
-                navigate('/requests');
-            }
-            return;
-        }
-
-        if (notification.link) {
-            navigate(notification.link);
-        }
+        navigate(getNotificationDestination(notification));
     };
 
     return (

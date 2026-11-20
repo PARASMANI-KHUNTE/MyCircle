@@ -1,8 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 :root {
     /* White/Light Gray Base */
@@ -196,149 +195,149 @@
     }
 }
 
-@layer components {
-    /* ===== Glass Card ===== */
-    .glass-card {
-        background: rgb(var(--glass-bg) / 0.75);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgb(var(--glass-border) / 0.6);
-        @apply rounded-2xl;
-        box-shadow: var(--shadow-md);
-    }
+/* Tailwind v4 custom utilities (replaces the v3 @layer components block) */
 
-    .glass-card-hover {
-        @apply glass-card transition-all duration-300;
-    }
+/* ===== Glass Card ===== */
+@utility glass-card {
+    background: rgb(var(--glass-bg) / 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgb(var(--glass-border) / 0.6);
+    @apply rounded-2xl;
+    box-shadow: var(--shadow-md);
+}
 
-    .glass-card-hover:hover {
-        background: rgb(var(--glass-bg) / 0.92);
-        box-shadow: var(--shadow-lg);
-        transform: translateY(-2px);
-    }
+@utility glass-card-hover {
+    @apply glass-card transition-all duration-300;
+}
 
-    /* ===== Modern Card ===== */
-    .modern-card {
-        @apply bg-card rounded-2xl border border-card-border;
-        box-shadow: var(--shadow-sm);
-        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                    border-color 0.2s ease;
-    }
+.glass-card-hover:hover {
+    background: rgb(var(--glass-bg) / 0.92);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
 
-    .modern-card:hover {
-        @apply border-card-border-hover;
-        box-shadow: var(--shadow-md);
-        transform: translateY(-2px);
-    }
+/* ===== Modern Card ===== */
+@utility modern-card {
+    @apply bg-card rounded-2xl border border-card-border;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.2s ease;
+}
 
-    /* ===== Gradient Text (Amber → Emerald) ===== */
-    .gradient-text {
-        @apply bg-clip-text text-transparent;
-        background-image: linear-gradient(135deg, rgb(var(--gradient-start)), rgb(var(--gradient-end)));
-    }
+.modern-card:hover {
+    @apply border-card-border-hover;
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
 
-    /* ===== Buttons ===== */
-    /* All buttons share base: min 44px height for touch targets */
-    .btn-base {
-        @apply inline-flex items-center justify-center font-semibold transition-all;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none;
-        min-height: 44px;
-        transition-duration: 200ms;
-        transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-    }
+/* ===== Gradient Text (Amber → Emerald) ===== */
+@utility gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, rgb(var(--gradient-start)), rgb(var(--gradient-end)));
+}
 
-    .btn-primary {
-        @apply btn-base rounded-xl gap-2 bg-primary text-primary-foreground;
-        @apply hover:bg-primary-hover active:scale-[0.98];
-        box-shadow: 0 2px 8px rgb(var(--primary) / 0.3);
-    }
+/* ===== Buttons ===== */
+/* All buttons share base: min 44px height for touch targets */
+@utility btn-base {
+    @apply inline-flex items-center justify-center font-semibold transition-all;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none;
+    min-height: 44px;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-    .btn-primary:hover {
-        box-shadow: 0 4px 16px rgb(var(--primary) / 0.4);
-    }
+@utility btn-primary {
+    @apply btn-base rounded-xl gap-2 bg-primary text-primary-foreground;
+    @apply hover:bg-primary-hover active:scale-[0.98];
+    box-shadow: 0 2px 8px rgb(var(--primary) / 0.3);
+}
 
-    .btn-secondary {
-        @apply btn-base rounded-xl gap-2 bg-secondary text-secondary-foreground;
-        @apply hover:bg-secondary-hover active:scale-[0.98];
-    }
+.btn-primary:hover {
+    box-shadow: 0 4px 16px rgb(var(--primary) / 0.4);
+}
 
-    .btn-outline {
-        @apply btn-base rounded-xl gap-2;
-        @apply border border-card-border bg-transparent text-foreground;
-        @apply hover:border-card-border-hover hover:bg-card-hover active:scale-[0.98];
-    }
+@utility btn-secondary {
+    @apply btn-base rounded-xl gap-2 bg-secondary text-secondary-foreground;
+    @apply hover:bg-secondary-hover active:scale-[0.98];
+}
 
-    .btn-ghost {
-        @apply btn-base rounded-xl gap-2;
-        @apply text-foreground-muted;
-        @apply hover:text-foreground hover:bg-card-hover active:scale-[0.98];
-    }
+@utility btn-outline {
+    @apply btn-base rounded-xl gap-2;
+    @apply border border-card-border bg-transparent text-foreground;
+    @apply hover:border-card-border-hover hover:bg-card-hover active:scale-[0.98];
+}
 
-    /* ===== Badges ===== */
-    .badge {
-        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
-    }
+@utility btn-ghost {
+    @apply btn-base rounded-xl gap-2;
+    @apply text-foreground-muted;
+    @apply hover:text-foreground hover:bg-card-hover active:scale-[0.98];
+}
 
-    .badge-primary { @apply badge bg-primary/10 text-primary border border-primary/20; }
-    .badge-success { @apply badge bg-success/10 text-success border border-success/20; }
-    .badge-warning { @apply badge bg-warning/10 text-warning border border-warning/20; }
-    .badge-error   { @apply badge bg-error/10 text-error border border-error/20; }
-    .badge-info    { @apply badge bg-info/10 text-info border border-info/20; }
+/* ===== Badges ===== */
+@utility badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+}
 
-    /* ===== Input ===== */
-    .input-modern {
-        @apply w-full min-h-[44px] px-4 py-3 rounded-xl border border-input-border bg-input text-foreground text-sm;
-        @apply placeholder:text-input-placeholder;
-        @apply focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
+@utility badge-primary { @apply badge bg-primary/10 text-primary border border-primary/20; }
+@utility badge-success { @apply badge bg-success/10 text-success border border-success/20; }
+@utility badge-warning { @apply badge bg-warning/10 text-warning border border-warning/20; }
+@utility badge-error   { @apply badge bg-error/10 text-error border border-error/20; }
+@utility badge-info    { @apply badge bg-info/10 text-info border border-info/20; }
 
-    /* ===== Avatar ===== */
-    .avatar {
-        @apply rounded-full object-cover bg-background-tertiary shrink-0;
-    }
+/* ===== Input ===== */
+@utility input-modern {
+    @apply w-full min-h-[44px] px-4 py-3 rounded-xl border border-input-border bg-input text-foreground text-sm;
+    @apply placeholder:text-input-placeholder;
+    @apply focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
 
-    .avatar-ring {
-        @apply ring-2 ring-background border-2 border-primary/20;
-    }
+/* ===== Avatar ===== */
+@utility avatar {
+    @apply rounded-full object-cover bg-background-tertiary shrink-0;
+}
 
-    /* ===== Skeleton ===== */
-    .skeleton {
-        @apply bg-background-tertiary rounded-xl;
-    }
+@utility avatar-ring {
+    @apply ring-2 ring-background border-2 border-primary/20;
+}
 
-    /* ===== Icon Buttons ===== */
-    /* min 44px touch target via w-11 h-11 */
-    .icon-btn {
-        @apply w-10 h-10 flex items-center justify-center rounded-xl;
-        @apply text-foreground-muted transition-all duration-200;
-        @apply hover:text-foreground hover:bg-card-hover active:scale-[0.93];
-    }
+/* ===== Skeleton ===== */
+@utility skeleton {
+    @apply bg-background-tertiary rounded-xl;
+}
 
-    .icon-btn-primary {
-        @apply w-10 h-10 flex items-center justify-center rounded-xl;
-        @apply bg-primary/10 text-primary transition-all duration-200;
-        @apply hover:bg-primary/20 active:scale-[0.93];
-    }
+/* ===== Icon Buttons ===== */
+/* min 44px touch target via w-11 h-11 */
+@utility icon-btn {
+    @apply w-10 h-10 flex items-center justify-center rounded-xl;
+    @apply text-foreground-muted transition-all duration-200;
+    @apply hover:text-foreground hover:bg-card-hover active:scale-[0.93];
+}
 
-    /* ===== Section Header ===== */
-    .section-label {
-        @apply text-xs font-bold uppercase tracking-widest text-foreground-muted;
-    }
+@utility icon-btn-primary {
+    @apply w-10 h-10 flex items-center justify-center rounded-xl;
+    @apply bg-primary/10 text-primary transition-all duration-200;
+    @apply hover:bg-primary/20 active:scale-[0.93];
+}
 
-    /* ===== Backward-compat aliases ===== */
-    /* glass-panel → bg-card + border + rounded-2xl (replaces old glassmorphism) */
-    .glass-panel {
-        @apply bg-card rounded-2xl border border-card-border;
-        box-shadow: var(--shadow-sm);
-    }
+/* ===== Section Header ===== */
+@utility section-label {
+    @apply text-xs font-bold uppercase tracking-widest text-foreground-muted;
+}
 
-    /* shadow-card → sm shadow */
-    .shadow-card {
-        box-shadow: var(--shadow-sm);
-    }
+/* ===== Backward-compat aliases ===== */
+/* glass-panel → bg-card + border + rounded-2xl (replaces old glassmorphism) */
+@utility glass-panel {
+    @apply bg-card rounded-2xl border border-card-border;
+    box-shadow: var(--shadow-sm);
+}
+
+/* shadow-card → sm shadow */
+@utility shadow-card {
+    box-shadow: var(--shadow-sm);
 }
 
 
@@ -380,11 +379,11 @@
 }
 
 .leaflet-popup-content-wrapper {
-    @apply !bg-card !text-foreground !rounded-xl !border !border-card-border !shadow-lg;
+    @apply bg-card! text-foreground! rounded-xl! border! border-card-border! shadow-lg!;
 }
 
 .leaflet-popup-tip {
-    @apply !bg-card;
+    @apply bg-card!;
 }
 
 .leaflet-control-attribution {

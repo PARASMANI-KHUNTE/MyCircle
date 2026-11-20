@@ -34,6 +34,7 @@ describe('createPost payload', () => {
                 location: 'Connaught Place, New Delhi',
                 latitude: '28.6139',
                 longitude: '77.2090',
+                locationSource: 'map',
                 price: '500',
                 duration: '10080',
                 exchangePreference: 'money',
@@ -54,6 +55,7 @@ describe('createPost payload', () => {
             subType: 'hiring',
             jobType: 'plumbing',
             title: 'Need a plumber',
+            locationSource: 'map',
             locationCoords: {
                 type: 'Point',
                 coordinates: [77.209, 28.6139],

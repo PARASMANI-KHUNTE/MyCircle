@@ -13,9 +13,13 @@ import { formatErrorMessage } from '../utils/errorMessage';
 import {
     ALLOWED_IMAGE_TYPES,
     DESCRIPTION_MAX_LENGTH,
+    getLocationPayload,
+    getLocationSource,
+    LocationSource,
     MAX_IMAGE_BYTES,
     MAX_POST_IMAGES,
     sectionForField,
+    switchLocationMethod,
     TITLE_MAX_LENGTH,
     validatePostDraft,
     ValidationError,
@@ -28,6 +32,7 @@ const CreatePostScreen = ({ navigation }: any) => {
     const { colors, isDark } = useTheme();
     const { requestLocation } = useLocation();
     const webviewRef = useRef<any>(null);
+    const locationRequestRef = useRef(0);
 
     // Wizard State
     const [step, setStep] = useState(1);
@@ -47,6 +52,7 @@ const CreatePostScreen = ({ navigation }: any) => {
     const [isUrgent, setIsUrgent] = useState(false);
     const [exchangePreference, setExchangePreference] = useState<'money' | 'barter' | 'flexible'>('money');
     const [locationMethod, setLocationMethod] = useState<'detect' | 'pin'>('detect');
+    const [locationSource, setLocationSource] = useState<LocationSource | null>(null);
     const [images, setImages] = useState<any[]>([]);
 
     // UI State
@@ -73,10 +79,11 @@ const CreatePostScreen = ({ navigation }: any) => {
         location,
         latitude: coordinates?.lat,
         longitude: coordinates?.lng,
+        locationSource,
         price,
         duration,
         exchangePreference,
-    }), [type, subType, title, description, location, coordinates, price, duration, exchangePreference]);
+    }), [type, subType, title, description, location, coordinates, locationSource, price, duration, exchangePreference]);
 
     const hasUnsavedChanges = Boolean(
         title.trim() ||
@@ -103,6 +110,7 @@ const CreatePostScreen = ({ navigation }: any) => {
         setIsUrgent(false);
         setExchangePreference('money');
         setLocationMethod('detect');
+        setLocationSource(null);
         setImages([]);
         setFormError(null);
     }, []);
@@ -141,7 +149,7 @@ const CreatePostScreen = ({ navigation }: any) => {
 
     useEffect(() => {
         setFormError(null);
-    }, [title, description, type, subType, location, coordinates, price, duration, exchangePreference, images]);
+    }, [title, description, type, subType, location, coordinates, locationSource, price, duration, exchangePreference, images]);
 
     const categories = [
         { id: 'job', label: 'Job Post', sub: 'Hire help for tasks', icon: Briefcase },
@@ -193,6 +201,26 @@ const CreatePostScreen = ({ navigation }: any) => {
         setImages(images.filter((_, i) => i !== index));
     };
 
+    const changeLocationMethod = (nextMethod: 'detect' | 'pin') => {
+        if (nextMethod === locationMethod) return;
+
+        const cleared = switchLocationMethod({
+            method: locationMethod,
+            location,
+            latitude: coordinates?.lat,
+            longitude: coordinates?.lng,
+        }, nextMethod);
+
+        locationRequestRef.current += 1;
+        setLocationMethod(nextMethod);
+        setLocation(cleared.location);
+        setCoordinates(null);
+        setLocationSource(null);
+        setLocationLoading(false);
+        setShowMapModal(false);
+        setFormError(null);
+    };
+
     const reverseGeocode = async (lat: number, lon: number) => {
         try {
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`, { headers: { 'User-Agent': 'MyCircleApp/1.0' } });
@@ -217,6 +245,19 @@ const CreatePostScreen = ({ navigation }: any) => {
             return;
         }
 
+        const locationFields = getLocationPayload({
+            method: locationMethod,
+            location,
+            latitude: coordinates?.lat,
+            longitude: coordinates?.lng,
+        });
+
+        if (!locationFields) {
+            setFormError({ field: 'location', message: 'Confirm a location using one option before publishing.', section: 'location' });
+            setStep(3);
+            return;
+        }
+
         setLoading(true);
         try {
             const formData = new FormData();
@@ -224,11 +265,10 @@ const CreatePostScreen = ({ navigation }: any) => {
             formData.append('description', description);
             formData.append('type', type);
             if (subType) formData.append('subType', subType);
-            formData.append('location', location || (coordinates ? `Pinned (${coordinates.lat.toFixed(2)}, ${coordinates.lng.toFixed(2)})` : ''));
-            if (coordinates) {
-                formData.append('latitude', coordinates.lat.toString());
-                formData.append('longitude', coordinates.lng.toString());
-            }
+            formData.append('location', locationFields.location);
+            formData.append('latitude', locationFields.latitude.toString());
+            formData.append('longitude', locationFields.longitude.toString());
+            formData.append('locationSource', locationFields.locationSource);
             const cleanPrice = String(price || '').replace(/[^0-9.]/g, '');
             const parsedPrice = parseFloat(cleanPrice);
             const validPrice = (!isNaN(parsedPrice) && parsedPrice >= 0) ? String(parsedPrice) : '0';
@@ -372,7 +412,7 @@ const CreatePostScreen = ({ navigation }: any) => {
             <Text style={styles.stepTitle}>Post Location</Text>
             <View style={styles.methodTabs}>
                 {['detect', 'pin'].map((m) => (
-                    <TouchableOpacity key={m} onPress={() => setLocationMethod(m as any)} style={[styles.methodTab, locationMethod === m && styles.activeMethodTab]}>
+                    <TouchableOpacity key={m} onPress={() => changeLocationMethod(m as 'detect' | 'pin')} style={[styles.methodTab, locationMethod === m && styles.activeMethodTab]}>
                         <Text style={[styles.methodTabText, locationMethod === m && styles.activeMethodTabText]}>{m === 'detect' ? 'DETECT GPS' : m.toUpperCase()}</Text>
                     </TouchableOpacity>
                 ))}
@@ -381,20 +421,27 @@ const CreatePostScreen = ({ navigation }: any) => {
             <View style={styles.inputCard}>
                 {locationMethod === 'detect' && (
                     <TouchableOpacity onPress={async () => {
+                        const requestId = ++locationRequestRef.current;
                         setLocationLoading(true);
                         try {
                             const coords = await requestLocation();
+                            if (requestId !== locationRequestRef.current) return;
+
                             if (coords) {
-                                setCoordinates({ lat: coords.lat, lng: coords.lng });
                                 const addr = await reverseGeocode(coords.lat, coords.lng);
+                                if (requestId !== locationRequestRef.current) return;
+                                setCoordinates({ lat: coords.lat, lng: coords.lng });
                                 setLocation(addr);
+                                setLocationSource(getLocationSource('detect'));
                             } else {
                                 showAlert('Location Access', 'Please ensure location permissions and GPS are enabled to detect your location.');
                             }
                         } catch {
-                            showAlert('Location Error', 'Unable to retrieve your current location. Please try pinning on the map.');
+                            if (requestId === locationRequestRef.current) {
+                                showAlert('Location Error', 'Unable to retrieve your current location. Please try pinning on the map.');
+                            }
                         } finally {
-                            setLocationLoading(false);
+                            if (requestId === locationRequestRef.current) setLocationLoading(false);
                         }
                     }} style={styles.detectBtn}>
                         {locationLoading ? <ActivityIndicator color="#af25f4" /> : <><Crosshair size={20} color="#af25f4" /><Text style={styles.detectBtnText}>Detect My Location</Text></>}
@@ -628,16 +675,24 @@ const CreatePostScreen = ({ navigation }: any) => {
                         ref={webviewRef}
                         onMessage={async (e) => {
                             const data = JSON.parse(e.nativeEvent.data);
+                            const requestId = locationRequestRef.current;
+
                             if (data.type === 'location') {
-                                setCoordinates({ lat: data.lat, lng: data.lng });
                                 const addr = await reverseGeocode(data.lat, data.lng);
+                                if (requestId !== locationRequestRef.current) return;
+                                setCoordinates({ lat: data.lat, lng: data.lng });
                                 setLocation(addr);
+                                setLocationSource(getLocationSource('pin'));
                             } else if (data.type === 'requestLoc') {
                                 const coords = await requestLocation();
+                                if (requestId !== locationRequestRef.current) return;
+
                                 if (coords) {
-                                    setCoordinates({ lat: coords.lat, lng: coords.lng });
                                     const addr = await reverseGeocode(coords.lat, coords.lng);
+                                    if (requestId !== locationRequestRef.current) return;
+                                    setCoordinates({ lat: coords.lat, lng: coords.lng });
                                     setLocation(addr);
+                                    setLocationSource(getLocationSource('pin'));
                                     webviewRef.current?.injectJavaScript(`window.updateCenter(${coords.lat}, ${coords.lng})`);
                                 } else {
                                     showAlert('Location Access', 'Unable to get your current location. Check permission and GPS, then try again.');

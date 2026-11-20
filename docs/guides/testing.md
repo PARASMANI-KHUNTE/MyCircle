@@ -43,6 +43,7 @@
 | Image Upload | Tap "Add Photo" / "Add photos" | Adds up to 5 JPEG, PNG or WebP images (5 MB each) |
 | Location - GPS | Tap "Detect My Location" / "Detect Location" | Fetches current location and label |
 | Location - Pin | Tap "Pin on Map" → Tap on map | Pins location at tap point |
+| Location - Switch Option | Capture a location, then switch GPS ↔ map pin | Previous coordinates and label are cleared; only the new source is published |
 | Validation | Leave a required field empty and continue | Inline error appears; step does not advance |
 | View Post | Tap post card | Opens post detail screen |
 | Like Post | Tap heart icon | Heart fills red, like count increases |

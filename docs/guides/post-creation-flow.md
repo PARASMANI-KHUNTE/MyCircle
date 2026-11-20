@@ -27,7 +27,8 @@ Validation runs when the user advances a step and again before publishing.
 - A category is required. Job posts need a job type; sell/rent posts need an item category.
 - Title and description are required after trimming whitespace.
 - Title is limited to 200 characters; description to 5000 (matching the server).
-- Location requires both coordinates and a readable location label.
+- Location requires exactly one source: current GPS or map pin. Switching options clears
+  the previous coordinates and label, and the selected source is submitted with the post.
 - Price, when provided, must be a non-negative number.
 - A maximum of 5 JPEG/PNG/WebP photos is allowed, each up to 5 MB.
 

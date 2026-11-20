@@ -5,5 +5,6 @@ describe('Post model creation fields', () => {
         expect(Post.schema.path('subType')).toBeDefined();
         expect(Post.schema.path('jobType')).toBeDefined();
         expect(Post.schema.path('itemCategory')).toBeDefined();
+        expect(Post.schema.path('locationSource')).toBeDefined();
     });
 });

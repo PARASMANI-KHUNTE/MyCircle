@@ -60,6 +60,11 @@ const PostSchema = new mongoose.Schema({
             index: '2dsphere'
         }
     },
+    locationSource: {
+        type: String,
+        enum: ['', 'current', 'map'],
+        default: '',
+    },
     images: [{
         type: String, // URL from Cloudinary
     }],

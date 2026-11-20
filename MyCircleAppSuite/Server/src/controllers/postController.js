@@ -40,7 +40,7 @@ const parsePagination = (query, defaultLimit, maxLimit) => {
 // @route   POST /api/posts
 // @access  Private
 exports.createPost = asyncHandler(async (req, res) => {
-    const { type, jobType, itemCategory, title, description, price, location, contactPhone, contactWhatsapp, duration, availability, budgetMin, budgetMax } = req.body;
+    const { type, subType, jobType, itemCategory, title, description, price, location, contactPhone, contactWhatsapp, duration, availability, budgetMin, budgetMax } = req.body;
 
     const numericPrice = parseFloat(price);
     if (price !== undefined && price !== '' && isNaN(numericPrice)) {
@@ -73,6 +73,7 @@ exports.createPost = asyncHandler(async (req, res) => {
     const newPost = new Post({
         user: req.user.id,
         type,
+        ...(subType && { subType }),
         ...(jobType && { jobType }),
         ...(itemCategory && { itemCategory }),
         title,

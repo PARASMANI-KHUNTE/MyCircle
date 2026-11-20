@@ -17,6 +17,16 @@ const PostSchema = new mongoose.Schema({
         enum: ['', ...ITEM_CATEGORIES],
         default: '',
     },
+    subType: {
+        type: String,
+        trim: true,
+        default: '',
+    },
+    jobType: {
+        type: String,
+        trim: true,
+        default: '',
+    },
     title: {
         type: String,
         required: true,

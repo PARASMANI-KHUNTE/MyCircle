@@ -3,13 +3,23 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityInd
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { MapPin, Check, Map, Crosshair, X, Camera, Briefcase, ShoppingBag, Package, ArrowRight, ArrowLeft, Clock, Info, Send } from 'lucide-react-native';
+import { MapPin, Check, Map, Crosshair, X, Camera, Briefcase, ShoppingBag, Package, ArrowRight, ArrowLeft, Clock, Info, Send, AlertTriangle } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
 import api from '../services/api';
 import { useLocation } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatErrorMessage } from '../utils/errorMessage';
+import {
+    ALLOWED_IMAGE_TYPES,
+    DESCRIPTION_MAX_LENGTH,
+    MAX_IMAGE_BYTES,
+    MAX_POST_IMAGES,
+    sectionForField,
+    TITLE_MAX_LENGTH,
+    validatePostDraft,
+    ValidationError,
+} from '../utils/postValidation';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Stepper from '../components/ui/Stepper';
 import { DARK_TILE_URL, LABELS_TILE_URL, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
@@ -53,6 +63,20 @@ const CreatePostScreen = ({ navigation }: any) => {
         isDestructive: false,
     });
     const isSubmittingRef = useRef(false);
+    const [formError, setFormError] = useState<ValidationError | null>(null);
+
+    const validationDraft = useCallback(() => ({
+        type,
+        subType,
+        title,
+        description,
+        location,
+        latitude: coordinates?.lat,
+        longitude: coordinates?.lng,
+        price,
+        duration,
+        exchangePreference,
+    }), [type, subType, title, description, location, coordinates, price, duration, exchangePreference]);
 
     const hasUnsavedChanges = Boolean(
         title.trim() ||
@@ -78,7 +102,9 @@ const CreatePostScreen = ({ navigation }: any) => {
         setDuration(40320);
         setIsUrgent(false);
         setExchangePreference('money');
+        setLocationMethod('detect');
         setImages([]);
+        setFormError(null);
     }, []);
 
     const promptDiscardConfirmation = useCallback((onConfirmDiscard: () => void) => {
@@ -113,6 +139,10 @@ const CreatePostScreen = ({ navigation }: any) => {
         return unsubscribe;
     }, [navigation, hasUnsavedChanges, promptDiscardConfirmation]);
 
+    useEffect(() => {
+        setFormError(null);
+    }, [title, description, type, subType, location, coordinates, price, duration, exchangePreference, images]);
+
     const categories = [
         { id: 'job', label: 'Job Post', sub: 'Hire help for tasks', icon: Briefcase },
         { id: 'service', label: 'Offering Services', sub: 'Share your skills', icon: Package },
@@ -127,20 +157,36 @@ const CreatePostScreen = ({ navigation }: any) => {
     ];
 
     const pickImage = async () => {
+        const remaining = MAX_POST_IMAGES - images.length;
+        if (remaining <= 0) {
+            showAlert('Photos', `You can add up to ${MAX_POST_IMAGES} photos.`);
+            return;
+        }
+
         const result = await launchImageLibrary({
             mediaType: 'photo',
             quality: 0.8,
-            selectionLimit: 5,
+            selectionLimit: remaining,
         });
 
-        if (result.assets) {
-            const newImages = result.assets.map(asset => ({
-                uri: asset.uri,
-                name: asset.fileName || `image_${Date.now()}.jpg`,
-                type: asset.type || 'image/jpeg',
-            }));
-            setImages([...images, ...newImages]);
+        if (result.didCancel || !result.assets?.length) return;
+
+        const validAssets = result.assets.filter(asset => {
+            const type = asset.type || 'image/jpeg';
+            return ALLOWED_IMAGE_TYPES.includes(type) && (!asset.fileSize || asset.fileSize <= MAX_IMAGE_BYTES);
+        });
+
+        if (validAssets.length !== result.assets.length) {
+            showAlert('Unsupported Photo', `Use JPEG, PNG or WebP images under 5 MB. ${validAssets.length} photo(s) were added.`);
         }
+
+        const newImages = validAssets.slice(0, remaining).map(asset => ({
+            uri: asset.uri,
+            name: asset.fileName || `image_${Date.now()}.jpg`,
+            type: asset.type || 'image/jpeg',
+        }));
+
+        if (newImages.length) setImages([...images, ...newImages]);
     };
 
     const removeImage = (index: number) => {
@@ -162,6 +208,15 @@ const CreatePostScreen = ({ navigation }: any) => {
     };
 
     const handleCreate = async () => {
+        const invalid = validatePostDraft('all', validationDraft());
+        if (invalid) {
+            setFormError(invalid);
+            setStep(sectionForField(invalid.field) === 'category' ? 1
+                : sectionForField(invalid.field) === 'details' ? 2
+                : sectionForField(invalid.field) === 'location' ? 3 : 4);
+            return;
+        }
+
         setLoading(true);
         try {
             const formData = new FormData();
@@ -191,8 +246,8 @@ const CreatePostScreen = ({ navigation }: any) => {
             await api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
             isSubmittingRef.current = true;
-            resetForm();
             showAlert('Success', 'Post created successfully!', () => {
+                resetForm();
                 isSubmittingRef.current = false;
                 navigation.navigate('Feed');
             });
@@ -263,6 +318,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                         placeholder="What are you offering?"
                         placeholderTextColor="#64748b"
                         value={title}
+                        maxLength={TITLE_MAX_LENGTH}
                         onChangeText={setTitle}
                     />
                 </View>
@@ -274,6 +330,7 @@ const CreatePostScreen = ({ navigation }: any) => {
                         placeholderTextColor="#64748b"
                         value={description}
                         multiline
+                        maxLength={DESCRIPTION_MAX_LENGTH}
                         onChangeText={setDescription}
                     />
                 </View>
@@ -427,6 +484,17 @@ const CreatePostScreen = ({ navigation }: any) => {
                 {!!availability && (
                     <Text style={styles.previewMeta}>Availability: {availability}</Text>
                 )}
+                {images.length > 0 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewImages}>
+                        {images.map((image, index) => (
+                            <Image key={index} source={{ uri: image.uri }} style={styles.reviewImage} />
+                        ))}
+                    </ScrollView>
+                )}
+                <View style={styles.reviewDetails}>
+                    <Text style={styles.previewMeta}>Exchange: {exchangePreference.toUpperCase()}</Text>
+                    <Text style={styles.previewMeta}>Barter: {acceptsBarter ? 'Yes' : 'No'}</Text>
+                </View>
                 <View style={styles.previewFooter}>
                     <View style={styles.footerInfo}><MapPin size={12} color="#94a3b8" /><Text style={styles.footerInfoText}>{location}</Text></View>
                     <View style={styles.footerInfo}><Clock size={12} color="#94a3b8" /><Text style={styles.footerInfoText}>{durations.find(d => d.value === duration)?.label}</Text></View>
@@ -436,20 +504,24 @@ const CreatePostScreen = ({ navigation }: any) => {
     );
 
     const goNext = () => {
-        if (step === 1 && !subType) return showAlert('Error', 'Please select a type');
-        if (step === 2 && (!title || !description)) return showAlert('Error', 'Details are required');
-        if (step === 3 && !location) return showAlert('Error', 'Location is required');
-        if (step === 4) {
-            const clean = String(price || '').trim();
-            if (clean !== '') {
-                const parsed = Number(clean);
-                if (!Number.isFinite(parsed) || parsed < 0) {
-                    return showAlert('Error', 'Price must be a valid non-negative number');
-                }
+        const sectionByStep: Record<number, 'category' | 'details' | 'location' | 'exchange'> = {
+            1: 'category',
+            2: 'details',
+            3: 'location',
+            4: 'exchange',
+        };
+
+        if (step < 5) {
+            const invalid = validatePostDraft(sectionByStep[step], validationDraft());
+            if (invalid) {
+                setFormError(invalid);
+                return;
             }
+            setStep(step + 1);
+            return;
         }
-        if (step < 5) setStep(step + 1);
-        else handleCreate();
+
+        handleCreate();
     };
 
     const goBack = () => {
@@ -510,6 +582,12 @@ const CreatePostScreen = ({ navigation }: any) => {
             </KeyboardAvoidingView>
 
             <View style={styles.footerGlass}>
+                {formError && (
+                    <View style={styles.errorBanner}>
+                        <AlertTriangle size={16} color="#fca5a5" />
+                        <Text style={styles.errorBannerText}>{formError.message}</Text>
+                    </View>
+                )}
                 <View style={styles.footerContent}>
                     <TouchableOpacity onPress={goBack} style={styles.footerBackButton}>
                         <Text style={styles.footerBackText}>{step === 1 ? 'Cancel' : 'Back'}</Text>
@@ -1027,6 +1105,36 @@ const styles = StyleSheet.create({
         color: '#cbd5e1',
         lineHeight: 18,
         marginBottom: 10
+    },
+    reviewImages: {
+        marginBottom: 16
+    },
+    reviewImage: {
+        width: 72,
+        height: 72,
+        borderRadius: 10,
+        marginRight: 8
+    },
+    reviewDetails: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 4
+    },
+    errorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: 6,
+        borderRadius: 10,
+        backgroundColor: 'rgba(239, 68, 68, 0.14)'
+    },
+    errorBannerText: {
+        flex: 1,
+        color: '#fca5a5',
+        fontSize: 13
     },
     previewFooter: {
         flexDirection: 'row',

@@ -44,6 +44,31 @@ const ContactRequestSchema = new mongoose.Schema({
     completedAt: {
         type: Date,
     },
+    locationShare: {
+        status: {
+            type: String,
+            enum: ['none', 'granted', 'revoked'],
+            default: 'none'
+        },
+        grantedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        grantedAt: Date,
+        expiresAt: Date,
+        revokedAt: Date,
+        sharedLocation: {
+            lat: Number,
+            lng: Number,
+            accuracy: Number,
+            note: {
+                type: String,
+                trim: true,
+                maxlength: 300
+            },
+            updatedAt: Date
+        }
+    },
     completionMarkedBy: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -82,7 +107,6 @@ const ContactRequestSchema = new mongoose.Schema({
     }]
 });
 
-// Ensure a user can only request once per post
 ContactRequestSchema.index({ post: 1, requester: 1 }, { unique: true });
 ContactRequestSchema.index({ post: 1, status: 1, createdAt: -1 });
 ContactRequestSchema.index({ requester: 1, recipient: 1, status: 1 });

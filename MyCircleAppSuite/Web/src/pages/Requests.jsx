@@ -8,7 +8,7 @@ import { getAvatarUrl } from '../utils/avatar';
 import { 
     Check, X, Clock, MessageCircle, ArrowRight, User, Package, 
     Trash2, Star, Phone, MessageSquare, MapPin, DollarSign,
-    RefreshCw, CheckCircle, XCircle, Send
+    RefreshCw, CheckCircle, XCircle, Send, Navigation
 } from 'lucide-react';
 import { useCurrencySymbol } from '../context/CurrencySymbolContext';
 
@@ -122,6 +122,57 @@ const Requests = () => {
         } catch (err) {
             console.error(err);
             showError(err.response?.data?.msg || "Action failed");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleShareLocation = async (requestId) => {
+        setActionLoading(requestId);
+        try {
+            if (!navigator.geolocation) {
+                showError('Geolocation is not supported in this browser.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                    const { data } = await api.post(`/contacts/${requestId}/location-share`, {
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy,
+                        expiresInMinutes: 120,
+                    });
+                    setReceivedRequests(prev => prev.map(r => r._id === requestId ? { ...r, ...data } : r));
+                    setSentRequests(prev => prev.map(r => r._id === requestId ? { ...r, ...data } : r));
+                    success('Location shared with the requester (expires in 2 hours).');
+                } catch (err) {
+                    console.error(err);
+                    showError(err.response?.data?.msg || 'Failed to share location');
+                } finally {
+                    setActionLoading(null);
+                }
+            }, (err) => {
+                console.error(err);
+                showError('Could not get your location. Please allow location access.');
+                setActionLoading(null);
+            }, { enableHighAccuracy: true, timeout: 15000 });
+        } catch (err) {
+            console.error(err);
+            showError('Failed to share location');
+            setActionLoading(null);
+        }
+    };
+
+    const handleRevokeLocation = async (requestId) => {
+        setActionLoading(requestId);
+        try {
+            const { data } = await api.delete(`/contacts/${requestId}/location-share`);
+            setReceivedRequests(prev => prev.map(r => r._id === requestId ? { ...r, ...data } : r));
+            setSentRequests(prev => prev.map(r => r._id === requestId ? { ...r, ...data } : r));
+            success('Location sharing revoked.');
+        } catch (err) {
+            console.error(err);
+            showError(err.response?.data?.msg || 'Failed to revoke location sharing');
         } finally {
             setActionLoading(null);
         }
@@ -451,20 +502,55 @@ const Requests = () => {
                                             )}
 
                                             {req.status === 'accepted' && activeTab === 'received' && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleComplete(req._id)}
-                                                    disabled={actionLoading === req._id}
-                                                    className="gap-1.5 flex-1 sm:flex-none justify-center text-blue-400 border-blue-400/30"
-                                                >
-                                                    {actionLoading === req._id ? (
-                                                        <RefreshCw className="w-3 h-3" />
-                                                    ) : (
-                                                        <CheckCircle className="w-3 h-3" />
+                                                <>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleShareLocation(req._id)}
+                                                        disabled={actionLoading === req._id}
+                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-emerald-400 border-emerald-400/30"
+                                                    >
+                                                        <MapPin className="w-3 h-3" />
+                                                        Share my location (2h)
+                                                    </Button>
+                                                    {req.locationShare?.status === 'granted' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleRevokeLocation(req._id)}
+                                                            disabled={actionLoading === req._id}
+                                                            className="gap-1.5 flex-1 sm:flex-none justify-center text-amber-400 border-amber-400/30"
+                                                        >
+                                                            Revoke location
+                                                        </Button>
                                                     )}
-                                                    Mark Complete
-                                                </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleComplete(req._id)}
+                                                        disabled={actionLoading === req._id}
+                                                        className="gap-1.5 flex-1 sm:flex-none justify-center text-blue-400 border-blue-400/30"
+                                                    >
+                                                        {actionLoading === req._id ? (
+                                                            <RefreshCw className="w-3 h-3" />
+                                                        ) : (
+                                                            <CheckCircle className="w-3 h-3" />
+                                                        )}
+                                                        Mark Complete
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {req.status === 'accepted' && activeTab === 'sent' && req.locationShare?.available && req.locationShare?.sharedLocation && (
+                                                <a
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-400/30 text-emerald-400 text-sm hover:bg-emerald-500/10"
+                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${req.locationShare.sharedLocation.lat},${req.locationShare.sharedLocation.lng}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    <Navigation className="w-3 h-3" />
+                                                    Navigate to shared location
+                                                </a>
                                             )}
 
                                             <Button

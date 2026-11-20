@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import api from '../services/api';
 import { ensureConversationWithUser } from '../services/chat';
-import { X, Check, MessageCircle, Trash2, BadgeCheck } from 'lucide-react-native';
+import { getCurrentLocation } from '../utils/location';
+import { X, Check, MessageCircle, Trash2, BadgeCheck, MapPin, Navigation } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -160,6 +162,37 @@ const RequestsScreen = ({ navigation }: any) => {
         setSentRequests(prev => prev.map(req => req._id === updatedRequest._id ? updatedRequest : req));
     };
 
+    const handleShareLocation = async (id: string) => {
+        try {
+            const loc = await getCurrentLocation();
+            if (!loc) {
+                Alert.alert('Location unavailable', 'Unable to get your location. Please enable location services and try again.');
+                return;
+            }
+            const res = await api.post(`/contacts/${id}/location-share`, {
+                lat: loc.latitude,
+                lng: loc.longitude,
+                expiresInMinutes: 120,
+            });
+            updateRequestInState(res.data);
+            Alert.alert('Shared', 'Your location is shared for 2 hours.');
+        } catch (e: any) {
+            const msg = e?.response?.data?.msg || e?.userFriendlyMessage || e?.message || 'Failed to share location';
+            Alert.alert('Error', msg);
+        }
+    };
+
+    const handleRevokeLocation = async (id: string) => {
+        try {
+            const res = await api.delete(`/contacts/${id}/location-share`);
+            updateRequestInState(res.data);
+            Alert.alert('Done', 'Location sharing revoked.');
+        } catch (e: any) {
+            const msg = e?.response?.data?.msg || e?.userFriendlyMessage || e?.message || 'Failed to revoke';
+            Alert.alert('Error', msg);
+        }
+    };
+
     const handleComplete = async (id: string) => {
         try {
             const res = await api.put(`/contacts/${id}/status`, { status: 'completed' });
@@ -263,18 +296,28 @@ const RequestsScreen = ({ navigation }: any) => {
                             {item.status === 'accepted' && (
                                 <View style={styles.postDecisionActions}>
                                     <TouchableOpacity
+                                        onPress={() => handleShareLocation(item._id)}
+                                        style={styles.completeButton}
+                                    >
+                                        <MapPin size={16} color="#10b981" />
+                                        <Text style={styles.completeButtonText}>SHARE LOCATION (2H)</Text>
+                                    </TouchableOpacity>
+                                    {item.locationShare?.status === 'granted' && (
+                                        <TouchableOpacity onPress={() => handleRevokeLocation(item._id)} style={styles.completeButton}>
+                                            <Text style={styles.completeButtonText}>REVOKE LOCATION</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    <TouchableOpacity
                                         onPress={() => openChat(item, item.requester._id)}
                                         style={styles.chatButtonNeon}
                                     >
                                         <MessageCircle size={18} color="white" />
                                         <Text style={styles.chatButtonText}>START CHAT</Text>
                                     </TouchableOpacity>
-                                    {item.status === 'accepted' && (
-                                        <TouchableOpacity onPress={() => handleComplete(item._id)} style={styles.completeButton}>
-                                            <BadgeCheck size={16} color="#10b981" />
-                                            <Text style={styles.completeButtonText}>MARK COMPLETE</Text>
-                                        </TouchableOpacity>
-                                    )}
+                                    <TouchableOpacity onPress={() => handleComplete(item._id)} style={styles.completeButton}>
+                                        <BadgeCheck size={16} color="#10b981" />
+                                        <Text style={styles.completeButtonText}>MARK COMPLETE</Text>
+                                    </TouchableOpacity>
                                 </View>
                             )}
                         </View>
@@ -334,6 +377,17 @@ const RequestsScreen = ({ navigation }: any) => {
 
                         {item.status === 'accepted' && (
                             <View style={styles.contactActions}>
+                                {item.locationShare?.available && item.locationShare?.sharedLocation && (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            const { lat, lng } = item.locationShare.sharedLocation;
+                                            Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+                                        }}
+                                        style={[styles.iconButtonNeon, { marginRight: 8 }]}
+                                    >
+                                        <Navigation size={18} color="white" />
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity
                                     onPress={() => openChat(item, item.recipient._id)}
                                     style={styles.iconButtonNeon}

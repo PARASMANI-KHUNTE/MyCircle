@@ -6,6 +6,8 @@ describe('notification delivery model fields', () => {
         expect(Notification.schema.path('event')).toBeDefined();
         expect(Notification.schema.path('event').enumValues).toContain('application_accepted');
         expect(Notification.schema.path('event').enumValues).toContain('application_rejected');
+        expect(Notification.schema.path('event').enumValues).toContain('location_shared');
+        expect(Notification.schema.path('event').enumValues).toContain('location_share_revoked');
         expect(Notification.schema.path('event').enumValues).toContain('post_status_changed');
     });
 

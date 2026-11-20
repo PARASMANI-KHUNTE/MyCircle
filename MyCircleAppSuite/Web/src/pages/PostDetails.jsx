@@ -572,21 +572,34 @@ const PostDetails = () => {
                                 )}
                             </div>
 
-                            {post.locationCoordinates && (
+                            {post.approvedLocationShare?.lat != null && post.approvedLocationShare?.lng != null && (
                                 <div className="p-6 bg-card/10 border border-card-border rounded-2xl shadow-inner">
-                                    <h2 className="text-lg font-black text-text-heading mb-4 uppercase tracking-wide">Location Map</h2>
-                                    <div className="h-[300px] rounded-xl overflow-hidden border border-card-border">
+                                    <h2 className="text-lg font-black text-text-heading mb-2 uppercase tracking-wide">Shared meeting location</h2>
+                                    <p className="text-xs text-text-muted mb-4">Shared by the owner after approval. Coordinate outside the app if needed.</p>
+                                    <div className="h-[300px] rounded-xl overflow-hidden border border-card-border mb-4">
                                         <MapContainer
-                                            center={[post.locationCoordinates.lat, post.locationCoordinates.lng]}
-                                            zoom={15}
+                                            center={[post.approvedLocationShare.lat, post.approvedLocationShare.lng]}
+                                            zoom={16}
                                             className="h-full w-full"
                                         >
                                             <MapTiles dark={isDark} />
-                                            <Marker position={[post.locationCoordinates.lat, post.locationCoordinates.lng]}>
-                                                <Popup>{post.location}</Popup>
+                                            <Marker position={[post.approvedLocationShare.lat, post.approvedLocationShare.lng]}>
+                                                <Popup>Approved meeting point</Popup>
                                             </Marker>
                                         </MapContainer>
                                     </div>
+                                    <a
+                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 text-sm font-semibold"
+                                        href={`https://www.google.com/maps/dir/?api=1&destination=${post.approvedLocationShare.lat},${post.approvedLocationShare.lng}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        <Navigation className="w-4 h-4" />
+                                        Navigate (Google Maps)
+                                    </a>
+                                    {post.approvedLocationShare.expiresAt && (
+                                        <p className="text-xs text-text-muted mt-2">Access may expire at {new Date(post.approvedLocationShare.expiresAt).toLocaleString()}.</p>
+                                    )}
                                 </div>
                             )}
 

@@ -9,6 +9,9 @@ router.post('/:postId', auth, contactController.createRequest);
 router.get('/received', auth, contactController.getReceivedRequests);
 router.get('/sent', auth, contactController.getSentRequests);
 router.put('/:id/status', auth, contactController.updateRequestStatus);
+router.get('/:id/location-share', auth, contactController.getLocationShare);
+router.post('/:id/location-share', auth, contactController.setLocationShare);
+router.delete('/:id/location-share', auth, contactController.revokeLocationShare);
 router.post('/:id/rate', [auth, validate(schemas.rateRequest)], contactController.rateRequest);
 router.delete('/:id', auth, contactController.deleteRequest);
 

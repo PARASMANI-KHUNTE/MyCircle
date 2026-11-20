@@ -7,7 +7,7 @@ import { MapPin, Check, Map, Crosshair, X, Camera, Briefcase, ShoppingBag, Packa
 import Animated, { FadeInDown, FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
 import api from '../services/api';
-import { getCurrentLocation } from '../utils/location';
+import { useLocation } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatErrorMessage } from '../utils/errorMessage';
 import ThemedAlert from '../components/ui/ThemedAlert';
@@ -16,6 +16,7 @@ import { DARK_TILE_URL, LABELS_TILE_URL, MAP_MAX_NATIVE_ZOOM } from '../constant
 
 const CreatePostScreen = ({ navigation }: any) => {
     const { colors, isDark } = useTheme();
+    const { requestLocation } = useLocation();
     const webviewRef = useRef<any>(null);
 
     // Wizard State
@@ -325,11 +326,11 @@ const CreatePostScreen = ({ navigation }: any) => {
                     <TouchableOpacity onPress={async () => {
                         setLocationLoading(true);
                         try {
-                            const loc = await getCurrentLocation();
-                            if (loc) {
-                                setCoordinates({ lat: loc.latitude, lng: loc.longitude });
-                                const addr = await reverseGeocode(loc.latitude, loc.longitude);
-                                setLocation(addr || loc.address);
+                            const coords = await requestLocation();
+                            if (coords) {
+                                setCoordinates({ lat: coords.lat, lng: coords.lng });
+                                const addr = await reverseGeocode(coords.lat, coords.lng);
+                                setLocation(addr);
                             } else {
                                 showAlert('Location Access', 'Please ensure location permissions and GPS are enabled to detect your location.');
                             }
@@ -554,8 +555,15 @@ const CreatePostScreen = ({ navigation }: any) => {
                                 const addr = await reverseGeocode(data.lat, data.lng);
                                 setLocation(addr);
                             } else if (data.type === 'requestLoc') {
-                                const l = await getCurrentLocation();
-                                if (l) { webviewRef.current?.injectJavaScript(`window.updateCenter(${l.latitude}, ${l.longitude})`); }
+                                const coords = await requestLocation();
+                                if (coords) {
+                                    setCoordinates({ lat: coords.lat, lng: coords.lng });
+                                    const addr = await reverseGeocode(coords.lat, coords.lng);
+                                    setLocation(addr);
+                                    webviewRef.current?.injectJavaScript(`window.updateCenter(${coords.lat}, ${coords.lng})`);
+                                } else {
+                                    showAlert('Location Access', 'Unable to get your current location. Check permission and GPS, then try again.');
+                                }
                             }
                         }}
                     />

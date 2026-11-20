@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { getCurrentLocation } from '../utils/location';
+import { useLocation } from '../context/LocationContext';
 import { useNotifications } from '../context/NotificationContext';
 import Sound from 'react-native-sound';
 import PostCard from '../components/ui/PostCard';
@@ -68,7 +68,10 @@ const FeedScreen = ({ navigation, route }: any) => {
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
     const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
     const [selectedPost, setSelectedPost] = useState<any | null>(null);
-    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const {
+        location: userLocation,
+        requestLocation,
+    } = useLocation();
     const [mapLoading] = useState(false);
 
     // Chat Badge Logic
@@ -234,17 +237,16 @@ const FeedScreen = ({ navigation, route }: any) => {
 
     const requestLocationPermission = useCallback(async () => {
         try {
-            const loc = await getCurrentLocation();
-            if (loc) {
-                setUserLocation({ lat: loc.latitude, lng: loc.longitude });
-                return true;
-            }
+            const coords = await requestLocation();
+            if (coords) return true;
+
+            showError('Unable to get your location. Check location permission and GPS, then try again.');
             return false;
         } catch (err) {
             console.warn('Location permission request failed', err);
             return false;
         }
-    }, []);
+    }, [requestLocation, showError]);
 
     const fetchUnreadMsgCount = useCallback(async () => {
         if (!isAuthenticated) {
@@ -270,9 +272,8 @@ const FeedScreen = ({ navigation, route }: any) => {
         if (!isNearby) {
             setNearbyLoading(true);
             try {
-                const loc = await getCurrentLocation();
-                if (loc) {
-                    setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+                const coords = await requestLocation();
+                if (coords) {
                     setIsNearby(true);
                     setLocationFilter('All');
                     showInfo('Filtered by nearby posts');
@@ -1096,9 +1097,8 @@ const FeedScreen = ({ navigation, route }: any) => {
                                         ]}
                                         onPress={async () => {
                                             if (!userLocation) {
-                                                const loc = await getCurrentLocation();
-                                                if (loc) {
-                                                    setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+                                                const coords = await requestLocation();
+                                                if (coords) {
                                                     setIsNearby(true);
                                                     setDistanceRadius(radius);
                                                 } else {

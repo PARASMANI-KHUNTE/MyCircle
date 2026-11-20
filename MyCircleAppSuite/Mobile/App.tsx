@@ -11,6 +11,7 @@ import AlertProvider from './src/components/ui/AlertProvider';
 import { ToastProvider } from './src/components/ui/Toast';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { useTheme } from './src/context/ThemeContext';
+import { LocationProvider } from './src/context/LocationContext';
 import { navigationRef } from './src/services/navigationService';
 import StartupAnimation from './src/components/animations/StartupAnimation';
 import { getNavigationTheme } from './src/theme/theme';
@@ -121,13 +122,15 @@ const App = () => {
                     <QueryClientProvider client={queryClient}>
                         <AlertProvider>
                             <ToastProvider>
-                                <AuthProvider>
-                                    <SocketProvider>
-                                        <NotificationProvider>
-                                            <MainContent />
-                                        </NotificationProvider>
-                                    </SocketProvider>
-                                </AuthProvider>
+                                <LocationProvider>
+                                    <AuthProvider>
+                                        <SocketProvider>
+                                            <NotificationProvider>
+                                                <MainContent />
+                                            </NotificationProvider>
+                                        </SocketProvider>
+                                    </AuthProvider>
+                                </LocationProvider>
                             </ToastProvider>
                         </AlertProvider>
                     </QueryClientProvider>

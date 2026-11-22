@@ -23,9 +23,14 @@ jest.mock('../src/utils/notificationBus', () => ({
     onNotification: jest.fn(() => jest.fn()),
 }));
 
+jest.mock('../src/utils/pushNotifications', () => ({
+    sendPushNotification: jest.fn().mockResolvedValue({ sent: 0, removedTokens: 0 }),
+}));
+
 const Notification = require('../src/models/Notification');
 const User = require('../src/models/User');
 const { publishNotification } = require('../src/utils/notificationBus');
+const { sendPushNotification } = require('../src/utils/pushNotifications');
 const {
     createNotification,
     registerDeviceToken,
@@ -90,6 +95,26 @@ describe('notification delivery', () => {
             notification: expect.objectContaining({ event: 'application_rejected' }),
         });
         expect(to).not.toHaveBeenCalled();
+    });
+
+    it('sends a push notification even when realtime delivery goes through Redis', async () => {
+        publishNotification.mockResolvedValue(true);
+
+        await createNotification({ to }, {
+            recipient: 'user-1',
+            sender: 'user-2',
+            type: 'request',
+            title: 'New Request',
+            message: 'Someone sent you a request.',
+            link: '/requests',
+            relatedId: 'post-1',
+        });
+
+        expect(sendPushNotification).toHaveBeenCalledWith(expect.objectContaining({
+            recipientId: 'user-1',
+            title: 'New Request',
+            body: 'Someone sent you a request.',
+        }));
     });
 
     it('does not notify the actor about their own action', async () => {

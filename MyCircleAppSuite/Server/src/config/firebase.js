@@ -2,6 +2,7 @@ const { initializeApp, cert, getApps, getApp } = require('firebase-admin/app');
 
 let getAuth = null;
 let getFirestore = null;
+let getMessaging = null;
 let Timestamp = null;
 let FieldValue = null;
 
@@ -19,6 +20,13 @@ try {
     FieldValue = firestoreModule.FieldValue;
 } catch (error) {
     console.warn('⚠️ Firebase Admin Firestore module could not be loaded. Firestore features will be disabled:', error.message);
+}
+
+try {
+    const messagingModule = require('firebase-admin/messaging');
+    getMessaging = messagingModule.getMessaging;
+} catch (error) {
+    console.warn('⚠️ Firebase Admin Messaging module could not be loaded. Push notifications will be disabled:', error.message);
 }
 
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
@@ -67,6 +75,9 @@ const admin = {
         cert,
     },
     auth: (app = firebaseApp) => (typeof getAuth === 'function' ? getAuth(app || undefined) : null),
+    messaging: (app = firebaseApp) => (typeof getMessaging === 'function' && getApps().length > 0
+        ? getMessaging(app || undefined)
+        : null),
     firestore: Object.assign(
         (app = firebaseApp) => ((getApps().length > 0 && typeof getFirestore === 'function') ? getFirestore(app || undefined) : null),
         {

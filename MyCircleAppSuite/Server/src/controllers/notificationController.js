@@ -3,6 +3,7 @@ const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { publishNotification } = require('../utils/notificationBus');
+const { sendPushNotification } = require('../utils/pushNotifications');
 
 const DEFAULT_NOTIFICATION_LIMIT = 30;
 const MAX_NOTIFICATION_LIMIT = 100;
@@ -208,6 +209,25 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
         }
         if (conversationId) {
             emittedNotification.conversationId = conversationId.toString();
+        }
+
+        // Push delivery must run before the Redis/local emit returns below,
+        // otherwise backgrounded or killed mobile apps would never see it.
+        try {
+            await sendPushNotification({
+                recipientId: recipientIdStr,
+                title,
+                body: message,
+                data: {
+                    type: type || 'system',
+                    event: event || eventByType[type] || 'system',
+                    link: link || '',
+                    relatedId: relatedId?.toString?.() || '',
+                    conversationId: conversationId?.toString?.() || '',
+                },
+            });
+        } catch (pushErr) {
+            console.error('[Notification] Push delivery failed:', pushErr.message);
         }
 
         // Redis fan-out covers PM2 cluster/worker processes. Direct emit is the

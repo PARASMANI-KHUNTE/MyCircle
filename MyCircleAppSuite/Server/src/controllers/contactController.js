@@ -333,6 +333,11 @@ exports.updateRequestStatus = async (req, res, next) => {
             post.completedAt = new Date();
             await post.save();
 
+            // Keep this request so both parties can still rate each other.
+            request.status = 'completed';
+            request.completedAt = new Date();
+            await request.save();
+
             if (post.user.toString() === request.recipient.toString()) {
                 const provider = await User.findById(request.recipient);
                 if (provider) {
@@ -366,12 +371,15 @@ exports.updateRequestStatus = async (req, res, next) => {
                 console.error('Failed to send completion notification:', notifErr.message);
             }
 
-            const deletedRequests = await ContactRequest.deleteMany({ post: postId });
+            const deletedRequests = await ContactRequest.deleteMany({
+                post: postId,
+                _id: { $ne: request._id },
+            });
 
             return res.json({
-                msg: 'Work completed. Post disabled, chats deleted, and related requests removed.',
+                msg: 'Work completed. Post disabled, chats deleted, and other related requests removed.',
                 removed: true,
-                removedRequestId: req.params.id,
+                completedRequestId: request._id,
                 removedRequestsCount: deletedRequests.deletedCount,
                 postId
             });

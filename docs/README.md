@@ -14,6 +14,8 @@ Canonical documentation for the MyCircle hyperlocal exchange platform.
 - [Project overview](guides/project-overview.md)
 - [Feature matrix](guides/features.md)
 - [Testing checklist](guides/testing.md)
+- [Post creation flow](guides/post-creation-flow.md)
+- [Notifications](guides/notifications.md)
 - [Project documentation](guides/project-documentation.md) ([PDF](guides/project-documentation.pdf))
 - [Mobile OTA updates](guides/mobile-ota-updates.md)
 

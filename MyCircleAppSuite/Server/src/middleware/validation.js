@@ -63,6 +63,9 @@ const schemas = {
         contentType: z.enum(['post', 'comment', 'chat', 'profile', 'image', 'user']).optional(),
         contentId: z.string().optional(),
     }),
+    adminUpdateUserRole: z.object({
+        role: z.enum(['user', 'admin', 'moderator']),
+    }),
 
     createContactRequest: z.object({
         recipientId: z.string().min(1, 'Recipient ID is required'),

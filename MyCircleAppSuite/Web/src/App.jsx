@@ -29,6 +29,10 @@ const Settings = lazy(() => import('./pages/Settings'));
 const BlockedUsers = lazy(() => import('./pages/BlockedUsers'));
 const LoginSuccess = lazy(() => import('./pages/LoginSuccess'));
 const DownloadApp = lazy(() => import('./pages/DownloadApp'));
+const RequireAdmin = lazy(() => import('./components/auth/RequireAdmin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 
 function AppContent() {
   return (
@@ -104,6 +108,30 @@ function AuthRoutes() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/blocked-users" element={<BlockedUsers />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminDashboard />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <RequireAdmin>
+                <AdminUsers />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <RequireAdmin>
+                <AdminReports />
+              </RequireAdmin>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Route>
       ) : (

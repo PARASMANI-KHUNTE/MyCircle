@@ -255,10 +255,12 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Report',
-                    onPress: () => {
-                        // In a real app, show a prompt for reason
-                        Alert.alert('Report Submitted', 'Our team will review this conversation.');
-                    }
+                    onPress: () => navigation.navigate('Support', {
+                        type: 'report',
+                        subjectType: 'chat',
+                        subjectId: conversation?._id,
+                        reportedUserId: otherParticipant?._id,
+                    })
                 }
             ]
         );

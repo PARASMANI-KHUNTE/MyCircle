@@ -24,6 +24,12 @@ export type RootStackParamList = {
     MyPosts: undefined;
     Requests: undefined;
     BlockedUsers: undefined;
+    Support: {
+        type?: 'report' | 'help' | 'feedback';
+        subjectType?: 'post' | 'comment' | 'chat' | 'profile' | 'image' | 'user' | 'other';
+        subjectId?: string;
+        reportedUserId?: string;
+    } | undefined;
     UserProfile: { userId?: string } | undefined;
     EditPost: { id: string };
     NotFound: { path?: string } | undefined;
@@ -46,6 +52,7 @@ export type WebRoutePath =
     | '/chat'
     | '/settings'
     | '/blocked-users'
+    | '/support'
     | '*';
 
 export const webToMobileRouteMap: Record<WebRoutePath, string> = {
@@ -65,6 +72,7 @@ export const webToMobileRouteMap: Record<WebRoutePath, string> = {
     '/chat': 'ChatList',
     '/settings': 'Settings',
     '/blocked-users': 'BlockedUsers',
+    '/support': 'Support',
     '*': 'NotFound',
 };
 

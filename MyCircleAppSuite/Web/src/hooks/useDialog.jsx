@@ -114,6 +114,10 @@ export const DialogProvider = ({ children }) => {
         alert,
         confirm,
         prompt,
+        // Stable aliases used by the admin pages.
+        showAlert: alert,
+        showConfirm: confirm,
+        showPrompt: prompt,
         closeDialog,
         setInputValue
     };

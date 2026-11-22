@@ -67,6 +67,20 @@ const schemas = {
         role: z.enum(['user', 'admin', 'moderator']),
     }),
 
+    createSupportSubmission: z.object({
+        type: z.enum(['report', 'help', 'feedback']),
+        message: z.string().min(3, 'Please provide a little more detail').max(2000, 'Message too long'),
+        category: z.enum(['spam', 'harassment', 'scam', 'impersonation', 'hate_speech', 'nudity', 'violence', 'other']).optional(),
+        subjectType: z.enum(['post', 'comment', 'chat', 'profile', 'image', 'user', 'other']).optional(),
+        subjectId: z.string().optional(),
+        reportedUserId: z.string().optional(),
+    }),
+
+    updateSupportSubmission: z.object({
+        status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']),
+        response: z.string().max(2000, 'Response too long').optional(),
+    }),
+
     createContactRequest: z.object({
         recipientId: z.string().min(1, 'Recipient ID is required'),
         message: z.string().max(500, 'Message too long').optional(),

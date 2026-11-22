@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell, Settings, LogOut, User, CircleDot, Inbox, Smartphone, Shield } from 'lucide-react';
+import { Menu, X, PlusCircle, MessageCircle, Sun, Moon, Bell, Settings, LogOut, User, CircleDot, Inbox, Smartphone, Shield, HelpCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Button from '../ui/Button';
 import { cn } from '../../utils/cn';
@@ -387,6 +387,10 @@ const Navbar = () => {
                                                         <Link to="/download" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-card-hover transition-colors">
                                                             <Smartphone className="w-4 h-4 text-primary" />
                                                             <span className="text-sm font-medium">Download App</span>
+                                                        </Link>
+                                                        <Link to="/support" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-card-hover transition-colors">
+                                                            <HelpCircle className="w-4 h-4 text-foreground-muted" />
+                                                            <span className="text-sm font-medium">Help & Support</span>
                                                         </Link>
                                                         {user?.role === 'admin' && (
                                                             <Link to="/admin" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-card-hover transition-colors">

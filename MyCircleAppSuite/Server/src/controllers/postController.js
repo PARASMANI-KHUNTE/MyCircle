@@ -926,7 +926,8 @@ exports.updatePostStatus = async (req, res, next) => {
                 io,
                 reason: 'Post closed'
             });
-            await ContactRequest.deleteMany({ post: post._id });
+            // Preserve completed requests so the rating flow can still use them.
+            await ContactRequest.deleteMany({ post: post._id, status: { $nin: ['completed'] } });
             await Notification.deleteMany({ relatedId: post._id });
         }
 

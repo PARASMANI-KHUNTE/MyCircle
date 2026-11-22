@@ -73,6 +73,11 @@ const PostSchema = new mongoose.Schema({
         enum: ['active', 'inactive', 'sold', 'completed', 'archived'],
         default: 'active',
     },
+    moderationStatus: {
+        type: String,
+        enum: ['visible', 'hidden', 'removed'],
+        default: 'visible',
+    },
     contactPhone: {
         type: String,
     },
@@ -196,6 +201,7 @@ PostSchema.pre('save', async function () {
 PostSchema.index({ user: 1 });
 PostSchema.index({ title: 'text', description: 'text' });
 PostSchema.index({ type: 1, status: 1, isActive: 1 });
+PostSchema.index({ moderationStatus: 1, createdAt: -1 });
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ price: 1 });
 PostSchema.index({ expiresAt: 1, status: 1, isActive: 1 });

@@ -35,6 +35,11 @@ const UserSchema = new mongoose.Schema({
         enum: ['user', 'admin', 'moderator'],
         default: 'user',
     },
+    accountStatus: {
+        type: String,
+        enum: ['active', 'suspended', 'banned'],
+        default: 'active',
+    },
     bio: String,
     location: String,
     skills: [String],

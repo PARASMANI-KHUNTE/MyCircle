@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { Bell, ChevronRight, HelpCircle, MessageSquare, Moon, RefreshCw, Sun, Trash2, UserX } from 'lucide-react-native';
+import { Bell, ChevronRight, HelpCircle, MessageSquare, Moon, RefreshCw, Shield, Sun, Trash2, UserX } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import AppScreen from '../components/layout/AppScreen';
@@ -11,7 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { checkForAppUpdate, UpdateStatusState } from '../services/updateService';
 
 const SettingsScreen = ({ navigation }: any) => {
-    const { logout } = useAuth() as any;
+    const { logout, isAdmin } = useAuth() as any;
     const { theme, toggleTheme, colors } = useTheme();
     const [notifications, setNotifications] = useState({ push: true });
     const [updateStatus, setUpdateStatus] = useState<string>('');
@@ -195,6 +195,23 @@ const SettingsScreen = ({ navigation }: any) => {
                         />
                     </View>
                 </Animated.View>
+
+                {isAdmin && (
+                    <>
+                        <Animated.View entering={FadeInDown.delay(475).duration(800).springify()} style={styles.sectionHeader}>
+                            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Administration</Text>
+                        </Animated.View>
+                        <Animated.View entering={FadeInDown.delay(500).duration(800).springify()}>
+                            <View style={[styles.group, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                                <SettingItem
+                                    icon={Shield}
+                                    label="Admin Panel"
+                                    onPress={() => navigation.navigate('AdminDashboard')}
+                                />
+                            </View>
+                        </Animated.View>
+                    </>
+                )}
 
                 <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Danger Zone</Text>

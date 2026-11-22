@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const ContactRequest = require('../models/ContactRequest');
 const Conversation = require('../models/Conversation');
+const SupportSubmission = require('../models/SupportSubmission');
 const { admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
@@ -352,6 +353,22 @@ exports.reportUser = async (req, res, next) => {
             ...(normalizedContentId ? { contentId: normalizedContentId } : {})
         });
         await reportedUser.save();
+
+        // Mirror the report into the triage queue so admins can update its status.
+        try {
+            await SupportSubmission.create({
+                type: 'report',
+                status: 'open',
+                reporter: req.user.id,
+                reportedUser: reportedUserId,
+                subjectType: contentType,
+                subjectId: normalizedContentId,
+                category,
+                message: normalizedReason,
+            });
+        } catch (submissionErr) {
+            console.error('Failed to add report to support queue:', submissionErr.message);
+        }
 
         res.status(201).json({
             msg: 'Report submitted. Our team will review it and take action if needed.',

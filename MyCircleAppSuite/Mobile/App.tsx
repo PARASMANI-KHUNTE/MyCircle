@@ -38,6 +38,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import LoginSuccessScreen from './src/screens/LoginSuccessScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
+import SupportScreen from './src/screens/SupportScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const RootNavigator = () => {
                     <Stack.Screen name="MyPosts" component={MyPostsScreen} />
                     <Stack.Screen name="Requests" component={RequestsScreen} options={{ headerShown: false }} />
                     <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ headerShown: false }} />
+                    <Stack.Screen name="Support" component={SupportScreen} options={{ headerShown: false }} />
                     <Stack.Screen name="UserProfile" component={ProfileScreen} />
                     <Stack.Screen name="EditPost" component={EditPostScreen} />
                     <Stack.Screen name="LoginSuccess" component={LoginSuccessScreen} />

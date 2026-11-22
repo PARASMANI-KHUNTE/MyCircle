@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { Bell, ChevronRight, Moon, RefreshCw, Sun, Trash2, UserX } from 'lucide-react-native';
+import { Bell, ChevronRight, HelpCircle, MessageSquare, Moon, RefreshCw, Sun, Trash2, UserX } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import AppScreen from '../components/layout/AppScreen';
@@ -153,6 +153,24 @@ const SettingsScreen = ({ navigation }: any) => {
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(400).duration(800).springify()} style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Support</Text>
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(425).duration(800).springify()}>
+                    <View style={[styles.group, { backgroundColor: colors.cardSoft, borderColor: colors.borderSoft }]}>
+                        <SettingItem
+                            icon={HelpCircle}
+                            label="Help & Support"
+                            onPress={() => navigation.navigate('Support', { type: 'help' })}
+                        />
+                        <SettingItem
+                            icon={MessageSquare}
+                            label="Send Feedback"
+                            onPress={() => navigation.navigate('Support', { type: 'feedback' })}
+                        />
+                    </View>
+                </Animated.View>
+
+                <Animated.View entering={FadeInDown.delay(450).duration(800).springify()} style={styles.sectionHeader}>
                     <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Updates</Text>
                 </Animated.View>
                 <Animated.View entering={FadeInDown.delay(450).duration(800).springify()}>

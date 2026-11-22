@@ -13,6 +13,9 @@ export default function AdminDashboard() {
                 <Link to="/admin/reports" style={{ padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)', color: '#c4b5fd', textDecoration: 'none', fontWeight: 600 }}>
                     Reports
                 </Link>
+                <Link to="/admin/submissions" style={{ padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)', color: '#c4b5fd', textDecoration: 'none', fontWeight: 600 }}>
+                    Support queue
+                </Link>
             </div>
         </div>
     );

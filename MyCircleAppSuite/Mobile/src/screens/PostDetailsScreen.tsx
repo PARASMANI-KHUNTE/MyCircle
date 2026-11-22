@@ -238,7 +238,12 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                 : [
                       {
                           label: 'Report Post',
-                          onPress: () => Alert.alert('Reported', 'Thank you.'),
+                          onPress: () => navigation.navigate('Support', {
+                              type: 'report',
+                              subjectType: 'post',
+                              subjectId: id,
+                              reportedUserId: post?.user?._id,
+                          }),
                       },
                       {
                           label: 'Block Author',

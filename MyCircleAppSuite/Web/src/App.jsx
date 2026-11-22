@@ -33,6 +33,8 @@ const RequireAdmin = lazy(() => import('./components/auth/RequireAdmin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
+const AdminSubmissions = lazy(() => import('./pages/admin/AdminSubmissions'));
+const Support = lazy(() => import('./pages/Support'));
 
 function AppContent() {
   return (
@@ -108,6 +110,7 @@ function AuthRoutes() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/blocked-users" element={<BlockedUsers />} />
+          <Route path="/support" element={<Support />} />
           <Route
             path="/admin"
             element={
@@ -129,6 +132,14 @@ function AuthRoutes() {
             element={
               <RequireAdmin>
                 <AdminReports />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/submissions"
+            element={
+              <RequireAdmin>
+                <AdminSubmissions />
               </RequireAdmin>
             }
           />

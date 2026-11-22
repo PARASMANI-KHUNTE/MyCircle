@@ -124,7 +124,7 @@ const serializeRequest = (request, viewerId) => {
 // @access  Private
 exports.createRequest = asyncHandler(async (req, res) => {
     const requesterId = req.user.id;
-    const { postId: bodyPostId, recipientId, message } = req.body || {};
+    const { postId: bodyPostId, message } = req.body || {};
     const postId = bodyPostId || req.params.postId;
 
     if (!postId) {
@@ -137,7 +137,8 @@ exports.createRequest = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Post not found');
     }
 
-    const finalRecipientId = recipientId || post.user;
+    // The recipient is always the post owner; never trust a client-supplied id.
+    const finalRecipientId = post.user;
     if (!finalRecipientId) {
         throw new ApiError(400, 'Post has no valid owner');
     }

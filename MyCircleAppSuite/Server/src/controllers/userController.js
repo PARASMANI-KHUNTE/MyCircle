@@ -19,6 +19,22 @@ const normalizeText = (value) => typeof value === 'string'
     ? value.replace(/\s+/g, ' ').trim()
     : '';
 
+const PUBLIC_PROFILE_BASE_FIELDS = ['_id', 'displayName', 'avatar', 'rating', 'reviews', 'reputation', 'isOnline', 'createdAt'];
+const PUBLIC_PROFILE_DETAIL_FIELDS = ['bio', 'location', 'skills', 'skillEndorsements', 'stats', 'lastSeenAt'];
+
+const buildPublicProfile = (user) => {
+    const source = typeof user.toObject === 'function' ? user.toObject() : user;
+    const isPrivate = source.preferences?.profileVisibility === 'private';
+    const fields = isPrivate
+        ? PUBLIC_PROFILE_BASE_FIELDS
+        : [...PUBLIC_PROFILE_BASE_FIELDS, ...PUBLIC_PROFILE_DETAIL_FIELDS];
+
+    return fields.reduce((profile, field) => {
+        if (source[field] !== undefined) profile[field] = source[field];
+        return profile;
+    }, {});
+};
+
 // @desc    Get current user profile
 // @route   GET /api/user/profile
 // @access  Private
@@ -389,11 +405,13 @@ exports.getConnections = async (req, res, next) => {
 // @route   GET /api/user/:userId
 // @access  Private
 exports.getUserById = asyncHandler(async (req, res, next) => {
-    const user = await User.findById(req.params.userId).select('-passwordHash -passwordSalt -preferences -blockedUsers');
+    const user = await User.findById(req.params.userId).select(
+        [...PUBLIC_PROFILE_BASE_FIELDS, ...PUBLIC_PROFILE_DETAIL_FIELDS, 'preferences.profileVisibility'].join(' ')
+    );
     if (!user) {
         throw new ApiError(404, 'User not found');
     }
-    res.json(user);
+    res.json(buildPublicProfile(user));
 });
 
 // @desc    Follow a user

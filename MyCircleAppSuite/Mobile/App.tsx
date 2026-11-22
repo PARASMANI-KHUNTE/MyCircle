@@ -39,12 +39,16 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import LoginSuccessScreen from './src/screens/LoginSuccessScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
 import SupportScreen from './src/screens/SupportScreen';
+import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
+import AdminUsersScreen from './src/screens/admin/AdminUsersScreen';
+import AdminPostsScreen from './src/screens/admin/AdminPostsScreen';
+import AdminSubmissionsScreen from './src/screens/admin/AdminSubmissionsScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
 
 const RootNavigator = () => {
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, isAdmin } = useAuth();
     const { colors } = useTheme();
 
     if (isLoading) {
@@ -88,6 +92,14 @@ const RootNavigator = () => {
                     <Stack.Screen name="UserProfile" component={ProfileScreen} />
                     <Stack.Screen name="EditPost" component={EditPostScreen} />
                     <Stack.Screen name="LoginSuccess" component={LoginSuccessScreen} />
+                    {isAdmin && (
+                        <>
+                            <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ headerShown: false }} />
+                            <Stack.Screen name="AdminUsers" component={AdminUsersScreen} options={{ headerShown: false }} />
+                            <Stack.Screen name="AdminPosts" component={AdminPostsScreen} options={{ headerShown: false }} />
+                            <Stack.Screen name="AdminSubmissions" component={AdminSubmissionsScreen} options={{ headerShown: false }} />
+                        </>
+                    )}
                     <Stack.Screen name="NotFound" component={NotFoundScreen} />
                 </>
             )}

@@ -67,6 +67,14 @@ const schemas = {
         role: z.enum(['user', 'admin', 'moderator']),
     }),
 
+    adminUpdateUserStatus: z.object({
+        status: z.enum(['active', 'suspended', 'banned']),
+    }),
+
+    adminUpdatePostModeration: z.object({
+        moderationStatus: z.enum(['visible', 'hidden', 'removed']),
+    }),
+
     createSupportSubmission: z.object({
         type: z.enum(['report', 'help', 'feedback']),
         message: z.string().min(3, 'Please provide a little more detail').max(2000, 'Message too long'),

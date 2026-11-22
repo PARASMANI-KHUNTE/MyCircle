@@ -24,6 +24,10 @@ export type RootStackParamList = {
     MyPosts: undefined;
     Requests: undefined;
     BlockedUsers: undefined;
+    AdminDashboard: undefined;
+    AdminUsers: undefined;
+    AdminPosts: undefined;
+    AdminSubmissions: undefined;
     Support: {
         type?: 'report' | 'help' | 'feedback';
         subjectType?: 'post' | 'comment' | 'chat' | 'profile' | 'image' | 'user' | 'other';
@@ -53,6 +57,10 @@ export type WebRoutePath =
     | '/settings'
     | '/blocked-users'
     | '/support'
+    | '/admin'
+    | '/admin/users'
+    | '/admin/reports'
+    | '/admin/submissions'
     | '*';
 
 export const webToMobileRouteMap: Record<WebRoutePath, string> = {
@@ -73,6 +81,10 @@ export const webToMobileRouteMap: Record<WebRoutePath, string> = {
     '/settings': 'Settings',
     '/blocked-users': 'BlockedUsers',
     '/support': 'Support',
+    '/admin': 'AdminDashboard',
+    '/admin/users': 'AdminUsers',
+    '/admin/reports': 'AdminSubmissions',
+    '/admin/submissions': 'AdminSubmissions',
     '*': 'NotFound',
 };
 

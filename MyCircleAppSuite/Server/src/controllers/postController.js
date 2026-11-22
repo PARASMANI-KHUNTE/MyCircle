@@ -156,8 +156,8 @@ exports.getPosts = async (req, res, next) => {
 
         let pipeline = [];
 
-        // Build base filter for active posts
-        const baseFilter = { isActive: true };
+        // Build base filter for active, moderator-approved posts
+        const baseFilter = { isActive: true, moderationStatus: 'visible' };
         
         // Add userId filter if provided (for profile pages)
         if (userId) {
@@ -365,7 +365,7 @@ exports.getPostById = async (req, res, next) => {
                 ]
             });
 
-        if (!post) {
+        if (!post || post.moderationStatus !== 'visible') {
             return res.status(404).json({ msg: 'Post not found' });
         }
 

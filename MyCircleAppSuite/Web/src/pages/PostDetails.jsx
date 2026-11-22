@@ -7,6 +7,7 @@ import PostCard from '../components/ui/PostCard';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { getAvatarUrl } from '../utils/avatar';
+import { getCallNumber, getTextNumber } from '../utils/postContact';
 import { getPostInsights, getPostExplanation } from '../services/aiService';
 import {
     ArrowLeft, MapPin, Clock, MessageCircle,
@@ -111,20 +112,20 @@ const PostDetails = () => {
     };
 
     const handleCall = () => {
-        if (!post.user?.contactPhone && !post.user?.contactWhatsapp) {
+        const phone = getCallNumber(post);
+        if (!phone) {
             showError('Phone number not available');
             return;
         }
-        const phone = post.user.contactPhone || post.user.contactWhatsapp;
         window.open(`tel:${phone}`, '_blank');
     };
 
     const handleText = () => {
-        if (!post.user?.contactPhone && !post.user?.contactWhatsapp) {
+        const phone = getTextNumber(post);
+        if (!phone) {
             showError('Phone number not available');
             return;
         }
-        const phone = post.user.contactWhatsapp || post.user.contactPhone;
         window.open(`sms:${phone}`, '_blank');
     };
 

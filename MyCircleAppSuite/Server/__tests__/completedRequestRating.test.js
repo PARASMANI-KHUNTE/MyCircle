@@ -78,6 +78,9 @@ describe('completed request retention', () => {
     it('persists the completed request and only deletes the other requests for the post', async () => {
         const request = buildRequest();
         ContactRequest.findById.mockResolvedValue(request);
+        ContactRequest.find.mockReturnValue({
+            select: jest.fn().mockResolvedValue([{ _id: 'request-2' }, { _id: 'request-3' }]),
+        });
         Post.findById.mockResolvedValue(buildPost());
         const res = { json: jest.fn(), status: jest.fn().mockReturnThis() };
         const next = jest.fn();
@@ -91,7 +94,16 @@ describe('completed request retention', () => {
             post: postId,
             _id: { $ne: requestId },
         });
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ completedRequestId: requestId }));
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            removed: false,
+            completedRequestId: requestId,
+            deletedRequestIds: ['request-2', 'request-3'],
+            postId,
+        }));
+        const response = res.json.mock.calls[0][0];
+        expect(response.request.status).toBe('completed');
+        expect(response.request.canRate).toBe(true);
+        expect(response.request.canMarkComplete).toBe(false);
     });
 
     it('keeps completed requests when a post is later closed via the status endpoint', async () => {

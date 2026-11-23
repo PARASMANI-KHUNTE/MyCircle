@@ -219,9 +219,11 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
                 title,
                 body: message,
                 data: {
+                    _id: notification._id.toString(),
                     type: type || 'system',
                     event: event || eventByType[type] || 'system',
                     link: link || '',
+                    postId: relatedId?.toString?.() || '',
                     relatedId: relatedId?.toString?.() || '',
                     conversationId: conversationId?.toString?.() || '',
                 },

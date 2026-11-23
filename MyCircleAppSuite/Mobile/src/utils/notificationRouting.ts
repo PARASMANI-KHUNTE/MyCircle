@@ -72,6 +72,8 @@ const routeFromLink = (link: string | null): NotificationRoute => {
             return { name: 'Requests' };
         case '/notifications':
             return { name: 'Notifications' };
+        case '/my-posts':
+            return { name: 'MyPosts' };
         default:
             return null;
     }
@@ -83,6 +85,7 @@ export const getNotificationRoute = (notification: NotificationPayload): Notific
     const conversationId = asString(notification?.conversationId);
     const postId = asString(notification?.postId);
     const relatedId = asString(notification?.relatedId);
+    const linkRoute = routeFromLink(asString(notification?.link));
 
     switch (event) {
         case 'application_accepted':
@@ -101,16 +104,23 @@ export const getNotificationRoute = (notification: NotificationPayload): Notific
             return { name: 'Requests' };
     }
 
+    // A conversation or post id is more specific than a generic link fallback.
+    if ((type === 'message' || event === 'message') && (conversationId || relatedId)) {
+        return { name: 'ChatWindow', params: { id: conversationId || relatedId } };
+    }
+    if ((type === 'approval' || type === 'request_approved') && conversationId) {
+        return { name: 'ChatWindow', params: { id: conversationId } };
+    }
+
+    // Explicit links (including /my-posts) must not be swallowed by type fallbacks.
+    if (linkRoute) return linkRoute;
+
     switch (type) {
         case 'approval':
         case 'request_approved':
-            return conversationId
-                ? { name: 'ChatWindow', params: { id: conversationId } }
-                : { name: 'Requests' };
-        case 'message': {
-            const id = conversationId || relatedId;
-            return id ? { name: 'ChatWindow', params: { id } } : { name: 'ChatList' };
-        }
+            return { name: 'Requests' };
+        case 'message':
+            return { name: 'ChatList' };
         case 'like':
         case 'comment':
         case 'reply': {
@@ -125,7 +135,7 @@ export const getNotificationRoute = (notification: NotificationPayload): Notific
             return { name: 'Requests' };
     }
 
-    return routeFromLink(asString(notification?.link));
+    return null;
 };
 
 export const getNotificationTitle = (notification: NotificationPayload): string => {

@@ -98,21 +98,32 @@ const ChatListScreen = ({ navigation }: any) => {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
-                        try {
-                            // Try to delete conversations one by one
-                            await Promise.all(
-                                Array.from(selectedItems).map(id => api.delete(`/chat/conversation/${id}`))
+                        const ids = Array.from(selectedItems);
+                        const results = await Promise.allSettled(
+                            ids.map(id => api.delete(`/chat/conversation/${id}`))
+                        );
+                        const failedIds = results
+                            .map((result, index) => result.status === 'rejected' ? ids[index] : null)
+                            .filter((id): id is string => Boolean(id));
+
+                        await fetchConversations();
+
+                        if (failedIds.length > 0) {
+                            setSelectedItems(new Set(failedIds));
+                            setIsSelectionMode(true);
+                            const hasMissingEndpoint = results.some(result =>
+                                result.status === 'rejected' && result.reason?.response?.status === 404
                             );
-                            fetchConversations();
-                            exitSelectionMode();
-                        } catch (err: any) {
-                            if (err.response?.status === 404) {
-                                Alert.alert("Feature Not Available", "Delete conversation feature is coming soon.");
-                            } else {
-                                Alert.alert("Error", "Failed to delete conversations");
-                            }
-                            exitSelectionMode();
+                            Alert.alert(
+                                hasMissingEndpoint ? 'Feature Not Available' : 'Partial Delete',
+                                hasMissingEndpoint
+                                    ? 'Delete conversation feature is coming soon.'
+                                    : `${ids.length - failedIds.length} deleted. ${failedIds.length} could not be deleted and are still selected.`
+                            );
+                            return;
                         }
+
+                        exitSelectionMode();
                     }
                 }
             ]

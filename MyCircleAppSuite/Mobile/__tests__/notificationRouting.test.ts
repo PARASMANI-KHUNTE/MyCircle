@@ -68,6 +68,37 @@ describe('getNotificationRoute', () => {
         expect(getNotificationRoute({ type: 'unknown', link: '/profile' })).toBeNull();
         expect(getNotificationRoute({})).toBeNull();
     });
+
+    it('honours /my-posts links for info notifications', () => {
+        expect(getNotificationRoute({ type: 'info', link: '/my-posts' })).toEqual({ name: 'MyPosts' });
+    });
+
+    it('honours post links from info notifications', () => {
+        expect(getNotificationRoute({ type: 'info', link: '/post/post-7' })).toEqual({
+            name: 'PostDetails',
+            params: { id: 'post-7' },
+        });
+    });
+
+    it('prefers a conversation id over a generic link', () => {
+        expect(getNotificationRoute({
+            type: 'approval',
+            conversationId: 'conv-1',
+            link: '/requests',
+        })).toEqual({ name: 'ChatWindow', params: { id: 'conv-1' } });
+    });
+
+    it('routes message notifications with a conversation id to the chat', () => {
+        expect(getNotificationRoute({
+            type: 'message',
+            event: 'message',
+            relatedId: 'conv-2',
+        })).toEqual({ name: 'ChatWindow', params: { id: 'conv-2' } });
+    });
+
+    it('falls back to Requests for generic notifications without a link', () => {
+        expect(getNotificationRoute({ type: 'info' })).toEqual({ name: 'Requests' });
+    });
 });
 
 describe('getNotificationTitle', () => {

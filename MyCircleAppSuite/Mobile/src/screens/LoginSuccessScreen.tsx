@@ -5,6 +5,7 @@ import { StackScreenProps } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
+import { Alert } from '../utils/alert';
 
 type Props = StackScreenProps<RootStackParamList, 'LoginSuccess'>;
 
@@ -23,7 +24,15 @@ const LoginSuccessScreen = ({ navigation, route }: Props) => {
                 return;
             }
 
-            await login(token);
+            try {
+                await login(token);
+            } catch (error) {
+                if (isMounted) {
+                    Alert.alert('Unable To Sign In', error);
+                    navigation.replace('Landing');
+                }
+                return;
+            }
 
             if (isMounted) {
                 navigation.reset({

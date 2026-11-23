@@ -17,6 +17,36 @@ const HookHarness = (props: any) => {
 const flush = () => new Promise<void>((resolve) => setImmediate(() => resolve()));
 
 describe('usePosts', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('treats zero latitude/longitude as real coordinates', async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: { queries: { retry: false, gcTime: 0 } },
+        });
+        let renderer!: ReactTestRenderer.ReactTestRenderer;
+
+        await ReactTestRenderer.act(async () => {
+            renderer = ReactTestRenderer.create(
+                <QueryClientProvider client={queryClient}>
+                    <HookHarness latitude={0} longitude={0} radius={25} limit={50} />
+                </QueryClientProvider>
+            );
+            await flush();
+        });
+
+        expect(api.get).toHaveBeenCalledWith('/posts', {
+            params: { limit: 50, latitude: 0, longitude: 0, radius: 25 },
+        });
+
+        await ReactTestRenderer.act(async () => {
+            renderer.unmount();
+            queryClient.clear();
+            await flush();
+        });
+    });
+
     it('sends urgentOnly to the server and includes it in the cache key', async () => {
         const queryClient = new QueryClient({
             defaultOptions: { queries: { retry: false, gcTime: 0 } },

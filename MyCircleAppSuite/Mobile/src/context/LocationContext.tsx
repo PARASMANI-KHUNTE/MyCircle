@@ -93,13 +93,13 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
     const ensureAccess = useCallback(async (): Promise<LocationAccessResult> => {
         if (statusRef.current === 'granted') return 'granted';
 
+        // The platform already distinguishes a normal denial from a permanent
+        // block. Never re-map a normal denial just because we asked before.
         const result = await requestLocationAccess();
-        const mapped: LocationAccessResult =
-            result === 'denied' && askedRef.current ? 'never_ask_again' : result;
 
-        updateStatus(mapped);
-        setError(mapped === 'granted' ? null : ERROR_MESSAGES[mapped]);
-        return mapped;
+        updateStatus(result);
+        setError(result === 'granted' ? null : ERROR_MESSAGES[result]);
+        return result;
     }, [updateStatus]);
 
     const startTracking = useCallback(async () => {
@@ -115,7 +115,9 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
 
             beginWatching();
 
-            const fix = await getCurrentLocation();
+            // Access was just resolved above; getCurrentLocation would ask a
+            // second time and could show two prompts for one explicit request.
+            const fix = await getCurrentLocation({ skipPermissionCheck: true });
             if (!fix) return null;
 
             const coords = { lat: fix.latitude, lng: fix.longitude };
@@ -142,9 +144,15 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
                 askedRef.current = stored === 'true';
 
                 if (!askedRef.current) {
+                    // Wait for the native prompt to settle before recording that
+                    // we asked. Otherwise closing the app mid-prompt suppresses
+                    // the prompt forever on the next launch.
+                    const access = await ensureAccess();
+                    if (cancelled) return;
+
+                    if (access === 'granted') beginWatching();
                     await AsyncStorage.setItem(LOCATION_ASKED_KEY, 'true');
                     askedRef.current = true;
-                    if (!cancelled) await startTracking();
                     return;
                 }
 
@@ -162,7 +170,7 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
         return () => {
             cancelled = true;
         };
-    }, [beginWatching, startTracking, updateStatus]);
+    }, [beginWatching, ensureAccess, updateStatus]);
 
     // Resume tracking when the app comes back to the foreground if it was
     // stopped by the OS or the user changed settings while away.

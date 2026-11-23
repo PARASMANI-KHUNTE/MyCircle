@@ -4,6 +4,7 @@ import * as LocationEnabler from 'react-native-android-location-enabler';
 import {
     clearLocationWatch,
     getCurrentLocation,
+    requestLocationAccess,
     watchLocation,
 } from '../src/utils/location';
 
@@ -90,6 +91,32 @@ describe('location utilities', () => {
 
         expect(result).toBeNull();
         expect(Geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    });
+
+    it('distinguishes an ordinary denial from a permanent block', async () => {
+        (PermissionsAndroid.check as jest.Mock).mockResolvedValue(false);
+
+        (PermissionsAndroid.request as jest.Mock).mockResolvedValue(
+            PermissionsAndroid.RESULTS.DENIED
+        );
+        await expect(requestLocationAccess()).resolves.toBe('denied');
+
+        (PermissionsAndroid.request as jest.Mock).mockResolvedValue(
+            PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
+        );
+        await expect(requestLocationAccess()).resolves.toBe('never_ask_again');
+    });
+
+    it('can fetch a fix without repeating the permission prompt', async () => {
+        (Geolocation.getCurrentPosition as jest.Mock).mockImplementation((success) => {
+            success({ coords: { latitude: 0, longitude: 0 } });
+        });
+
+        const result = await getCurrentLocation({ skipPermissionCheck: true });
+
+        expect(result?.latitude).toBe(0);
+        expect(result?.longitude).toBe(0);
+        expect(PermissionsAndroid.request).not.toHaveBeenCalled();
     });
 
     it('registers and clears position watchers', () => {

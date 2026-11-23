@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { usePosts } from '../hooks/usePosts';
+import { prependPostToFeed, usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, Image } from 'react-native';
 
@@ -20,6 +20,8 @@ import PostCard from '../components/ui/PostCard';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
 import { buildFeedMapHtml, buildLocationUpdateScript } from '../utils/feedMapHtml';
+import { formatErrorMessage } from '../utils/errorMessage';
+import PaginationFooter from '../components/ui/PaginationFooter';
 
 // Enable playback in silent mode
 Sound.setCategory('Playback');
@@ -129,7 +131,7 @@ const FeedScreen = ({ navigation, route }: any) => {
     const serverCategory = selectedCategory === 'barter' ? 'barter' : selectedCategory;
     const serverSort = sortOrder === 'nearest' && !isNearby ? 'latest' : (sortOrder === 'price_asc' || sortOrder === 'price_desc') ? 'latest' : sortOrder;
 
-    const { data: postsData, isLoading: loading, refetch, isRefetching, isError } = usePosts({
+    const feedQueryOptions = useMemo(() => ({
         latitude: isNearby ? queryLocation?.lat : undefined,
         longitude: isNearby ? queryLocation?.lng : undefined,
         radius: distanceRadius,
@@ -140,7 +142,19 @@ const FeedScreen = ({ navigation, route }: any) => {
         sort: serverSort,
         barterOnly: selectedCategory === 'barter',
         urgentOnly,
-    });
+    }), [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, queryLocation?.lat, queryLocation?.lng, selectedCategory, serverCategory, serverSort, urgentOnly]);
+
+    const {
+        data: postsData,
+        isLoading: loading,
+        refetch,
+        isRefetching,
+        isError,
+        error,
+        hasMore,
+        fetchMore,
+        isFetchingMore,
+    } = usePosts(feedQueryOptions);
 
     const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
 
@@ -253,26 +267,9 @@ const FeedScreen = ({ navigation, route }: any) => {
             return;
         }
 
-        const queryKey = ['posts', {
-            latitude: isNearby ? queryLocation?.lat : undefined,
-            longitude: isNearby ? queryLocation?.lng : undefined,
-            radius: distanceRadius,
-            limit: 50,
-            type: serverCategory,
-            q: debouncedSearchQuery || undefined,
-            location: locationFilter !== 'All' ? locationFilter : undefined,
-            sort: serverSort,
-            barterOnly: selectedCategory === 'barter',
-            urgentOnly
-        }];
-        queryClient.setQueryData(queryKey, (oldData: any[]) => {
-            if (!oldData) return [newPost];
-
-            const withoutDuplicate = oldData.filter((post: any) => post._id !== newPost._id);
-            return [newPost, ...withoutDuplicate];
-        });
+        prependPostToFeed(queryClient, feedQueryOptions, newPost);
         success('New post added!');
-    }, [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, matchesActiveFilters, queryClient, queryLocation?.lat, queryLocation?.lng, selectedCategory, serverCategory, serverSort, success, urgentOnly]);
+    }, [feedQueryOptions, matchesActiveFilters, queryClient, success]);
 
     // const [refreshing, setRefreshing] = useState(false); // Managed by React Query now
 
@@ -488,6 +485,10 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
     };
 
+    const loadMoreError = isError && postsData.length > 0
+        ? formatErrorMessage(error, 'Failed to load more posts. Please try again.')
+        : null;
+
     const renderFeedState = () => {
         if (loading) return (
             <View style={styles.loadingContainer}>
@@ -496,7 +497,7 @@ const FeedScreen = ({ navigation, route }: any) => {
             </View>
         );
 
-        if (isError) return (
+        if (isError && postsData.length === 0) return (
             <View style={[styles.loadingContainer, { padding: 20 }]}>
                 <Text style={[themeStyles.text, { marginBottom: 12, textAlign: 'center' }]}>
                     Failed to load posts.
@@ -543,6 +544,19 @@ const FeedScreen = ({ navigation, route }: any) => {
                         />
                     </Animated.View>
                 )}
+                onEndReached={() => {
+                    if (hasMore && !isFetchingMore && !loadMoreError) void fetchMore();
+                }}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                    <PaginationFooter
+                        loading={isFetchingMore}
+                        error={loadMoreError}
+                        hasMore={hasMore}
+                        showEnd={postsData.length > 0}
+                        onRetry={() => void fetchMore()}
+                    />
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <View style={styles.emptyIconContainer}>
@@ -809,7 +823,7 @@ const FeedScreen = ({ navigation, route }: any) => {
 
             {viewMode === 'list' ? (
                 renderListContent()
-            ) : loading || isError ? (
+            ) : loading || (isError && postsData.length === 0) ? (
                 renderFeedState()
             ) : (
                 <View style={{ flex: 1 }}>

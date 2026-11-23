@@ -10,6 +10,8 @@ import api from '../services/api';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
+import { usePagedList } from '../hooks/usePagedList';
+import PaginationFooter from '../components/ui/PaginationFooter';
 
 
 const ProfileScreen = ({ navigation, route }: any) => {
@@ -20,8 +22,19 @@ const ProfileScreen = ({ navigation, route }: any) => {
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ posts: 0, requests: 0, rating: 0 });
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-    const [myPosts, setMyPosts] = useState<any[]>([]);
-    const [, setPostsLoading] = useState(false);
+    const {
+        items: myPosts,
+        refresh: refreshMyPosts,
+        loadingMore: postsLoadingMore,
+        error: postsError,
+        hasMore: postsHasMore,
+        loadMore: loadMorePosts,
+    } = usePagedList<any>({
+        endpoint: '/posts/my-posts',
+        limit: 20,
+        errorLabel: 'Failed to fetch your posts',
+        getItemId: (post) => String(post._id),
+    });
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
         title: string;
@@ -41,19 +54,6 @@ const ProfileScreen = ({ navigation, route }: any) => {
     const userId = route.params?.userId || authUser?._id || authUser?.id;
     const isOwnProfile = userId === (authUser?._id || authUser?.id);
 
-    const fetchMyPosts = useCallback(async () => {
-        if (!isOwnProfile) return;
-        try {
-            setPostsLoading(true);
-            const res = await api.get('/posts/my-posts');
-            setMyPosts(res.data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setPostsLoading(false);
-        }
-    }, [isOwnProfile]);
-
     const fetchProfile = useCallback(async () => {
         try {
             const endpoint = isOwnProfile ? '/user/profile' : `/user/${userId}`;
@@ -67,7 +67,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                     requests: statsRes.data.stats?.receivedRequests || 0,
                     rating: typeof statsRes.data.rating === 'number' ? statsRes.data.rating : (Number(res.data?.rating) || 0)
                 });
-                fetchMyPosts();
+                refreshMyPosts();
             } else {
                 setStats({
                     posts: res.data.postsCount || 0,
@@ -92,7 +92,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [fetchMyPosts, isOwnProfile, navigation, userId]);
+    }, [isOwnProfile, navigation, refreshMyPosts, userId]);
 
     useFocusEffect(
         useCallback(() => {
@@ -104,6 +104,14 @@ const ProfileScreen = ({ navigation, route }: any) => {
         setRefreshing(true);
         fetchProfile();
     };
+
+    const handlePostsScroll = useCallback((event: any) => {
+        if (!isOwnProfile || !postsHasMore || postsLoadingMore || postsError) return;
+        const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+        if (contentSize.height - contentOffset.y - layoutMeasurement.height < 200) {
+            void loadMorePosts();
+        }
+    }, [isOwnProfile, loadMorePosts, postsError, postsHasMore, postsLoadingMore]);
 
     const handleLogout = () => {
         setAlertConfig({
@@ -176,7 +184,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 setAlertConfig(prev => ({ ...prev, visible: false }));
                 try {
                     await api.delete(`/posts/${postId}`);
-                    fetchMyPosts();
+                    refreshMyPosts();
                     fetchProfile();
                 } catch (error) {
                     console.error(error);
@@ -320,6 +328,8 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 showsVerticalScrollIndicator={false}
+                onScroll={handlePostsScroll}
+                scrollEventThrottle={200}
             >
                 {/* Profile Card */}
                 <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.profileSection}>
@@ -466,6 +476,16 @@ const ProfileScreen = ({ navigation, route }: any) => {
                         <Text style={styles.emptyText}>You haven't posted anything yet.</Text>
                     )}
                 </Animated.View>
+
+                {isOwnProfile && myPosts.length > 0 && (
+                    <PaginationFooter
+                        loading={postsLoadingMore}
+                        error={postsError}
+                        hasMore={postsHasMore}
+                        onRetry={() => void loadMorePosts()}
+                        endText="No more posts"
+                    />
+                )}
 
                 {/* Message & Block Buttons for Other Profiles */}
                 {!isOwnProfile && (

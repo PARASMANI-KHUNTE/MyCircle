@@ -12,9 +12,20 @@ import ScreenHeader from '../components/layout/ScreenHeader';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
+import PaginationFooter from '../components/ui/PaginationFooter';
 
 const NotificationsScreen = ({ navigation }: any) => {
-    const { notifications, loading, refresh, markAllRead, handleNotificationClick } = useNotifications();
+    const {
+        notifications,
+        loading,
+        refresh,
+        markAllRead,
+        handleNotificationClick,
+        loadMore = async () => {},
+        hasMore = false,
+        loadingMore = false,
+        loadMoreError = null,
+    } = useNotifications();
     const { colors } = useTheme();
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -245,7 +256,14 @@ const NotificationsScreen = ({ navigation }: any) => {
                     )}
                 </View>
 
-                {loading && notifications.length === 0 ? (
+                {loadMoreError && notifications.length === 0 ? (
+                    <View style={styles.loadingContainer}>
+                        <Text style={[styles.emptyText, { color: colors.danger, marginBottom: 12 }]}>{loadMoreError}</Text>
+                        <TouchableOpacity onPress={() => void refresh()} style={styles.retryButton}>
+                            <Text style={styles.retryButtonText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : loading && notifications.length === 0 ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={colors.primary} />
                     </View>
@@ -260,6 +278,20 @@ const NotificationsScreen = ({ navigation }: any) => {
                             </View>
                         )}
                         refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />}
+                        onEndReached={() => {
+                            if (hasMore && !loadingMore && !loadMoreError) void loadMore();
+                        }}
+                        onEndReachedThreshold={0.5}
+                        ListFooterComponent={
+                            <PaginationFooter
+                                loading={loadingMore}
+                                error={loadMoreError}
+                                hasMore={hasMore}
+                                showEnd={notifications.length > 0}
+                                onRetry={() => void loadMore()}
+                                endText="No more notifications"
+                            />
+                        }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <View style={[styles.emptyIconContainer, { backgroundColor: colors.primarySoft }]}>
@@ -306,6 +338,16 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    retryButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: '#af25f4',
+    },
+    retryButtonText: {
+        color: '#ffffff',
+        fontWeight: '700',
     },
     listContent: {
         paddingTop: 8,

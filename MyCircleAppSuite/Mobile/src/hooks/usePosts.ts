@@ -11,6 +11,7 @@ interface UsePostsOptions {
     location?: string;
     sort?: string;
     barterOnly?: boolean;
+    urgentOnly?: boolean;
 }
 
 export const usePosts = ({
@@ -23,9 +24,10 @@ export const usePosts = ({
     location,
     sort,
     barterOnly,
+    urgentOnly,
 }: UsePostsOptions = {}) => {
     return useQuery({
-        queryKey: ['posts', { latitude, longitude, radius, limit, type, q, location, sort, barterOnly }],
+        queryKey: ['posts', { latitude, longitude, radius, limit, type, q, location, sort, barterOnly, urgentOnly }],
         queryFn: async () => {
             const params: Record<string, string | number | boolean> = { limit };
             if (latitude && longitude) {
@@ -47,6 +49,9 @@ export const usePosts = ({
             }
             if (barterOnly) {
                 params.barterOnly = true;
+            }
+            if (urgentOnly) {
+                params.urgentOnly = true;
             }
             const { data } = await api.get('/posts', { params });
             return data;

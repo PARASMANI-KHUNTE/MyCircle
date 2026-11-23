@@ -6,7 +6,7 @@ import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity,
 import { FlashList } from "@shopify/flash-list";
 import { WebView } from 'react-native-webview';
 import AppScreen from '../components/layout/AppScreen';
-import { Search, Briefcase, Zap, ShoppingCart, MapPin, ArrowUpDown, X, Check, Bell, MessageCircle, SlidersHorizontal, ArrowDownUp, Flame } from 'lucide-react-native';
+import { Search, Briefcase, Zap, ShoppingCart, MapPin, Map as MapIcon, CalendarDays, ArrowUpDown, X, Check, Bell, MessageCircle, SlidersHorizontal, ArrowDownUp, Flame } from 'lucide-react-native';
 import api from '../services/api';
 import Animated, {
     FadeInDown,
@@ -55,6 +55,11 @@ const CATEGORIES = [
     { id: 'barter', label: 'Barter', icon: ArrowUpDown },
 ];
 
+const DEFAULT_DISTANCE_RADIUS = 50;
+const SEARCH_DEBOUNCE_MS = 300;
+
+const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
+
 const FeedScreen = ({ navigation, route }: any) => {
     const { isAuthenticated } = useAuth();
     const initialViewMode = route?.params?.viewMode || 'list';
@@ -64,6 +69,7 @@ const FeedScreen = ({ navigation, route }: any) => {
     const queryClient = useQueryClient();
     const { unreadCount } = useNotifications();
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [unreadMsgCount, setUnreadMsgCount] = useState(0);
     const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
@@ -90,7 +96,7 @@ const FeedScreen = ({ navigation, route }: any) => {
     const [, setNearbyLoading] = useState(false);
 
     // Distance filter (radius in km)
-    const [distanceRadius, setDistanceRadius] = useState<number>(50); // Default 50km (All)
+    const [distanceRadius, setDistanceRadius] = useState<number>(DEFAULT_DISTANCE_RADIUS); // Default 50km (All)
 
     // React Query Hook
     const serverCategory = selectedCategory === 'barter' ? 'barter' : selectedCategory;
@@ -102,10 +108,11 @@ const FeedScreen = ({ navigation, route }: any) => {
         radius: distanceRadius,
         limit: 50,
         type: serverCategory,
-        q: searchQuery.trim() || undefined,
+        q: debouncedSearchQuery || undefined,
         location: locationFilter !== 'All' ? locationFilter : undefined,
         sort: serverSort,
         barterOnly: selectedCategory === 'barter',
+        urgentOnly,
     });
 
     const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
@@ -133,6 +140,13 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
     }, [initialViewMode, viewMode]);
 
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery.trim());
+        }, SEARCH_DEBOUNCE_MS);
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
+
     const matchesActiveFilters = useCallback((post: any) => {
         if (!post) return false;
 
@@ -150,7 +164,7 @@ const FeedScreen = ({ navigation, route }: any) => {
             return false;
         }
 
-        const trimmedQuery = searchQuery.trim().toLowerCase();
+        const trimmedQuery = debouncedSearchQuery.trim().toLowerCase();
         if (trimmedQuery) {
             const searchableText = [
                 post.title,
@@ -168,7 +182,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
 
         if (selectedDate) {
-            const postDate = new Date(post.createdAt).toISOString().split('T')[0];
+            const postDate = post.createdAt ? toDateKey(new Date(post.createdAt)) : null;
             if (postDate !== selectedDate) {
                 return false;
             }
@@ -205,7 +219,7 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
 
         return true;
-    }, [distanceRadius, isNearby, locationFilter, priceRange, searchQuery, selectedCategory, selectedDate, urgentOnly, userLocation]);
+    }, [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, priceRange, selectedCategory, selectedDate, urgentOnly, userLocation]);
 
     const handleNewPost = useCallback((newPost: any) => {
         if (!matchesActiveFilters(newPost)) {
@@ -218,10 +232,11 @@ const FeedScreen = ({ navigation, route }: any) => {
             radius: distanceRadius,
             limit: 50,
             type: serverCategory,
-            q: searchQuery.trim() || undefined,
+            q: debouncedSearchQuery || undefined,
             location: locationFilter !== 'All' ? locationFilter : undefined,
             sort: serverSort,
-            barterOnly: selectedCategory === 'barter'
+            barterOnly: selectedCategory === 'barter',
+            urgentOnly
         }];
         queryClient.setQueryData(queryKey, (oldData: any[]) => {
             if (!oldData) return [newPost];
@@ -230,7 +245,7 @@ const FeedScreen = ({ navigation, route }: any) => {
             return [newPost, ...withoutDuplicate];
         });
         success('New post added!');
-    }, [distanceRadius, isNearby, locationFilter, matchesActiveFilters, queryClient, searchQuery, selectedCategory, serverCategory, serverSort, success, userLocation?.lat, userLocation?.lng]);
+    }, [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, matchesActiveFilters, queryClient, selectedCategory, serverCategory, serverSort, success, urgentOnly, userLocation?.lat, userLocation?.lng]);
 
     // const [refreshing, setRefreshing] = useState(false); // Managed by React Query now
 
@@ -288,6 +303,31 @@ const FeedScreen = ({ navigation, route }: any) => {
             setIsNearby(false);
         }
     };
+
+    const resetFilters = useCallback(() => {
+        setSearchQuery('');
+        setDebouncedSearchQuery('');
+        setSelectedCategory('all');
+        setSortOrder('latest');
+        setPriceRange('all');
+        setUrgentOnly(false);
+        setLocationFilter('All');
+        setSelectedDate(null);
+        setIsNearby(false);
+        setDistanceRadius(DEFAULT_DISTANCE_RADIUS);
+        setSelectedPost(null);
+        setShowFilterModal(false);
+        setShowLocationModal(false);
+    }, []);
+
+    const hasActiveFilters = searchQuery.trim() !== ''
+        || selectedCategory !== 'all'
+        || locationFilter !== 'All'
+        || selectedDate !== null
+        || urgentOnly
+        || sortOrder !== 'latest'
+        || priceRange !== 'all'
+        || isNearby;
 
     const filterPosts = useCallback(() => {
         let result = [...(postsData || [])].filter(matchesActiveFilters);
@@ -470,20 +510,14 @@ const FeedScreen = ({ navigation, route }: any) => {
                         </View>
                         <Text style={[styles.emptyTitle, { color: colors.text }]}>No posts found</Text>
                         <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                            {searchQuery || selectedCategory !== 'all' || locationFilter !== 'All' 
-                                ? "Try adjusting your filters to see more results" 
+                            {hasActiveFilters
+                                ? "Try adjusting your filters to see more results"
                                 : "Be the first to create a post in your area!"}
                         </Text>
-                        {(searchQuery || selectedCategory !== 'all' || locationFilter !== 'All') && (
-                            <TouchableOpacity 
+                        {hasActiveFilters && (
+                            <TouchableOpacity
                                 style={styles.resetButton}
-                                onPress={() => { 
-                                    setSearchQuery(''); 
-                                    setSelectedCategory('all'); 
-                                    setLocationFilter('All'); 
-                                    setSelectedDate(null);
-                                    setIsNearby(false);
-                                }}
+                                onPress={resetFilters}
                             >
                                 <Text style={styles.resetButtonText}>Reset Filters</Text>
                             </TouchableOpacity>
@@ -621,6 +655,42 @@ const FeedScreen = ({ navigation, route }: any) => {
                             </Text>
                         </TouchableOpacity>
                     ))}
+
+                    {/* Location Picker */}
+                    <TouchableOpacity
+                        style={[
+                            styles.filterChip,
+                            { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                            locationFilter !== 'All' && { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: colors.primary }
+                        ]}
+                        onPress={() => setShowLocationModal(true)}
+                    >
+                        <MapIcon size={15} color={locationFilter !== 'All' ? colors.primary : colors.textSecondary} />
+                        <Text style={[
+                            styles.filterText,
+                            { color: locationFilter !== 'All' ? colors.primary : colors.textSecondary, marginLeft: 6 }
+                        ]}>
+                            {locationFilter !== 'All' ? locationFilter : 'Location'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Date Picker */}
+                    <TouchableOpacity
+                        style={[
+                            styles.filterChip,
+                            { backgroundColor: colors.card, borderColor: colors.borderSoft },
+                            selectedDate && { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: colors.primary }
+                        ]}
+                        onPress={() => setShowFilterModal(true)}
+                    >
+                        <CalendarDays size={15} color={selectedDate ? colors.primary : colors.textSecondary} />
+                        <Text style={[
+                            styles.filterText,
+                            { color: selectedDate ? colors.primary : colors.textSecondary, marginLeft: 6 }
+                        ]}>
+                            {selectedDate ? selectedDate.slice(5) : 'Date'}
+                        </Text>
+                    </TouchableOpacity>
 
                     <View style={[styles.filterDivider, { backgroundColor: colors.borderSoft }]} />
 
@@ -845,6 +915,34 @@ const FeedScreen = ({ navigation, route }: any) => {
                                 ))}
                             </View>
 
+                            {/* Post Date Section */}
+                            <Text style={[styles.filterSectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>POST DATE</Text>
+                            <View style={styles.filterOptionGroup}>
+                                {[
+                                    { id: null, label: 'Any date' },
+                                    { id: toDateKey(new Date()), label: 'Today' },
+                                    { id: toDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000)), label: 'Yesterday' },
+                                ].map((opt) => (
+                                    <TouchableOpacity
+                                        key={opt.label}
+                                        style={[
+                                            styles.filterOptionPill,
+                                            { backgroundColor: colors.background, borderColor: colors.borderSoft },
+                                            selectedDate === opt.id && { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: colors.primary }
+                                        ]}
+                                        onPress={() => setSelectedDate(opt.id)}
+                                    >
+                                        <Text style={[
+                                            styles.filterOptionText,
+                                            { color: selectedDate === opt.id ? colors.primary : colors.text }
+                                        ]}>
+                                            {opt.label}
+                                        </Text>
+                                        {selectedDate === opt.id && <Check size={16} color={colors.primary} />}
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
                             {/* Distance Radius Section */}
                             <Text style={[styles.filterSectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>DISTANCE RADIUS</Text>
                             <View style={styles.distanceChipsRow}>
@@ -901,13 +999,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                         <View style={styles.modalActionButtons}>
                             <TouchableOpacity
                                 style={[styles.filterResetBtn, { borderColor: colors.borderSoft }]}
-                                onPress={() => {
-                                    setSortOrder('latest');
-                                    setPriceRange('all');
-                                    setUrgentOnly(false);
-                                    setIsNearby(false);
-                                    setDistanceRadius(50);
-                                }}
+                                onPress={resetFilters}
                             >
                                 <Text style={[styles.filterResetBtnText, { color: colors.textSecondary }]}>Reset All</Text>
                             </TouchableOpacity>

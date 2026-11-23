@@ -2,10 +2,13 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const ContactRequest = require('../models/ContactRequest');
 const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
+const Notification = require('../models/Notification');
 const SupportSubmission = require('../models/SupportSubmission');
 const { admin } = require('../config/firebase');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
+const { deleteConversationArtifacts, deletePostScopedChats } = require('../utils/chatLifecycle');
 const mongoose = require('mongoose');
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -45,6 +48,72 @@ exports.getUserProfile = asyncHandler(async (req, res, next) => {
         throw new ApiError(404, 'User not found');
     }
     res.json(user);
+});
+
+// @desc    Permanently delete the authenticated account and its data
+// @route   DELETE /api/user/account
+// @access  Private
+exports.deleteAccount = asyncHandler(async (req, res, next) => {
+    const userId = req.user.id;
+    const io = req.app?.get?.('io');
+
+    const user = await User.findById(userId).select('_id');
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    const conversations = await Conversation.find({ participants: userId }).select('_id participants');
+    for (const conversation of conversations) {
+        await deleteConversationArtifacts({ conversation, io, reason: 'Account deleted' });
+    }
+
+    const ownedPosts = await Post.find({ user: userId }).select('_id');
+    const ownedPostIds = ownedPosts.map((post) => post._id);
+    for (const postId of ownedPostIds) {
+        await deletePostScopedChats({ postId, io, reason: 'Account deleted' });
+    }
+
+    const postScopedCondition = ownedPostIds.length ? [{ post: { $in: ownedPostIds } }] : [];
+    const notificationScopedCondition = ownedPostIds.length ? [{ relatedId: { $in: ownedPostIds } }] : [];
+
+    await Promise.all([
+        Post.deleteMany({ user: userId }),
+        ContactRequest.deleteMany({
+            $or: [{ requester: userId }, { recipient: userId }, ...postScopedCondition]
+        }),
+        Notification.deleteMany({
+            $or: [{ recipient: userId }, { sender: userId }, ...notificationScopedCondition]
+        }),
+        Message.deleteMany({ $or: [{ sender: userId }, { readBy: userId }] }),
+        SupportSubmission.deleteMany({ $or: [{ reporter: userId }, { reportedUser: userId }] }),
+        Post.updateMany({ user: { $ne: userId } }, {
+            $pull: {
+                likes: userId,
+                comments: { user: userId },
+                'comments.$[].replies': { user: userId },
+                'comments.$[].replies.$[].replies': { user: userId }
+            }
+        }),
+        ContactRequest.updateMany({}, {
+            $pull: {
+                completionMarkedBy: userId,
+                ratings: { $or: [{ fromUser: userId }, { toUser: userId }] }
+            }
+        }),
+        User.updateMany({ _id: { $ne: userId } }, {
+            $pull: {
+                blockedUsers: userId,
+                followers: userId,
+                following: userId,
+                'skillEndorsements.$[].endorsedBy': userId,
+                reports: { reporter: userId }
+            }
+        })
+    ]);
+
+    await User.findByIdAndDelete(userId);
+
+    res.json({ msg: 'Your account and associated data have been deleted.' });
 });
 
 // @desc    Get Firebase Custom Token for authenticated user

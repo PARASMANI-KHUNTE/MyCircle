@@ -6,6 +6,7 @@ import { BASE_URL } from '../services/api';
 import { navigate } from '../services/navigationService';
 import { NOTIFICATION_CHANNEL_ID } from '../services/notificationService';
 import { getNotificationRoute, getNotificationTitle } from '../utils/notificationRouting';
+import { getCurrentUserId } from '../utils/userIdentity';
 
 const getSocketUrl = () => {
     if (!BASE_URL) {
@@ -29,6 +30,7 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const { user, token } = useAuth();
+    const currentUserId = getCurrentUserId(user);
     const [socket, setSocket] = useState<Socket | null>(null);
     const [connected, setConnected] = useState(false);
     const socketRef = useRef<Socket | null>(null);
@@ -91,7 +93,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }, [handleNotificationPress, user]);
 
     useEffect(() => {
-        if (!user?.id || !token) {
+        if (!currentUserId || !token) {
             if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current = null;
@@ -194,7 +196,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 socketRef.current = null;
             }
         };
-    }, [user?.id, token, handleNotificationPress]);
+    }, [currentUserId, token, handleNotificationPress]);
 
     return (
         <SocketContext.Provider value={{ socket, connected }}>

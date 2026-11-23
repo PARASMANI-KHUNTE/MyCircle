@@ -1,37 +1,75 @@
+/* eslint-disable no-bitwise -- base64 and hash calculations are intentionally bitwise */
 /**
  * Generate a colorful, unique avatar based on user's name
  * Uses a deterministic algorithm to create consistent avatars
  */
 
-// Simple btoa polyfill for React Native if not present
-const btoa = (input: string) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-    let str = input;
-    let output = '';
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
-    for (let block = 0, charCode, i = 0, map = chars;
-        str.charAt(i | 0) || (map = '=', i % 1);
-        output += map.charAt(63 & block >> 8 - i % 1 * 8)) {
+const toUtf8Bytes = (value: string): number[] => {
+    const bytes: number[] = [];
 
-        charCode = str.charCodeAt(i += 3 / 4);
-
-        if (charCode > 0xFF) {
-            throw new Error("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
+    for (let index = 0; index < value.length; index += 1) {
+        let codePoint = value.codePointAt(index) ?? 0;
+        if (codePoint > 0xFFFF) {
+            index += 1;
         }
 
-        block = block << 8 | charCode;
+        if (codePoint <= 0x7F) {
+            bytes.push(codePoint);
+        } else if (codePoint <= 0x7FF) {
+            bytes.push(0xC0 | (codePoint >> 6), 0x80 | (codePoint & 0x3F));
+        } else if (codePoint <= 0xFFFF) {
+            bytes.push(
+                0xE0 | (codePoint >> 12),
+                0x80 | ((codePoint >> 6) & 0x3F),
+                0x80 | (codePoint & 0x3F)
+            );
+        } else {
+            bytes.push(
+                0xF0 | (codePoint >> 18),
+                0x80 | ((codePoint >> 12) & 0x3F),
+                0x80 | ((codePoint >> 6) & 0x3F),
+                0x80 | (codePoint & 0x3F)
+            );
+        }
+    }
+
+    return bytes;
+};
+
+const utf8ToBase64 = (value: string): string => {
+    const bytes = toUtf8Bytes(value);
+    let output = '';
+
+    for (let index = 0; index < bytes.length; index += 3) {
+        const first = bytes[index];
+        const second = bytes[index + 1];
+        const third = bytes[index + 2];
+        const hasSecond = second !== undefined;
+        const hasThird = third !== undefined;
+
+        output += BASE64_CHARS[first >> 2];
+        output += BASE64_CHARS[((first & 0x03) << 4) | (hasSecond ? second >> 4 : 0)];
+        output += hasSecond ? BASE64_CHARS[((second & 0x0F) << 2) | (hasThird ? third >> 6 : 0)] : '=';
+        output += hasThird ? BASE64_CHARS[third & 0x3F] : '=';
     }
 
     return output;
 };
 
-export function generateAvatar(name: string, size: number = 128): string {
-    // Create a hash from the name for consistent colors
-    const hash = name.split('').reduce((acc, char) => {
-        return char.charCodeAt(0) + ((acc << 5) - acc);
+const escapeXml = (value: string): string => value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+
+export function buildAvatarSvg(name: string, size: number = 128): string {
+    const hash = Array.from(name).reduce((acc, char) => {
+        return (char.codePointAt(0) ?? 0) + ((acc << 5) - acc);
     }, 0);
 
-    // Generate colors from hash
     const hue = Math.abs(hash % 360);
     const saturation = 65 + (Math.abs(hash) % 20);
     const lightness = 50 + (Math.abs(hash) % 15);
@@ -39,17 +77,16 @@ export function generateAvatar(name: string, size: number = 128): string {
     const backgroundColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
     const textColor = lightness > 60 ? '#1a1a1a' : '#ffffff';
 
-    // Get initials (max 2 characters)
     const initials = name
-        .split(' ')
-        .map(word => word[0])
+        .trim()
+        .split(/\s+/u)
+        .map(word => Array.from(word)[0] ?? '')
         .filter(Boolean)
         .slice(0, 2)
         .join('')
-        .toUpperCase();
+        .toLocaleUpperCase();
 
-    // Create SVG
-    const svg = `
+    return `
         <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
             <rect width="${size}" height="${size}" fill="${backgroundColor}"/>
             <text
@@ -61,12 +98,13 @@ export function generateAvatar(name: string, size: number = 128): string {
                 font-size="${size * 0.4}"
                 font-weight="600"
                 fill="${textColor}"
-            >${initials}</text>
+            >${escapeXml(initials)}</text>
         </svg>
     `;
+}
 
-    // Convert to data URL
-    return `data:image/svg+xml;base64,${btoa(svg)}`;
+export function generateAvatar(name: string, size: number = 128): string {
+    return `data:image/svg+xml;base64,${utf8ToBase64(buildAvatarSvg(name, size))}`;
 }
 
 /**

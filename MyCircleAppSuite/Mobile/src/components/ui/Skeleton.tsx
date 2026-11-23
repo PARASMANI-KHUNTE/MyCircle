@@ -9,6 +9,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 
+export const getSkeletonColor = (dark?: boolean, isDark?: boolean) =>
+    dark || isDark ? '#27272a' : '#e4e4e7';
+
 interface SkeletonProps {
     width?: number | string;
     height?: number | string;
@@ -25,9 +28,9 @@ const Skeleton = ({
     dark
 }: SkeletonProps) => {
     const opacity = useSharedValue(0.3);
-    const { colors } = useTheme();
+    const { isDark } = useTheme();
 
-    const baseColor = dark ? '#27272a' : (colors.background === '#09090b' ? '#27272a' : '#e4e4e7');
+    const baseColor = getSkeletonColor(dark, isDark);
 
     useEffect(() => {
         opacity.value = withRepeat(

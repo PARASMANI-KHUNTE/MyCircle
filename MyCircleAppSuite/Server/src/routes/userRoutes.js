@@ -20,6 +20,7 @@ router.post('/follow/:userId', auth, userController.followUser);
 router.delete('/follow/:userId', auth, userController.unfollowUser);
 router.post('/endorse/:userId', auth, userController.endorseSkill);
 router.get('/services', auth, userController.getServices);
+router.delete('/account', auth, userController.deleteAccount);
 router.get('/:userId/followers', auth, userController.getFollowers);
 router.get('/:userId/following', auth, userController.getFollowing);
 router.get('/:userId', auth, userController.getUserById);

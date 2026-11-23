@@ -8,6 +8,7 @@ import ScreenHeader from '../components/layout/ScreenHeader';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import api from '../services/api';
 import { checkForAppUpdate, UpdateStatusState } from '../services/updateService';
 
 const SettingsScreen = ({ navigation }: any) => {
@@ -16,6 +17,7 @@ const SettingsScreen = ({ navigation }: any) => {
     const [notifications, setNotifications] = useState({ push: true });
     const [updateStatus, setUpdateStatus] = useState<string>('');
     const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState<boolean>(false);
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
         title: string;
@@ -52,6 +54,38 @@ const SettingsScreen = ({ navigation }: any) => {
         });
     };
 
+    const performDeleteAccount = async () => {
+        if (isDeletingAccount) return;
+
+        setIsDeletingAccount(true);
+        try {
+            await api.delete('/user/account');
+            setAlertConfig({
+                visible: true,
+                title: 'Account Deleted',
+                message: 'Your account and associated data have been removed.',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => {
+                    setAlertConfig(prev => ({ ...prev, visible: false }));
+                    void logout();
+                },
+            });
+        } catch (error: any) {
+            setAlertConfig({
+                visible: true,
+                title: 'Could Not Delete Account',
+                message: error?.userFriendlyMessage || error?.response?.data?.msg ||
+                    'We could not delete your account. Please try again.',
+                confirmText: 'OK',
+                isDestructive: false,
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+            });
+        } finally {
+            setIsDeletingAccount(false);
+        }
+    };
+
     const handleDeleteAccount = () => {
         setAlertConfig({
             visible: true,
@@ -60,17 +94,7 @@ const SettingsScreen = ({ navigation }: any) => {
             confirmText: 'Delete',
             isDestructive: true,
             onConfirm: () => {
-                setAlertConfig({
-                    visible: true,
-                    title: 'Account Deleted',
-                    message: 'Your account has been successfully removed.',
-                    confirmText: 'OK',
-                    isDestructive: false,
-                    onConfirm: () => {
-                        setAlertConfig(prev => ({ ...prev, visible: false }));
-                        void logout();
-                    },
-                });
+                void performDeleteAccount();
             },
         });
     };
@@ -219,6 +243,7 @@ const SettingsScreen = ({ navigation }: any) => {
                 <Animated.View entering={FadeInDown.delay(550).duration(800).springify()}>
                     <TouchableOpacity
                         activeOpacity={0.85}
+                        disabled={isDeletingAccount}
                         onPress={handleDeleteAccount}
                         style={[styles.group, styles.deleteRow, { backgroundColor: colors.cardSoft, borderColor: colors.dangerSoft }]}
                     >
@@ -226,7 +251,9 @@ const SettingsScreen = ({ navigation }: any) => {
                             <View style={[styles.iconContainer, { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft }]}>
                                 <Trash2 size={20} color={colors.danger} />
                             </View>
-                            <Text style={[styles.settingLabel, { color: colors.danger }]}>Delete Account</Text>
+                            <Text style={[styles.settingLabel, { color: colors.danger }]}>
+                                {isDeletingAccount ? 'Deleting account...' : 'Delete Account'}
+                            </Text>
                         </View>
                         <ChevronRight size={20} color={colors.danger} />
                     </TouchableOpacity>

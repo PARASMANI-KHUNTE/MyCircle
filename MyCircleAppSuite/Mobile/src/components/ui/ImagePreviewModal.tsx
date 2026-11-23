@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
-import { Modal, View, Image, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Modal, View, Image, TouchableOpacity, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-native';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ImagePreviewModalProps {
     visible: boolean;
@@ -19,7 +17,15 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     onClose
 }) => {
     const { colors } = useTheme();
+    const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
+
+    useEffect(() => {
+        if (!visible) return;
+
+        const maxIndex = Math.max(images.length - 1, 0);
+        setCurrentIndex(Math.min(Math.max(initialIndex, 0), maxIndex));
+    }, [visible, initialIndex, images.length]);
 
     const goToPrevious = () => {
         setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
@@ -55,7 +61,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
                 )}
 
                 {/* Main Image */}
-                <View style={styles.imageContainer}>
+                <View style={[styles.imageContainer, { width: screenWidth, height: screenHeight * 0.7 }]}>
                     <Image
                         source={{ uri: images[currentIndex] }}
                         style={styles.fullImage}
@@ -84,7 +90,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
 
                 {/* Thumbnail Strip */}
                 {images.length > 1 && (
-                    <View style={styles.thumbnailContainer}>
+                    <View style={[styles.thumbnailContainer, { width: screenWidth }]}>
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -146,8 +152,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     imageContainer: {
-        width: SCREEN_WIDTH,
-        height: SCREEN_HEIGHT * 0.7,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -174,7 +178,6 @@ const styles = StyleSheet.create({
     thumbnailContainer: {
         position: 'absolute',
         bottom: 30,
-        width: SCREEN_WIDTH,
     },
     thumbnailScroll: {
         paddingHorizontal: 20,

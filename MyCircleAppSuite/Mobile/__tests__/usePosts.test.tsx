@@ -1,6 +1,6 @@
 jest.mock('../src/services/api', () => ({
     __esModule: true,
-    default: { get: jest.fn().mockResolvedValue({ data: [] }) },
+    default: { get: jest.fn().mockResolvedValue({ data: [], headers: { 'x-has-more': 'false' } }) },
 }));
 
 import React from 'react';
@@ -14,7 +14,7 @@ const HookHarness = (props: any) => {
     return null;
 };
 
-const flush = () => new Promise<void>((resolve) => setImmediate(() => resolve()));
+const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 50));
 
 describe('usePosts', () => {
     beforeEach(() => {
@@ -37,7 +37,7 @@ describe('usePosts', () => {
         });
 
         expect(api.get).toHaveBeenCalledWith('/posts', {
-            params: { limit: 50, latitude: 0, longitude: 0, radius: 25 },
+            params: { page: 1, limit: 50, latitude: 0, longitude: 0, radius: 25 },
         });
 
         await ReactTestRenderer.act(async () => {
@@ -63,11 +63,64 @@ describe('usePosts', () => {
         });
 
         expect(api.get).toHaveBeenCalledWith('/posts', {
-            params: { limit: 50, urgentOnly: true },
+            params: { page: 1, limit: 50, urgentOnly: true },
         });
         expect(queryClient.getQueryCache().findAll().some((query) =>
             JSON.stringify(query.queryKey).includes('urgentOnly')
         )).toBe(true);
+
+        await ReactTestRenderer.act(async () => {
+            renderer.unmount();
+            queryClient.clear();
+            await flush();
+        });
+    });
+
+    it('appends older pages and stops when x-has-more is false', async () => {
+        (api.get as jest.Mock)
+            .mockResolvedValueOnce({
+                data: [{ _id: 'post-1' }],
+                headers: { 'x-has-more': 'true', 'x-total-count': '2' },
+            })
+            .mockResolvedValueOnce({
+                data: [{ _id: 'post-2' }],
+                headers: { 'x-has-more': 'false', 'x-total-count': '2' },
+            });
+
+        const queryClient = new QueryClient({
+            defaultOptions: { queries: { retry: false, gcTime: 0 } },
+        });
+        let renderer!: ReactTestRenderer.ReactTestRenderer;
+        let latest!: ReturnType<typeof usePosts>;
+        const PagingHarness = () => {
+            latest = usePosts({ limit: 1 });
+            return null;
+        };
+
+        await ReactTestRenderer.act(async () => {
+            renderer = ReactTestRenderer.create(
+                <QueryClientProvider client={queryClient}>
+                    <PagingHarness />
+                </QueryClientProvider>
+            );
+            await flush();
+        });
+        await ReactTestRenderer.act(async () => {
+            await flush();
+        });
+
+        expect(latest.data).toEqual([{ _id: 'post-1' }]);
+        expect(latest.hasMore).toBe(true);
+
+        await ReactTestRenderer.act(async () => {
+            await latest.fetchMore();
+            await flush();
+        });
+
+        expect(api.get).toHaveBeenLastCalledWith('/posts', { params: { page: 2, limit: 1 } });
+        expect(latest.data).toEqual([{ _id: 'post-1' }, { _id: 'post-2' }]);
+        expect(latest.hasMore).toBe(false);
+        expect(latest.total).toBe(2);
 
         await ReactTestRenderer.act(async () => {
             renderer.unmount();

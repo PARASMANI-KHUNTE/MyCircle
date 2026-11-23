@@ -1,6 +1,9 @@
 const mockUsePosts = jest.fn();
 
-jest.mock('../src/hooks/usePosts', () => ({ usePosts: (options: any) => mockUsePosts(options) }));
+jest.mock('../src/hooks/usePosts', () => ({
+    usePosts: (options: any) => mockUsePosts(options),
+    prependPostToFeed: jest.fn(),
+}));
 
 jest.mock('@tanstack/react-query', () => ({
     useQueryClient: () => ({ setQueryData: jest.fn() }),
@@ -60,9 +63,9 @@ jest.mock('../src/components/ui/PostCard', () => {
 
 jest.mock('@shopify/flash-list', () => {
     const React = require('react');
-    const { View } = require('react-native');
+    const { View, TouchableOpacity, Text } = require('react-native');
     return {
-        FlashList: ({ data, renderItem, ListEmptyComponent }: any) => React.createElement(
+        FlashList: ({ data, renderItem, ListEmptyComponent, ListFooterComponent, onEndReached }: any) => React.createElement(
             View,
             null,
             ListEmptyComponent
@@ -70,7 +73,17 @@ jest.mock('@shopify/flash-list', () => {
                     ? React.createElement(ListEmptyComponent)
                     : ListEmptyComponent)
                 : null,
-            ...(data || []).map((item: any, index: number) => renderItem({ item, index }))
+            ...(data || []).map((item: any, index: number) => renderItem({ item, index })),
+            ListFooterComponent
+                ? (typeof ListFooterComponent === 'function'
+                    ? React.createElement(ListFooterComponent)
+                    : ListFooterComponent)
+                : null,
+            React.createElement(
+                TouchableOpacity,
+                { testID: 'feed-load-more', onPress: onEndReached },
+                React.createElement(Text, null, 'trigger-load-more')
+            )
         ),
     };
 });
@@ -97,6 +110,9 @@ describe('FeedScreen filters', () => {
             refetch: jest.fn(),
             isRefetching: false,
             isError: false,
+            hasMore: false,
+            fetchMore: jest.fn(),
+            isFetchingMore: false,
         });
     });
 
@@ -146,6 +162,60 @@ describe('FeedScreen filters', () => {
             location: undefined,
             latitude: undefined,
         }));
+
+        await ReactTestRenderer.act(async () => {
+            tree.unmount();
+            await flush();
+        });
+    });
+
+    it('requests the next page from the list footer and exposes the end state', async () => {
+        const fetchMore = jest.fn().mockResolvedValue(undefined);
+        mockUsePosts.mockReturnValue({
+            data: [],
+            isLoading: false,
+            refetch: jest.fn(),
+            isRefetching: false,
+            isError: false,
+            hasMore: true,
+            fetchMore,
+            isFetchingMore: false,
+        });
+
+        let tree!: ReactTestRenderer.ReactTestRenderer;
+        await ReactTestRenderer.act(async () => {
+            tree = ReactTestRenderer.create(
+                <FeedScreen navigation={{ navigate: jest.fn() }} route={{ params: {} }} />
+            );
+            await flush();
+        });
+
+        const trigger = tree.root.findByProps({ testID: 'feed-load-more' });
+        await ReactTestRenderer.act(async () => {
+            trigger.props.onPress();
+            await flush();
+        });
+        expect(fetchMore).toHaveBeenCalledTimes(1);
+
+        mockUsePosts.mockReturnValue({
+            data: [{ _id: 'post-1', type: 'sell', createdAt: new Date().toISOString() }],
+            isLoading: false,
+            refetch: jest.fn(),
+            isRefetching: false,
+            isError: false,
+            hasMore: false,
+            fetchMore,
+            isFetchingMore: false,
+        });
+        await ReactTestRenderer.act(async () => {
+            tree.update(
+                <FeedScreen navigation={{ navigate: jest.fn() }} route={{ params: {} }} />
+            );
+            await flush();
+        });
+        expect(tree.root.findAllByType(Text).some((node) =>
+            node.props.children === "You're all caught up"
+        )).toBe(true);
 
         await ReactTestRenderer.act(async () => {
             tree.unmount();

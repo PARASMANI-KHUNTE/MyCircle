@@ -72,7 +72,7 @@ jest.mock('../src/utils/alert', () => ({
 
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
-import { Text, TouchableOpacity } from 'react-native';
+import { SectionList, Text, TouchableOpacity } from 'react-native';
 import api from '../src/services/api';
 import { Alert } from '../src/utils/alert';
 import { useNotifications } from '../src/context/NotificationContext';
@@ -124,6 +124,39 @@ describe('NotificationsScreen', () => {
             await flush();
         });
         expect(refresh).toHaveBeenCalled();
+    });
+
+    it('loads older notifications from the section list footer', async () => {
+        const loadMore = jest.fn().mockResolvedValue(undefined);
+        (useNotifications as jest.Mock).mockReturnValue({
+            notifications: [notification],
+            loading: false,
+            refresh,
+            markAllRead: jest.fn(),
+            handleNotificationClick: jest.fn(),
+            loadMore,
+            hasMore: true,
+            loadingMore: false,
+            loadMoreError: null,
+        });
+
+        let tree!: ReactTestRenderer.ReactTestRenderer;
+        await ReactTestRenderer.act(async () => {
+            tree = ReactTestRenderer.create(<NotificationsScreen navigation={{ goBack: jest.fn() }} />);
+            await flush();
+        });
+
+        const list = tree.root.findByType(SectionList);
+        expect(list.props.onEndReached).toBeDefined();
+        await ReactTestRenderer.act(async () => {
+            list.props.onEndReached();
+            await flush();
+        });
+        expect(loadMore).toHaveBeenCalledTimes(1);
+
+        await ReactTestRenderer.act(async () => {
+            tree.unmount();
+        });
     });
 
     it('alerts and refreshes after a delete failure', async () => {

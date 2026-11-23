@@ -9,6 +9,8 @@ import { useTheme } from '../context/ThemeContext';
 import { ArrowLeft, MessageCircle, ChevronRight, CheckSquare, Square, X, Trash2, CheckCheck } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { usePagedList } from '../hooks/usePagedList';
+import PaginationFooter from '../components/ui/PaginationFooter';
 
 const getParticipantId = (participant: any) => participant?._id?.toString?.() || participant?.id?.toString?.();
 
@@ -16,8 +18,21 @@ const ChatListScreen = ({ navigation }: any) => {
     const { colors, isDark } = useTheme();
     const auth = useAuth() as any;
     const { socket } = useSocket() as any;
-    const [conversations, setConversations] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const {
+        items: conversations,
+        loading,
+        loadingMore,
+        error,
+        hasMore,
+        refresh: fetchConversations,
+        sync: syncConversations,
+        loadMore,
+    } = usePagedList<any>({
+        endpoint: '/chat/conversations',
+        limit: 25,
+        errorLabel: 'Failed to load conversations',
+        getItemId: (conversation) => String(conversation._id),
+    });
     
     // Selection state
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -29,18 +44,18 @@ const ChatListScreen = ({ navigation }: any) => {
     useFocusEffect(
         React.useCallback(() => {
             fetchConversations();
-        }, [])
+        }, [fetchConversations])
     );
 
     useEffect(() => {
         if (!socket) return;
 
         const handleNewMessage = () => {
-            fetchConversations();
+            syncConversations();
         };
 
         const handleMessagesRead = () => {
-            fetchConversations();
+            syncConversations();
         };
 
         const handleTypingStart = (data: any) => {
@@ -62,7 +77,7 @@ const ChatListScreen = ({ navigation }: any) => {
             socket.off('user_typing', handleTypingStart);
             socket.off('user_stop_typing', handleTypingStop);
         };
-    }, [socket]);
+    }, [socket, syncConversations]);
 
     const toggleSelection = (id: string) => {
         const newSelected = new Set(selectedItems);
@@ -139,17 +154,6 @@ const ChatListScreen = ({ navigation }: any) => {
             exitSelectionMode();
         } catch (err) {
             console.error('Failed to mark as read:', err);
-        }
-    };
-
-    const fetchConversations = async () => {
-        try {
-            const res = await api.get('/chat/conversations');
-            setConversations(res.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -276,6 +280,13 @@ const ChatListScreen = ({ navigation }: any) => {
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator color={colors.primary} size="large" />
                 </View>
+            ) : error && conversations.length === 0 ? (
+                <View style={styles.loadingContainer}>
+                    <Text style={[styles.emptyText, { color: colors.danger, marginBottom: 12 }]}>{error}</Text>
+                    <TouchableOpacity onPress={fetchConversations} style={styles.retryButton}>
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
             ) : (
                 <FlatList
                     data={conversations}
@@ -285,6 +296,19 @@ const ChatListScreen = ({ navigation }: any) => {
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor={colors.primary} />
+                    }
+                    onEndReached={() => {
+                        if (hasMore && !loadingMore && !error) void loadMore();
+                    }}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        <PaginationFooter
+                            loading={loadingMore}
+                            error={conversations.length > 0 ? error : null}
+                            hasMore={hasMore}
+                            showEnd={conversations.length > 0}
+                            onRetry={() => void loadMore()}
+                        />
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
@@ -451,6 +475,16 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    retryButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: '#af25f4',
+    },
+    retryButtonText: {
+        color: '#ffffff',
+        fontWeight: '700',
     },
     emptyContainer: {
         flex: 1,

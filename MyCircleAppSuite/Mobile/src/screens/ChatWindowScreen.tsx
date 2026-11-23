@@ -11,6 +11,11 @@ import { Send, ArrowLeft, Shield, Check, CheckCheck, Sparkles, MoreVertical } fr
 import { getSmartSuggestions } from '../utils/smartSuggestions';
 import { getAvatarUrl } from '../utils/avatar';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { getPageMeta } from '../utils/pagination';
+import { formatErrorMessage } from '../utils/errorMessage';
+import PaginationFooter from '../components/ui/PaginationFooter';
+
+const MESSAGE_PAGE_SIZE = 50;
 
 const ChatWindowScreen = ({ route, navigation }: any) => {
     const { conversation: initialConversation, id: conversationId, recipient } = route.params || {};
@@ -20,10 +25,17 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [pageError, setPageError] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [isTyping, setIsTyping] = useState(false);
     const flatListRef = useRef<FlatList>(null);
     const typingTimeoutRef = useRef<any>(null);
+    const messagesPageRef = useRef(0);
+    const messagesInFlightRef = useRef(false);
+    const messagesSeqRef = useRef(0);
+    const stickToBottomRef = useRef(true);
     const currentUserId = user?._id || user?.id;
 
     const resolveConversation = useCallback(async () => {
@@ -60,17 +72,59 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         || conversation?.participants?.[0]
         || recipient;
 
-    const fetchMessages = useCallback(async (targetConversationId = conversation?._id) => {
-        if (!targetConversationId) return;
+    const fetchMessages = useCallback(async (
+        targetConversationId = conversation?._id,
+        page = 1
+    ) => {
+        if (!targetConversationId || messagesInFlightRef.current) return;
+
+        const appendOlder = page > 1;
+        const seq = ++messagesSeqRef.current;
+        messagesInFlightRef.current = true;
+        if (appendOlder) {
+            stickToBottomRef.current = false;
+            setLoadingMore(true);
+        } else {
+            setLoading(true);
+        }
+        setPageError(null);
+
         try {
-            const res = await api.get(`/chat/messages/${targetConversationId}`);
-            setMessages(res.data);
-            setLoading(false);
-        } catch {
-            console.error('Failed to fetch messages');
-            setLoading(false);
+            const res = await api.get(`/chat/messages/${targetConversationId}`, {
+                params: { page, limit: MESSAGE_PAGE_SIZE },
+            });
+            const incoming: any[] = Array.isArray(res.data) ? res.data : [];
+            const meta = getPageMeta(res.headers, incoming.length, MESSAGE_PAGE_SIZE);
+            if (seq !== messagesSeqRef.current) return;
+
+            messagesPageRef.current = page;
+            setHasMore(meta.hasMore);
+            setMessages((previous) => {
+                if (!appendOlder) return incoming;
+                const existing = new Set(previous.map((message) => String(message._id)));
+                return [
+                    ...incoming.filter((message) => !existing.has(String(message._id))),
+                    ...previous,
+                ];
+            });
+            if (!appendOlder) stickToBottomRef.current = true;
+        } catch (err) {
+            if (seq === messagesSeqRef.current) {
+                setPageError(formatErrorMessage(err, 'Failed to load messages. Please try again.'));
+            }
+        } finally {
+            if (seq === messagesSeqRef.current) {
+                setLoading(false);
+                setLoadingMore(false);
+                messagesInFlightRef.current = false;
+            }
         }
     }, [conversation?._id]);
+
+    const loadOlderMessages = useCallback(() => {
+        if (!hasMore || loading || loadingMore || pageError) return;
+        return fetchMessages(conversation?._id, messagesPageRef.current + 1);
+    }, [conversation?._id, fetchMessages, hasMore, loading, loadingMore, pageError]);
 
     const markAsRead = useCallback(async (targetConversationId = conversation?._id) => {
         if (!targetConversationId) return;
@@ -88,6 +142,15 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
     useEffect(() => {
         const initialize = async () => {
+            // A different conversation must not inherit the previous page state.
+            messagesSeqRef.current += 1;
+            messagesInFlightRef.current = false;
+            messagesPageRef.current = 0;
+            stickToBottomRef.current = true;
+            setMessages([]);
+            setHasMore(false);
+            setPageError(null);
+
             const resolvedConversation = await resolveConversation();
             if (!resolvedConversation?._id) {
                 setLoading(false);
@@ -200,6 +263,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             createdAt: new Date().toISOString()
         };
 
+        stickToBottomRef.current = true;
         setMessages(prev => [...prev, optimisticMsg]);
 
         try {
@@ -389,16 +453,53 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                 style={{ flex: 1 }}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    renderItem={renderMessage}
-                    keyExtractor={item => item._id}
-                    contentContainerStyle={styles.listContent}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-                    initialNumToRender={20}
-                    showsVerticalScrollIndicator={false}
-                />
+                {loading && messages.length === 0 ? (
+                    <View style={styles.errorContainer}>
+                        <ActivityIndicator size="large" color="#af25f4" />
+                    </View>
+                ) : pageError && messages.length === 0 ? (
+                    <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>{pageError}</Text>
+                        <TouchableOpacity
+                            onPress={() => void fetchMessages(conversation._id)}
+                            style={styles.retryButton}
+                        >
+                            <Text style={styles.retryButtonText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        renderItem={renderMessage}
+                        keyExtractor={item => item._id}
+                        contentContainerStyle={styles.listContent}
+                        onContentSizeChange={() => {
+                            if (stickToBottomRef.current) {
+                                flatListRef.current?.scrollToEnd({ animated: false });
+                            }
+                        }}
+                        onScroll={(event) => {
+                            const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+                            stickToBottomRef.current =
+                                contentSize.height - contentOffset.y - layoutMeasurement.height < 100;
+                        }}
+                        onEndReached={() => void loadOlderMessages()}
+                        onEndReachedThreshold={0.5}
+                        ListFooterComponent={
+                            <PaginationFooter
+                                loading={loadingMore}
+                                error={messages.length > 0 ? pageError : null}
+                                hasMore={hasMore}
+                                showEnd={messages.length > 0}
+                                onRetry={() => void loadOlderMessages()}
+                                endText="Beginning of conversation"
+                            />
+                        }
+                        initialNumToRender={20}
+                        showsVerticalScrollIndicator={false}
+                    />
+                )}
 
                 {isTyping && (
                     <Animated.Text
@@ -470,6 +571,16 @@ const styles = StyleSheet.create({
         color: '#94a3b8',
         fontSize: 18,
         marginBottom: 24,
+    },
+    retryButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: '#af25f4',
+    },
+    retryButtonText: {
+        color: '#ffffff',
+        fontWeight: '700',
     },
     container: {
         flex: 1,

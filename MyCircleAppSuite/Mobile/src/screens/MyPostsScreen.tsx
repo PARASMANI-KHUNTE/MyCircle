@@ -7,11 +7,26 @@ import PostCard from '../components/ui/PostCard';
 import { Trash, EyeOff, Eye, ArrowLeft, BarChart2, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { usePagedList } from '../hooks/usePagedList';
+import PaginationFooter from '../components/ui/PaginationFooter';
 
 const MyPostsScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
-    const [posts, setPosts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const {
+        items: posts,
+        setItems: setPosts,
+        loading,
+        loadingMore,
+        error,
+        hasMore,
+        refresh: fetchMyPosts,
+        loadMore,
+    } = usePagedList<any>({
+        endpoint: '/posts/my-posts',
+        limit: 20,
+        errorLabel: 'Failed to fetch your posts',
+        getItemId: (post) => String(post._id),
+    });
     const [filter, setFilter] = useState('all'); // 'all', 'active', 'inactive', 'sold'
 
     // Analytics State
@@ -20,23 +35,10 @@ const MyPostsScreen = ({ navigation }: any) => {
     const [analyticsData, setAnalyticsData] = useState<any>(null);
     const [currentPostTitle, setCurrentPostTitle] = useState('');
 
-    const fetchMyPosts = async () => {
-        try {
-            setLoading(true);
-            const res = await api.get('/posts/my-posts');
-            setPosts(res.data);
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Error', 'Failed to fetch your posts');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useFocusEffect(
         useCallback(() => {
             fetchMyPosts();
-        }, [])
+        }, [fetchMyPosts])
     );
 
     const handleStatusChange = async (postId: string, newStatus: string) => {
@@ -60,7 +62,7 @@ const MyPostsScreen = ({ navigation }: any) => {
                     onPress: async () => {
                         try {
                             await api.delete(`/posts/${postId}`);
-                            setPosts(posts.filter((p: any) => p._id !== postId));
+                            setPosts((previous: any[]) => previous.filter((p) => p._id !== postId));
                         } catch {
                             Alert.alert('Error', 'Failed to delete post');
                         }
@@ -77,8 +79,8 @@ const MyPostsScreen = ({ navigation }: any) => {
         try {
             const res = await api.get(`/posts/${post._id}/analytics`);
             setAnalyticsData(res.data);
-        } catch (error) {
-            console.error(error);
+        } catch (analyticsError) {
+            console.error(analyticsError);
             Alert.alert('Error', 'Failed to fetch analytics');
             setShowAnalytics(false);
         } finally {
@@ -173,6 +175,13 @@ const MyPostsScreen = ({ navigation }: any) => {
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator color={colors.primary} size="large" />
                     </View>
+                ) : error && posts.length === 0 ? (
+                    <View style={styles.loadingContainer}>
+                        <Text style={[styles.emptyText, { color: colors.danger, marginBottom: 12 }]}>{error}</Text>
+                        <TouchableOpacity onPress={fetchMyPosts} style={styles.retryButton}>
+                            <Text style={styles.retryButtonText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
                 ) : (
                     <FlatList
                         data={filteredPosts}
@@ -180,6 +189,19 @@ const MyPostsScreen = ({ navigation }: any) => {
                         renderItem={renderItem}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
+                        onEndReached={() => {
+                            if (hasMore && !loadingMore && !error) void loadMore();
+                        }}
+                        onEndReachedThreshold={0.5}
+                        ListFooterComponent={
+                            <PaginationFooter
+                                loading={loadingMore}
+                                error={posts.length > 0 ? error : null}
+                                hasMore={hasMore}
+                                showEnd={posts.length > 0}
+                                onRetry={() => void loadMore()}
+                            />
+                        }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No posts found with this status.</Text>
@@ -314,6 +336,16 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    retryButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: '#8b5cf6',
+    },
+    retryButtonText: {
+        color: '#ffffff',
+        fontWeight: '700',
     },
     listContent: {
         paddingBottom: 40,

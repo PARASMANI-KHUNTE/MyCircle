@@ -4,6 +4,7 @@ import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import notificationService from '../services/notificationService';
 import { getNotificationRoute } from '../utils/notificationRouting';
+import { usePagedList } from '../hooks/usePagedList';
 
 interface Notification {
     _id: string;
@@ -26,6 +27,10 @@ interface NotificationContextType {
     markAsRead: (id: string) => Promise<void>;
     markAllRead: () => Promise<void>;
     refresh: () => Promise<void>;
+    loadMore: () => Promise<void>;
+    hasMore: boolean;
+    loadingMore: boolean;
+    loadMoreError: string | null;
     handleNotificationClick: (notification: Notification, navigation: any) => void;
 }
 
@@ -38,9 +43,22 @@ export const useNotifications = () => {
 };
 
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const {
+        items: notifications,
+        setItems: setNotifications,
+        loading,
+        loadingMore,
+        error: loadMoreError,
+        hasMore,
+        refresh: refreshNotifications,
+        loadMore,
+    } = usePagedList<Notification>({
+        endpoint: '/notifications',
+        limit: 30,
+        errorLabel: 'Failed to load notifications',
+        getItemId: (notification) => String(notification._id),
+    });
     const [unreadCount, setUnreadCount] = useState(0);
-    const [loading, setLoading] = useState(true);
     const seenIdsRef = useRef<Set<string>>(new Set());
     const wasAuthenticatedRef = useRef(false);
     const { socket } = useSocket();
@@ -56,19 +74,18 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     }, []);
 
     const refresh = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/notifications');
-            const list: Notification[] = Array.isArray(res.data) ? res.data : [];
-            seenIdsRef.current = new Set(list.map(n => String(n._id)));
-            setNotifications(list);
-            await fetchUnreadCount();
-        } catch (err) {
-            console.error('Failed to fetch notifications:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [fetchUnreadCount]);
+        await refreshNotifications();
+        await fetchUnreadCount();
+    }, [fetchUnreadCount, refreshNotifications]);
+
+    const loadMoreNotifications = useCallback(async () => {
+        await loadMore();
+    }, [loadMore]);
+
+    // Keep the socket dedupe set in sync with every page, not just page one.
+    useEffect(() => {
+        notifications.forEach((notification) => seenIdsRef.current.add(String(notification._id)));
+    }, [notifications]);
 
     useEffect(() => {
         notificationService.initialize();
@@ -82,7 +99,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             setNotifications([]);
             setUnreadCount(0);
         }
-    }, [isAuthenticated, refresh]);
+    }, [isAuthenticated, refresh, setNotifications]);
 
     useEffect(() => {
         if (isLoading) return;
@@ -123,7 +140,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             socket.off('new_notification', handleNewNotification);
             socket.off('connect', handleConnect);
         };
-    }, [socket, refresh, fetchUnreadCount]);
+    }, [socket, refresh, fetchUnreadCount, setNotifications]);
 
     const markAsRead = async (id: string) => {
         try {
@@ -167,6 +184,10 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             markAsRead,
             markAllRead,
             refresh,
+            loadMore: loadMoreNotifications,
+            hasMore,
+            loadingMore,
+            loadMoreError,
             handleNotificationClick
         }}>
             {children}

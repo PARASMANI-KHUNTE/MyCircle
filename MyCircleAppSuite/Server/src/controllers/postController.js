@@ -714,10 +714,11 @@ exports.updatePost = async (req, res, next) => {
             post.images = [...(post.images || []), ...uploadedImages].slice(0, 5);
         }
 
-        // Recalculate expiresAt if duration is changed
+        // Recalculate expiresAt only when the listing duration actually changes,
+        // so a title-only edit never silently extends the post.
         if (duration !== undefined && duration !== null && duration !== '') {
             const durationInMinutes = parseInt(duration, 10);
-            if (!isNaN(durationInMinutes)) {
+            if (!isNaN(durationInMinutes) && Number(post.duration) !== durationInMinutes) {
                 post.duration = durationInMinutes;
                 post.expiresAt = new Date(Date.now() + durationInMinutes * 60000);
             }

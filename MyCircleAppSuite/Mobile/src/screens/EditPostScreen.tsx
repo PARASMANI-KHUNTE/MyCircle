@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, StatusBar } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import api from '../services/api';
@@ -8,26 +8,65 @@ import { WebView } from 'react-native-webview';
 import ThemedAlert from '../components/ui/ThemedAlert';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DARK_TILE_URL, LABELS_TILE_URL, MAP_ATTRIBUTION, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
+import { formatErrorMessage } from '../utils/errorMessage';
+import {
+    DESCRIPTION_MAX_LENGTH,
+    MAX_POST_IMAGES,
+    TITLE_MAX_LENGTH,
+    validatePostDraft,
+} from '../utils/postValidation';
+
+type EditFormValues = {
+    title: string;
+    description: string;
+    type: string;
+    location: string;
+    coordinates: { lat: number; lng: number } | null;
+    price: string;
+    acceptsBarter: boolean;
+    duration: number;
+    durationChanged: boolean;
+    images: any[];
+    newImages: any[];
+};
+
+const formSnapshot = (values: EditFormValues) => JSON.stringify({
+    title: values.title.trim(),
+    description: values.description.trim(),
+    type: values.type,
+    location: values.location.trim(),
+    coordinates: values.coordinates ? `${values.coordinates.lat},${values.coordinates.lng}` : '',
+    price: values.price,
+    acceptsBarter: values.acceptsBarter,
+    duration: values.duration,
+    durationChanged: values.durationChanged,
+    images: values.images.map((image: any) => image.uri).join('|'),
+    newImages: values.newImages.map((image: any) => image.uri).join('|'),
+});
 
 const EditPostScreen = ({ navigation, route }: any) => {
-    const { post } = route.params;
+    const postId = route.params?.id || route.params?.post?._id;
+    const loadRequestRef = useRef(0);
+    const isSubmittingRef = useRef(false);
 
     // Form State
-    const [title, setTitle] = useState(post.title);
-    const [description, setDescription] = useState(post.description);
-    const [type, setType] = useState(post.type);
-    const [location, setLocation] = useState(post.location);
-    const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(
-        post.locationCoords?.coordinates?.length === 2
-            ? { lat: post.locationCoords.coordinates[1], lng: post.locationCoords.coordinates[0] }
-            : null
-    );
-    const [price, setPrice] = useState(post.price?.toString() || '');
-    const [acceptsBarter, setAcceptsBarter] = useState(post.acceptsBarter || false);
-    const [duration, setDuration] = useState(post.duration || 40320);
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [type, setType] = useState('job');
+    const [location, setLocation] = useState('');
+    const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
+    const [price, setPrice] = useState('');
+    const [acceptsBarter, setAcceptsBarter] = useState(false);
+    const [duration, setDuration] = useState(40320);
+    const [durationChanged, setDurationChanged] = useState(false);
 
-    const [images, setImages] = useState<any[]>(post.images ? post.images.map((img: any) => ({ uri: img })) : []);
+    const [images, setImages] = useState<any[]>([]);
     const [newImages, setNewImages] = useState<any[]>([]);
+
+    // Load / discard state
+    const [loadingPost, setLoadingPost] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
 
     // UI State
     const [loading, setLoading] = useState(false);
@@ -39,6 +78,96 @@ const EditPostScreen = ({ navigation, route }: any) => {
         confirmText: 'OK',
         onConfirm: () => { },
     });
+
+    const currentSnapshot = useMemo(() => formSnapshot({
+        title, description, type, location, coordinates, price,
+        acceptsBarter, duration, durationChanged, images, newImages,
+    }), [title, description, type, location, coordinates, price, acceptsBarter, duration, durationChanged, images, newImages]);
+
+    const hasUnsavedChanges = savedSnapshot !== null && currentSnapshot !== savedSnapshot;
+
+    const loadPost = useCallback(async () => {
+        const requestId = ++loadRequestRef.current;
+
+        if (!postId) {
+            setLoadError('This post could not be identified. Go back and try again.');
+            setLoadingPost(false);
+            return;
+        }
+
+        setLoadingPost(true);
+        setLoadError(null);
+        try {
+            const res = await api.get(`/posts/${postId}`);
+            if (requestId !== loadRequestRef.current) return;
+
+            const post = res.data || {};
+            const coords = post.locationCoords?.coordinates?.length === 2
+                ? { lat: Number(post.locationCoords.coordinates[1]), lng: Number(post.locationCoords.coordinates[0]) }
+                : null;
+            const existingImages = (post.images || []).map((image: any) => ({ uri: typeof image === 'string' ? image : image?.uri })).filter((image: any) => image.uri);
+            const values: EditFormValues = {
+                title: post.title || '',
+                description: post.description || '',
+                type: post.type || 'job',
+                location: post.location || '',
+                coordinates: coords,
+                price: post.price?.toString() || '',
+                acceptsBarter: !!post.acceptsBarter,
+                duration: post.duration || 40320,
+                durationChanged: false,
+                images: existingImages,
+                newImages: [],
+            };
+
+            setTitle(values.title);
+            setDescription(values.description);
+            setType(values.type);
+            setLocation(values.location);
+            setCoordinates(values.coordinates);
+            setPrice(values.price);
+            setAcceptsBarter(values.acceptsBarter);
+            setDuration(values.duration);
+            setDurationChanged(false);
+            setImages(values.images);
+            setNewImages([]);
+            setSavedSnapshot(formSnapshot(values));
+        } catch (error) {
+            if (requestId === loadRequestRef.current) {
+                setLoadError(formatErrorMessage(error, 'We could not load this post. It may have been removed.'));
+            }
+        } finally {
+            if (requestId === loadRequestRef.current) setLoadingPost(false);
+        }
+    }, [postId]);
+
+    useEffect(() => {
+        void loadPost();
+    }, [loadPost]);
+
+    const promptDiscardConfirmation = useCallback((onConfirmDiscard: () => void) => {
+        setAlertConfig({
+            visible: true,
+            title: 'Discard Changes?',
+            message: 'You have unsaved changes. Are you sure you want to discard them?',
+            confirmText: 'Discard',
+            isDestructive: true,
+            onConfirm: () => {
+                setAlertConfig((prev: any) => ({ ...prev, visible: false }));
+                onConfirmDiscard();
+            },
+            onCancel: () => setAlertConfig((prev: any) => ({ ...prev, visible: false })),
+        });
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
+            if (!hasUnsavedChanges || isSubmittingRef.current) return;
+            event.preventDefault();
+            promptDiscardConfirmation(() => navigation.dispatch(event.data.action));
+        });
+        return unsubscribe;
+    }, [navigation, hasUnsavedChanges, promptDiscardConfirmation]);
 
     const durations = [
         { label: '15 Mins', value: 15 },
@@ -55,20 +184,26 @@ const EditPostScreen = ({ navigation, route }: any) => {
     ];
 
     const pickImage = async () => {
+        const remaining = MAX_POST_IMAGES - (images.length + newImages.length);
+        if (remaining <= 0) {
+            showAlert('Photos', `You can add up to ${MAX_POST_IMAGES} photos.`);
+            return;
+        }
+
         const result = await launchImageLibrary({
             mediaType: 'photo',
             quality: 1,
-            selectionLimit: 5 - (images.length + newImages.length),
+            selectionLimit: remaining,
         });
 
-        if (result.assets) {
-            const assets = result.assets.map(asset => ({
+        if (result.assets?.length) {
+            const assets = result.assets.slice(0, remaining).map(asset => ({
                 uri: asset.uri,
                 name: asset.fileName || `image_${Date.now()}.jpg`,
                 type: asset.type || 'image/jpeg',
                 isNew: true
             }));
-            setNewImages([...newImages, ...assets]);
+            setNewImages(prev => [...prev, ...assets].slice(0, MAX_POST_IMAGES - images.length));
         }
     };
 
@@ -81,23 +216,38 @@ const EditPostScreen = ({ navigation, route }: any) => {
     };
 
     const handleUpdate = async () => {
-        if (!title || !description || (!acceptsBarter && !price) || !location) {
-            return showAlert('Missing Fields', 'Please fill in all required fields.');
+        if (!postId || loadingPost) return;
+
+        const detailsError = validatePostDraft('details', { title, description });
+        const exchangeError = validatePostDraft('exchange', {
+            price,
+            duration: durationChanged ? duration : undefined,
+        });
+        const validationError = detailsError || exchangeError;
+
+        if (validationError || !location.trim()) {
+            return showAlert(
+                'Check Your Post',
+                validationError?.message || 'Please add a location before saving.'
+            );
         }
 
+        isSubmittingRef.current = true;
         setLoading(true);
         try {
             const formData = new FormData();
-            formData.append('title', title);
-            formData.append('description', description);
+            formData.append('title', title.trim());
+            formData.append('description', description.trim());
             formData.append('type', type);
             const cleanPrice = String(price || '').replace(/[^0-9.]/g, '');
             const parsedPrice = parseFloat(cleanPrice);
             const validPrice = (!isNaN(parsedPrice) && parsedPrice >= 0) ? String(parsedPrice) : '0';
             formData.append('price', validPrice);
             formData.append('acceptsBarter', acceptsBarter ? 'true' : 'false');
-            formData.append('location', location);
-            formData.append('duration', duration.toString());
+            formData.append('location', location.trim());
+
+            // Keep the original expiry unless the user explicitly changed duration.
+            if (durationChanged) formData.append('duration', duration.toString());
 
             if (coordinates) {
                 formData.append('latitude', coordinates.lat.toString());
@@ -110,12 +260,14 @@ const EditPostScreen = ({ navigation, route }: any) => {
                 formData.append('images', image as any);
             });
 
-            await api.put(`/posts/${post._id}`, formData, {
+            await api.put(`/posts/${postId}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
 
+            // Treat this state as saved so the discard guard does not fire after success.
+            setSavedSnapshot(currentSnapshot);
             setAlertConfig({
                 visible: true,
                 title: 'Success',
@@ -126,10 +278,10 @@ const EditPostScreen = ({ navigation, route }: any) => {
                     navigation.goBack();
                 }
             });
-        } catch (error: any) {
-            console.error(error);
-            showAlert('Error', 'Failed to update post.');
+        } catch (error) {
+            showAlert('Error', formatErrorMessage(error, 'Failed to update post.'));
         } finally {
+            isSubmittingRef.current = false;
             setLoading(false);
         }
     };
@@ -143,6 +295,33 @@ const EditPostScreen = ({ navigation, route }: any) => {
             onConfirm: () => setAlertConfig((prev: any) => ({ ...prev, visible: false }))
         });
     };
+
+    if (loadingPost) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.stateContainer}>
+                    <ActivityIndicator size="large" color="#af25f4" />
+                    <Text style={styles.stateText}>Loading post...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (loadError || savedSnapshot === null) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.stateContainer}>
+                    <Text style={styles.stateText}>{loadError || 'This post is no longer available.'}</Text>
+                    <TouchableOpacity onPress={() => void loadPost()} style={styles.stateButton}>
+                        <Text style={styles.stateButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.stateSecondaryButton}>
+                        <Text style={styles.stateText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -210,6 +389,7 @@ const EditPostScreen = ({ navigation, route }: any) => {
                             onChangeText={setTitle}
                             placeholder="Post title"
                             placeholderTextColor="#64748b"
+                            maxLength={TITLE_MAX_LENGTH}
                         />
                     </View>
                 </Animated.View>
@@ -224,6 +404,7 @@ const EditPostScreen = ({ navigation, route }: any) => {
                             multiline
                             placeholder="Describe your post..."
                             placeholderTextColor="#64748b"
+                            maxLength={DESCRIPTION_MAX_LENGTH}
                         />
                     </View>
                 </Animated.View>
@@ -263,7 +444,7 @@ const EditPostScreen = ({ navigation, route }: any) => {
                         {durations.map((d) => {
                             const isSelected = duration === d.value;
                             return (
-                    <TouchableOpacity key={d.value} onPress={() => setDuration(d.value)}>
+                    <TouchableOpacity key={d.value} onPress={() => { setDuration(d.value); setDurationChanged(true); }}>
                                     <View style={[styles.durationChip, isSelected ? { borderColor: '#af25f4', backgroundColor: 'rgba(175, 37, 244, 0.1)' } : {}]}>
                                         <Text style={{ color: isSelected ? '#ffffff' : '#94a3b8', fontWeight: '700' }}>{d.label}</Text>
                                     </View>
@@ -328,7 +509,7 @@ const EditPostScreen = ({ navigation, route }: any) => {
                             source={{
                                 html: `
                                 <!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>body { margin: 0; padding: 0; } #map { height: 100vh; width: 100vw; }</style></head><body><div id="map"></div><script>
-                                    var map = L.map('map').setView([${coordinates?.lat || 28.6139}, ${coordinates?.lng || 77.2090}], 13);
+                                    var map = L.map('map').setView([${coordinates?.lat ?? 28.6139}, ${coordinates?.lng ?? 77.2090}], 13);
                                     L.tileLayer('${DARK_TILE_URL}', { attribution: '${MAP_ATTRIBUTION}', maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
                                     L.tileLayer('${LABELS_TILE_URL}', { maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
                                     var marker; ${coordinates ? `marker = L.marker([${coordinates.lat}, ${coordinates.lng}]).addTo(map);` : ''}
@@ -543,7 +724,32 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
         borderRadius: 6,
     },
-    newBadgeText: { color: '#ffffff', fontSize: 9, fontWeight: '700' }
+    newBadgeText: { color: '#ffffff', fontSize: 9, fontWeight: '700' },
+    stateContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        gap: 16,
+    },
+    stateText: {
+        color: '#ffffff',
+        fontSize: 15,
+        textAlign: 'center',
+    },
+    stateButton: {
+        backgroundColor: '#af25f4',
+        borderRadius: 12,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+    },
+    stateButtonText: {
+        color: '#ffffff',
+        fontWeight: '700',
+    },
+    stateSecondaryButton: {
+        paddingVertical: 8,
+    },
 });
 
 export default EditPostScreen;

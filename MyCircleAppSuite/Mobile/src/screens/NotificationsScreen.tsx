@@ -5,6 +5,7 @@ import { Bell, CheckCircle, CheckSquare, Heart, Info, MessageSquare, Square, Tra
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useFocusEffect } from '@react-navigation/native';
 
 import AppScreen from '../components/layout/AppScreen';
 import ScreenHeader from '../components/layout/ScreenHeader';
@@ -17,6 +18,12 @@ const NotificationsScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+
+    useFocusEffect(
+        useCallback(() => {
+            void refresh();
+        }, [refresh])
+    );
 
     const getIcon = useCallback((type: string) => {
         const size = 20;
@@ -37,9 +44,11 @@ const NotificationsScreen = ({ navigation }: any) => {
     const handleDelete = useCallback(async (id: string) => {
         try {
             await api.delete(`/notifications/${id}`);
-            refresh();
+            await refresh();
         } catch (err) {
             console.error('Failed to delete notification:', err);
+            Alert.alert('Error', 'Failed to delete notification. It may have already been removed.');
+            await refresh();
         }
     }, [refresh]);
 
@@ -50,14 +59,28 @@ const NotificationsScreen = ({ navigation }: any) => {
                 text: 'Delete',
                 style: 'destructive',
                 onPress: async () => {
-                    try {
-                        await Promise.all(Array.from(selectedItems).map(id => api.delete(`/notifications/${id}`)));
-                        refresh();
-                        setIsSelectionMode(false);
-                        setSelectedItems(new Set());
-                    } catch {
-                        Alert.alert('Error', 'Failed to delete some notifications');
+                    const ids = Array.from(selectedItems);
+                    const results = await Promise.allSettled(
+                        ids.map(id => api.delete(`/notifications/${id}`))
+                    );
+                    const failedIds = results
+                        .map((result, index) => result.status === 'rejected' ? ids[index] : null)
+                        .filter((id): id is string => Boolean(id));
+
+                    await refresh();
+
+                    if (failedIds.length > 0) {
+                        setSelectedItems(new Set(failedIds));
+                        setIsSelectionMode(true);
+                        Alert.alert(
+                            'Partial Delete',
+                            `${ids.length - failedIds.length} deleted. ${failedIds.length} could not be deleted and are still selected.`
+                        );
+                        return;
                     }
+
+                    setIsSelectionMode(false);
+                    setSelectedItems(new Set());
                 },
             },
         ]);

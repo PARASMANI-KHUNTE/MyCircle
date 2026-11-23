@@ -4,9 +4,12 @@ import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { useAuth } from './AuthContext';
 import { BASE_URL } from '../services/api';
 import { navigate } from '../services/navigationService';
-import { NOTIFICATION_CHANNEL_ID } from '../services/notificationService';
+import { NOTIFICATION_CHANNEL_ID, presentForegroundNotification } from '../services/notificationService';
 import { getNotificationRoute, getNotificationTitle } from '../utils/notificationRouting';
+import { claimNotificationOpen } from '../utils/notificationDedupe';
 import { getCurrentUserId } from '../utils/userIdentity';
+
+let notifeeInitialChecked = false;
 
 const getSocketUrl = () => {
     if (!BASE_URL) {
@@ -36,7 +39,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const socketRef = useRef<Socket | null>(null);
 
     const handleNotificationPress = useCallback((data: any) => {
-        if (!data) return;
+        if (!data || !claimNotificationOpen(data._id)) return;
 
         console.log('Notification Pressed:', data);
         const route = getNotificationRoute(data);
@@ -79,6 +82,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }, [handleNotificationPress]);
 
     useEffect(() => {
+        if (notifeeInitialChecked) return;
+        notifeeInitialChecked = true;
+
         async function checkInitialNotification() {
             try {
                 const initialNotification = await notifee.getInitialNotification();
@@ -90,7 +96,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             }
         }
         checkInitialNotification();
-    }, [handleNotificationPress, user]);
+    }, [handleNotificationPress]);
 
     useEffect(() => {
         if (!currentUserId || !token) {
@@ -143,15 +149,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         newSocket.on('new_notification', async (data: any) => {
             try {
-                await notifee.createChannel({
-                    id: NOTIFICATION_CHANNEL_ID,
-                    name: 'MyCircle Notifications',
-                    importance: AndroidImportance.HIGH,
-                    sound: 'default',
-                    vibration: true,
-                    vibrationPattern: [300, 500],
-                });
-
                 const notifeeData: Record<string, string> = {};
                 if (data._id) notifeeData._id = String(data._id);
                 if (data.type) notifeeData.type = String(data.type);
@@ -161,29 +158,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 if (data.relatedId) notifeeData.relatedId = String(data.relatedId);
                 if (data.link) notifeeData.link = String(data.link);
 
-                await notifee.displayNotification({
+                await presentForegroundNotification({
                     title: getNotificationTitle(data),
                     body: data.message || 'You have a new update.',
                     data: notifeeData,
-                    android: {
-                        channelId: NOTIFICATION_CHANNEL_ID,
-                        importance: AndroidImportance.HIGH,
-                        sound: 'default',
-                        vibrationPattern: [300, 500],
-                        pressAction: {
-                            id: 'default',
-                        },
-                        smallIcon: 'ic_launcher',
-                    },
-                    ios: {
-                        sound: 'default',
-                        foregroundPresentationOptions: {
-                            badge: true,
-                            sound: true,
-                            banner: true,
-                            list: true,
-                        },
-                    },
                 });
             } catch (err) {
                 console.error('Notification error:', err);

@@ -19,6 +19,7 @@ import {
     getNotificationTitle,
     type NotificationPayload,
 } from '../utils/notificationRouting';
+import { claimForegroundDisplay, claimNotificationOpen } from '../utils/notificationDedupe';
 
 export const NOTIFICATION_CHANNEL_ID = 'mycircle_channel_v1';
 
@@ -29,6 +30,7 @@ let backgroundHandlerRegistered = false;
 let registeredDeviceToken: string | null = null;
 let pendingDeviceToken: string | null = null;
 let deviceTokenPromise: Promise<boolean> | null = null;
+let initialNotificationChecked = false;
 
 const getMessagingInstance = () => {
     try {
@@ -100,10 +102,25 @@ const handleOpenedNotification = (remoteMessage?: RemoteMessage | null) => {
     if (!remoteMessage) return;
 
     const data = normalizeData(remoteMessage.data);
+    if (!claimNotificationOpen(data._id)) return;
+
     const route = getNotificationRoute(data as NotificationPayload);
     if (route) {
         navigate(route.name, route.params);
     }
+};
+
+/** Shared foreground presenter so FCM and socket events cannot both alert. */
+export const presentForegroundNotification = async ({ title, body, data }: {
+    title: string;
+    body: string;
+    data: NotificationData;
+}): Promise<boolean> => {
+    if (!claimForegroundDisplay({ ...data, title, message: body })) {
+        return false;
+    }
+    await displayLocalNotification({ title, body, data });
+    return true;
 };
 
 const registerBackgroundHandler = (messaging: ReturnType<typeof getMessaging> | null) => {
@@ -116,7 +133,7 @@ const registerBackgroundHandler = (messaging: ReturnType<typeof getMessaging> | 
             title: remoteMessage.notification?.title || data.title,
         } as NotificationPayload;
 
-        await displayLocalNotification({
+        await presentForegroundNotification({
             title: getNotificationTitle(payload),
             body: remoteMessage.notification?.body || data.message || '',
             data,
@@ -223,9 +240,12 @@ export const notificationListener = () => {
 
     const unsubscribeOpened = onNotificationOpenedApp(messaging, handleOpenedNotification);
 
-    getInitialNotification(messaging)
-        .then(handleOpenedNotification)
-        .catch(error => console.error('Failed to check initial notification:', error));
+    if (!initialNotificationChecked) {
+        initialNotificationChecked = true;
+        getInitialNotification(messaging)
+            .then(handleOpenedNotification)
+            .catch(error => console.error('Failed to check initial notification:', error));
+    }
 
     const unsubscribeForeground = onMessage(messaging, async (remoteMessage: RemoteMessage) => {
         try {
@@ -235,7 +255,7 @@ export const notificationListener = () => {
                 title: remoteMessage.notification?.title || data.title,
             } as NotificationPayload;
 
-            await displayLocalNotification({
+            await presentForegroundNotification({
                 title: getNotificationTitle(payload),
                 body: remoteMessage.notification?.body || data.message || '',
                 data,

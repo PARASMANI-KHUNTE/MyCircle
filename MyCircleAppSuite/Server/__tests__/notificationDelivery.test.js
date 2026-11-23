@@ -114,6 +114,11 @@ describe('notification delivery', () => {
             recipientId: 'user-1',
             title: 'New Request',
             body: 'Someone sent you a request.',
+            data: expect.objectContaining({
+                _id: 'notification-1',
+                postId: 'post-1',
+                relatedId: 'post-1',
+            }),
         }));
     });
 

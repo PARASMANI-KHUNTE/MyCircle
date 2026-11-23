@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, Image } from 'react-native';
@@ -19,7 +19,7 @@ import Sound from 'react-native-sound';
 import PostCard from '../components/ui/PostCard';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
-import { LIGHT_TILE_URL, DARK_TILE_URL, LABELS_TILE_URL, MAP_ATTRIBUTION, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
+import { buildFeedMapHtml } from '../utils/feedMapHtml';
 
 // Enable playback in silent mode
 Sound.setCategory('Playback');
@@ -58,7 +58,7 @@ const CATEGORIES = [
 const FeedScreen = ({ navigation, route }: any) => {
     const { isAuthenticated } = useAuth();
     const initialViewMode = route?.params?.viewMode || 'list';
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
     const { socket } = useSocket() as any; // Type assertion if needed
     const { success, error: showError, info: showInfo } = useToast();
     const queryClient = useQueryClient();
@@ -72,7 +72,6 @@ const FeedScreen = ({ navigation, route }: any) => {
         location: userLocation,
         requestLocation,
     } = useLocation();
-    const [mapLoading] = useState(false);
 
     // Chat Badge Logic
 
@@ -387,254 +386,13 @@ const FeedScreen = ({ navigation, route }: any) => {
         });
     }, [mapPosts]);
 
-    const mapHTML = `
-    <!DOCTYPE html>
-        <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-                <style>
-                    body {margin: 0; padding: 0; background-color: ${colors.background}; }
-                    #map {height: 100vh; width: 100vw; }
-                    .leaflet-container {background: ${colors.background}; }
-                    
-                    @keyframes pulse {
-                        0% { transform: scale(0.5); opacity: 1; }
-                        100% { transform: scale(2.5); opacity: 0; }
-                    }
-                    .user-loc-container {
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                    }
-                    .user-loc-dot {
-                        width: 14px;
-                        height: 14px;
-                        background: #8b5cf6;
-                        border: 2px solid white;
-                        border-radius: 50%;
-                        z-index: 2;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.3);
-                    }
-                    .user-loc-pulse {
-                        position: absolute;
-                        width: 30px;
-                        height: 30px;
-                        background: rgba(139, 92, 246, 0.4);
-                        border-radius: 50%;
-                        animation: pulse 2s infinite;
-                        z-index: 1;
-                    }
-                    
-                    @keyframes markerEntrance {
-                        0% { transform: scale(0); opacity: 0; }
-                        60% { transform: scale(1.2); }
-                        100% { transform: scale(1); opacity: 1; }
-                    }
-                    .post-marker-anim {
-                        animation: markerEntrance 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-                    }
-
-                    .custom-marker {
-                        position: relative;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                    }
-                    .marker-glass {
-                        background: rgba(255, 255, 255, 0.1);
-                        backdrop-filter: blur(8px);
-                        -webkit-backdrop-filter: blur(8px);
-                        border: 1px solid rgba(255, 255, 255, 0.2);
-                        padding: 4px 10px;
-                        border-radius: 12px;
-                        color: white;
-                        font-family: sans-serif;
-                        font-weight: bold;
-                        font-size: 12px;
-                        white-space: nowrap;
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                        border-bottom: 2px solid var(--marker-color);
-                        transition: all 0.2s ease;
-                    }
-                    .custom-marker:hover .marker-glass {
-                        transform: translateY(-2px);
-                        background: rgba(255, 255, 255, 0.2);
-                    }
-                    .marker-tail {
-                        width: 0;
-                        height: 0;
-                        border-left: 6px solid transparent;
-                        border-right: 6px solid transparent;
-                        border-top: 6px solid var(--marker-color);
-                        margin-top: -1px;
-                        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
-                    }
-                    .marker-price {
-                        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-                    }
-
-                    /* Locate Me Button */
-                    .locate-me-btn {
-                        position: absolute;
-                        bottom: 180px; /* Above the bottom sheet if open */
-                        right: 20px;
-                        width: 44px;
-                        height: 44px;
-                        background: rgba(255, 255, 255, 0.1);
-                        backdrop-filter: blur(12px);
-                        -webkit-backdrop-filter: blur(12px);
-                        border: 1px solid rgba(255, 255, 255, 0.2);
-                        border-radius: 12px;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 1000;
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                        transition: all 0.2s ease;
-                        cursor: pointer;
-                    }
-                    .locate-me-btn:active {
-                        transform: scale(0.9);
-                        background: rgba(139, 92, 246, 0.3);
-                    }
-                    .locate-icon {
-                        width: 20px;
-                        height: 20px;
-                        border: 2px solid white;
-                        border-radius: 50%;
-                        position: relative;
-                    }
-                    .locate-icon::after {
-                        content: '';
-                        position: absolute;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
-                        width: 8px;
-                        height: 8px;
-                        background: white;
-                        border-radius: 50%;
-                    }
-                </style>
-            </head>
-            <body>
-                <div id="map"></div>
-                <div class="locate-me-btn" onclick="recenterMap()">
-                    <div class="locate-icon"></div>
-                </div>
-                <script>
-                    var userLoc = ${userLocation ? JSON.stringify(userLocation) : 'null'};
-                    var defaultCenter = [28.6139, 77.2090];
-                    var center = userLoc ? [userLoc.lat, userLoc.lng] : defaultCenter;
-
-                    var map = L.map('map', {zoomControl: false, zoomSnap: 0.1 }).setView(center, userLoc ? 15.5 : 12);
-
-                    window.recenterMap = function() {
-                        if (userLoc) {
-                            map.flyTo([userLoc.lat, userLoc.lng], 16.5, {
-                                animate: true,
-                                duration: 1.5,
-                                easeLinearity: 0.25
-                            });
-                        } else {
-                            // Request location through RN if null
-                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'requestLocation' }));
-                        }
-                    };
-
-                    var isDark = ${colors.background === '#000000'};
-                    var mapStyle = isDark ? '${DARK_TILE_URL}' : '${LIGHT_TILE_URL}';
-
-                    L.tileLayer(mapStyle, {
-                        attribution: '${MAP_ATTRIBUTION}',
-                        maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM},
-                        maxZoom: 19
-                    }).addTo(map);
-                    L.tileLayer('${LABELS_TILE_URL}', { maxNativeZoom: ${MAP_MAX_NATIVE_ZOOM}, maxZoom: 19 }).addTo(map);
-
-                    // Add user location marker with premium animation
-                    if (userLoc) {
-                        var userIcon = L.divIcon({
-                            className: 'user-loc-container',
-                            html: '<div class="user-loc-pulse"></div><div class="user-loc-dot"></div>',
-                            iconSize: [30, 30],
-                            iconAnchor: [15, 15]
-                        });
-                        L.marker([userLoc.lat, userLoc.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-
-                        L.circle([userLoc.lat, userLoc.lng], {
-                            radius: ${distanceRadius * 1000},
-                            fillColor: '#8b5cf6',
-                            color: '#8b5cf6',
-                            weight: 1,
-                            opacity: 0.2,
-                            fillOpacity: 0.05
-                        }).addTo(map);
-                    }
-
-                    var posts = ${JSON.stringify(fuzzedPosts.map(p => ({
-        id: p._id,
-        lat: p.fuzzedLat,
-        lng: p.fuzzedLng,
-        type: p.type,
-        price: p.price,
-        title: p.title,
-        color: p.type === 'job' ? '#3b82f6' :
-            p.type === 'service' ? '#06b6d4' :
-                p.type === 'sell' ? '#f59e0b' :
-                    p.type === 'rent' ? '#8b5cf6' : '#ec4899'
-    })))};
-
-                    var bounds = [];
-                    if (userLoc) {
-                        bounds.push([userLoc.lat, userLoc.lng]);
-                    }
-
-                    posts.forEach(function(p, index) {
-                        setTimeout(function() {
-                            // Custom Premium Marker
-                            var markerHtml = '<div class="custom-marker" style="--marker-color: ' + p.color + '">' +
-                                '<div class="marker-glass">' +
-                                    '<span class="marker-price">₹' + p.price + '</span>' +
-                                '</div>' +
-                                '<div class="marker-tail"></div>' +
-                            '</div>';
-
-                            var markerIcon = L.divIcon({
-                                className: 'custom-marker-wrapper',
-                                html: markerHtml,
-                                iconSize: [60, 30],
-                                iconAnchor: [30, 30]
-                            });
-
-                            var marker = L.marker([p.lat, p.lng], {
-                                icon: markerIcon,
-                                className: 'post-marker-anim'
-                            }).addTo(map);
-
-                            marker.on('click', function() {
-                                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', postId: p.id }));
-                                map.flyTo([p.lat, p.lng], 16.5, { duration: 1.2, easeLinearity: 0.25 });
-                            });
-
-                            bounds.push([p.lat, p.lng]);
-                        }, index * 100); // Staggered entrance
-                    });
-
-                    // Initial entrance animation
-                    if (userLoc) {
-                        setTimeout(function() {
-                            map.flyTo([userLoc.lat, userLoc.lng], 16, { animate: true, duration: 1.8 });
-                        }, 500);
-                    } else if (bounds.length > 0) {
-                        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-                    }
-                </script>
-            </body>
-        </html>
-`;
+    const mapHTML = useMemo(() => buildFeedMapHtml({
+        background: colors.background,
+        isDark,
+        userLocation,
+        posts: fuzzedPosts,
+        distanceRadius,
+    }), [colors.background, isDark, userLocation, fuzzedPosts, distanceRadius]);
 
     const handleWebMessage = (event: any) => {
         try {
@@ -650,10 +408,11 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
     };
 
-    const renderListContent = () => {
+    const renderFeedState = () => {
         if (loading) return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[themeStyles.textSecondary, { marginTop: 12 }]}>Loading posts...</Text>
             </View>
         );
 
@@ -670,6 +429,13 @@ const FeedScreen = ({ navigation, route }: any) => {
                 </TouchableOpacity>
             </View>
         );
+
+        return null;
+    };
+
+    const renderListContent = () => {
+        const state = renderFeedState();
+        if (state) return state;
 
         return (
             <FlashList
@@ -688,7 +454,7 @@ const FeedScreen = ({ navigation, route }: any) => {
                 }
                 renderItem={({ item, index }: any) => (
                     <Animated.View
-                        entering={FadeInDown.delay(index * 100).springify()}
+                        entering={FadeInDown.delay(Math.min(index * 100, 600)).springify()}
                         style={styles.gridItemWrapper}
                     >
                         <PostCard
@@ -933,6 +699,8 @@ const FeedScreen = ({ navigation, route }: any) => {
 
             {viewMode === 'list' ? (
                 renderListContent()
+            ) : loading || isError ? (
+                renderFeedState()
             ) : (
                 <View style={{ flex: 1 }}>
                     <WebView
@@ -970,13 +738,6 @@ const FeedScreen = ({ navigation, route }: any) => {
                             </TouchableOpacity>
                         </View>
                     )}
-                </View>
-            )}
-
-            {mapLoading && (
-                <View style={[StyleSheet.absoluteFill, styles.loadingOverlay, { backgroundColor: colors.background + 'CC' }]}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={[styles.loadingText, { color: colors.text }]}>Preparing Map...</Text>
                 </View>
             )}
 

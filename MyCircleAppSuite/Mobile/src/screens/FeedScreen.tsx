@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { usePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { View, Text, ActivityIndicator, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, RefreshControl, Image } from 'react-native';
@@ -19,7 +19,7 @@ import Sound from 'react-native-sound';
 import PostCard from '../components/ui/PostCard';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../components/ui/Toast';
-import { buildFeedMapHtml } from '../utils/feedMapHtml';
+import { buildFeedMapHtml, buildLocationUpdateScript } from '../utils/feedMapHtml';
 
 // Enable playback in silent mode
 Sound.setCategory('Playback');
@@ -57,6 +57,7 @@ const CATEGORIES = [
 
 const DEFAULT_DISTANCE_RADIUS = 50;
 const SEARCH_DEBOUNCE_MS = 300;
+const LOCATION_QUERY_INTERVAL_MS = 15000;
 
 const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -78,6 +79,32 @@ const FeedScreen = ({ navigation, route }: any) => {
         location: userLocation,
         requestLocation,
     } = useLocation();
+
+    // GPS fixes arrive frequently. Use a throttled snapshot for network queries
+    // so nearby mode does not refetch on every tick; the live fix still moves
+    // the map marker through injectJavaScript.
+    const [queryLocation, setQueryLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const lastQueryLocationAtRef = useRef(0);
+
+    useEffect(() => {
+        if (!userLocation) {
+            setQueryLocation(null);
+            return;
+        }
+
+        const elapsed = Date.now() - lastQueryLocationAtRef.current;
+        if (elapsed >= LOCATION_QUERY_INTERVAL_MS) {
+            lastQueryLocationAtRef.current = Date.now();
+            setQueryLocation(userLocation);
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            lastQueryLocationAtRef.current = Date.now();
+            setQueryLocation(userLocation);
+        }, LOCATION_QUERY_INTERVAL_MS - elapsed);
+        return () => clearTimeout(timeout);
+    }, [userLocation]);
 
     // Chat Badge Logic
 
@@ -103,8 +130,8 @@ const FeedScreen = ({ navigation, route }: any) => {
     const serverSort = sortOrder === 'nearest' && !isNearby ? 'latest' : (sortOrder === 'price_asc' || sortOrder === 'price_desc') ? 'latest' : sortOrder;
 
     const { data: postsData, isLoading: loading, refetch, isRefetching, isError } = usePosts({
-        latitude: isNearby ? userLocation?.lat : undefined,
-        longitude: isNearby ? userLocation?.lng : undefined,
+        latitude: isNearby ? queryLocation?.lat : undefined,
+        longitude: isNearby ? queryLocation?.lng : undefined,
         radius: distanceRadius,
         limit: 50,
         type: serverCategory,
@@ -207,19 +234,19 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
 
         if (isNearby) {
-            if (!userLocation || !post.locationCoords?.coordinates?.length) {
+            if (!queryLocation || !post.locationCoords?.coordinates?.length) {
                 return false;
             }
 
             const [lng, lat] = post.locationCoords.coordinates;
-            const distance = getDistanceInKm(userLocation, { lat, lng });
+            const distance = getDistanceInKm(queryLocation, { lat, lng });
             if (distance > distanceRadius) {
                 return false;
             }
         }
 
         return true;
-    }, [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, priceRange, selectedCategory, selectedDate, urgentOnly, userLocation]);
+    }, [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, priceRange, queryLocation, selectedCategory, selectedDate, urgentOnly]);
 
     const handleNewPost = useCallback((newPost: any) => {
         if (!matchesActiveFilters(newPost)) {
@@ -227,8 +254,8 @@ const FeedScreen = ({ navigation, route }: any) => {
         }
 
         const queryKey = ['posts', {
-            latitude: isNearby ? userLocation?.lat : undefined,
-            longitude: isNearby ? userLocation?.lng : undefined,
+            latitude: isNearby ? queryLocation?.lat : undefined,
+            longitude: isNearby ? queryLocation?.lng : undefined,
             radius: distanceRadius,
             limit: 50,
             type: serverCategory,
@@ -245,7 +272,7 @@ const FeedScreen = ({ navigation, route }: any) => {
             return [newPost, ...withoutDuplicate];
         });
         success('New post added!');
-    }, [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, matchesActiveFilters, queryClient, selectedCategory, serverCategory, serverSort, success, urgentOnly, userLocation?.lat, userLocation?.lng]);
+    }, [debouncedSearchQuery, distanceRadius, isNearby, locationFilter, matchesActiveFilters, queryClient, queryLocation?.lat, queryLocation?.lng, selectedCategory, serverCategory, serverSort, success, urgentOnly]);
 
     // const [refreshing, setRefreshing] = useState(false); // Managed by React Query now
 
@@ -426,13 +453,26 @@ const FeedScreen = ({ navigation, route }: any) => {
         });
     }, [mapPosts]);
 
+    const webViewRef = useRef<any>(null);
+    // Bake only the first known fix into the HTML. Later fixes are injected so
+    // the map keeps its zoom/pan and does not remount on every GPS update.
+    const [initialMapLocation] = useState<{ lat: number; lng: number } | null>(userLocation);
+
     const mapHTML = useMemo(() => buildFeedMapHtml({
         background: colors.background,
         isDark,
-        userLocation,
+        userLocation: initialMapLocation,
         posts: fuzzedPosts,
         distanceRadius,
-    }), [colors.background, isDark, userLocation, fuzzedPosts, distanceRadius]);
+    }), [colors.background, initialMapLocation, isDark, fuzzedPosts, distanceRadius]);
+
+    const injectUserLocation = useCallback((location: { lat: number; lng: number } | null) => {
+        webViewRef.current?.injectJavaScript?.(buildLocationUpdateScript(location));
+    }, []);
+
+    useEffect(() => {
+        injectUserLocation(userLocation);
+    }, [injectUserLocation, userLocation]);
 
     const handleWebMessage = (event: any) => {
         try {
@@ -774,10 +814,12 @@ const FeedScreen = ({ navigation, route }: any) => {
             ) : (
                 <View style={{ flex: 1 }}>
                     <WebView
+                        ref={webViewRef}
                         originWhitelist={['*']}
                         source={{ html: mapHTML }}
                         style={{ flex: 1, backgroundColor: colors.background }}
                         onMessage={handleWebMessage}
+                        onLoad={() => injectUserLocation(userLocation)}
                     />
                     {selectedPost && (
                         <View style={styles.bottomSheet}>

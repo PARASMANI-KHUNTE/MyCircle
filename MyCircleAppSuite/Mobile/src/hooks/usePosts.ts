@@ -30,7 +30,10 @@ export const usePosts = ({
         queryKey: ['posts', { latitude, longitude, radius, limit, type, q, location, sort, barterOnly, urgentOnly }],
         queryFn: async () => {
             const params: Record<string, string | number | boolean> = { limit };
-            if (latitude && longitude) {
+            // 0° latitude/longitude are valid coordinates (e.g. the Gulf of
+            // Guinea), so only skip absent values rather than falsy ones.
+            if (latitude !== undefined && latitude !== null
+                && longitude !== undefined && longitude !== null) {
                 params.latitude = latitude;
                 params.longitude = longitude;
                 params.radius = radius || 50;

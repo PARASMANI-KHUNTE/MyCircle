@@ -1,4 +1,4 @@
-import { buildFeedMapHtml } from '../src/utils/feedMapHtml';
+import { buildFeedMapHtml, buildLocationUpdateScript } from '../src/utils/feedMapHtml';
 import { DARK_TILE_URL, LIGHT_TILE_URL } from '../src/constants/mapTiles';
 
 const maliciousTitle = '</script><script>window.__pwned = true</script>';
@@ -36,6 +36,29 @@ describe('buildFeedMapHtml', () => {
         expect(darkHtml).not.toContain(LIGHT_TILE_URL);
         expect(lightHtml).toContain(LIGHT_TILE_URL);
         expect(lightHtml).not.toContain(DARK_TILE_URL);
+    });
+
+    it('exposes an in-place location updater so GPS fixes do not reload the map', () => {
+        const html = buildFeedMapHtml(options);
+
+        expect(html).toContain('window.updateUserLocation = function(location)');
+        expect(html).toContain('map.removeLayer(userMarker)');
+        expect(html).toContain('replaceUserLayers(userLoc)');
+        expect(html).not.toContain('location.reload');
+    });
+
+    it('builds an escaped injection script for routine location updates', () => {
+        const script = buildLocationUpdateScript({ lat: 0, lng: 0 });
+
+        expect(script).toContain('window.updateUserLocation({"lat":0,"lng":0})');
+        expect(buildLocationUpdateScript(null)).toContain('window.updateUserLocation(null)');
+
+        const unsafe = buildLocationUpdateScript({
+            lat: '</script><script>alert(1)</script>',
+            lng: 0,
+        } as any);
+        expect(unsafe).not.toContain('</script><script>');
+        expect(unsafe).toContain('\\u003c/script\\u003e');
     });
 
     it('collects marker bounds before fitting them and caps animation delays', () => {

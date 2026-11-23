@@ -95,6 +95,12 @@ export const requestLocationAccess = async (): Promise<LocationAccessResult> => 
         } else if (!(await isLocationPermissionGranted())) {
             const result = await PermissionsAndroid.request(FINE_PERMISSION, PERMISSION_DIALOG);
 
+            // Preserve the platform's "don't ask again" answer so callers can
+            // distinguish an ordinary denial from a permanently blocked app.
+            if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+                return 'never_ask_again';
+            }
+
             if (result !== PermissionsAndroid.RESULTS.GRANTED) {
                 // Android 12+ can grant approximate location instead of precise.
                 const hasCoarse = await PermissionsAndroid.check(COARSE_PERMISSION);
@@ -198,13 +204,23 @@ const resolveAddress = async (latitude: number, longitude: number): Promise<stri
     return fallback;
 };
 
+interface GetCurrentLocationOptions {
+    /** Skip the permission/service check when the caller already resolved it. */
+    skipPermissionCheck?: boolean;
+}
+
 /**
  * Gets one device fix. Permission and device-services checks are included so
- * every caller (feed, post creation, map modal) behaves consistently.
+ * every caller (feed, post creation, map modal) behaves consistently. Callers
+ * that just resolved access themselves can skip the duplicate check/prompt.
  */
-export const getCurrentLocation = async (): Promise<LocationObject | null> => {
-    const access = await requestLocationAccess();
-    if (access !== 'granted') return null;
+export const getCurrentLocation = async (
+    options: GetCurrentLocationOptions = {}
+): Promise<LocationObject | null> => {
+    if (!options.skipPermissionCheck) {
+        const access = await requestLocationAccess();
+        if (access !== 'granted') return null;
+    }
 
     let fix: PositionFix | null = null;
     try {
@@ -241,7 +257,7 @@ export const watchLocation = (
         {
             enableHighAccuracy: true,
             distanceFilter: 10,
-            interval: 5000,
+            interval: 10000,
             timeout: 10000,
             maximumAge: 10000,
         }

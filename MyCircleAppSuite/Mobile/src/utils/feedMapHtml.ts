@@ -222,16 +222,23 @@ export const buildFeedMapHtml = ({
                         maxZoom: config.maxZoom
                     }).addTo(map);
 
-                    if (userLoc) {
+                    var userMarker = null;
+                    var userCircle = null;
+                    var hasCenteredOnUser = !!userLoc;
+
+                    function replaceUserLayers(location) {
+                        if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+                        if (userCircle) { map.removeLayer(userCircle); userCircle = null; }
+                        if (!location) return;
+
                         var userIcon = L.divIcon({
                             className: 'user-loc-container',
                             html: '<div class="user-loc-pulse"></div><div class="user-loc-dot"></div>',
                             iconSize: [30, 30],
                             iconAnchor: [15, 15]
                         });
-                        L.marker([userLoc.lat, userLoc.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-
-                        L.circle([userLoc.lat, userLoc.lng], {
+                        userMarker = L.marker([location.lat, location.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+                        userCircle = L.circle([location.lat, location.lng], {
                             radius: config.distanceRadius * 1000,
                             fillColor: '#8b5cf6',
                             color: '#8b5cf6',
@@ -240,6 +247,24 @@ export const buildFeedMapHtml = ({
                             fillOpacity: 0.05
                         }).addTo(map);
                     }
+
+                    // Native callers push routine GPS fixes here so the WebView
+                    // keeps its zoom/pan instead of reloading the whole document.
+                    window.updateUserLocation = function(location) {
+                        userLoc = location && typeof location.lat === 'number' && typeof location.lng === 'number'
+                            ? { lat: location.lat, lng: location.lng }
+                            : null;
+                        replaceUserLayers(userLoc);
+
+                        // Center once when the first fix arrives after load;
+                        // subsequent fixes only move the marker.
+                        if (userLoc && !hasCenteredOnUser) {
+                            hasCenteredOnUser = true;
+                            map.flyTo([userLoc.lat, userLoc.lng], 16, { animate: true, duration: 1.2 });
+                        }
+                    };
+
+                    replaceUserLayers(userLoc);
 
                     var bounds = [];
                     if (userLoc) bounds.push([userLoc.lat, userLoc.lng]);
@@ -291,3 +316,12 @@ export const buildFeedMapHtml = ({
         </html>
     `;
 };
+
+/**
+ * Builds the script injected into an already-loaded map WebView to move the
+ * user marker/circle without remounting the document.
+ */
+export const buildLocationUpdateScript = (
+    location?: { lat: number; lng: number } | null
+): string =>
+    `if (window.updateUserLocation) { window.updateUserLocation(${serializeForInlineScript(location ?? null)}); }`;

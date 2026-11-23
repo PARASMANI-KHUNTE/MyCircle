@@ -150,7 +150,8 @@ exports.getPosts = async (req, res, next) => {
             location,
             sort = 'latest',
             q,
-            barterOnly
+            barterOnly,
+            urgentOnly
         } = req.query; // radius in km
         const { page, limit, skip } = parsePagination(req.query, DEFAULT_POST_LIMIT, MAX_POST_LIMIT);
 
@@ -171,6 +172,9 @@ exports.getPosts = async (req, res, next) => {
         }
         if (barterOnly === 'true' || barterOnly === true || type === 'barter') {
             baseFilter.acceptsBarter = true;
+        }
+        if (urgentOnly === 'true' || urgentOnly === true) {
+            baseFilter.isUrgent = true;
         }
 
         // 1. Geospatial Stage (Must be first if present)
@@ -300,10 +304,10 @@ exports.getPosts = async (req, res, next) => {
                                 reputation: '$user.reputation',
                                 rating: '$user.rating'
                             },
-                            type: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
-                            isActive: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
+                            type: 1, subType: 1, title: 1, description: 1, price: 1, location: 1, images: 1, status: 1,
+                            isActive: 1, isUrgent: 1, views: 1, likes: 1, shares: 1, createdAt: 1,
                             locationCoords: 1, duration: 1, availability: 1, budgetMin: 1, budgetMax: 1,
-                            expiresAt: 1,
+                            exchangePreference: 1, acceptsBarter: 1, expiresAt: 1,
                             distance: { $ifNull: ['$dist.calculated', null] },
                             applicationCount: {
                                 $ifNull: [{ $arrayElemAt: ['$applicationStats.count', 0] }, 0]

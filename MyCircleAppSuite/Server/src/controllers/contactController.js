@@ -355,6 +355,7 @@ exports.updateRequestStatus = async (req, res, next) => {
             await Notification.deleteMany({ relatedId: postId });
 
             await request.populate('recipient', 'displayName');
+            await request.populate('requester', 'displayName');
             await request.populate('post', 'title');
 
             try {
@@ -371,16 +372,24 @@ exports.updateRequestStatus = async (req, res, next) => {
                 console.error('Failed to send completion notification:', notifErr.message);
             }
 
-            const deletedRequests = await ContactRequest.deleteMany({
+            const otherRequests = await ContactRequest.find({
+                post: postId,
+                _id: { $ne: request._id },
+            }).select('_id');
+            const deletedRequestIds = otherRequests.map((other) => other._id.toString());
+
+            await ContactRequest.deleteMany({
                 post: postId,
                 _id: { $ne: request._id },
             });
 
             return res.json({
                 msg: 'Work completed. Post disabled, chats deleted, and other related requests removed.',
-                removed: true,
+                removed: false,
+                request: serializeRequest(request, req.user.id),
                 completedRequestId: request._id,
-                removedRequestsCount: deletedRequests.deletedCount,
+                deletedRequestIds,
+                removedRequestsCount: deletedRequestIds.length,
                 postId
             });
         }

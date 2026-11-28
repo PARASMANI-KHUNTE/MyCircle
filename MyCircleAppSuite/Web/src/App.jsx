@@ -31,6 +31,7 @@ const LoginSuccess = lazy(() => import('./pages/LoginSuccess'));
 const DownloadApp = lazy(() => import('./pages/DownloadApp'));
 const RequireAdmin = lazy(() => import('./components/auth/RequireAdmin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminPosts = lazy(() => import('./pages/admin/AdminPosts'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminSubmissions = lazy(() => import('./pages/admin/AdminSubmissions'));
@@ -116,6 +117,14 @@ function AuthRoutes() {
             element={
               <RequireAdmin>
                 <AdminDashboard />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/posts"
+            element={
+              <RequireAdmin>
+                <AdminPosts />
               </RequireAdmin>
             }
           />

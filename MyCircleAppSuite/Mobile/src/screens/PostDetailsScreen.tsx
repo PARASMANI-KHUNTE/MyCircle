@@ -32,7 +32,12 @@ import {
 import { getAvatarUrl } from '../utils/avatar';
 import { formatDurationMinutesLong } from '../utils/formatDuration';
 import api from '../services/api';
-import { formatPostPrice, reconcileLikes, resolveShareLink } from '../utils/postInteractions';
+import {
+    formatPostPrice,
+    getContactActionState,
+    reconcileLikes,
+    resolveShareLink,
+} from '../utils/postInteractions';
 import { invalidatePosts } from '../hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { ensureConversationWithUser } from '../services/chat';
@@ -213,6 +218,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleRequestContact = async () => {
+        if (isOwnPost) {
+            Alert.alert('Your listing', 'You cannot send a contact request to yourself.');
+            return;
+        }
         try {
             await api.post(`/contacts/${id}`);
             Alert.alert('Success', 'Request Sent!');
@@ -244,6 +253,21 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         }
     };
 
+    const handleBlockAuthor = async () => {
+        const authorId = post?.user?._id;
+        if (!authorId || isOwnPost) return;
+
+        try {
+            await api.post(`/user/block/${authorId}`);
+            setActionSheetVisible(false);
+            Alert.alert('Blocked', 'Author blocked. They can no longer contact you.', [
+                { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+        } catch {
+            Alert.alert('Error', 'Failed to block author.');
+        }
+    };
+
     const showMenu = () => {
         setActionSheetConfig({
             title: 'Options',
@@ -268,7 +292,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                       {
                           label: 'Block Author',
                           isDestructive: true,
-                          onPress: () => Alert.alert('Blocked', 'User blocked.'),
+                          onPress: handleBlockAuthor,
                       },
                   ],
         });
@@ -291,6 +315,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     if (!post) return null;
 
     const formattedPrice = formatPostPrice(post);
+    const contactAction = getContactActionState(isOwnPost, contactRequestStatus);
 
     return (
         <KeyboardAvoidingView
@@ -810,37 +835,33 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                             />
                         </TouchableOpacity>
 
-                        {/* Request Contact Button */}
+                        {/* Request Contact Button / owner label */}
                         <TouchableOpacity
                             onPress={handleRequestContact}
                             style={[
                                 styles.requestMainBtn,
                                 {
-                                    backgroundColor:
-                                        contactRequestStatus === 'pending'
-                                            ? isDark
-                                                ? 'rgba(255,255,255,0.1)'
-                                                : 'rgba(0,0,0,0.08)'
-                                            : colors.primary,
+                                    backgroundColor: contactAction.disabled
+                                        ? isDark
+                                            ? 'rgba(255,255,255,0.1)'
+                                            : 'rgba(0,0,0,0.08)'
+                                        : colors.primary,
                                 },
                             ]}
-                            disabled={contactRequestStatus !== 'none'}
+                            disabled={!contactAction.showRequest || contactAction.disabled}
                             activeOpacity={0.8}
                         >
                             <Text
                                 style={[
                                     styles.requestMainBtnText,
                                     {
-                                        color:
-                                            contactRequestStatus === 'pending'
-                                                ? colors.textSecondary
-                                                : '#ffffff',
+                                        color: contactAction.disabled
+                                            ? colors.textSecondary
+                                            : '#ffffff',
                                     },
                                 ]}
                             >
-                                {contactRequestStatus === 'none'
-                                    ? 'Request Contact'
-                                    : contactRequestStatus.toUpperCase()}
+                                {contactAction.label}
                             </Text>
                         </TouchableOpacity>
 

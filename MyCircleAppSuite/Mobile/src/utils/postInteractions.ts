@@ -49,3 +49,25 @@ export const normalizePriceInput = (value: string): string | undefined => {
     if (!Number.isFinite(numeric) || numeric <= 0) return undefined;
     return String(numeric);
 };
+
+export interface ContactActionState {
+    showRequest: boolean;
+    label: string;
+    disabled: boolean;
+}
+
+/** Owners see a static label instead of an action that would fail server-side. */
+export const getContactActionState = (
+    isOwnPost: boolean,
+    status: string = 'none'
+): ContactActionState => {
+    if (isOwnPost) {
+        return { showRequest: false, label: 'Your listing', disabled: true };
+    }
+
+    return {
+        showRequest: true,
+        label: status === 'none' ? 'Request Contact' : status.toUpperCase(),
+        disabled: status !== 'none',
+    };
+};

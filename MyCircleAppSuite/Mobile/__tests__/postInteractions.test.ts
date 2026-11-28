@@ -3,6 +3,7 @@ import {
     resolveShareLink,
     formatPostPrice,
     normalizePriceInput,
+    getContactActionState,
 } from '../src/utils/postInteractions';
 
 describe('post interactions', () => {
@@ -36,5 +37,23 @@ describe('post interactions', () => {
         expect(normalizePriceInput('')).toBe(undefined);
         expect(normalizePriceInput('0')).toBe(undefined);
         expect(normalizePriceInput('₹1,200')).toBe('1200');
+    });
+
+    it('never offers contact requests on the owner listing', () => {
+        expect(getContactActionState(true, 'none')).toEqual({
+            showRequest: false,
+            label: 'Your listing',
+            disabled: true,
+        });
+        expect(getContactActionState(false, 'pending')).toEqual({
+            showRequest: true,
+            label: 'PENDING',
+            disabled: true,
+        });
+        expect(getContactActionState(false, 'none')).toEqual({
+            showRequest: true,
+            label: 'Request Contact',
+            disabled: false,
+        });
     });
 });

@@ -11,8 +11,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { usePagedList } from '../hooks/usePagedList';
 import PaginationFooter from '../components/ui/PaginationFooter';
-
-const getParticipantId = (participant: any) => participant?._id?.toString?.() || participant?.id?.toString?.();
+import {
+    resolveOtherParticipant,
+    resolvePresenceOverride,
+    type PresenceOverrides,
+} from '../utils/chatPresence';
 
 const ChatListScreen = ({ navigation }: any) => {
     const { colors, isDark } = useTheme();
@@ -39,6 +42,7 @@ const ChatListScreen = ({ navigation }: any) => {
     const [isSelectionMode, setIsSelectionMode] = useState(false);
 
     const [typingUsers, setTypingUsers] = useState<{ [key: string]: boolean }>({});
+    const [presenceOverrides, setPresenceOverrides] = useState<PresenceOverrides>({});
 
     // Refresh conversations when screen gains focus
     useFocusEffect(
@@ -66,16 +70,28 @@ const ChatListScreen = ({ navigation }: any) => {
             setTypingUsers(prev => ({ ...prev, [data.conversationId]: false }));
         };
 
+        const handleUserOnline = (userId: any) => {
+            if (userId) setPresenceOverrides(prev => ({ ...prev, [String(userId)]: true }));
+        };
+
+        const handleUserOffline = (userId: any) => {
+            if (userId) setPresenceOverrides(prev => ({ ...prev, [String(userId)]: false }));
+        };
+
         socket.on('receive_message', handleNewMessage);
         socket.on('messages_read', handleMessagesRead);
         socket.on('user_typing', handleTypingStart);
         socket.on('user_stop_typing', handleTypingStop);
+        socket.on('user_online', handleUserOnline);
+        socket.on('user_offline', handleUserOffline);
 
         return () => {
             socket.off('receive_message', handleNewMessage);
             socket.off('messages_read', handleMessagesRead);
             socket.off('user_typing', handleTypingStart);
             socket.off('user_stop_typing', handleTypingStop);
+            socket.off('user_online', handleUserOnline);
+            socket.off('user_offline', handleUserOffline);
         };
     }, [socket, syncConversations]);
 
@@ -159,7 +175,8 @@ const ChatListScreen = ({ navigation }: any) => {
 
     const renderItem = ({ item, index }: { item: any, index: number }) => {
         const currentUserId = auth?.user?._id?.toString?.() || auth?.user?.id?.toString?.();
-        const otherUser = item.participants.find((p: any) => getParticipantId(p) !== currentUserId) || item.participants[0];
+        const otherUser = resolveOtherParticipant(item.participants, currentUserId);
+        const isOtherUserOnline = resolvePresenceOverride(otherUser, presenceOverrides);
         const lastMsg = item.lastMessage;
         const hasUnread = item.unreadCount > 0;
         const isSelected = selectedItems.has(item._id);
@@ -200,7 +217,7 @@ const ChatListScreen = ({ navigation }: any) => {
                                     source={{ uri: otherUser?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${otherUser?.displayName}` }}
                                     style={styles.avatar}
                                 />
-                                {otherUser?.isOnline && <View style={styles.activeIndicator} />}
+                                {isOtherUserOnline && <View style={styles.activeIndicator} />}
                             </View>
 
                             <View style={styles.contentContainer}>

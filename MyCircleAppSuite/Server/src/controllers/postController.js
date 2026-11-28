@@ -82,18 +82,7 @@ exports.createPost = asyncHandler(async (req, res) => {
         }
     }
 
-    let images = [];
-    if (req.files) {
-        images = req.files.map(file => file.path);
-        
-        for (const img of images) {
-            addImageJob({
-                imagePath: img,
-                action: 'optimize',
-                postId: null,
-            }, { priority: 2 });
-        }
-    }
+    const images = req.files ? req.files.map(file => file.path) : [];
 
     const newPost = new Post({
         user: req.user.id,
@@ -125,6 +114,15 @@ exports.createPost = asyncHandler(async (req, res) => {
     });
 
     const post = await newPost.save();
+
+    // Queue only after the post exists so workers can persist results back to it.
+    await Promise.all(images.map(imagePath => addImageJob({
+        imagePath,
+        action: 'optimize',
+        postId: post._id.toString(),
+        userId: req.user.id,
+    }, { priority: 2 }).catch(err => console.error('Failed to queue image optimization:', err.message))));
+
     const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar', 'reputation', 'rating']);
 
     const io = req.app.get('io');

@@ -4,39 +4,7 @@ const ContactRequest = require('../models/ContactRequest');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const { createNotification } = require('../controllers/notificationController');
-const cloudinary = require('../config/cloudinary');
 const { db } = require('../config/firebase');
-
-/**
- * Delete old images from Cloudinary that are no longer referenced
- */
-const cleanupOrphanedImages = async () => {
-    try {
-        // Get all active post image URLs
-        const activePosts = await Post.find({ 
-            images: { $exists: true, $ne: [] } 
-        }).select('images');
-        
-        // Collect all referenced image URLs
-        const referencedUrls = new Set();
-        for (const post of activePosts) {
-            if (post.images) {
-                post.images.forEach(url => {
-                    if (url && url.includes('cloudinary')) {
-                        referencedUrls.add(url);
-                    }
-                });
-            }
-        }
-        
-        // Note: Full Cloudinary cleanup requires listing all resources
-        // This is just a placeholder - in production you'd compare against Cloudinary folder
-        console.log(`[Cron] Found ${referencedUrls.size} active images`);
-        
-    } catch (error) {
-        console.error('[Cron] Error cleaning up images:', error);
-    }
-};
 
 /**
  * Auto-archive completed posts after 7 days of completion

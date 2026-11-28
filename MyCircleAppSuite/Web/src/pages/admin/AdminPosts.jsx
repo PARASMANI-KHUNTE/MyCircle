@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
 import Button from '../../components/ui/Button';
 import { useDialog } from '../../hooks/useDialog';
+import { useToast } from '../../components/ui/Toast';
 
 const MODERATION_STATUSES = ['visible', 'hidden', 'removed'];
 
@@ -13,8 +15,13 @@ const ACTIONS = [
 
 export default function AdminPosts() {
     const { showAlert, showConfirm } = useDialog();
+    const { success } = useToast();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const statusParam = searchParams.get('moderationStatus');
     const [q, setQ] = useState('');
-    const [moderationStatus, setModerationStatus] = useState('');
+    const [moderationStatus, setModerationStatus] = useState(
+        MODERATION_STATUSES.includes(statusParam) ? statusParam : ''
+    );
     const [page, setPage] = useState(1);
     const [data, setData] = useState({ posts: [], total: 0, totalPages: 1 });
     const [loading, setLoading] = useState(true);
@@ -56,6 +63,7 @@ export default function AdminPosts() {
         setUpdating(post._id);
         try {
             await api.patch(`/admin/posts/${post._id}/moderation`, { moderationStatus: status });
+            success(`Post marked ${status}`);
             await load();
         } catch (e) {
             showAlert(e?.response?.data?.msg || e?.response?.data?.errors?.[0]?.message || 'Failed to update moderation status', 'Error');
@@ -76,7 +84,12 @@ export default function AdminPosts() {
                 />
                 <select
                     value={moderationStatus}
-                    onChange={(e) => { setModerationStatus(e.target.value); setPage(1); }}
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        setModerationStatus(value);
+                        setPage(1);
+                        setSearchParams(value ? { moderationStatus: value } : {});
+                    }}
                     style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#e2e8f0' }}
                 >
                     <option value="">All statuses</option>

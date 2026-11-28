@@ -38,6 +38,7 @@ jest.mock('react-native-reanimated', () => {
 
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 import api from '../src/services/api';
 import EditPostScreen from '../src/screens/EditPostScreen';
@@ -86,9 +87,14 @@ describe('EditPostScreen', () => {
 
     const mount = async () => {
         let tree!: ReactTestRenderer.ReactTestRenderer;
+        const queryClient = new QueryClient({
+            defaultOptions: { queries: { retry: false, gcTime: 0 } },
+        });
         await ReactTestRenderer.act(async () => {
             tree = ReactTestRenderer.create(
-                <EditPostScreen navigation={navigation} route={{ params: { id: 'post-1' } }} />
+                <QueryClientProvider client={queryClient}>
+                    <EditPostScreen navigation={navigation} route={{ params: { id: 'post-1' } }} />
+                </QueryClientProvider>
             );
             await flush();
         });

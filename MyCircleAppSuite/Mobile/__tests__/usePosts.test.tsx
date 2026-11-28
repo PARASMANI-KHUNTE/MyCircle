@@ -7,7 +7,7 @@ import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import api from '../src/services/api';
-import { usePosts } from '../src/hooks/usePosts';
+import { invalidatePosts, usePosts } from '../src/hooks/usePosts';
 
 const HookHarness = (props: any) => {
     usePosts(props);
@@ -74,6 +74,19 @@ describe('usePosts', () => {
             queryClient.clear();
             await flush();
         });
+    });
+
+    it('invalidates cached post feeds after a mutation', async () => {
+        const queryClient = new QueryClient({
+            defaultOptions: { queries: { retry: false, gcTime: 0 } },
+        });
+        queryClient.setQueryData(['posts', { limit: 20 }], { pages: [], pageParams: [1] });
+
+        await invalidatePosts(queryClient);
+
+        const cachedQuery = queryClient.getQueryCache().findAll({ queryKey: ['posts'] })[0];
+        expect(cachedQuery?.state.isInvalidated).toBe(true);
+        queryClient.clear();
     });
 
     it('appends older pages and stops when x-has-more is false', async () => {

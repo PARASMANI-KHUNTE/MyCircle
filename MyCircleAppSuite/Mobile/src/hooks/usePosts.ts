@@ -1,4 +1,4 @@
-import { InfiniteData, keepPreviousData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { InfiniteData, keepPreviousData, useInfiniteQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import api from '../services/api';
 import { getPageMeta } from '../utils/pagination';
@@ -110,6 +110,10 @@ export const usePosts = (options: UsePostsOptions = {}) => {
         isFetchingMore: query.isFetchingNextPage,
     };
 };
+
+/** Invalidate every feed query after a post is created, edited, deleted or toggled. */
+export const invalidatePosts = (queryClient: QueryClient) =>
+    queryClient.invalidateQueries({ queryKey: ['posts'] });
 
 /** Adds a freshly created/streamed post to the first cached feed page. */
 export const prependPostToFeed = (

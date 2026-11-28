@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Sty
 import ThemedAlert from '../components/ui/ThemedAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, LogOut, MessageCircle, Clock, Edit, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -11,12 +12,14 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
 import { usePagedList } from '../hooks/usePagedList';
+import { invalidatePosts } from '../hooks/usePosts';
 import PaginationFooter from '../components/ui/PaginationFooter';
 
 
 const ProfileScreen = ({ navigation, route }: any) => {
     const { user: authUser, logout } = useAuth();
     const { colors, isDark } = useTheme();
+    const queryClient = useQueryClient();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -184,6 +187,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 setAlertConfig(prev => ({ ...prev, visible: false }));
                 try {
                     await api.delete(`/posts/${postId}`);
+                    await invalidatePosts(queryClient);
                     refreshMyPosts();
                     fetchProfile();
                 } catch (error) {

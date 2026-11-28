@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -31,7 +31,10 @@ import {
 } from 'lucide-react-native';
 import { getAvatarUrl } from '../utils/avatar';
 import { formatDurationMinutesLong } from '../utils/formatDuration';
-import api, { BASE_URL } from '../services/api';
+import api from '../services/api';
+import { formatPostPrice, reconcileLikes, resolveShareLink } from '../utils/postInteractions';
+import { invalidatePosts } from '../hooks/usePosts';
+import { useQueryClient } from '@tanstack/react-query';
 import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -50,6 +53,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const auth = useAuth() as any;
     const { colors, isDark } = useTheme();
     const insets = useSafeAreaInsets();
+    const queryClient = useQueryClient();
 
     const [post, setPost] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -57,6 +61,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         'none' | 'pending' | 'accepted' | 'approved' | 'rejected' | 'expired'
     >('none');
     const [likes, setLikes] = useState<string[]>([]);
+    const likePendingRef = useRef(false);
     const [comments, setComments] = useState<any[]>([]);
 
     // AI State
@@ -120,34 +125,49 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const handleLike = async () => {
         if (!auth.user)
             return Alert.alert('Login Required', 'Please login to like posts');
+        if (likePendingRef.current) return;
+
+        likePendingRef.current = true;
+        const previousLikes = likes;
+        const optimisticLikes = isLiked
+            ? likes.filter((uid) => uid !== auth.user._id)
+            : [...likes, auth.user._id];
+        setLikes(optimisticLikes);
+
         try {
-            await api.post(`/posts/${id}/like`);
-            setLikes(
-                isLiked
-                    ? likes.filter((uid) => uid !== auth.user._id)
-                    : [...likes, auth.user._id]
-            );
+            const response = await api.post(`/posts/${id}/like`);
+            setLikes(reconcileLikes(previousLikes, auth.user._id, response.data, previousLikes));
         } catch {
+            setLikes(previousLikes);
             Alert.alert('Error', 'Failed to update like');
+        } finally {
+            likePendingRef.current = false;
         }
     };
 
     const handleShare = async () => {
-        try {
-            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
-            const postUrl = `${serverBase}/post/${id}`;
-            const shareTitle = post?.title || 'Check out this post on MyCircle';
-            const shareMessage = `Check out "${shareTitle}" on MyCircle: ${postUrl}`;
+        const shareTitle = post?.title || 'Check out this post on MyCircle';
+        let postUrl: string | null = null;
 
-            const result = await Share.share({
+        try {
+            const response = await api.post(`/posts/${id}/share`);
+            postUrl = resolveShareLink(response.data, id);
+            if (!postUrl) {
+                Alert.alert('Error', 'Share link is unavailable.');
+                return;
+            }
+        } catch {
+            Alert.alert('Error', 'Failed to create share link.');
+            return;
+        }
+
+        try {
+            const shareMessage = `Check out "${shareTitle}" on MyCircle: ${postUrl}`;
+            await Share.share({
                 title: shareTitle,
                 message: Platform.OS === 'android' ? shareMessage : shareTitle,
                 url: postUrl,
             });
-
-            if (result.action === Share.sharedAction) {
-                api.post(`/posts/${id}/share`).catch(() => {});
-            }
         } catch (err: any) {
             if (
                 err?.message &&
@@ -155,8 +175,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                 !err.message.includes('cancelled')
             ) {
                 try {
-                    const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
-                    Clipboard.setString(`${serverBase}/post/${id}`);
+                    Clipboard.setString(postUrl);
                     Alert.alert('Link Copied', 'Post link copied to clipboard!');
                 } catch {
                     Alert.alert('Error', 'Failed to share');
@@ -217,6 +236,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const handleDeletePost = async () => {
         try {
             await api.delete(`/posts/${id}`);
+            await invalidatePosts(queryClient);
             Alert.alert('Deleted', 'Post removed');
             navigation.goBack();
         } catch {
@@ -270,12 +290,7 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
     if (!post) return null;
 
-    const formattedPrice =
-        post.price !== undefined && post.price !== '' && post.price !== null
-            ? `₹${post.price}`
-            : post.acceptsBarter
-            ? 'Barter / Exchange'
-            : 'Contact for price';
+    const formattedPrice = formatPostPrice(post);
 
     return (
         <KeyboardAvoidingView

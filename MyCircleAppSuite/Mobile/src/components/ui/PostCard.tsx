@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -16,7 +16,8 @@ import { MapPin, Heart, Share2, ArrowRight } from 'lucide-react-native';
 import { getAvatarUrl } from '../../utils/avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import api, { BASE_URL } from '../../services/api';
+import api from '../../services/api';
+import { formatPostPrice, reconcileLikes, resolveShareLink } from '../../utils/postInteractions';
 import { getPlaceholderSuggestions } from '../../services/aiService';
 import GenerativePlaceholder from './GenerativePlaceholder';
 import TrustBadge from './TrustBadge';
@@ -60,6 +61,7 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
     const { user: currentUser } = useAuth();
     const { colors, isDark } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
+    const likePendingRef = useRef(false);
     const [aiSuggestion, setAiSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
 
     const checkShared = useCallback(async () => {
@@ -82,40 +84,53 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
             Alert.alert('Login Required', 'Please login to save favorite items.');
             return;
         }
+        if (likePendingRef.current) return;
 
-        const newLikes = isLiked
+        likePendingRef.current = true;
+        const previousLikes = likes;
+        const optimisticLikes = isLiked
             ? likes.filter((id) => id !== currentUser._id)
             : [...likes, currentUser._id];
-        setLikes(newLikes);
+        setLikes(optimisticLikes);
 
         try {
-            await api.post(`/posts/${post._id}/like`);
+            const response = await api.post(`/posts/${post._id}/like`);
+            setLikes(reconcileLikes(previousLikes, currentUser._id, response.data, previousLikes));
         } catch {
-            setLikes(likes);
+            setLikes(previousLikes);
+            Alert.alert('Error', 'Failed to update like');
+        } finally {
+            likePendingRef.current = false;
         }
     };
 
     const handleShare = async () => {
-        try {
-            const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
-            const postUrl = `${serverBase}/post/${post._id}`;
-            const shareTitle = post.title || 'Check out this listing on MyCircle';
-            const shareMessage = `Check out "${shareTitle}" on MyCircle Marketplace: ${postUrl}`;
+        const shareTitle = post.title || 'Check out this listing on MyCircle';
+        let postUrl: string | null = null;
 
-            const result = await Share.share({
+        try {
+            const response = await api.post(`/posts/${post._id}/share`);
+            postUrl = resolveShareLink(response.data, post._id);
+            if (!postUrl) {
+                Alert.alert('Error', 'Share link is unavailable.');
+                return;
+            }
+        } catch {
+            Alert.alert('Error', 'Failed to create share link.');
+            return;
+        }
+
+        try {
+            const shareMessage = `Check out "${shareTitle}" on MyCircle Marketplace: ${postUrl}`;
+            await Share.share({
                 title: shareTitle,
                 message: Platform.OS === 'android' ? shareMessage : shareTitle,
                 url: postUrl,
             });
-
-            if (result.action === Share.sharedAction) {
-                api.post(`/posts/${post._id}/share`).catch(() => {});
-            }
         } catch (err: any) {
             if (err?.message && !err.message.includes('dismissed') && !err.message.includes('cancelled')) {
                 try {
-                    const serverBase = (BASE_URL || '').replace(/\/api\/?$/, '');
-                    Clipboard.setString(`${serverBase}/post/${post._id}`);
+                    Clipboard.setString(postUrl);
                     Alert.alert('Link Copied', 'Listing link copied to clipboard!');
                 } catch {
                     Alert.alert('Error', 'Failed to share');
@@ -139,20 +154,6 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
             default:
                 return colors.primary;
         }
-    };
-
-    const formatPrice = () => {
-        if (post.price !== undefined && post.price !== '' && post.price !== null) {
-            const numeric = Number(post.price);
-            if (!isNaN(numeric)) {
-                return `₹${numeric.toLocaleString()}`;
-            }
-            return `₹${post.price}`;
-        }
-        if (post.acceptsBarter) {
-            return 'Barter';
-        }
-        return 'Contact';
     };
 
     const heroImage = post.images && post.images.length > 0 ? post.images[0] : null;
@@ -250,7 +251,7 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
                 {/* Price and Category Tag */}
                 <View style={styles.priceRow}>
                     <Text style={[styles.priceText, { color: colors.primary }]}>
-                        {formatPrice()}
+                        {formatPostPrice(post)}
                     </Text>
                     {post.distance && (
                         <View style={styles.distanceTag}>

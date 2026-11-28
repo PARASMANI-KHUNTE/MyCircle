@@ -6,7 +6,10 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { MapPin, Check, Map, Crosshair, X, Camera, Briefcase, ShoppingBag, Package, ArrowRight, ArrowLeft, Clock, Info, Send, AlertTriangle } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+import { invalidatePosts } from '../hooks/usePosts';
+import { normalizePriceInput } from '../utils/postInteractions';
 import { useLocation } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatErrorMessage } from '../utils/errorMessage';
@@ -29,6 +32,7 @@ import Stepper from '../components/ui/Stepper';
 import { DARK_TILE_URL, LABELS_TILE_URL, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
 
 const CreatePostScreen = ({ navigation }: any) => {
+    const queryClient = useQueryClient();
     const { colors, isDark } = useTheme();
     const { requestLocation } = useLocation();
     const webviewRef = useRef<any>(null);
@@ -269,10 +273,8 @@ const CreatePostScreen = ({ navigation }: any) => {
             formData.append('latitude', locationFields.latitude.toString());
             formData.append('longitude', locationFields.longitude.toString());
             formData.append('locationSource', locationFields.locationSource);
-            const cleanPrice = String(price || '').replace(/[^0-9.]/g, '');
-            const parsedPrice = parseFloat(cleanPrice);
-            const validPrice = (!isNaN(parsedPrice) && parsedPrice >= 0) ? String(parsedPrice) : '0';
-            formData.append('price', validPrice);
+            const normalizedPrice = normalizePriceInput(price);
+            if (normalizedPrice !== undefined) formData.append('price', normalizedPrice);
             if (availability.trim()) formData.append('availability', availability.trim());
             formData.append('duration', duration.toString());
             formData.append('isUrgent', isUrgent.toString());
@@ -284,6 +286,7 @@ const CreatePostScreen = ({ navigation }: any) => {
             });
 
             await api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            await invalidatePosts(queryClient);
 
             isSubmittingRef.current = true;
             showAlert('Success', 'Post created successfully!', () => {

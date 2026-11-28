@@ -2,7 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Modal, Pressable } from 'react-native';
 import { Alert } from '../utils/alert';
 import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+import { invalidatePosts } from '../hooks/usePosts';
 import PostCard from '../components/ui/PostCard';
 import { Trash, EyeOff, Eye, ArrowLeft, BarChart2, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +14,7 @@ import PaginationFooter from '../components/ui/PaginationFooter';
 
 const MyPostsScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
+    const queryClient = useQueryClient();
     const {
         items: posts,
         setItems: setPosts,
@@ -44,6 +47,7 @@ const MyPostsScreen = ({ navigation }: any) => {
     const handleStatusChange = async (postId: string, newStatus: string) => {
         try {
             await api.patch(`/posts/${postId}/status`, { status: newStatus });
+            await invalidatePosts(queryClient);
             fetchMyPosts();
         } catch {
             Alert.alert('Error', 'Failed to update status');
@@ -62,6 +66,7 @@ const MyPostsScreen = ({ navigation }: any) => {
                     onPress: async () => {
                         try {
                             await api.delete(`/posts/${postId}`);
+                            await invalidatePosts(queryClient);
                             setPosts((previous: any[]) => previous.filter((p) => p._id !== postId));
                         } catch {
                             Alert.alert('Error', 'Failed to delete post');
@@ -95,7 +100,12 @@ const MyPostsScreen = ({ navigation }: any) => {
 
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.postCardWrapper}>
-            <PostCard post={item} isOwnPost={true} navigation={navigation} />
+            <PostCard
+                post={item}
+                isOwnPost={true}
+                navigation={navigation}
+                onPress={() => navigation.navigate('PostDetails', { id: item._id })}
+            />
 
             <View style={[styles.actionsToolbar, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.actionGroup}>

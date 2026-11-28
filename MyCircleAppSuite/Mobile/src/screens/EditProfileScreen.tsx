@@ -7,18 +7,21 @@ import { ArrowLeft, Camera, User, MapPin, Briefcase, Phone, Check } from 'lucide
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { buildContactPhone, parseContactPhone, resolveAvatarUri } from '../utils/profileData';
 
 const EditProfileScreen = ({ navigation }: any) => {
     const auth = useAuth() as any;
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [avatar, setAvatar] = useState<any>(null);
+    const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         displayName: '',
         bio: '',
         location: '',
         skills: '',
-        phone: '',
+        contactPhone: '',
         countryCode: '+91'
     });
 
@@ -27,20 +30,26 @@ const EditProfileScreen = ({ navigation }: any) => {
     }, []);
 
     const fetchProfile = async () => {
+        setLoading(true);
+        setLoadError(null);
         try {
             const res = await api.get('/user/profile');
             const { displayName, bio, location, skills } = res.data;
+            const phoneParts = parseContactPhone(res.data.contactPhone);
             setFormData({
                 displayName: displayName || '',
                 bio: bio || '',
                 location: location || '',
                 skills: skills ? skills.join(', ') : '',
-                phone: res.data.phone || '',
-                countryCode: res.data.countryCode || '+91'
+                contactPhone: phoneParts.number,
+                countryCode: phoneParts.countryCode,
             });
+            setProfileAvatar(res.data.avatar || null);
+            setAvatar(null);
             setLoading(false);
         } catch (err) {
             console.error(err);
+            setLoadError('Could not load your profile. Please retry before making changes.');
             setLoading(false);
         }
     };
@@ -64,6 +73,7 @@ const EditProfileScreen = ({ navigation }: any) => {
 
 
     const handleSave = async () => {
+        if (loadError) return;
         setSaving(true);
         try {
             const formDataToSend = new FormData();
@@ -77,27 +87,8 @@ const EditProfileScreen = ({ navigation }: any) => {
             formDataToSend.append('displayName', formData.displayName);
             formDataToSend.append('bio', formData.bio);
             formDataToSend.append('location', formData.location);
-            // Combine code and phone for storage or save separately
-            if (formData.phone) {
-                // Ensure no duplicates of country code if user typed it
-                formDataToSend.append('phone', formData.countryCode + formData.phone);
-                formDataToSend.append('countryCode', formData.countryCode);
-                // Also append as contactPhone as that is used by Post model often
-                formDataToSend.append('contactPhone', formData.countryCode + formData.phone);
-            }
-            // Combine code and phone for storage or save separately?
-            // User schema usually has just 'phone'. Let's save both or combined.
-            // Requirement: "add mobile please add select country to add phone number .accordingly "
-            // Storing combined is better for uniqueness.
-            // But if we want to edit it later, we need to split it.
-            // Let's assume we save 'phone' as full number and 'countryCode' as separate field if possible, or just phone.
-            // Since backend schema isn't fully visible, I will append 'contactPhone' if that's the field name. 
-            // In postController it used 'contactPhone'. In User model??
-            // I should check User model. Assuming 'phone' or 'contactPhone'.
-            // Let's use 'contactPhone' for consistency with Post, or 'phone' if generic.
-            // EditProfile usually updates User.
-            formDataToSend.append('phone', formData.countryCode + formData.phone);
-            formDataToSend.append('countryCode', formData.countryCode);
+            // The user model stores one canonical contactPhone; do not send duplicate fields.
+            formDataToSend.append('contactPhone', buildContactPhone(formData.countryCode, formData.contactPhone));
 
             const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
             skillsArray.forEach(skill => {
@@ -127,6 +118,17 @@ const EditProfileScreen = ({ navigation }: any) => {
         </View>
     );
 
+    if (loadError) return (
+        <SafeAreaView style={styles.container}>
+            <View style={styles.loadErrorContainer}>
+                <Text style={styles.loadErrorText}>{loadError}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={fetchProfile}>
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    );
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -148,7 +150,7 @@ const EditProfileScreen = ({ navigation }: any) => {
                 </View>
                 <TouchableOpacity
                     onPress={handleSave}
-                    disabled={saving}
+                    disabled={saving || !!loadError}
                     style={styles.saveButton}
                 >
                     {saving ? (
@@ -167,7 +169,11 @@ const EditProfileScreen = ({ navigation }: any) => {
                     <View style={styles.avatarWrapper}>
                         <View style={styles.avatarContainer}>
                             <Image
-                                source={{ uri: avatar?.uri || auth?.user?.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${auth?.user?.displayName}` }}
+                                source={{ uri: resolveAvatarUri(
+                                    avatar?.uri || profileAvatar,
+                                    auth?.user?.avatar,
+                                    formData.displayName || auth?.user?.displayName
+                                ) }}
                                 style={styles.avatarImage}
                             />
                         </View>
@@ -205,8 +211,8 @@ const EditProfileScreen = ({ navigation }: any) => {
                                         <Phone size={20} color="#64748b" />
                                         <TextInput
                                             style={styles.input}
-                                            value={formData.phone}
-                                            onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text.replace(/[^0-9]/g, '') }))}
+                                            value={formData.contactPhone}
+                                            onChangeText={(text) => setFormData(prev => ({ ...prev, contactPhone: text.replace(/[^0-9]/g, '') }))}
                                             placeholder="Phone Number"
                                             placeholderTextColor="#64748b"
                                             keyboardType="phone-pad"
@@ -298,6 +304,28 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#0a0a0a',
+    },
+    loadErrorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    loadErrorText: {
+        color: '#ffffff',
+        fontSize: 15,
+        textAlign: 'center',
+        marginBottom: 16,
+    },
+    retryButton: {
+        backgroundColor: '#af25f4',
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 24,
+    },
+    retryButtonText: {
+        color: '#ffffff',
+        fontWeight: '700',
     },
     header: {
         paddingHorizontal: 16,

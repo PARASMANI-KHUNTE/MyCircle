@@ -13,6 +13,7 @@ import GenerativePlaceholder from '../components/ui/GenerativePlaceholder';
 import TrustBadge from '../components/ui/TrustBadge';
 import { usePagedList } from '../hooks/usePagedList';
 import { invalidatePosts } from '../hooks/usePosts';
+import { formatRating, normalizeProfileStats, resolveAvatarUri, type ProfileViewStats } from '../utils/profileData';
 import PaginationFooter from '../components/ui/PaginationFooter';
 
 
@@ -23,7 +24,12 @@ const ProfileScreen = ({ navigation, route }: any) => {
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [stats, setStats] = useState({ posts: 0, requests: 0, rating: 0 });
+    const [stats, setStats] = useState<ProfileViewStats>({
+        posts: 0,
+        requests: null,
+        rating: null,
+        reviews: 0,
+    });
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const {
         items: myPosts,
@@ -56,6 +62,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
     const userId = route.params?.userId || authUser?._id || authUser?.id;
     const isOwnProfile = userId === (authUser?._id || authUser?.id);
+    const avatarUri = resolveAvatarUri(user?.avatar, authUser?.avatar, user?.displayName);
 
     const fetchProfile = useCallback(async () => {
         try {
@@ -63,21 +70,13 @@ const ProfileScreen = ({ navigation, route }: any) => {
             const res = await api.get(endpoint);
             setUser(res.data);
 
+            let statsResponse;
             if (isOwnProfile) {
-                const statsRes = await api.get('/user/stats');
-                setStats({
-                    posts: statsRes.data.stats?.totalPosts || 0,
-                    requests: statsRes.data.stats?.receivedRequests || 0,
-                    rating: typeof statsRes.data.rating === 'number' ? statsRes.data.rating : (Number(res.data?.rating) || 0)
-                });
+                statsResponse = (await api.get('/user/stats')).data;
                 refreshMyPosts();
-            } else {
-                setStats({
-                    posts: res.data.postsCount || 0,
-                    requests: res.data.requestsCount || 0,
-                    rating: typeof res.data.rating === 'number' ? res.data.rating : 0
-                });
             }
+
+            setStats(normalizeProfileStats(res.data, statsResponse));
         } catch (error) {
             console.error(error);
             setAlertConfig({
@@ -339,14 +338,13 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.profileSection}>
                     <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
                         <View style={styles.avatarWrapper}>
-                            <Image
-                                source={{ uri: user.avatar || `https://api.dicebear.com/7.x/avataaars/png?seed=${user.displayName}` }}
-                                style={styles.avatar}
-                            />
-                            <View style={styles.onlineBadge} />
+                            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                            {user.isOnline === true && <View style={styles.onlineBadge} />}
                         </View>
                         <Text style={[styles.name, { color: colors.text }]}>{user.displayName}</Text>
-                        <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
+                        {isOwnProfile && !!user.email && (
+                            <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
+                        )}
                         <View style={styles.trustBadgeContainer}>
                             <TrustBadge
                                 score={user.reputation?.trustScore ?? 50}
@@ -365,12 +363,14 @@ const ProfileScreen = ({ navigation, route }: any) => {
                             <Text style={[styles.statLabel, { color: '#af25f4' }]}>POSTS</Text>
                         </View>
                         <View style={[styles.statTile, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
-                            <Text style={[styles.statValue, { color: colors.text }]}>{stats.requests}</Text>
+                            <Text style={[styles.statValue, { color: colors.text }]}>
+                                {stats.requests === null ? '—' : stats.requests}
+                            </Text>
                             <Text style={[styles.statLabel, { color: '#3b82f6' }]}>REQUESTS</Text>
                         </View>
                         <View style={[styles.statTile, { backgroundColor: colors.card, borderColor: colors.borderSoft }]}>
-                            <Text style={[styles.statValue, { color: '#22c55e' }]}>
-                                {stats.rating > 0 ? stats.rating.toFixed(1) : (user?.reviews > 0 ? '0.0' : '5.0')}
+                            <Text style={[styles.statValue, styles.statValueCompact, { color: '#22c55e' }]}>
+                                {formatRating(stats)}
                             </Text>
                             <Text style={[styles.statLabel, { color: '#22c55e' }]}>RATING</Text>
                         </View>
@@ -395,6 +395,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 </Animated.View>
 
                 {/* My Posts Section */}
+                {isOwnProfile && (
                 <Animated.View entering={FadeInDown.delay(500).duration(800).springify()} style={styles.postsSection}>
                     <View style={styles.sectionHeader}>
                         <Text style={[styles.sectionTitle, { color: colors.text }]}>My Posts</Text>
@@ -413,13 +414,15 @@ const ProfileScreen = ({ navigation, route }: any) => {
                     {isOwnProfile && myPosts.length > 0 ? (
                         <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
                             {myPosts.map((post) => (
-                                <TouchableOpacity
+                                <View
                                     key={post._id}
                                     style={viewMode === 'grid' ? styles.gridItem : styles.listItem}
-                                    onPress={() => navigation.navigate('PostDetails', { id: post._id })}
                                 >
                                     {viewMode === 'grid' ? (
-                                        <View style={[styles.gridCard, { borderColor: getTypeColor(post.type) }]}>
+                                        <TouchableOpacity
+                                            onPress={() => navigation.navigate('PostDetails', { id: post._id })}
+                                            style={[styles.gridCard, { borderColor: getTypeColor(post.type) }]}
+                                        >
                                             {getPostImage(post) ? (
                                                 <Image
                                                     source={{ uri: getPostImage(post)! }}
@@ -446,26 +449,31 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                                 </View>
                                                 {renderExpirationBar(post)}
                                             </View>
-                                        </View>
+                                        </TouchableOpacity>
                                     ) : (
                                         <View style={[styles.listCard, { backgroundColor: colors.card, borderColor: colors.borderSoft, borderLeftColor: getTypeColor(post.type) }]}>
-                                            {getPostImage(post) ? (
-                                                <Image source={{ uri: getPostImage(post)! }} style={styles.listImage} />
-                                            ) : (
-                                                <GenerativePlaceholder
-                                                    id={post._id}
-                                                    type={post.type}
-                                                    style={styles.listImage}
-                                                    showIcon={false}
-                                                    title={post.title}
-                                                    description={post.description}
-                                                />
-                                            )}
-                                            <View style={styles.listContent}>
-                                                <Text style={[styles.typeLabel, { color: getTypeColor(post.type) }]}>{post.type.toUpperCase()}</Text>
-                                                <Text style={[styles.listTitle, { color: colors.text }]} numberOfLines={1}>{post.title}</Text>
-                                                {renderExpirationBar(post)}
-                                            </View>
+                                            <TouchableOpacity
+                                                style={styles.listNavigationArea}
+                                                onPress={() => navigation.navigate('PostDetails', { id: post._id })}
+                                            >
+                                                {getPostImage(post) ? (
+                                                    <Image source={{ uri: getPostImage(post)! }} style={styles.listImage} />
+                                                ) : (
+                                                    <GenerativePlaceholder
+                                                        id={post._id}
+                                                        type={post.type}
+                                                        style={styles.listImage}
+                                                        showIcon={false}
+                                                        title={post.title}
+                                                        description={post.description}
+                                                    />
+                                                )}
+                                                <View style={styles.listContent}>
+                                                    <Text style={[styles.typeLabel, { color: getTypeColor(post.type) }]}>{post.type.toUpperCase()}</Text>
+                                                    <Text style={[styles.listTitle, { color: colors.text }]} numberOfLines={1}>{post.title}</Text>
+                                                    {renderExpirationBar(post)}
+                                                </View>
+                                            </TouchableOpacity>
                                             <View style={styles.listActionArea}>
                                                 <TouchableOpacity onPress={() => handleDeletePost(post._id)} style={styles.listActionBtn}>
                                                     <Trash2 size={16} color="#ef4444" />
@@ -473,13 +481,14 @@ const ProfileScreen = ({ navigation, route }: any) => {
                                             </View>
                                         </View>
                                     )}
-                                </TouchableOpacity>
+                                </View>
                             ))}
                         </View>
                     ) : isOwnProfile && (
                         <Text style={styles.emptyText}>You haven't posted anything yet.</Text>
                     )}
                 </Animated.View>
+                )}
 
                 {isOwnProfile && myPosts.length > 0 && (
                     <PaginationFooter
@@ -680,6 +689,9 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         marginBottom: 2,
     },
+    statValueCompact: {
+        fontSize: 13,
+    },
     statLabel: {
         fontSize: 10,
         fontWeight: '700',
@@ -838,6 +850,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#ffffff',
+    },
+    listNavigationArea: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     listActionArea: {
         flexDirection: 'row',

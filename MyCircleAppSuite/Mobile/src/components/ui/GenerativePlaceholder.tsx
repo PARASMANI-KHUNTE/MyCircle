@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle, Pattern } from 'react-native-svg';
 import { Briefcase, Wrench, ShoppingBag, Zap } from 'lucide-react-native';
@@ -16,19 +16,7 @@ interface GenerativePlaceholderProps {
     description?: string;
 }
 
-const GenerativePlaceholder = ({ id, type, style, showIcon = true, iconSize = 80, aiIcon, aiGifKeyword, title, description }: GenerativePlaceholderProps) => {
-    const [fetchedIcon, setFetchedIcon] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!aiIcon && !aiGifKeyword && title) {
-            const { getPlaceholderSuggestions } = require('../../services/aiService');
-            getPlaceholderSuggestions(title, description || '').then((res: any) => {
-                setFetchedIcon(res.icon);
-            });
-        }
-    }, [id, aiIcon, aiGifKeyword, title, description]);
-
-
+const GenerativePlaceholder = ({ id, type, style, showIcon = true, iconSize = 80, aiIcon }: GenerativePlaceholderProps) => {
     const getTypeColor = () => {
         switch (type?.toLowerCase()) {
             case 'job': return Palette.info;
@@ -57,7 +45,7 @@ const GenerativePlaceholder = ({ id, type, style, showIcon = true, iconSize = 80
     ];
 
     const getCategoryIcon = () => {
-        const iconName = aiIcon || fetchedIcon || '';
+        const iconName = aiIcon || '';
         const props = { size: iconSize, color: '#fff', opacity: 0.15 };
 
 

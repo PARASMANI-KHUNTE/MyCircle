@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatPostPrice, reconcileLikes, resolveShareLink } from '../../utils/postInteractions';
-import { getPlaceholderSuggestions } from '../../services/aiService';
+import { getLocalPlaceholderSuggestion } from '../../utils/aiPlaceholders';
 import GenerativePlaceholder from './GenerativePlaceholder';
 import TrustBadge from './TrustBadge';
 
@@ -62,7 +62,10 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
     const { colors, isDark } = useTheme();
     const [likes, setLikes] = useState(post.likes || []);
     const likePendingRef = useRef(false);
-    const [aiSuggestion, setAiSuggestion] = useState<{ icon: string; gifKeywords: string[] } | null>(null);
+    const aiSuggestion = useMemo(
+        () => getLocalPlaceholderSuggestion(post.title, post.description, post.type),
+        [post.title, post.description, post.type]
+    );
 
     const checkShared = useCallback(async () => {
         try {
@@ -71,11 +74,8 @@ const PostCard = ({ post, onPress }: PostCardProps) => {
     }, []);
 
     useEffect(() => {
-        if (!post.images || post.images.length === 0) {
-            getPlaceholderSuggestions(post.title, post.description).then(setAiSuggestion);
-        }
         checkShared();
-    }, [post._id, post.title, post.description, post.images, checkShared]);
+    }, [checkShared]);
 
     const isLiked = currentUser && likes.includes(currentUser._id);
 

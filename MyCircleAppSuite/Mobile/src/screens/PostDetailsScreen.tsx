@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -43,7 +43,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ensureConversationWithUser } from '../services/chat';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getPostInsights, getPostExplanation, getPlaceholderSuggestions } from '../services/aiService';
+import { getPostInsights, getPostExplanation } from '../services/aiService';
+import { getAiListItems, getLocalPlaceholderSuggestion } from '../utils/aiPlaceholders';
 
 import ActionSheet, { ActionItem } from '../components/ui/ActionSheet';
 import ImagePreviewModal from '../components/ui/ImagePreviewModal';
@@ -85,10 +86,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
         description?: string;
         actions: ActionItem[];
     }>({ actions: [] });
-    const [aiPlaceholderSuggestion, setAiPlaceholderSuggestion] = useState<{
-        icon: string;
-        gifKeywords: string[];
-    } | null>(null);
     const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -96,6 +93,10 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     const isOwnPost = auth?.user?._id === post?.user?._id;
     const hasChatAccess =
         contactRequestStatus === 'accepted' || contactRequestStatus === 'approved';
+    const aiPlaceholderSuggestion = useMemo(
+        () => getLocalPlaceholderSuggestion(post?.title, post?.description, post?.type),
+        [post?.title, post?.description, post?.type]
+    );
 
     const fetchPostDetails = useCallback(async () => {
         try {
@@ -118,14 +119,6 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
     useEffect(() => {
         fetchPostDetails();
     }, [fetchPostDetails]);
-
-    useEffect(() => {
-        if (post && (!post.images || post.images.length === 0)) {
-            getPlaceholderSuggestions(post.title, post.description).then(
-                setAiPlaceholderSuggestion
-            );
-        }
-    }, [post]);
 
     const handleLike = async () => {
         if (!auth.user)
@@ -316,6 +309,8 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
 
     const formattedPrice = formatPostPrice(post);
     const contactAction = getContactActionState(isOwnPost, contactRequestStatus);
+    const aiListItems = getAiListItems(aiResult);
+    const aiListItemTextStyle = { color: colors.textSecondary };
 
     return (
         <KeyboardAvoidingView
@@ -735,6 +730,18 @@ const PostDetailsScreen = ({ route, navigation }: any) => {
                                         >
                                             {aiResult.details}
                                         </Text>
+                                        {aiListItems.length > 0 && (
+                                            <View style={styles.aiList}>
+                                                {aiListItems.map((item, index) => (
+                                                    <Text
+                                                        key={`${index}-${item}`}
+                                                        style={[styles.aiListItem, aiListItemTextStyle]}
+                                                    >
+                                                        {`• ${item}`}
+                                                    </Text>
+                                                ))}
+                                            </View>
+                                        )}
                                     </Animated.View>
                                 ) : (
                                     <Text
@@ -1121,6 +1128,14 @@ const styles = StyleSheet.create({
     aiPrompt: {
         fontSize: 13,
         fontStyle: 'italic',
+    },
+    aiList: {
+        marginTop: 8,
+        gap: 4,
+    },
+    aiListItem: {
+        fontSize: 13,
+        lineHeight: 19,
     },
     commentsSection: {
         marginTop: 24,

@@ -208,30 +208,58 @@ exports.getUserStats = async (req, res, next) => {
     }
 };
 
+const DEFAULT_NOTIFICATION_CATEGORIES = { contactRequests: true, messages: true, postExpiry: true };
+const DEFAULT_QUIET_HOURS = { enabled: false, start: '22:00', end: '07:00', timezone: 'UTC' };
+const MAX_FEED_PRESETS = 20;
+
+const normalizeFeedPreset = (preset) => ({
+    name: String(preset.name).trim(),
+    type: preset.type || 'all',
+    radius: preset.radius ?? 50,
+    barterOnly: preset.barterOnly ?? false,
+    urgentOnly: preset.urgentOnly ?? false,
+    location: preset.location || '',
+});
+
 // @desc    Update user settings
 // @route   PUT /api/user/settings
 // @access  Private
 exports.updateUserSettings = async (req, res, next) => {
     try {
-        const { emailNotifications, profileVisibility } = req.body;
+        const { emailNotifications, profileVisibility, notificationCategories, quietHours, feedPresets } = req.body;
         const user = await User.findById(req.user.id);
 
         if (!user) {
             return res.status(404).json({ msg: 'User not found' });
         }
 
-        if (user.preferences) {
-            if (emailNotifications !== undefined) user.preferences.emailNotifications = emailNotifications;
-            if (profileVisibility !== undefined) user.preferences.profileVisibility = profileVisibility;
-        } else {
-            user.preferences = {
-                emailNotifications: emailNotifications !== undefined ? emailNotifications : true,
-                profileVisibility: profileVisibility !== undefined ? profileVisibility : 'public'
+        const preferences = user.preferences && typeof user.preferences.toObject === 'function'
+            ? user.preferences.toObject()
+            : { ...(user.preferences || {}) };
+
+        if (emailNotifications !== undefined) preferences.emailNotifications = emailNotifications;
+        if (profileVisibility !== undefined) preferences.profileVisibility = profileVisibility;
+        if (notificationCategories !== undefined) {
+            preferences.notificationCategories = {
+                ...DEFAULT_NOTIFICATION_CATEGORIES,
+                ...(preferences.notificationCategories || {}),
+                ...notificationCategories,
             };
         }
+        if (quietHours !== undefined) {
+            preferences.quietHours = {
+                ...DEFAULT_QUIET_HOURS,
+                ...(preferences.quietHours || {}),
+                ...quietHours,
+            };
+        }
+        if (feedPresets !== undefined) {
+            preferences.feedPresets = feedPresets.slice(0, MAX_FEED_PRESETS).map(normalizeFeedPreset);
+        }
 
+        user.preferences = preferences;
         await user.save();
-        res.json(user.preferences);
+        res.json(preferences);
     } catch (err) {
         return next(err);
     }

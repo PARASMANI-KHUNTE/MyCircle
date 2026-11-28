@@ -122,6 +122,27 @@ describe('notification delivery', () => {
         }));
     });
 
+    it('skips delivery when the recipient disabled that notification category', async () => {
+        User.findById.mockReturnValue({
+            select: jest.fn().mockReturnThis(),
+            lean: jest.fn().mockResolvedValue({
+                preferences: { notificationCategories: { messages: false } },
+            }),
+        });
+
+        await createNotification({ to }, {
+            recipient: 'user-1',
+            sender: 'user-2',
+            type: 'message',
+            title: 'New Message',
+            message: 'Hello there',
+        });
+
+        expect(Notification).not.toHaveBeenCalled();
+        expect(sendPushNotification).not.toHaveBeenCalled();
+        expect(emit).not.toHaveBeenCalled();
+    });
+
     it('does not notify the actor about their own action', async () => {
         await createNotification({ to }, {
             recipient: 'user-1',

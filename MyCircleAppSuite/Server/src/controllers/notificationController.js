@@ -4,6 +4,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { publishNotification } = require('../utils/notificationBus');
 const { sendPushNotification } = require('../utils/pushNotifications');
+const { shouldDeliverNotification } = require('../utils/notificationPreferences');
 
 const DEFAULT_NOTIFICATION_LIMIT = 30;
 const MAX_NOTIFICATION_LIMIT = 100;
@@ -189,11 +190,18 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
             like: 'like',
             comment: 'comment',
         };
+        const resolvedEvent = event || eventByType[type] || 'system';
+
+        if (!await shouldDeliverNotification(User, recipientIdStr, { event: resolvedEvent, type, title })) {
+            console.log(`[Notification] Skipped ${resolvedEvent} for ${recipientIdStr} due to preferences`);
+            return;
+        }
+
         const notification = new Notification({
             recipient,
             sender,
             type,
-            event: event || eventByType[type] || 'system',
+            event: resolvedEvent,
             title,
             message,
             link,
@@ -221,7 +229,7 @@ exports.createNotification = async (io, { recipient, sender, type, title, messag
                 data: {
                     _id: notification._id.toString(),
                     type: type || 'system',
-                    event: event || eventByType[type] || 'system',
+                    event: resolvedEvent,
                     link: link || '',
                     postId: relatedId?.toString?.() || '',
                     relatedId: relatedId?.toString?.() || '',

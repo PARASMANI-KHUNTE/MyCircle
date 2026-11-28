@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Modal, StatusBar } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+import { invalidatePosts } from '../hooks/usePosts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Check, X, Camera, Briefcase, Wrench, ShoppingBag, Package, Handshake, Save, ArrowLeft } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
@@ -9,6 +11,7 @@ import ThemedAlert from '../components/ui/ThemedAlert';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DARK_TILE_URL, LABELS_TILE_URL, MAP_ATTRIBUTION, MAP_MAX_NATIVE_ZOOM } from '../constants/mapTiles';
 import { formatErrorMessage } from '../utils/errorMessage';
+import { normalizePriceInput } from '../utils/postInteractions';
 import {
     DESCRIPTION_MAX_LENGTH,
     MAX_POST_IMAGES,
@@ -45,6 +48,7 @@ const formSnapshot = (values: EditFormValues) => JSON.stringify({
 });
 
 const EditPostScreen = ({ navigation, route }: any) => {
+    const queryClient = useQueryClient();
     const postId = route.params?.id || route.params?.post?._id;
     const loadRequestRef = useRef(0);
     const isSubmittingRef = useRef(false);
@@ -239,10 +243,9 @@ const EditPostScreen = ({ navigation, route }: any) => {
             formData.append('title', title.trim());
             formData.append('description', description.trim());
             formData.append('type', type);
-            const cleanPrice = String(price || '').replace(/[^0-9.]/g, '');
-            const parsedPrice = parseFloat(cleanPrice);
-            const validPrice = (!isNaN(parsedPrice) && parsedPrice >= 0) ? String(parsedPrice) : '0';
-            formData.append('price', validPrice);
+            // A blank price deliberately clears the listing price; the UI then
+            // shows Barter/Contact instead of ₹0.
+            formData.append('price', normalizePriceInput(price) ?? '0');
             formData.append('acceptsBarter', acceptsBarter ? 'true' : 'false');
             formData.append('location', location.trim());
 
@@ -265,6 +268,7 @@ const EditPostScreen = ({ navigation, route }: any) => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
+            await invalidatePosts(queryClient);
 
             // Treat this state as saved so the discard guard does not fire after success.
             setSavedSnapshot(currentSnapshot);

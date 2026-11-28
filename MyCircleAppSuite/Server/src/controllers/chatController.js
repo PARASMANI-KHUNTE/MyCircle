@@ -45,6 +45,49 @@ const getNotificationMessagePreview = (messageText) => {
         : normalized;
 };
 
+const assertValidChatIds = ({ currentUserId, recipientId, postId }) => {
+    if (!mongoose.isValidObjectId(recipientId)) {
+        throw new ApiError(400, 'Invalid recipient ID');
+    }
+
+    if (String(recipientId) === String(currentUserId)) {
+        throw new ApiError(400, 'You cannot start a conversation with yourself');
+    }
+
+    if (postId && !mongoose.isValidObjectId(postId)) {
+        throw new ApiError(400, 'Invalid post ID');
+    }
+};
+
+const assertUsersCanChat = async (currentUserId, recipientId) => {
+    const [currentUser, recipientUser] = await Promise.all([
+        User.findById(currentUserId),
+        User.findById(recipientId)
+    ]);
+
+    if (!currentUser) throw new ApiError(404, 'Logged in user not found');
+    if (!recipientUser) throw new ApiError(404, 'Recipient not found');
+
+    const blockedUsers = currentUser.blockedUsers || [];
+    if (blockedUsers.map(id => id.toString()).includes(String(recipientId))) {
+        throw new ApiError(403, 'You have blocked this user');
+    }
+
+    const recipientBlocked = recipientUser.blockedUsers || [];
+    if (recipientBlocked.map(id => id.toString()).includes(String(currentUserId))) {
+        throw new ApiError(403, 'You cannot message this user');
+    }
+
+    return { currentUser, recipientUser };
+};
+
+const buildParticipantSummary = (user) => ({
+    _id: user._id,
+    displayName: user.displayName,
+    avatar: user.avatar,
+    isOnline: user.isOnline
+});
+
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
 // @access  Private
@@ -161,6 +204,9 @@ exports.getOrCreateConversation = asyncHandler(async (req, res, next) => {
     const recipientId = req.params.userId;
     const postId = req.query.postId || null;
 
+    assertValidChatIds({ currentUserId: req.user.id, recipientId, postId });
+    const { currentUser, recipientUser } = await assertUsersCanChat(req.user.id, recipientId);
+
     // Check if conversation exists
     let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId))
         .populate('participants', ['displayName', 'avatar', 'isOnline'])
@@ -191,13 +237,12 @@ exports.getOrCreateConversation = asyncHandler(async (req, res, next) => {
             throw new ApiError(403, 'You can only access conversations with connected users');
         }
 
-        // Get recipient details
-        const recipient = await User.findById(recipientId).select('displayName avatar isOnline');
-        const currentUser = await User.findById(req.user.id).select('displayName avatar isOnline');
-
         return res.json({
             _id: null,
-            participants: [currentUser, recipient],
+            participants: [
+                buildParticipantSummary(currentUser),
+                buildParticipantSummary(recipientUser)
+            ],
             lastMessage: null,
             unreadCount: 0
         });
@@ -248,6 +293,13 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
     if (!db) throw new ApiError(500, 'Firebase not initialized');
     const { recipientId, text, postId } = req.body;
 
+    assertValidChatIds({ currentUserId: req.user.id, recipientId, postId });
+
+    // Check for profanity before persisting anything
+    if (containsProfanity(text)) {
+        throw new ApiError(400, 'Message contains inappropriate content');
+    }
+
     // Check if conversation exists
     let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId || null));
 
@@ -275,6 +327,9 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
         }
     }
 
+    // Check if users have blocked each other before creating a conversation
+    const { currentUser } = await assertUsersCanChat(req.user.id, recipientId);
+
     // Create new conversation if not exists
     if (!conversation) {
         conversation = new Conversation({
@@ -283,28 +338,6 @@ exports.sendMessage = asyncHandler(async (req, res, next) => {
             expiresAt: getChatExpiryDate()
         });
         await conversation.save();
-    }
-
-    // Check for profanity
-    if (containsProfanity(text)) {
-        throw new ApiError(400, 'Message contains inappropriate content');
-    }
-
-    // Check if users have blocked each other
-    const currentUser = await User.findById(req.user.id);
-    const recipientUser = await User.findById(recipientId);
-
-    if (!currentUser) throw new ApiError(404, 'Logged in user not found');
-    if (!recipientUser) throw new ApiError(404, 'Recipient not found');
-
-    // Ensure blockedUsers exists as an array
-    const blockedUsers = currentUser.blockedUsers || [];
-    if (blockedUsers.map(id => id.toString()).includes(recipientId)) {
-        throw new ApiError(403, 'You have blocked this user');
-    }
-    const recipientBlocked = recipientUser.blockedUsers || [];
-    if (recipientBlocked.map(id => id.toString()).includes(req.user.id)) {
-        throw new ApiError(403, 'You cannot message this user');
     }
 
     const sender = {
@@ -400,6 +433,9 @@ exports.initChat = asyncHandler(async (req, res, next) => {
     if (!postId) {
         throw new ApiError(400, 'Post ID is required to start a conversation');
     }
+
+    assertValidChatIds({ currentUserId: req.user.id, recipientId, postId });
+    await assertUsersCanChat(req.user.id, recipientId);
 
     // Check if conversation exists
     let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId))

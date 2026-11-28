@@ -52,6 +52,14 @@ const schemas = {
         services: z.array(z.string()).optional(),
     }),
 
+    updateUserSettings: z.object({
+        emailNotifications: z.boolean().optional(),
+        profileVisibility: z.enum(['public', 'private']).optional(),
+    }).refine(
+        (data) => data.emailNotifications !== undefined || data.profileVisibility !== undefined,
+        { message: 'At least one setting is required' }
+    ),
+
     blockUser: z.object({
         userId: z.string().min(1, 'User ID is required'),
     }),

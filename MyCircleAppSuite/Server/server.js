@@ -17,6 +17,7 @@ const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
 const { closeQueueConnection } = require('./src/utils/queue');
 const { onNotification } = require('./src/utils/notificationBus');
+const { onModerationUpdate } = require('./src/utils/moderationBus');
 const { createRateLimiters } = require('./src/utils/rateLimiters');
 const { registerSocketHandlers } = require('./src/socket/handlers');
 
@@ -63,6 +64,12 @@ app.set('io', io);
 onNotification(({ recipientId, notification }) => {
     io.to(`user:${recipientId}`).emit('new_notification', notification);
     logger.info({ recipientId, title: notification?.title }, 'Delivered cross-process notification');
+});
+
+// Moderation results produced by BullMQ workers are relayed to connected clients.
+onModerationUpdate(({ postId, moderationStatus }) => {
+    io.emit('post_moderation_update', { postId, moderationStatus });
+    logger.info({ postId, moderationStatus }, 'Broadcast post moderation update');
 });
 
 io.use((socket, next) => {

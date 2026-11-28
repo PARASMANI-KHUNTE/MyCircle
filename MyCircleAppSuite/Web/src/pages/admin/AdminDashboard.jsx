@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../utils/api';
 import Button from '../../components/ui/Button';
 import { useDialog } from '../../hooks/useDialog';
+import { useSocket } from '../../context/SocketContext';
 import { getOverviewCards } from '../../utils/adminOverview';
 
 const REFRESH_INTERVAL_MS = 30000;
@@ -27,6 +28,7 @@ const cardStyle = {
 
 export default function AdminDashboard() {
     const { showAlert } = useDialog();
+    const { socket } = useSocket();
     const [overview, setOverview] = useState(null);
     const [queues, setQueues] = useState({ hidden: 0, removed: 0 });
     const [loading, setLoading] = useState(true);
@@ -62,6 +64,13 @@ export default function AdminDashboard() {
         const interval = setInterval(() => load({ silent: true }), REFRESH_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [load]);
+
+    useEffect(() => {
+        if (!socket) return undefined;
+        const refresh = () => load({ silent: true });
+        socket.on('post_moderation_update', refresh);
+        return () => socket.off('post_moderation_update', refresh);
+    }, [socket, load]);
 
     const cards = getOverviewCards(overview || {});
 

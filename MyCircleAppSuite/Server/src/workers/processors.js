@@ -5,7 +5,8 @@ const cloudinary = require('../config/cloudinary');
 const Post = require('../models/Post');
 const Message = require('../models/Message');
 const { createNotification } = require('../controllers/notificationController');
-const { checkContentSafety } = require('../config/groq');
+const { checkContentSafety, generatePostTags } = require('../config/groq');
+const { publishModerationUpdate } = require('../utils/moderationBus');
 
 const POST_IMAGE_FOLDER = 'mycircle_posts';
 const DEFAULT_MESSAGE_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -114,12 +115,21 @@ const processNotificationJob = async (job) => {
 const processAIJob = async (job) => {
     const { taskType, content, postId } = job.data || {};
 
+    if (taskType === 'auto-tag') {
+        const tags = await generatePostTags(job.data || {});
+        if (postId) {
+            await Post.updateOne({ _id: postId }, { $set: { tags } });
+        }
+        return { success: true, tags };
+    }
+
     if (taskType === 'content-moderation') {
         const result = await checkContentSafety(content);
         const moderationStatus = result.safe === false ? 'hidden' : 'visible';
 
         if (postId) {
             await Post.updateOne({ _id: postId }, { $set: { moderationStatus } });
+            await publishModerationUpdate({ postId: postId.toString(), moderationStatus });
         }
 
         return { success: true, result, moderationStatus };

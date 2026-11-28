@@ -4,6 +4,7 @@ import api from '../../utils/api';
 import Button from '../../components/ui/Button';
 import { useDialog } from '../../hooks/useDialog';
 import { useToast } from '../../components/ui/Toast';
+import { useSocket } from '../../context/SocketContext';
 
 const MODERATION_STATUSES = ['visible', 'hidden', 'removed'];
 
@@ -16,6 +17,7 @@ const ACTIONS = [
 export default function AdminPosts() {
     const { showAlert, showConfirm } = useDialog();
     const { success } = useToast();
+    const { socket } = useSocket();
     const [searchParams, setSearchParams] = useSearchParams();
     const statusParam = searchParams.get('moderationStatus');
     const [q, setQ] = useState('');
@@ -27,8 +29,8 @@ export default function AdminPosts() {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(null);
 
-    const load = useCallback(async () => {
-        setLoading(true);
+    const load = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) setLoading(true);
         try {
             const params = { page, limit: 20 };
             if (q.trim()) params.q = q.trim();
@@ -43,13 +45,20 @@ export default function AdminPosts() {
             showAlert(e?.response?.data?.msg || 'Failed to load posts', 'Error');
             setData((current) => ({ ...current, posts: [] }));
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [page, q, moderationStatus, showAlert]);
 
     useEffect(() => {
         load();
     }, [load]);
+
+    useEffect(() => {
+        if (!socket) return undefined;
+        const refresh = () => load({ silent: true });
+        socket.on('post_moderation_update', refresh);
+        return () => socket.off('post_moderation_update', refresh);
+    }, [socket, load]);
 
     const changeModeration = async (post, status) => {
         if (post.moderationStatus === status) return;

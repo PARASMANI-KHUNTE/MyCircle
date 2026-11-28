@@ -8,7 +8,7 @@ const ApiError = require('../utils/ApiError');
 const ContactRequest = require('../models/ContactRequest');
 const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
-const { addImageJob } = require('../utils/queue');
+const { addImageJob, addAIJob } = require('../utils/queue');
 const mongoose = require('mongoose');
 const { containsProfanity } = require('../utils/profanityFilter');
 const { deletePostScopedChats } = require('../utils/chatLifecycle');
@@ -23,6 +23,8 @@ const isPostOwner = (post, userId) => {
 
 const DEFAULT_POST_LIMIT = 20;
 const MAX_POST_LIMIT = 50;
+
+const logQueueFailure = (label) => (err) => console.error(`Failed to queue ${label}:`, err.message);
 
 const parsePagination = (query, defaultLimit, maxLimit) => {
     const page = Math.max(parseInt(query.page, 10) || 1, 1);
@@ -116,12 +118,31 @@ exports.createPost = asyncHandler(async (req, res) => {
     const post = await newPost.save();
 
     // Queue only after the post exists so workers can persist results back to it.
+    const postId = post._id.toString();
+
     await Promise.all(images.map(imagePath => addImageJob({
         imagePath,
         action: 'optimize',
-        postId: post._id.toString(),
+        postId,
         userId: req.user.id,
-    }, { priority: 2 }).catch(err => console.error('Failed to queue image optimization:', err.message))));
+    }, { priority: 2 }).catch(logQueueFailure('image optimization'))));
+
+    await Promise.all([
+        addAIJob({
+            taskType: 'auto-tag',
+            postId,
+            title: post.title,
+            description: post.description,
+            type: post.type,
+            jobType: post.jobType,
+            itemCategory: post.itemCategory,
+        }, { priority: 3 }).catch(logQueueFailure('auto-tagging')),
+        addAIJob({
+            taskType: 'content-moderation',
+            postId,
+            content: [post.title, post.description].filter(Boolean).join(' '),
+        }, { priority: 3 }).catch(logQueueFailure('content moderation')),
+    ]);
 
     const populatedPost = await Post.findById(post._id).populate('user', ['displayName', 'avatar', 'reputation', 'rating']);
 

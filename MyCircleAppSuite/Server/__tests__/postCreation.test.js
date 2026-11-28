@@ -2,25 +2,27 @@ const mockSave = jest.fn().mockResolvedValue({ _id: 'post-1' });
 const mockPopulate = jest.fn().mockResolvedValue({ _id: 'post-1', title: 'Need a plumber' });
 
 const mockPostModel = jest.fn(function Post(data) {
-    this.data = data;
+    Object.assign(this, data);
     this.save = mockSave;
 });
 mockPostModel.findById = jest.fn(() => ({ populate: mockPopulate }));
 
 jest.mock('../src/models/Post', () => mockPostModel);
-jest.mock('../src/utils/queue', () => ({ addImageJob: jest.fn() }));
+jest.mock('../src/utils/queue', () => ({ addImageJob: jest.fn(), addAIJob: jest.fn() }));
 jest.mock('../src/config/firebase', () => ({ db: {} }));
 jest.mock('../src/controllers/notificationController', () => ({ createNotification: jest.fn() }));
 jest.mock('../src/utils/chatLifecycle', () => ({ deletePostScopedChats: jest.fn() }));
 
 const { createPost, updatePostStatus } = require('../src/controllers/postController');
 const { createNotification } = require('../src/controllers/notificationController');
-const { addImageJob } = require('../src/utils/queue');
+const { addImageJob, addAIJob } = require('../src/utils/queue');
 const ContactRequest = require('../src/models/ContactRequest');
 
 describe('createPost payload', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        addImageJob.mockResolvedValue(null);
+        addAIJob.mockResolvedValue(null);
         mockSave.mockResolvedValue({ _id: 'post-1' });
         mockPopulate.mockResolvedValue({ _id: 'post-1', title: 'Need a plumber' });
     });
@@ -103,6 +105,61 @@ describe('createPost payload', () => {
         expect(callOrder).toEqual(['save', 'queue']);
         expect(next).not.toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith({ _id: 'post-42' });
+    });
+
+    it('queues AI auto-tagging and moderation after saving the post with its real id', async () => {
+        const callOrder = [];
+
+        mockSave.mockImplementationOnce(async () => {
+            callOrder.push('save');
+            return {
+                _id: 'post-99',
+                title: 'Bike repair',
+                description: 'Brakes need fixing',
+                type: 'service',
+            };
+        });
+        addAIJob.mockImplementation(async (job) => {
+            callOrder.push(job.taskType);
+            return null;
+        });
+
+        const req = {
+            body: {
+                type: 'service',
+                title: 'Bike repair',
+                description: 'Brakes need fixing',
+            },
+            user: { id: 'user-1' },
+            app: { get: jest.fn() },
+        };
+        const res = { json: jest.fn() };
+        const next = jest.fn();
+
+        await createPost(req, res, next);
+        await new Promise(resolve => setImmediate(resolve));
+
+        expect(addAIJob).toHaveBeenCalledWith(
+            expect.objectContaining({
+                taskType: 'auto-tag',
+                postId: 'post-99',
+                title: 'Bike repair',
+                description: 'Brakes need fixing',
+            }),
+            { priority: 3 }
+        );
+        expect(addAIJob).toHaveBeenCalledWith(
+            expect.objectContaining({
+                taskType: 'content-moderation',
+                postId: 'post-99',
+                content: 'Bike repair Brakes need fixing',
+            }),
+            { priority: 3 }
+        );
+        expect(callOrder[0]).toBe('save');
+        expect(callOrder).toContain('auto-tag');
+        expect(callOrder).toContain('content-moderation');
+        expect(next).not.toHaveBeenCalled();
     });
 
     it('notifies affected requesters when a post status changes', async () => {

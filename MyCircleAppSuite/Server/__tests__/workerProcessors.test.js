@@ -29,6 +29,11 @@ jest.mock('../src/controllers/notificationController', () => ({
 
 jest.mock('../src/config/groq', () => ({
     checkContentSafety: jest.fn(),
+    generatePostTags: jest.fn(),
+}));
+
+jest.mock('../src/utils/moderationBus', () => ({
+    publishModerationUpdate: jest.fn().mockResolvedValue(true),
 }));
 
 const axios = require('axios');
@@ -37,7 +42,8 @@ const cloudinary = require('../src/config/cloudinary');
 const Post = require('../src/models/Post');
 const Message = require('../src/models/Message');
 const { createNotification } = require('../src/controllers/notificationController');
-const { checkContentSafety } = require('../src/config/groq');
+const { checkContentSafety, generatePostTags } = require('../src/config/groq');
+const { publishModerationUpdate } = require('../src/utils/moderationBus');
 const {
     processImageJob,
     processNotificationJob,
@@ -118,6 +124,10 @@ describe('worker processors', () => {
                 { _id: 'post-1' },
                 { $set: { moderationStatus: 'hidden' } }
             );
+            expect(publishModerationUpdate).toHaveBeenCalledWith({
+                postId: 'post-1',
+                moderationStatus: 'hidden',
+            });
             expect(result.moderationStatus).toBe('hidden');
         });
 
@@ -135,9 +145,18 @@ describe('worker processors', () => {
             expect(result.moderationStatus).toBe('visible');
         });
 
-        it('rejects unimplemented AI tasks instead of returning empty results', async () => {
-            await expect(processAIJob({ data: { taskType: 'auto-tag', postId: 'post-1' } }))
-                .rejects.toThrow('Unsupported AI task');
+        it('persists generated tags back to the post', async () => {
+            generatePostTags.mockResolvedValue(['plumbing', 'repair']);
+
+            const result = await processAIJob({
+                data: { taskType: 'auto-tag', postId: 'post-1', title: 'Bike repair' },
+            });
+
+            expect(Post.updateOne).toHaveBeenCalledWith(
+                { _id: 'post-1' },
+                { $set: { tags: ['plumbing', 'repair'] } }
+            );
+            expect(result).toEqual({ success: true, tags: ['plumbing', 'repair'] });
         });
     });
 

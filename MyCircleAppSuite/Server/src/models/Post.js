@@ -68,6 +68,10 @@ const PostSchema = new mongoose.Schema({
     images: [{
         type: String, // URL from Cloudinary
     }],
+    tags: [{
+        type: String, // AI-suggested category/skill tags
+        trim: true,
+    }],
     status: {
         type: String,
         enum: ['active', 'inactive', 'sold', 'completed', 'archived'],

@@ -85,7 +85,8 @@ const buildParticipantSummary = (user) => ({
     _id: user._id,
     displayName: user.displayName,
     avatar: user.avatar,
-    isOnline: user.isOnline
+    isOnline: user.isOnline,
+    ...(user.lastSeenAt ? { lastSeenAt: user.lastSeenAt } : {})
 });
 
 // @desc    Get all conversations for a user
@@ -106,7 +107,7 @@ exports.getConversations = asyncHandler(async (req, res, next) => {
 
     const [conversations, total] = await Promise.all([
         Conversation.find(conversationFilter)
-            .populate('participants', 'displayName avatar')
+            .populate('participants', 'displayName avatar isOnline lastSeenAt')
             .populate('lastMessage')
             .populate('postId', 'title images price description type location')
             .sort({ updatedAt: -1 })
@@ -209,7 +210,7 @@ exports.getOrCreateConversation = asyncHandler(async (req, res, next) => {
 
     // Check if conversation exists
     let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId))
-        .populate('participants', ['displayName', 'avatar', 'isOnline'])
+        .populate('participants', ['displayName', 'avatar', 'isOnline', 'lastSeenAt'])
         .populate('lastMessage');
 
     // If conversation exists, check if it's still active
@@ -256,7 +257,7 @@ exports.getOrCreateConversation = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.getConversationById = asyncHandler(async (req, res, next) => {
     const conversation = await Conversation.findById(req.params.conversationId)
-        .populate('participants', 'displayName avatar isOnline')
+        .populate('participants', 'displayName avatar isOnline lastSeenAt')
         .populate('lastMessage')
         .populate('postId', 'title images price description type location')
         .lean();
@@ -439,7 +440,7 @@ exports.initChat = asyncHandler(async (req, res, next) => {
 
     // Check if conversation exists
     let conversation = await Conversation.findOne(buildConversationFilter(req.user.id, recipientId, postId))
-    .populate('participants', ['displayName', 'avatar', 'isOnline'])
+    .populate('participants', ['displayName', 'avatar', 'isOnline', 'lastSeenAt'])
     .populate('lastMessage');
 
     // Connectivity Check - accept both 'accepted' (DB) and 'approved' (frontend)
@@ -468,7 +469,7 @@ exports.initChat = asyncHandler(async (req, res, next) => {
         });
         await conversation.save();
         conversation = await Conversation.findById(conversation._id)
-            .populate('participants', ['displayName', 'avatar', 'isOnline']);
+            .populate('participants', ['displayName', 'avatar', 'isOnline', 'lastSeenAt']);
     } else {
         conversation.expiresAt = getChatExpiryDate();
         conversation.deletedBy = [];

@@ -14,6 +14,13 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { getPageMeta } from '../utils/pagination';
 import { formatErrorMessage } from '../utils/errorMessage';
 import PaginationFooter from '../components/ui/PaginationFooter';
+import {
+    formatPresenceStatus,
+    getParticipantId,
+    resolveOtherParticipant,
+    resolvePresenceOverride,
+    type PresenceOverrides,
+} from '../utils/chatPresence';
 
 const MESSAGE_PAGE_SIZE = 50;
 
@@ -30,6 +37,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     const [pageError, setPageError] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [isTyping, setIsTyping] = useState(false);
+    const [presenceOverrides, setPresenceOverrides] = useState<PresenceOverrides>({});
     const flatListRef = useRef<FlatList>(null);
     const typingTimeoutRef = useRef<any>(null);
     const messagesPageRef = useRef(0);
@@ -68,9 +76,13 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
 
         return null;
     }, [conversationId, initialConversation, recipient]);
-    const otherParticipant = conversation?.participants?.find((p: any) => p._id !== user?._id)
-        || conversation?.participants?.[0]
-        || recipient;
+    const otherParticipant = resolveOtherParticipant(
+        conversation?.participants,
+        currentUserId,
+        recipient
+    );
+    const otherParticipantId = getParticipantId(otherParticipant);
+    const isRecipientOnline = resolvePresenceOverride(otherParticipant, presenceOverrides);
 
     const fetchMessages = useCallback(async (
         targetConversationId = conversation?._id,
@@ -224,6 +236,26 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
         };
     }, [socket, conversation?._id, navigation, currentUserId, generateSuggestions, markAsRead]);
 
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleUserOnline = (userId: any) => {
+            if (userId) setPresenceOverrides(prev => ({ ...prev, [String(userId)]: true }));
+        };
+
+        const handleUserOffline = (userId: any) => {
+            if (userId) setPresenceOverrides(prev => ({ ...prev, [String(userId)]: false }));
+        };
+
+        socket.on('user_online', handleUserOnline);
+        socket.on('user_offline', handleUserOffline);
+
+        return () => {
+            socket.off('user_online', handleUserOnline);
+            socket.off('user_offline', handleUserOffline);
+        };
+    }, [socket]);
+
     const handleInputChange = (text: string) => {
         setNewMessage(text);
         if (!socket) return;
@@ -249,7 +281,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     };
 
     const handleSend = async () => {
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() || !otherParticipantId) return;
 
         const msgText = newMessage.trim();
         setNewMessage('');
@@ -277,7 +309,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
             }
 
             const response = await api.post('/chat/message', {
-                recipientId: otherParticipant._id,
+                recipientId: otherParticipantId,
                 text: msgText,
                 postId: activeConversation.postId
             });
@@ -290,6 +322,9 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     };
 
     const handleBlock = () => {
+        if (!otherParticipantId) {
+            return Alert.alert('Unavailable', 'Recipient information is still loading.');
+        }
         Alert.alert(
             'Block User',
             `Are you sure you want to block ${otherParticipant?.displayName || 'this user'}?`,
@@ -300,7 +335,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await api.post(`/user/block/${otherParticipant._id}`);
+                            await api.post(`/user/block/${otherParticipantId}`);
                             navigation.goBack();
                         } catch {
                             Alert.alert('Error', 'Failed to block user');
@@ -312,6 +347,9 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
     };
 
     const handleReport = () => {
+        if (!otherParticipantId) {
+            return Alert.alert('Unavailable', 'Recipient information is still loading.');
+        }
         Alert.alert(
             'Report User',
             'Would you like to report this user for inappropriate behavior?',
@@ -323,7 +361,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                         type: 'report',
                         subjectType: 'chat',
                         subjectId: conversation?._id,
-                        reportedUserId: otherParticipant?._id,
+                        reportedUserId: otherParticipantId,
                     })
                 }
             ]
@@ -421,7 +459,7 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('UserProfile', { userId: otherParticipant?._id })}
+                        onPress={() => otherParticipantId && navigation.navigate('UserProfile', { userId: otherParticipantId })}
                         style={styles.userInfo}
                     >
                         <View style={styles.avatarContainer}>
@@ -429,11 +467,11 @@ const ChatWindowScreen = ({ route, navigation }: any) => {
                                 source={{ uri: getAvatarUrl(otherParticipant) }}
                                 style={styles.avatar}
                             />
-                            <View style={styles.onlineStatus} />
+                            {isRecipientOnline && <View style={styles.onlineStatus} />}
                         </View>
                         <View style={styles.userNameContainer}>
-                        <Text style={styles.headerUserName}>{otherParticipant?.displayName || 'Chat'}</Text>
-                            <Text style={styles.statusText}>Online</Text>
+                            <Text style={styles.headerUserName}>{otherParticipant?.displayName || 'Chat'}</Text>
+                            <Text style={styles.statusText}>{formatPresenceStatus(isRecipientOnline)}</Text>
                         </View>
                     </TouchableOpacity>
 

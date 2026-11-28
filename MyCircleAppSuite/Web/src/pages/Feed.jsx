@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import { cn } from '../utils/cn';
+import { buildFeedParams, normalizeFeedFilters, describeFeedPreset } from '../utils/feedPresets';
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import MapTiles from '../components/MapTiles';
 import L from 'leaflet';
@@ -35,6 +36,8 @@ const categories = [
     { id: 'rent', label: 'Rent', icon: Key }
 ];
 
+const EMPTY_PRESETS = [];
+
 const MapUpdater = ({ center, zoom }) => {
     const map = useMap();
     useEffect(() => {
@@ -47,7 +50,7 @@ const MapUpdater = ({ center, zoom }) => {
 
 const Feed = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const { isDark } = useTheme();
     const { success, error: showError } = useToast();
     const [posts, setPosts] = useState([]);
@@ -60,21 +63,25 @@ const Feed = () => {
     const [userLocation, setUserLocation] = useState(null);
     const [loadingLocation, setLoadingLocation] = useState(false);
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+    const [radius, setRadius] = useState(50);
+    const [barterOnly, setBarterOnly] = useState(false);
+    const [urgentOnly, setUrgentOnly] = useState(false);
+    const [presetName, setPresetName] = useState('');
 
     const { socket } = useSocket();
 
+    const savedPresets = Array.isArray(user?.preferences?.feedPresets)
+        ? user.preferences.feedPresets
+        : EMPTY_PRESETS;
     const serverSort = sortOrder === 'latest' || sortOrder === 'oldest' ? sortOrder : 'latest';
 
     const fetchPosts = useCallback(async () => {
         setLoading(true);
         try {
-            const params = {
-                limit: 50,
-                type: filter !== 'all' ? filter : undefined,
-                q: searchTerm.trim() || undefined,
-                location: locationFilter !== 'all' ? locationFilter : undefined,
-                sort: serverSort,
-            };
+            const params = buildFeedParams(
+                { type: filter, radius, barterOnly, urgentOnly, location: locationFilter === 'all' ? '' : locationFilter },
+                { query: searchTerm, sort: serverSort, coords: userLocation }
+            );
             const res = await api.get('/posts', { params });
             setPosts(res.data);
         } catch (err) {
@@ -82,7 +89,7 @@ const Feed = () => {
         } finally {
             setLoading(false);
         }
-    }, [filter, searchTerm, locationFilter, serverSort]);
+    }, [filter, radius, barterOnly, urgentOnly, locationFilter, searchTerm, serverSort, userLocation]);
 
     useEffect(() => {
         if (!socket) return;
@@ -103,9 +110,13 @@ const Feed = () => {
     }, [filter, fetchPosts]);
 
     const availableLocations = React.useMemo(() => {
-        const locations = Array.from(new Set(posts.map(p => p.location).filter(Boolean)));
+        const locations = Array.from(new Set([
+            ...posts.map(p => p.location),
+            locationFilter,
+            ...savedPresets.map(preset => preset.location),
+        ].filter((location) => location && location !== 'all')));
         return locations.sort();
-    }, [posts]);
+    }, [posts, locationFilter, savedPresets]);
 
     const filteredPosts = React.useMemo(() => posts, [posts]);
 
@@ -178,6 +189,66 @@ const Feed = () => {
         setSearchTerm('');
         setLocationFilter('all');
         setSortOrder('latest');
+        setRadius(50);
+        setBarterOnly(false);
+        setUrgentOnly(false);
+    };
+
+    const applyPreset = (preset) => {
+        const normalized = normalizeFeedFilters(preset);
+        setFilter(normalized.type);
+        setLocationFilter(normalized.location || 'all');
+        setRadius(normalized.radius);
+        setBarterOnly(normalized.barterOnly);
+        setUrgentOnly(normalized.urgentOnly);
+        setIsFilterExpanded(true);
+        success(`Applied "${preset.name}"`);
+    };
+
+    const persistPresets = async (presets) => {
+        await api.put('/user/settings', { feedPresets: presets });
+        await refreshUser();
+    };
+
+    const savePreset = async () => {
+        const name = presetName.trim();
+        if (!name) {
+            showError('Give this preset a name first.');
+            return;
+        }
+        if (savedPresets.length >= 20) {
+            showError('You can save up to 20 presets.');
+            return;
+        }
+
+        try {
+            await persistPresets([
+                ...savedPresets,
+                {
+                    name,
+                    ...normalizeFeedFilters({
+                        type: filter,
+                        radius,
+                        barterOnly,
+                        urgentOnly,
+                        location: locationFilter === 'all' ? '' : locationFilter,
+                    }),
+                },
+            ]);
+            setPresetName('');
+            success(`Saved "${name}"`);
+        } catch (err) {
+            showError(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Could not save preset');
+        }
+    };
+
+    const deletePreset = async (name) => {
+        try {
+            await persistPresets(savedPresets.filter(preset => preset.name !== name));
+            success(`Removed "${name}"`);
+        } catch (err) {
+            showError(err.response?.data?.message || 'Could not remove preset');
+        }
     };
 
     return (
@@ -272,8 +343,22 @@ const Feed = () => {
                         >
                             <SlidersHorizontal className="w-4 h-4" />
                             <span>Filters</span>
-                            {(locationFilter !== 'all' || sortOrder !== 'latest') && (
-                                <span className="w-5 h-5 rounded-full bg-primary-foreground/20 text-xs flex items-center justify-center">2</span>
+                            {[
+                                locationFilter !== 'all',
+                                sortOrder !== 'latest',
+                                barterOnly,
+                                urgentOnly,
+                                radius !== 50 && !!userLocation,
+                            ].filter(Boolean).length > 0 && (
+                                <span className="w-5 h-5 rounded-full bg-primary-foreground/20 text-xs flex items-center justify-center">
+                                    {[
+                                        locationFilter !== 'all',
+                                        sortOrder !== 'latest',
+                                        barterOnly,
+                                        urgentOnly,
+                                        radius !== 50 && !!userLocation,
+                                    ].filter(Boolean).length}
+                                </span>
                             )}
                         </button>
 
@@ -313,12 +398,72 @@ const Feed = () => {
                                         </select>
                                     </div>
 
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Radius (km)</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="500"
+                                            value={radius}
+                                            onChange={(e) => setRadius(e.target.value)}
+                                            disabled={!userLocation}
+                                            className="w-full px-4 py-3 rounded-xl border border-card-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                                        />
+                                        {!userLocation && (
+                                            <p className="text-[11px] text-foreground-muted">Switch to map view to share your location.</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4">
+                                    <label className="flex items-center gap-3 px-4 py-3 rounded-xl border border-card-border bg-card text-sm text-foreground cursor-pointer">
+                                        <input type="checkbox" checked={barterOnly} onChange={(e) => setBarterOnly(e.target.checked)} className="accent-primary" />
+                                        Barter only
+                                    </label>
+                                    <label className="flex items-center gap-3 px-4 py-3 rounded-xl border border-card-border bg-card text-sm text-foreground cursor-pointer">
+                                        <input type="checkbox" checked={urgentOnly} onChange={(e) => setUrgentOnly(e.target.checked)} className="accent-primary" />
+                                        Urgent only
+                                    </label>
                                     <div className="flex items-end">
                                         <button
                                             onClick={clearFilters}
                                             className="w-full px-4 py-3 rounded-xl border border-error/20 text-error font-medium hover:bg-error/10 transition-all"
                                         >
                                             Clear All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t border-card-border space-y-3">
+                                    <p className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Saved filter presets</p>
+                                    {savedPresets.length > 0 && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {savedPresets.map((preset) => (
+                                                <span key={preset.name} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-card-border text-xs text-foreground">
+                                                    <button type="button" onClick={() => applyPreset(preset)} className="font-semibold hover:text-primary" title={describeFeedPreset(preset)}>
+                                                        {preset.name}
+                                                    </button>
+                                                    <button type="button" onClick={() => deletePreset(preset.name)} className="text-foreground-muted hover:text-error" aria-label={`Remove ${preset.name}`}>
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <input
+                                            type="text"
+                                            value={presetName}
+                                            onChange={(e) => setPresetName(e.target.value)}
+                                            placeholder="Preset name (e.g. Nearby barter)"
+                                            className="flex-1 px-4 py-3 rounded-xl border border-card-border bg-card text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={savePreset}
+                                            className="px-5 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all"
+                                        >
+                                            Save filters
                                         </button>
                                     </div>
                                 </div>

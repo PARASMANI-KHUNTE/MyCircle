@@ -60,7 +60,26 @@ const UserSchema = new mongoose.Schema({
     },
     preferences: {
         emailNotifications: { type: Boolean, default: true },
-        profileVisibility: { type: String, enum: ['public', 'private'], default: 'public' }
+        profileVisibility: { type: String, enum: ['public', 'private'], default: 'public' },
+        notificationCategories: {
+            contactRequests: { type: Boolean, default: true },
+            messages: { type: Boolean, default: true },
+            postExpiry: { type: Boolean, default: true },
+        },
+        quietHours: {
+            enabled: { type: Boolean, default: false },
+            start: { type: String, default: '22:00' },
+            end: { type: String, default: '07:00' },
+            timezone: { type: String, default: 'UTC' },
+        },
+        feedPresets: [{
+            name: { type: String, required: true },
+            type: { type: String, default: 'all' },
+            radius: { type: Number, default: 50 },
+            barterOnly: { type: Boolean, default: false },
+            urgentOnly: { type: Boolean, default: false },
+            location: { type: String, default: '' },
+        }],
     },
     blockedUsers: [{
         type: mongoose.Schema.Types.ObjectId,

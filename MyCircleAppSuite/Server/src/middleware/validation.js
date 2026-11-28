@@ -55,8 +55,27 @@ const schemas = {
     updateUserSettings: z.object({
         emailNotifications: z.boolean().optional(),
         profileVisibility: z.enum(['public', 'private']).optional(),
+        notificationCategories: z.object({
+            contactRequests: z.boolean().optional(),
+            messages: z.boolean().optional(),
+            postExpiry: z.boolean().optional(),
+        }).optional(),
+        quietHours: z.object({
+            enabled: z.boolean().optional(),
+            start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:mm').optional(),
+            end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:mm').optional(),
+            timezone: z.string().min(1).max(64).optional(),
+        }).optional(),
+        feedPresets: z.array(z.object({
+            name: z.string().min(1).max(60),
+            type: z.string().max(30).optional(),
+            radius: z.number().min(1).max(500).optional(),
+            barterOnly: z.boolean().optional(),
+            urgentOnly: z.boolean().optional(),
+            location: z.string().max(150).optional(),
+        })).max(20).optional(),
     }).refine(
-        (data) => data.emailNotifications !== undefined || data.profileVisibility !== undefined,
+        (data) => Object.keys(data).length > 0,
         { message: 'At least one setting is required' }
     ),
 

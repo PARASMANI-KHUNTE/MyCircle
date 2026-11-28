@@ -107,6 +107,58 @@ Text: "${text.substring(0, 500)}"`;
     return { safe: true };
 };
 
+const TAG_STOP_WORDS = new Set([
+    'the', 'and', 'for', 'with', 'this', 'that', 'from', 'have', 'has', 'had',
+    'are', 'was', 'were', 'will', 'would', 'can', 'could', 'should', 'you',
+    'your', 'ours', 'their', 'its', 'very', 'just', 'about', 'into', 'also',
+    'looking', 'need', 'needed', 'available', 'contact', 'please', 'only',
+]);
+
+const normalizeTags = (tags) => {
+    const seen = new Set();
+
+    return tags
+        .map((tag) => String(tag)
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, ' '))
+        .filter((tag) => {
+            if (tag.length < 2 || tag.length > 30 || TAG_STOP_WORDS.has(tag) || seen.has(tag)) {
+                return false;
+            }
+            seen.add(tag);
+            return true;
+        })
+        .slice(0, 5);
+};
+
+/**
+ * Suggest category/skill tags for a post (Groq -> local keyword fallback).
+ */
+const generatePostTags = async (postData = {}) => {
+    const title = String(postData.title || '');
+    const description = String(postData.description || '');
+
+    if (isKeyValid()) {
+        try {
+            const prompt = `Suggest up to 5 short category or skill tags for this marketplace post. Return JSON: {"tags": ["tag1", "tag2"]}. Use lowercase words or short phrases, no sentences. Title: "${title}". Description: "${description.substring(0, 500)}".`;
+            const result = await askGroq(prompt);
+            const tags = result && Array.isArray(result.tags) ? normalizeTags(result.tags) : [];
+            if (tags.length) return tags;
+        } catch (err) {
+            console.warn('Groq tag generation failed, trying local keywords...', err.message);
+        }
+    }
+
+    const tokens = tokenizer.tokenize(`${title} ${description}`) || [];
+    const hints = [postData.type, postData.jobType, postData.itemCategory]
+        .filter(Boolean)
+        .map((value) => String(value));
+
+    return normalizeTags([...hints, ...tokens]);
+};
+
 /**
  * 2. Image Safety Check (Fail Open — Groq doesn't support vision)
  */
@@ -230,6 +282,7 @@ module.exports = {
     checkContentSafety,
     checkImageSafety,
     generateSuggestions,
+    generatePostTags,
     analyzePost,
     explainPost,
     getPlaceholderSuggestions

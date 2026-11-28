@@ -7,7 +7,6 @@ const passport = require('passport');
 const http = require('http');
 const crypto = require('crypto');
 const { Server } = require('socket.io');
-const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const compression = require('compression');
 const pino = require('pino');
@@ -16,9 +15,10 @@ const connectDB = require('./src/config/db');
 require('./src/config/firebase');
 const validateEnv = require('./src/utils/validateEnv');
 const errorHandler = require('./src/middleware/errorHandler');
-const User = require('./src/models/User');
 const { closeQueueConnection } = require('./src/utils/queue');
 const { onNotification } = require('./src/utils/notificationBus');
+const { createRateLimiters } = require('./src/utils/rateLimiters');
+const { registerSocketHandlers } = require('./src/socket/handlers');
 
 validateEnv();
 
@@ -86,100 +86,7 @@ io.use((socket, next) => {
     }
 });
 
-io.on('connection', (socket) => {
-    logger.info({ socketId: socket.id }, 'User connected');
-
-    if (socket.user?.id) {
-        socket.userId = socket.user.id;
-        socket.join(`user:${socket.user.id}`);
-        logger.info({ userId: socket.user.id, room: `user:${socket.user.id}` }, 'User auto-joined room');
-        socket.broadcast.emit('user_online', socket.user.id);
-        User.findByIdAndUpdate(socket.user.id, {
-            $set: { isOnline: true, lastSeenAt: new Date() }
-        }).catch((error) => {
-            logger.warn({ userId: socket.user.id, error: error.message }, 'Failed to update online status');
-        });
-    }
-
-    socket.on('join', (requestedUserId) => {
-        try {
-            if (!socket.user?.id) {
-                logger.warn({ socketId: socket.id }, 'Join rejected for unauthenticated socket');
-                return;
-            }
-            if (requestedUserId && String(requestedUserId) !== String(socket.user.id)) {
-                logger.warn({ socketId: socket.id, claimedUserId: requestedUserId, authenticatedUserId: socket.user.id }, 'Ignoring mismatched join userId');
-            }
-            socket.join(`user:${socket.user.id}`);
-            socket.userId = socket.user.id;
-        } catch (error) {
-            logger.error({ error: error.message }, 'Error in join event');
-        }
-    });
-
-    socket.on('join_conversation', (conversationId) => {
-        try {
-            if (conversationId) {
-                socket.join(`conversation:${conversationId}`);
-                logger.debug({ conversationId }, 'User joined conversation');
-            }
-        } catch (error) {
-            logger.error({ error: error.message }, 'Error in join_conversation');
-        }
-    });
-
-    socket.on('leave_conversation', (conversationId) => {
-        try {
-            if (conversationId) {
-                socket.leave(`conversation:${conversationId}`);
-            }
-        } catch (error) {
-            logger.error({ error: error.message }, 'Error in leave_conversation');
-        }
-    });
-
-    socket.on('typing_start', (data) => {
-        try {
-            if (data?.recipientId) {
-                io.to(`user:${data.recipientId}`).emit('user_typing', {
-                    userId: socket.userId,
-                    conversationId: data.conversationId
-                });
-            }
-        } catch (error) {
-            logger.error({ error: error.message }, 'Error in typing_start');
-        }
-    });
-
-    socket.on('typing_stop', (data) => {
-        try {
-            if (data?.recipientId) {
-                io.to(`user:${data.recipientId}`).emit('user_stop_typing', {
-                    userId: socket.userId,
-                    conversationId: data.conversationId
-                });
-            }
-        } catch (error) {
-            logger.error({ error: error.message }, 'Error in typing_stop');
-        }
-    });
-
-    socket.on('disconnect', () => {
-        try {
-            logger.info({ socketId: socket.id }, 'User disconnected');
-            if (socket.userId) {
-                socket.broadcast.emit('user_offline', socket.userId);
-                User.findByIdAndUpdate(socket.userId, {
-                    $set: { isOnline: false, lastSeenAt: new Date() }
-                }).catch((error) => {
-                    logger.warn({ userId: socket.userId, error: error.message }, 'Failed to update offline status');
-                });
-            }
-        } catch (error) {
-            logger.error({ error: error.message }, 'Error in disconnect');
-        }
-    });
-});
+registerSocketHandlers(io, { logger });
 
 app.use(helmet({
     contentSecurityPolicy: {
@@ -205,44 +112,18 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 if (isProduction) {
-    const rateLimitOptions = {
-        windowMs: 15 * 60 * 1000,
-        max: 100,
-        message: 'Too many requests from this IP, please try again later.',
-        standardHeaders: true,
-        legacyHeaders: false,
-    };
-    
-    if (process.env.REDIS_URL) {
-        const RedisStore = require('rate-limit-redis');
-        const Redis = require('ioredis');
-        const redis = new Redis(process.env.REDIS_URL);
-        
-        rateLimitOptions.store = new RedisStore({
-            sendCommand: (...args) => redis.call(...args),
-        });
-        logger.info('Using Redis for rate limiting');
-    }
-    
-    const limiter = rateLimit(rateLimitOptions);
-    app.use('/api/', limiter);
+    const { apiLimiter, authLimiter, aiLimiter } = createRateLimiters();
 
-    const authLimiter = rateLimit({
-        windowMs: 15 * 60 * 1000,
-        max: 5,
-        message: 'Too many authentication attempts, please try again later.',
-    });
+    app.use('/api/', apiLimiter);
     app.use('/auth/', authLimiter);
     app.use('/api/auth/', authLimiter);
-    
-    // Stricter rate limiting for AI routes
-    const aiLimiter = rateLimit({
-        windowMs: 60 * 1000,
-        max: 20,
-        message: 'Too many AI requests, please try again later.',
-    });
     app.use('/api/ai/', aiLimiter);
-    logger.info('Rate limiting enabled');
+
+    logger.info(
+        process.env.REDIS_URL
+            ? 'Rate limiting enabled with shared Redis store'
+            : 'Rate limiting enabled (in-memory)'
+    );
 } else {
     logger.info('Rate limiting disabled (development mode)');
 }

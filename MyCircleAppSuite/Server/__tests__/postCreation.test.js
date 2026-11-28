@@ -15,6 +15,7 @@ jest.mock('../src/utils/chatLifecycle', () => ({ deletePostScopedChats: jest.fn(
 
 const { createPost, updatePostStatus } = require('../src/controllers/postController');
 const { createNotification } = require('../src/controllers/notificationController');
+const { addImageJob } = require('../src/utils/queue');
 const ContactRequest = require('../src/models/ContactRequest');
 
 describe('createPost payload', () => {
@@ -68,6 +69,40 @@ describe('createPost payload', () => {
         expect(mockPostModel.findById).toHaveBeenCalled();
         expect(mockPopulate).toHaveBeenCalled();
         expect(res.json).toHaveBeenCalledWith({ _id: 'post-1' });
+    });
+
+    it('queues image optimization after saving the post with its real id', async () => {
+        const callOrder = [];
+        const imagePath = 'https://res.cloudinary.com/demo/image/upload/v1/mycircle_posts/abc.jpg';
+
+        mockSave.mockImplementationOnce(async () => {
+            callOrder.push('save');
+            return { _id: 'post-42' };
+        });
+        addImageJob.mockImplementation(async () => {
+            callOrder.push('queue');
+            return null;
+        });
+
+        const req = {
+            body: { type: 'service', title: 'Bike repair' },
+            files: [{ path: imagePath }],
+            user: { id: 'user-1' },
+            app: { get: jest.fn() },
+        };
+        const res = { json: jest.fn() };
+        const next = jest.fn();
+
+        await createPost(req, res, next);
+        await new Promise(resolve => setImmediate(resolve));
+
+        expect(addImageJob).toHaveBeenCalledWith(
+            expect.objectContaining({ imagePath, postId: 'post-42', action: 'optimize' }),
+            { priority: 2 }
+        );
+        expect(callOrder).toEqual(['save', 'queue']);
+        expect(next).not.toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith({ _id: 'post-42' });
     });
 
     it('notifies affected requesters when a post status changes', async () => {
